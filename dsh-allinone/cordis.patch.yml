@@ -1,0 +1,257 @@
+# dsh-allinone — 魔理沙整合包聚合 bundle patch
+#
+# 源码态插件 patch 汇总 + @huanlin npm 发布包 patch 合并。
+# 纯 client 插件（dsh.client 声明）无需 insert 行，走 dsh.client 自动发现。
+# 安装：dsh plugin --profile web add link:<本聚合包>
+# 组合行按 id 与 profile 既有 layer 覆盖（后 layer 胜）；config 整行替换。
+
+# ── @loserfox/git-identity ──
+# git-identity bundle patch: mounts the git-identity row into the profile
+# composition. The row name resolves through the profile directory's
+# node_modules (the bundle is installed there by `dsh plugin --profile <name> add`).
+- insert:
+    - id: git-identity
+      name: '@loserfox/git-identity'
+
+# ── @deepseek-ai/dsh-genui ──
+# dsh-genui bundle for DeepSeek Harness (dsh).
+# Inserted into the profile's composition when this bundle is installed
+# (`dsh plugin --profile web add link:/path/to/dsh-genui`). The plugin row
+# resolves the package by name through the profile's node_modules; the node
+# half teaches the model the ```dsh-ui fence, the dshClient half registers
+# the browser renderer via the fence-registry extension point.
+- insert:
+    - id: genui
+      name: '@deepseek-ai/dsh-genui'
+
+# ── @dsh-external/workflow ──
+# Reusable, governed, durable multi-agent workflows over DSH subagent,
+# approval, Session, background-job, command, and tool extension seams.
+
+- insert:
+    - id: dsh-external-workflow
+      name: '@dsh-external/workflow'
+
+# ── @dsh-external/dsh-vision-toolkit ──
+# dsh-vision-toolkit bundle patch: mounts the plugin into a profile layer stack.
+# Runtime defaults live at the plugin's config boundary. Users override them in
+# their profile patch row with the same id.
+- insert:
+    - id: vision-toolkit
+      name: '@dsh-external/dsh-vision-toolkit'
+
+# ── @dsh-external/dsh-web-ui-notify ──
+# dsh-web-ui-notify bundle patch: mount the desktop-notification plugin.
+#
+# Applied when this bundle appears in a profile's dsh.profile.bundles list.
+# The host half (package root) tracks pending user interactions; the browser
+# half (dsh.client) is discovered automatically through the package's
+# dsh.client declaration + exports["./client"].
+
+- insert:
+    - id: ui-notify
+      name: '@dsh-external/dsh-web-ui-notify'
+
+# ── @dsh-external/dsh-suggested-replies ──
+# Suggested replies is a Web bundle. It observes completed turns, asks the
+# configured model for candidate next user messages, and projects them into the
+# official strip immediately above the message input. Clicking a candidate
+# writes the draft only; sending remains an explicit input-bar action.
+- insert:
+    - id: suggested-replies
+      name: '@dsh-external/dsh-suggested-replies'
+      config:
+        enabled: true
+        suggestionCount: 3
+        contextMessageCount: 4
+        maxSuggestionChars: 160
+        maxTokens: 384
+        timeoutMs: 15000
+        # Optional explicit auxiliary route. Omit to inherit the current
+        # session provider/model.
+        # suggestionProvider: deepseek-official
+        # suggestionModel: deepseek-v4-flash
+
+# ── whale-girl ──
+# whale-girl bundle patch：向 web 组合挂载 whale-girl（Node half 读写状态/资产，
+# client half 由 __ModuleLoader__ 内核挂载渲染宠物）。
+- insert:
+    - id: whale-girl
+      name: whale-girl
+
+# ── @deepseek-ai/dsh-qwen-mm ──
+# Qwen-MM is an explicit opt-in bundle. The row is present so a profile can
+# enable it with a later overlay, but it never fetches a remote repository or
+# starts an MCP server merely because this bundle was installed.
+- insert:
+    - id: qwen-mm
+      name: '@deepseek-ai/dsh-qwen-mm'
+      disabled: true
+
+# ── @dsh-community/multimedia-webui-input ──
+- insert:
+    - id: community-multimedia-webui-input
+      name: '@dsh-community/multimedia-webui-input'
+
+# ── @dsh-external/dsh-drag-and-drop ──
+# dsh-drag-and-drop bundle patch: mount the file-drag path plugin.
+#
+# Applied when this bundle appears in a profile's dsh.profile.bundles list.
+# The host half (package root) registers the file-locate HTTP route; the
+# browser half (dsh.client) is discovered automatically through the package's
+# dsh.client declaration + exports["./client"].
+
+- insert:
+    - id: drag-and-drop
+      name: '@dsh-external/dsh-drag-and-drop'
+
+# ── @dsh-external/dsh-stickers ──
+- insert:
+    - id: dsh-stickers
+      name: '@dsh-external/dsh-stickers'
+
+# ── @dsh-external/dsh-code-map ──
+- insert:
+    - id: code-map
+      name: '@dsh-external/dsh-code-map'
+
+# ── dsh-sonar ──
+# The root row is the browser-roster face; the subpath row owns host services.
+- insert:
+    - id: sonar-view-client
+      name: dsh-sonar
+    - id: sonar-view-host
+      name: dsh-sonar/host
+      config:
+        locale: zh-CN
+        refreshIntervalMs: 2000
+        motion: full
+        backgroundReviewEnabled: true
+        backgroundReviewIntervalMs: 15000
+
+# ── @dsh-external/dsh-sidechain ──
+# dsh bundle patch: inserts this plugin into a profile's layer stack.
+- insert:
+    - id: dsh-sidechain
+      name: '@dsh-external/dsh-sidechain'
+
+# ── @dsh-external/dsh-diff-viewer ──
+# dsh bundle patch: inserts this plugin into a profile's layer stack.
+- insert:
+    - id: dsh-diff-viewer
+      name: '@dsh-external/dsh-diff-viewer'
+
+# ── @deepseek-ai/dsh-track ──
+# The dsh-track bundle patch: mounts the Track Bridge engine.
+#
+# Install into a profile with:
+#   dsh plugin --profile web add github:dsh-external/dsh-track
+#
+# The web-app bundle already mounts storage (json backend under ~/.dsh/storages),
+# storage-domain, skill, and skill-local — this patch only inserts the track
+# engine row. The fat skill ships in skills/dsh-track/SKILL.md and is copied
+# to ~/.dsh/skills/dsh-track by the install script so skill-local's default
+# roots pick it up.
+
+- insert:
+    - id: track
+      name: '@deepseek-ai/dsh-track'
+
+# ── @huanlin/dsh-plugin-yet-another-subagent ──
+# Disable official tool-subagent (spawn path; this plugin takes over the
+# `subagent` tool name). The fork path (`tool-subagent-fork`, tool name
+# `subagent_fork`) is left intact — no name collision with this plugin's
+# single `subagent` tool, and fork delegation stays available to the model.
+- id: tool-subagent
+  disabled: true
+
+# Insert this plugin.
+- insert:
+    - id: yet-another-subagent
+      name: '@huanlin/dsh-plugin-yet-another-subagent'
+      config:
+        profiles:
+          - id: general
+            label: General
+            model: { kind: 'auto' }
+            persona: { kind: 'inherit' }
+            toolFilter: { kind: 'none' }
+            maxDepth: 3
+            builtin: true
+        generalFixed: true
+
+# ── @huanlin/dsh-plugin-ya-workspace-sidebar ──
+# Replace the official workspace browser. The official client package claims
+# both sidebar.workspaces and conversation.hero.workspace, so the replacement
+# provides both seats before taking over the browsing information architecture.
+- id: ui-workspace
+  disabled: true
+
+- insert:
+    - id: ya-workspace-sidebar
+      name: '@huanlin/dsh-plugin-ya-workspace-sidebar'
+
+# ── @huanlin/dsh-plugin-interpreters ──
+# dsh-interpreters bundle layer: inserts the plugin row.
+# Loaded by `dsh plugin --profile <name> add link:./dsh-interpreters`.
+# The `name` is the package entry; Loader resolves it from profile node_modules.
+# Defaults: python/node from PATH, 30s timeout.
+- insert:
+    - id: dsh-interpreters
+      name: '@huanlin/dsh-plugin-interpreters'
+      config:
+        pythonPath: 'python'
+        nodePath: 'node'
+        timeoutMs: 30000
+
+# ── @huanlin/dsh-plugin-mineru ──
+# dsh-mineru bundle layer: inserts the dsh-mineru plugin row.
+# Loaded by `dsh plugin --profile <name> add @huanlin/dsh-plugin-mineru`.
+# The `name` is the package entry; Loader resolves it from profile node_modules.
+# baseURL is configured at runtime via the DSH GUI settings page (MinerU section);
+# the value below is the first-boot seed only.
+- insert:
+    - id: dsh-mineru
+      name: '@huanlin/dsh-plugin-mineru'
+      config:
+        baseURL: 'http://localhost:18000'
+
+# ── @huanlin/dsh-plugin-aigc-canvas ──
+# dsh-aigc-canvas bundle layer: inserts the plugin row.
+# Loaded by `dsh plugin --profile <name> add @huanlin/dsh-plugin-aigc-canvas`.
+# The `name` is the package entry; Loader resolves it from profile node_modules.
+# Provider config is editable at runtime via the DSH GUI settings page;
+# the values below are first-boot seeds only. The stub provider
+# (endpoint=stub://aigc-backend) produces synthetic test media — no real API calls.
+- insert:
+    - id: dsh-aigc-canvas
+      name: '@huanlin/dsh-plugin-aigc-canvas'
+      config:
+        providers:
+          - id: stub
+            name: ''
+            endpoint: 'stub://aigc-backend'
+            apiKey: ''
+            instructions: ''
+            builtin: true
+        requestTimeoutMs: 300000
+        mediaSizeLimit: 104857600
+
+# ── 纯 client 插件（host 挂载行，client 经 dsh.client 自动发现）──
+- insert:
+    - id: dsh-ui-progress
+      name: '@dsh-external/dsh-ui-progress'
+
+    - id: dsh-paste-input
+      name: '@dsh-community/dsh-paste-input'
+
+    - id: dsh-input-history
+      name: '@dsh-external/dsh-input-history'
+
+    - id: dsh-artifact
+      name: '@dsh-external/dsh-artifact'
+
+# ── 纯 host 插件 ──
+- insert:
+    - id: a2a
+      name: '@dpskh/a2a'
