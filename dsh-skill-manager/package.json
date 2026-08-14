@@ -1,0 +1,30 @@
+{
+  "name": "dsh-skill-manager",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness plugin: manage user skills (~/.dsh/skills) via slash commands and the skill_manage tool.",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "skill",
+    "agent",
+    "cordis"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.5.0"
+  }
+}

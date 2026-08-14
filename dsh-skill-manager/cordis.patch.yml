@@ -1,0 +1,15 @@
+# dsh-skill-manager bundle patch: mounts the skill management plugin.
+#
+# A host-plane row: it writes user skills under the harness home, so it stays
+# on the host plane where filesystem access lives. It injects `commands` and
+# `tools` (both provided by the base composition) and registers the `/skills`,
+# `/skill-remove` commands plus the `skill_manage` model tool.
+#
+# `dshHome` is optional: the plugin already falls back to `$DSH_HOME`, then
+# `~/.dsh`, so a deployment only sets it here to pin a different root.
+
+- insert:
+    - id: skill-manager
+      name: dsh-skill-manager
+      config:
+        dshHome: !!js process.env.DSH_HOME
