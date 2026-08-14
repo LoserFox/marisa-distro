@@ -258,3 +258,8 @@
 - insert:
     - id: a2a
       name: '@dpskh/a2a'
+
+# ── 自改层：agent 会话内 inspect/define/run/stop/undefine 插件（官方 demo:cordis 同款）──
+- insert:
+    - id: tool-cordis
+      name: '@deepseek-ai/dsh-tool-cordis'
