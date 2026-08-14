@@ -162,10 +162,13 @@
 # `subagent` tool name). The fork path (`tool-subagent-fork`, tool name
 # `subagent_fork`) is left intact — no name collision with this plugin's
 # single `subagent` tool, and fork delegation stays available to the model.
-- id: tool-subagent
-  disabled: true
 
 # Insert this plugin.
+- id: yet-another-subagent
+  disabled: true
+
+# better-sidebar client 与 yet-another-subagent 的 tool.call.toolview 声明时序冲突（2026-08-14 验证），
+# 保留 better-sidebar（Explorer/终端），恢复官方 tool-subagent。
 - insert:
     - id: yet-another-subagent
       name: '@huanlin/dsh-plugin-yet-another-subagent'
