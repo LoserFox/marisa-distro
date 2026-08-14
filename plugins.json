@@ -6,7 +6,8 @@
     {
       "name": "dsh-better-sidebar",
       "source": "npm",
-      "version": "^0.10.3"
+      "version": "^0.10.3",
+      "bundle": true
     },
     {
       "name": "@loserfox/git-identity",
@@ -119,7 +120,8 @@
     {
       "name": "dsh-llm-fallbacks",
       "source": "npm",
-      "version": "^0.1.0-alpha.1"
+      "version": "^0.1.0-alpha.1",
+      "bundle": true
     },
     {
       "name": "@dsh-external/dsh-ui-progress",
@@ -151,7 +153,8 @@
     {
       "name": "@canglongcl/dsh-web-review",
       "source": "npm",
-      "version": "^0.1.0"
+      "version": "^0.1.0",
+      "bundle": true
     },
     {
       "name": "@dsh-external/dsh-artifact",

@@ -134,7 +134,7 @@ pkg = {
                 "@deepseek-ai/dsh-base",
                 "@deepseek-ai/dsh-web-app",
                 "@dsh-external/dsh-allinone"
-            ]
+            ] + [p['name'] for p in data.get('plugins', []) if p.get('bundle')]
         }
     }
 }
