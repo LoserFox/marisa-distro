@@ -50,7 +50,7 @@
 
 - insert:
     - id: ui-notify
-      name: '@dsh-external/dsh-web-ui-notify'
+      name: '@bill9109/dsh-web-ui-notify'
 
 # ── @dsh-external/dsh-suggested-replies ──
 # Suggested replies is a Web bundle. It observes completed turns, asks the
@@ -103,7 +103,7 @@
 
 - insert:
     - id: drag-and-drop
-      name: '@dsh-external/dsh-drag-and-drop'
+      name: '@bill9109/dsh-drag-and-drop'
 
 # ── @dsh-external/dsh-stickers ──
 - insert:

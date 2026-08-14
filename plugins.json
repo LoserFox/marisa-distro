@@ -46,13 +46,14 @@
       "patch-id": null
     },
     {
-      "name": "@dsh-external/dsh-web-ui-notify",
+      "name": "@bill9109/dsh-web-ui-notify",
       "source": "git",
       "dir": "dsh-web-ui-approval-notify",
       "repo": "https://github.com/dsh-external/dsh-web-ui-approval-notify.git",
       "needs-build": true,
       "has-lib": true,
-      "patch-id": null
+      "patch-id": null,
+      "id": "ui-notify"
     },
     {
       "name": "@dsh-external/dsh-suggested-replies",
@@ -91,13 +92,14 @@
       "patch-id": null
     },
     {
-      "name": "@dsh-external/dsh-drag-and-drop",
+      "name": "@bill9109/dsh-drag-and-drop",
       "source": "git",
       "dir": "dsh-drag-and-drop",
       "repo": "https://github.com/dsh-external/dsh-drag-and-drop.git",
       "needs-build": true,
       "has-lib": true,
-      "patch-id": null
+      "patch-id": null,
+      "id": "drag-and-drop"
     },
     {
       "name": "@dsh-external/dsh-stickers",
