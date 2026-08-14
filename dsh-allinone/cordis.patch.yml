@@ -263,3 +263,8 @@
 - insert:
     - id: tool-cordis
       name: '@deepseek-ai/dsh-tool-cordis'
+
+# ── skill 管理器（/skills /skill-remove + skill_manage 工具，读写 ~/.dsh/skills）──
+- insert:
+    - id: skill-manager
+      name: dsh-skill-manager
