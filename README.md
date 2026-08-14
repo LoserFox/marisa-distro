@@ -58,7 +58,15 @@ dsh plugin --profile marisa add link:/path/to/marisa-distro/dsh-allinone
 
 Cordis 论文中文翻译：`/root/research/reports/cordis-paper-zh.md`（《时空可组合性的编程范式》——DSH/Cordis 的形式化基础：可逆效应、反应式余效应、动态组合演算）
 
-## 🎯 mygo 管理内核状态（2026-08-14）
+## 🎯 mygo 管理内核状态（2026-08-14 升级 0.2.0-rc.0）
+
+**完全重构版（next 分支）已升级**：@r05en1cu scope 七包（mygo/mygo-cli/mygo-api/mygo-ext-panel/mygo-ext-fabric/mygo-loader-hub/mygo-loader-profile），npm 公开版 rc6 兼容。
+- 新 CLI：install/uninstall/enable/disable/instances/adopt/clone/hub（dsh-hub 市场）/config
+- 新能力：pack 离线分发链路、pnpm 双门槛一键放行、热重载状态保持、bundle 解析预检、fabric 去重互斥
+- 官方登记已知限制：web profile 严格参数解析（魔理沙已用 .argument 补丁修复）
+- 构建适配（harness 内）：devDeps 改 workspace:^ + zod 装 harness 根 + 包内 @deepseek-ai 链接
+
+
 
 **全链路激活**：
 - pluginManager 服务 ✅（storage → storage-json → storage-domain → mygo 注入链完整）

@@ -117,10 +117,10 @@ for p in data['plugins']:
 deps['@dsh-external/dsh-allinone'] = f"file:{profile_dir}/allinone-install"
 # mygo 管理内核四件套（profile patch 引用了它们，必须可解析）
 harness = os.environ.get('HARNESS', '')
-deps['@deepseek-ai/dsh-mygo'] = f"file:{harness}/packages/cordis/mygo"
-deps['@deepseek-ai/dsh-mygo-api'] = f"file:{harness}/packages/core/mygo-api"
-deps['@dsh-external/dsh-mygo-cli'] = f"file:{harness}/packages/cordis/mygo-cli"
-deps['@dsh-external/dsh-mygo-panel'] = f"file:{harness}/vendor/dsh-mygo-panel"
+deps['@r05en1cu/dsh-mygo'] = f"file:{harness}/packages/cordis/mygo"
+deps['@r05en1cu/dsh-mygo-api'] = f"file:{harness}/packages/core/mygo-api"
+deps['@r05en1cu/dsh-mygo-cli'] = f"file:{harness}/packages/cordis/mygo-cli"
+deps['@r05en1cu/dsh-mygo-ext-panel'] = f"file:{harness}/vendor/dsh-mygo-panel"
 
 pkg = {
     "name": f"marisa-{profile}",
@@ -149,12 +149,12 @@ cat > "$PROFILE_DIR/cordis.patch.yml" <<'YAML'
 # mygo 管理内核：管理器 + CLI（pack 打包模式需临时禁用 web-startup）
 - insert:
     - id: mygo
-      name: '@deepseek-ai/dsh-mygo'
+      name: '@r05en1cu/dsh-mygo'
       config:
         profile: web
 
     - id: dsh-mygo-cli
-      name: '@dsh-external/dsh-mygo-cli'
+      name: '@r05en1cu/dsh-mygo-cli'
 YAML
 
 # 3c. pnpm-workspace.yaml（含 harness workspace globs：插件 workspace:^ 依赖从此解析）
