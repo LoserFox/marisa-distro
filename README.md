@@ -57,3 +57,14 @@ dsh plugin --profile marisa add link:/path/to/marisa-distro/dsh-allinone
 ## 理论背景
 
 Cordis 论文中文翻译：`/root/research/reports/cordis-paper-zh.md`（《时空可组合性的编程范式》——DSH/Cordis 的形式化基础：可逆效应、反应式余效应、动态组合演算）
+
+## 🎯 mygo 管理内核状态（2026-08-14）
+
+**全链路激活**：
+- pluginManager 服务 ✅（storage → storage-json → storage-domain → mygo 注入链完整）
+- CLI 路由 ✅（`dsh --profile mygo mygo <pack|restore|init>`）
+- pack/restore/init 命令链 ✅（pack 报"插件集为空"= 生态现状：当前仅 mygo-cli 有 dsh.mygo manifest，31 个社区插件均为 cordis/bundle 协议，mygo 新协议生态未跟进——非 bug）
+
+**官方缺陷修复（本地 fork）**：web-startup 的 commander 不接受多余参数 → `dsh --profile web mygo pack` 必挂（docs 声称可用）→ 已加 `.argument('[args...]')` 透传（src/startup.ts + lib/startup.js）
+
+**离线分发现状**：魔理沙的 31 插件分发 = install.sh（file: 源码 + 构建 + 链接修复 + 启动验证），不依赖 mygo pack
