@@ -68,3 +68,13 @@ Cordis 论文中文翻译：`/root/research/reports/cordis-paper-zh.md`（《时
 **官方缺陷修复（本地 fork）**：web-startup 的 commander 不接受多余参数 → `dsh --profile web mygo pack` 必挂（docs 声称可用）→ 已加 `.argument('[args...]')` 透传（src/startup.ts + lib/startup.js）
 
 **离线分发现状**：魔理沙的 31 插件分发 = install.sh（file: 源码 + 构建 + 链接修复 + 启动验证），不依赖 mygo pack
+
+## 🖥️ Desktop 壳（Windows 路线）
+
+**dsh-desktop 纯壳**（Go/Wails v3 + WebView2，dsh-external/dsh-desktop）：
+- 壳 = 唯一 exe（~数 MB），spawn `dsh web --port 0` → 解析 stdout 端口 → WebView2 内嵌加载（无系统浏览器）
+- 托盘常驻 / 开机自启 / 后端退避重启 / 退出清理进程树
+- **魔理沙集成**：默认 `dsh web` 即指向魔理沙 profile（web）；自定义：
+  `DSH_WEB_CMD="dsh --profile marisa web --port {port}"`
+- Windows 使用：`install-windows.ps1`（dsh-win-port）装 dsh → 下载 `dsh-desktop-windows-amd64.zip` → 设置 DSH_WEB_CMD（可选）→ 运行 dsh-shell.exe
+- Linux 构建已验证（本机 go build 通过，16.7MB；需 gtk4/webkitgtk-6.0/gstreamer devel）
