@@ -41,11 +41,63 @@ dsh plugin --profile marisa add link:/path/to/marisa-distro/dsh-allinone
 | `install.sh` | 一键安装（clone 插件 + 生成 profile + install + 验证） |
 | `plugins.json` | 插件权威清单（21 git 源码 + 8 npm 版） |
 
-### 插件构成（29）
+### 插件清单（31 + 管理内核 + 工具，全部公开可寻）
 
-- **21 源码态**（git clone）：git-identity、genui、workflow、vision-toolkit、web-ui-notify、suggested-replies、whale-girl、qwen-mm、multimedia-webui-input、drag-and-drop、stickers、code-map、ui-progress、paste-input、input-history、artifact、sonar、sidechain、diff-viewer、track、a2a
-- **8 npm 版**：better-sidebar、llm-fallbacks、web-review、yet-another-subagent、ya-workspace-sidebar、interpreters、mineru、aigc-canvas
-- **管理内核**：mygo 管理器 + mygo-cli（profile patch 挂载）
+**源码态插件（20，git clone 分发）**
+
+| 插件 | 仓库 | License |
+|---|---|---|
+| dsh-genui | https://github.com/dsh-external/dsh-genui | MIT |
+| dsh-qwen-mm | https://github.com/dsh-external/Qwen-MM-Plugins | BSD-3-Clause |
+| dsh-track | https://github.com/dsh-external/dsh-track | 未声明 |
+| dsh-a2a | https://github.com/dsh-external/dsh-a2a | BSD-3-Clause |
+| dsh-paste-input | https://github.com/lhh010/dsh-paste-input | MIT |
+| dsh-multimedia-webui-input（禁用） | https://github.com/dsh-external/dsh-multimedia-webui-input | MIT |
+| dsh-artifact | https://github.com/dsh-external/dsh-artifact | BSD-3-Clause |
+| dsh-code-map | https://github.com/dsh-external/dsh-code-map | BSD-3-Clause |
+| dsh-diff-viewer | https://github.com/dsh-external/dsh-diff-viewer | BSD-3-Clause |
+| dsh-drag-and-drop | https://github.com/dsh-external/dsh-drag-and-drop | BSD-3-Clause |
+| dsh-input-history | https://github.com/lhh010/dsh-input-history | BSD-3-Clause |
+| dsh-sidechain | https://github.com/dsh-external/dsh-sidechain | BSD-3-Clause |
+| dsh-stickers | https://github.com/dsh-external/dsh-stickers | BSD-3-Clause |
+| dsh-suggested-replies | https://github.com/dsh-external/dsh-suggested-replies | MIT |
+| dsh-ui-progress | https://github.com/lhh010/dsh-ui-progress | BSD-3-Clause |
+| dsh-vision-toolkit | https://github.com/dsh-external/dsh-vision-toolkit | MIT |
+| dsh-workflow | https://github.com/dsh-external/dsh_workflow | MIT |
+| dsh-web-ui-notify | https://github.com/dsh-external/dsh-web-ui-approval-notify | BSD-3-Clause |
+| dsh-git-identity | https://github.com/dsh-external/dsh-git-identity | 未声明 |
+| dsh-sonar | https://github.com/dsh-external/dsh-sonar | MIT |
+| whale-girl | https://github.com/dsh-external/whale-girl | MIT |
+
+**npm 版插件（8）**
+
+| 插件 | 仓库 | License |
+|---|---|---|
+| dsh-better-sidebar | https://github.com/omdsh-dev/DSH-better-sidebar | MIT |
+| dsh-llm-fallbacks | npm 未声明 | 未声明 |
+| dsh-web-review | https://github.com/CanglongCl/dsh-web-review | 未声明 |
+| dsh-plugin-yet-another-subagent（禁用） | npm @huanlin | AGPL-3.0 |
+| dsh-plugin-ya-workspace-sidebar | npm @huanlin | AGPL-3.0 |
+| dsh-plugin-interpreters | npm @huanlin | AGPL-3.0 |
+| dsh-plugin-mineru | npm @huanlin | AGPL-3.0 |
+| dsh-plugin-aigc-canvas | npm @huanlin | AGPL-3.0 |
+
+**管理内核与工具**
+
+| 组件 | 仓库 | License |
+|---|---|---|
+| mygo 管理器（0.2.0-rc.0 七包） | https://github.com/dsh-external/dsh-mygo （next 分支） | MIT |
+| dsh-skill-manager | https://github.com/bitterSmilezzz/dsh-skill-manager | MIT |
+| cordis-host-runner / tool-cordis | deepseek-harness 内置（https://github.com/deepseek-ai/deepseek-harness） | MIT |
+| dsh-allinone（本包聚合 patch） | 本仓库 | MIT |
+
+> 禁用的 2 个：multimedia-webui-input（依赖官方不存在的 client 包）、yet-another-subagent（与 better-sidebar client 时序冲突）。
+
+## 协议声明
+
+- 本发行（聚合包）为各插件的**独立聚合**（aggregate），不改动任何上游插件源码；各插件版权归其各自作者，许可证以上表为准（分发时保留各包 LICENSE）。
+- **AGPL-3.0 注意**（@huanlin 系 5 个插件）：源码随 npm 包完整分发（node_modules 内可达），满足 AGPL 源码提供义务；若修改这些插件并对外提供服务，需按 AGPL 开源你的修改。
+- 未声明 license 的插件（track/git-identity/llm-fallbacks/web-review）：默认保留所有权利，仅作个人使用。
 
 ## 待办
 
@@ -98,3 +150,35 @@ Cordis 论文中文翻译：`/root/research/reports/cordis-paper-zh.md`（《时
 
 > 均为上游仓库的 SKILL.md 目录快照（本地改动零）；升级 = 重新 clone 上游后替换 `skills/<包名>/`。
 
+
+## 🪟 Windows 端测试（2026-08-14 路线）
+
+### 方式 A：Web 直跑（最快）
+
+```powershell
+# 1. 前置：Node 22+ / pnpm 11+ / Git（choco install nodejs git 或官网安装）
+git clone https://github.com/deepseek-ai/deepseek-harness
+git clone https://github.com/LoserFox/marisa-distro
+
+# 2. 装插件依赖（marisa-distro/install.sh 是 bash——Windows 用 Git Bash 跑，
+#    或手动：把 install.sh 生成的 ~/.dsh/profiles/marisa/ 结构建好）
+#    Git Bash 里：
+#    ./install.sh --harness <harness路径> --profile marisa --skip-verify
+
+# 3. 启动（Node 直跑，无需 Docker）
+cd deepseek-harness
+pnpm dsh --profile marisa web --port 3080
+# 浏览器打开 http://127.0.0.1:3080
+```
+
+### 方式 B：Desktop 壳（dsh-desktop，Windows 原生窗口）
+
+- 壳 = Wails v3 + WebView2（Win10/11 自带 WebView2 runtime）
+- 壳默认执行 `dsh web`（= `--profile web`），魔理沙集成 = `DSH_WEB_CMD="dsh --profile marisa web --port {port}"`
+- Windows 构建：在 Windows 主机上 `wails build`（需 Go 1.22+），产出 exe（Linux 侧已验证 16.7MB 构建 + go test 全过，Windows 同架构待主机验证）
+
+### 已知 Windows 差异
+
+- `install.sh` 的 bash 脚本需 Git Bash/WSL（或按 install.sh 步骤手动：plugins.json → profile/package.json → pnpm install）
+- node-pty（终端功能）Windows 需 MSVC 构建工具链（npm rebuild node-pty），失败仅终端面板不可用
+- 路径用 `/` 或 `\` 统一（Git Bash 下用 `/`）
