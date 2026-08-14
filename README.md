@@ -86,3 +86,15 @@ Cordis 论文中文翻译：`/root/research/reports/cordis-paper-zh.md`（《时
   `DSH_WEB_CMD="dsh --profile marisa web --port {port}"`
 - Windows 使用：`install-windows.ps1`（dsh-win-port）装 dsh → 下载 `dsh-desktop-windows-amd64.zip` → 设置 DSH_WEB_CMD（可选）→ 运行 dsh-shell.exe
 - Linux 构建已验证（本机 go build 通过，16.7MB；需 gtk4/webkitgtk-6.0/gstreamer devel）
+
+## 📚 预装 Skill 包（36 个）
+
+安装时自动复制到 `~/.dsh/skills/`（skill-local 发现目录，`/skills` 命令与 `skill_manage` 工具可见）：
+
+| 包 | 数量 | 来源仓库 |
+|---|---|---|
+| **mattpocock** | 22 | https://github.com/mattpocock/skills （Matt Pocock 工程技能集：tdd/code-review/grilling/wayfinder 等） |
+| **superpowers** | 14 | https://github.com/obra/superpowers （Jesse Vincent 的 agentic 技能框架：brainstorming/systematic-debugging/writing-plans 等） |
+
+> 均为上游仓库的 SKILL.md 目录快照（本地改动零）；升级 = 重新 clone 上游后替换 `skills/<包名>/`。
+

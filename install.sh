@@ -294,6 +294,26 @@ if [[ -n "$NODE_PTY" ]] && [[ ! -f "$NODE_PTY/prebuilds/linux-x64/pty.node" ]]; 
     || echo "    ⚠ node-pty 编译失败（终端功能不可用，可稍后手动处理）"
 fi
 
+# ---- 4.5 预装 skill 包（mattpocock + superpowers，平铺进 skill-local 发现目录）--
+echo ""
+echo "==> 预装 skill 包（36 个）→ ~/.dsh/skills/（平铺，每个 skill 一个子目录）"
+SKILLS_DST="${HOME}/.dsh/skills"
+mkdir -p "$SKILLS_DST"
+N=0
+for s in mattpocock superpowers; do
+  if [[ -d "$MARISA_DIR/skills/$s" ]]; then
+    for sk in "$MARISA_DIR/skills/$s"/*/; do
+      name=$(basename "$sk")
+      if [[ -f "$sk/SKILL.md" ]]; then
+        rm -rf "$SKILLS_DST/$name"
+        cp -r "$sk" "$SKILLS_DST/$name"
+        N=$((N+1))
+      fi
+    done
+  fi
+done
+echo "    ✓ $N 个 skill 已安装
+
 # ---- 5. 启动验证 ---------------------------------------------------------------
 if [[ "$SKIP_VERIFY" == "1" ]]; then
   echo ""
