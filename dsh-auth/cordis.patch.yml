@@ -1,0 +1,17 @@
+# dsh-auth bundle patch: mounts the login gate plugin.
+#
+# Requires the Marisa-local harness seam (rpc-host.ts /api route handler
+# checks the optional `dshAuth` service). Without the seam the plugin still
+# serves /auth/* + UI soft gate; the /api hard gate is inert.
+
+- insert:
+    - id: dsh-auth
+      name: dsh-auth
+      config:
+        usersFile: '/root/.dsh/auth/users.json'
+        sessionTtlMinutes: 720
+        cookieName: 'dsh_sid'
+        cookieSecure: false
+        protectApi: true
+        protectUi: true
+        seedAdmin: true

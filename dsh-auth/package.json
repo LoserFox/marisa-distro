@@ -1,0 +1,16 @@
+{
+  "name": "dsh-auth",
+  "version": "0.1.0",
+  "description": "DSH WebUI 登录系统（Marisa 发行）— /auth/* 登录路由 + /api 硬门 + tapIndex 软门",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  }
+}
