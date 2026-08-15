@@ -67,13 +67,8 @@
     "apps/web/tests/pwsh-terminal.e2e.ts",
     "apps/web/stress-tests/reasoning-chunks.stress.ts",
     "apps/cli/tests/**/*.ts",
-    "examples/*/src/**/*.ts",
-    "examples/*/start.ts",
-    "examples/*/tests/**/*.ts",
     "packages/*/*/tests/**/*.ts",
-    "scripts/**/*.ts",
-    "website/**/*.ts",
-    "website/.vitepress/**/*.ts"
+    "scripts/**/*.ts"
   ],
   "exclude": [
     "packages/client/**",
