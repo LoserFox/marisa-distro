@@ -1,2 +1,16 @@
 node_modules/
+**/node_modules/
 *.log
+release/
+*.tsbuildinfo
+.pnpm-store/
+profiles/marisa/runtime/
+
+# harness、plugins 和 desktop 都由本仓库直接纳管；不允许重新嵌套 Git。
+harness/.git/
+plugins/*/.git/
+desktop/.git/
+
+# 本地启动器和平台构建缓存。
+harness/bin/dsh.cmd
+desktop/build/

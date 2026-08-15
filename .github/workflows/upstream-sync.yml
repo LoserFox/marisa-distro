@@ -1,0 +1,109 @@
+name: Upstream Sync Candidates
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.components.outputs.components }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - id: components
+        shell: bash
+        run: |
+          value=$(node -e "const m=require('./maintenance/upstreams.json'); console.log(JSON.stringify(['harness',...m.plugins.map(p=>p.id)]))")
+          echo "components=$value" >> "$GITHUB_OUTPUT"
+
+  candidate:
+    needs: matrix
+    concurrency:
+      group: upstream-sync-${{ matrix.component }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.matrix.outputs.components) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11'
+          run_install: false
+      - name: Resume existing candidate branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMPONENT: ${{ matrix.component }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="bot/upstream-${COMPONENT//_/-}"
+          open_prs=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq 'length')
+          if [[ "$open_prs" != "0" ]] && git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+            git fetch --no-tags origin "refs/heads/$branch:refs/remotes/origin/$branch"
+            git switch -C "$branch" "origin/$branch"
+          else
+            git switch -C "$branch"
+          fi
+      - id: sync
+        env:
+          COMPONENT: ${{ matrix.component }}
+        shell: bash
+        run: node scripts/sync-upstream.mjs "$COMPONENT"
+      - name: Refresh lockfile for mirrors
+        if: steps.sync.outputs.changed == 'true' && steps.sync.outputs.source == 'git' && steps.sync.outputs.mode == 'mirror'
+        run: pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+      - name: Ensure upstream-sync label exists
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if ! gh label create upstream-sync --repo "$GITHUB_REPOSITORY" --color 0E8A16 \
+            --description 'Automated upstream synchronization candidate' --force; then
+            # Concurrent matrix jobs can both observe a missing label. The winner
+            # creates it; the other job converges by editing the newly created label.
+            gh label edit upstream-sync --repo "$GITHUB_REPOSITORY" --color 0E8A16 \
+              --description 'Automated upstream synchronization candidate'
+          fi
+      - name: Open or refresh component PR
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMPONENT: ${{ matrix.component }}
+          MODE: ${{ steps.sync.outputs.mode }}
+          HEAD_SHA: ${{ steps.sync.outputs.head }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="bot/upstream-${COMPONENT//_/-}"
+          git config user.name 'marisa-upstream-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add maintenance plugins pnpm-lock.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(upstream): update $COMPONENT candidate"
+          git push --force-with-lease origin "$branch"
+          open_prs=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state open --json number --jq 'length')
+          if [[ "$open_prs" == "0" ]]; then
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+              --title "chore(upstream): update $COMPONENT" \
+              --label upstream-sync \
+              --body "Automated $MODE update candidate for $COMPONENT at $HEAD_SHA. Mirrors contain the upstream source replacement; forks require the documented diff to be replayed and release-level tests before merge."
+          fi

@@ -1,0 +1,186 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v* tag to build and publish
+        required: true
+        type: string
+      desktop_acceptance_complete:
+        description: I manually verified the rendered desktop UI and Windows install/start/uninstall flow
+        required: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.version.outputs.commit }}
+    steps:
+      - name: Require maintainer acceptance
+        if: inputs.desktop_acceptance_complete != true
+        run: exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        env:
+          TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'tag must be vMAJOR.MINOR.PATCH'; exit 1; }
+          git show-ref --tags --verify --quiet "refs/tags/$TAG" || { echo "tag does not exist: $TAG"; exit 1; }
+          commit="$(git rev-parse "refs/tags/$TAG^{commit}")"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: validate
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11'
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - name: Put python3 on PATH
+        shell: pwsh
+        run: |
+          $python = (Get-Command python.exe).Source
+          Copy-Item -LiteralPath $python -Destination (Join-Path (Split-Path $python) 'python3.exe') -Force
+      - name: Build, test and package Windows release
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/build-release-windows.ps1 -Version '${{ needs.validate.outputs.version }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            release/Marisa-DSH-windows-x64-standalone.exe
+            release/Marisa-DSH-windows-x64.msi
+          if-no-files-found: error
+
+  linux-experimental:
+    needs: validate
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - name: Install Wails Linux build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Build experimental system-DSH shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release/linux
+          go build -C desktop -trimpath -ldflags '-s -w' -o ../release/linux/marisa-dsh .
+          cp desktop/README.md release/linux/README.md
+          tar -C release/linux -czf release/Marisa-DSH-linux-x64-experimental.tar.gz marisa-dsh README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-experimental
+          path: release/Marisa-DSH-linux-x64-experimental.tar.gz
+          if-no-files-found: error
+
+  macos-experimental:
+    needs: validate
+    continue-on-error: true
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - name: Build unsigned experimental app
+        shell: bash
+        run: |
+          set -euo pipefail
+          app='release/Marisa DSH.app'
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          go build -C desktop -trimpath -ldflags '-s -w' -o "../$app/Contents/MacOS/Marisa DSH" .
+          cp desktop/installer/macos-Info.plist "$app/Contents/Info.plist"
+          ditto -c -k --sequesterRsrc --keepParent "$app" release/Marisa-DSH-macos-arm64-experimental.app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-experimental
+          path: release/Marisa-DSH-macos-arm64-experimental.app.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [validate, windows, linux-experimental, macos-experimental]
+    if: always() && needs.validate.result == 'success' && needs.windows.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+          fetch-depth: 0
+      - name: Verify the release tag remains pinned to the validated commit
+        env:
+          TAG: ${{ inputs.tag }}
+          EXPECTED_COMMIT: ${{ needs.validate.outputs.commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          actual_commit="$(git rev-parse "refs/tags/$TAG^{commit}")"
+          test "$actual_commit" = "$EXPECTED_COMMIT" || {
+            echo "tag $TAG moved from $EXPECTED_COMMIT to $actual_commit; refusing to publish mixed artifacts"
+            exit 1
+          }
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Generate checksums for every successful release asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f release-assets/SHA256SUMS.txt
+          (
+            cd release-assets
+            find . -maxdepth 1 -type f -printf '%f\0' | sort -z |
+              while IFS= read -r -d '' asset; do sha256sum -- "$asset"; done
+          ) > release-assets/SHA256SUMS.txt
+          test -s release-assets/SHA256SUMS.txt
+      - name: Create prerelease and upload every successful platform
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease --generate-notes \
+              --title "Marisa DSH $TAG (Preview)" \
+              --notes 'Windows is the supported distribution. Linux and macOS assets, when present, are experimental system-DSH shells. Windows and macOS artifacts are currently unsigned.'
+          fi
+          find release-assets -type f -print0 | xargs -0 gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber

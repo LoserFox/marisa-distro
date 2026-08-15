@@ -2,9 +2,9 @@
 /**
  * generate-profile.mjs — materialize the marisa v2 distribution.
  *
- * Reads legacy/plugins.json (29-plugin manifest: 21 git + 8 npm) and writes:
+ * Reads profiles/marisa/plugins.json (28 vendored plugins) and writes:
  *   1. bundles/marisa-bundle/package.json — the fork's aggregation bundle:
- *      the 21 vendored git plugins + pwsh lane + tool-cordis + skill-manager
+ *      the 20 vendored git plugins + pwsh lane + tool-cordis + skill-manager
  *      as file: deps, with the composition patch (cordis.patch.yml, checked
  *      in beside it) owned by the bundle. Patch rows resolve through the
  *      profile's node_modules, where the bundle's deps are hoisted.
@@ -17,11 +17,10 @@
  *      to hand-written profile rows.
  *
  * Resolution contract:
- *   - git plugin dep KEYS are the ACTUAL package.json names of the vendored
- *     dirs (not the manifest names): two dirs vendored under different scopes
- *     than plugins.json records — dsh-drag-and-drop -> @omdsh-dev/
- *     dsh-drag-and-drop, dsh-track -> @fakechris/dsh-track. The generator
- *     warns on every mismatch.
+ *   - git plugin dep KEYS are the ACTUAL package.json names recorded in
+ *     profiles/marisa/plugins.json. The generator reads each vendored
+ *     package.json and warns whenever the recorded name has drifted from the
+ *     source tree (e.g. a sync PR changed the package identity).
  *   - Extra file: deps required by patch rows that reference non-plugin
  *     packages:
  *       @deepseek-ai/dsh-tool-cordis -> harness/packages/cordis/tool-cordis
@@ -50,18 +49,23 @@ const TEMPLATE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(TEMPLATE_DIR, '..', '..');
 const PLUGINS_ROOT = path.join(REPO, 'plugins');
 const BUNDLE_DIR = path.join(REPO, 'bundles', 'marisa-bundle');
-const MANIFEST = JSON.parse(readFileSync(path.join(REPO, 'legacy', 'plugins.json'), 'utf8'));
+const MANIFEST = JSON.parse(readFileSync(path.join(TEMPLATE_DIR, 'plugins.json'), 'utf8'));
 
 const DSH_ROOT = process.env.USERPROFILE || os.homedir();
-const PROFILE_DIR = path.join(DSH_ROOT, '.dsh', 'profiles', 'marisa');
+const PROFILE_DIR = process.env.MARISA_PROFILE_DIR
+  ? path.resolve(process.env.MARISA_PROFILE_DIR)
+  : path.join(DSH_ROOT, '.dsh', 'profiles', 'marisa');
+const RUNTIME_PROFILE_DIR = path.join(REPO, 'profiles', 'marisa', 'runtime');
+const isReleaseRuntime = path.resolve(PROFILE_DIR) === path.resolve(RUNTIME_PROFILE_DIR);
 
 // Windows-safe absolute path with forward slashes for file:/workspace specs.
 const fwd = (p) => p.split(path.sep).join('/');
+const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR, target)) : fwd(target);
 
 // ── manifest ─────────────────────────────────────────────────────────────
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
-if (gitPlugins.length !== 21) throw new Error(`expected 21 git plugins, got ${gitPlugins.length}`);
+if (gitPlugins.length !== 20) throw new Error(`expected 20 git plugins, got ${gitPlugins.length}`);
 if (npmPlugins.length !== 8) throw new Error(`expected 8 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
@@ -95,13 +99,13 @@ for (const [name, dir] of Object.entries(EXTRA_DIRS)) {
 // ── marisa-bundle package.json ───────────────────────────────────────────
 const bundlePkg = {
   name: 'marisa-bundle',
-  version: '2.0.0',
+  version: '0.1.0',
   private: true,
   // This is a manifest-only bundle. A resolvable root entry is required by
   // MyGO's strict bundle preflight (`require.resolve(bundleName)`).
   main: './package.json',
   description:
-    '魔理沙 fork 聚合 bundle — 21 vendored git plugins + Windows pwsh lane + tool-cordis + skill-manager（组合行见 cordis.patch.yml）',
+    '魔理沙 fork 聚合 bundle — 20 vendored git plugins + Windows pwsh lane + tool-cordis + skill-manager（组合行见 cordis.patch.yml）',
   dependencies: bundleDeps,
   dsh: {
     bundle: { patch: './cordis.patch.yml' },
@@ -110,10 +114,12 @@ const bundlePkg = {
 
 // ── thin profile ─────────────────────────────────────────────────────────
 const profileDeps = {
-  'marisa-bundle': `file:${fwd(BUNDLE_DIR)}`,
+  'marisa-bundle': `file:${profileRef(BUNDLE_DIR)}`,
 };
 for (const p of npmPlugins) {
-  profileDeps[p.name] = p.version;
+  const dir = path.join(PLUGINS_ROOT, p.dir);
+  if (!existsSync(path.join(dir, 'package.json'))) throw new Error(`vendored npm plugin dir missing: ${dir}`);
+  profileDeps[p.name] = `file:${profileRef(dir)}`;
 }
 
 const MYGO_VERSION = '0.2.0-rc.6';
@@ -152,15 +158,15 @@ const bundles = [
 const pkg = {
   name: 'marisa-marisa',
   private: true,
-  version: '2.0.0',
-  description: '魔理沙 v2 薄 profile — base + web-app + Marisa 插件 + MyGO rc6 市场',
+  version: '0.1.0',
+  description: '魔理沙薄 profile — base + web-app + vendored 插件 + MyGO rc6 市场',
   dependencies: profileDeps,
   dsh: {
     profile: { bundles },
     desktop: {
       id: 'ai.deepseek.dsh.marisa',
       window: { width: 1280, height: 800, minWidth: 800, minHeight: 600 },
-      icon: fwd(path.join(REPO, 'desktop', 'assets', 'icon.svg')),
+      icon: profileRef(path.join(REPO, 'desktop', 'assets', 'icon.svg')),
       dshHome: 'bundled',
     },
   },
@@ -179,7 +185,6 @@ const landlockGlobs = [
   'harness/native/landlock-run/packages/linux-x64',
 ];
 const minimumReleaseAgeExclude = [
-  '@canglongcl/dsh-web-review@0.1.0',
   '@deepseek-ai/dsh-agent@0.1.0-rc.6',
   '@deepseek-ai/dsh-brand@0.1.0-rc.6',
   '@deepseek-ai/dsh-commands@0.1.0-rc.6',
@@ -192,25 +197,18 @@ const minimumReleaseAgeExclude = [
   '@deepseek-ai/dsh-storage@0.1.0-rc.6',
   '@deepseek-ai/dsh-system-prompt@0.1.0-rc.6',
   '@deepseek-ai/dsh-tools@0.1.0-rc.6',
-  '@huanlin/dsh-plugin-aigc-canvas@0.1.0',
-  '@huanlin/dsh-plugin-interpreters@0.1.0',
-  '@huanlin/dsh-plugin-mineru@0.2.1',
-  '@huanlin/dsh-plugin-ya-workspace-sidebar@0.1.0',
-  '@huanlin/dsh-plugin-yet-another-subagent@0.1.2',
   ...MYGO_PACKAGES.map((name) => `${name}@${MYGO_VERSION}`),
   '@r05en1cu/dsh-mygo-api@0.2.0-rc.6',
   '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.6',
-  'dsh-better-sidebar@0.10.3',
-  'dsh-llm-fallbacks@0.1.0-alpha.1',
 ];
 const workspaceYaml = `# marisa v2 profile workspace — joins the marisa-distro harness workspaces.
 packages:
   - '.'
-  - '${fwd(path.join(REPO, 'harness', 'packages', '*'))}'
-  - '${fwd(path.join(REPO, 'harness', 'packages', '*', '*'))}'
-  - '${fwd(path.join(REPO, 'harness', 'vendor', '*'))}'
-  - '${fwd(path.join(REPO, 'harness', 'apps', '*'))}'
-${landlockGlobs.map((g) => `  - '${fwd(path.join(REPO, g))}'`).join('\n')}
+  - '${profileRef(path.join(REPO, 'harness', 'packages', '*'))}'
+  - '${profileRef(path.join(REPO, 'harness', 'packages', '*', '*'))}'
+  - '${profileRef(path.join(REPO, 'harness', 'vendor', '*'))}'
+  - '${profileRef(path.join(REPO, 'harness', 'apps', '*'))}'
+${landlockGlobs.map((g) => `  - '${profileRef(path.join(REPO, g))}'`).join('\n')}
 
 nodeLinker: hoisted
 linkWorkspacePackages: true
@@ -228,11 +226,6 @@ allowBuilds:
 minimumReleaseAgeExclude:
 ${minimumReleaseAgeExclude.map((p) => `  - '${p}'`).join('\n')}
 
-# Published 0.1.1 registers its browser bundle under the obsolete
-# @dsh-external scope, so the client loader rejects it as a different module.
-patchedDependencies:
-  '@huanlin/dsh-plugin-aigc-canvas@0.1.1': '${fwd(path.join(REPO, 'patches', '@huanlin__dsh-plugin-aigc-canvas@0.1.1.patch'))}'
-
 `;
 
 // ── materialize ──────────────────────────────────────────────────────────
@@ -241,8 +234,13 @@ mkdirSync(BUNDLE_DIR, { recursive: true });
 writeFileSync(path.join(BUNDLE_DIR, 'package.json'), JSON.stringify(bundlePkg, null, 2) + '\n');
 
 // 2) thin profile — overwrite the half-built profile from earlier experiments
-for (const stale of ['node_modules', 'pnpm-lock.yaml', 'allinone-install', 'cordis.patch.yml', 'v2-compat']) {
+for (const stale of ['allinone-install', 'cordis.patch.yml', 'v2-compat']) {
   rmSync(path.join(PROFILE_DIR, stale), { recursive: true, force: true });
+}
+if (!isReleaseRuntime) {
+  for (const stale of ['node_modules', 'pnpm-lock.yaml']) {
+    rmSync(path.join(PROFILE_DIR, stale), { recursive: true, force: true });
+  }
 }
 mkdirSync(PROFILE_DIR, { recursive: true });
 writeFileSync(path.join(PROFILE_DIR, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');

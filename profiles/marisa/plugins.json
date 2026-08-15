@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    { "name": "@huanlin/dsh-plugin-aigc-canvas", "source": "npm", "dir": "aigc-canvas", "version": "0.1.0" },
+    { "name": "@dsh-external/workflow", "source": "git", "dir": "dsh_workflow" },
+    { "name": "@dpskh/a2a", "source": "git", "dir": "dsh-a2a" },
+    { "name": "@dsh-external/dsh-artifact", "source": "git", "dir": "dsh-artifact" },
+    { "name": "dsh-better-sidebar", "source": "npm", "dir": "dsh-better-sidebar", "version": "0.10.3", "bundle": true },
+    { "name": "@dsh-external/dsh-code-map", "source": "git", "dir": "dsh-code-map" },
+    { "name": "@dsh-external/dsh-diff-viewer", "source": "git", "dir": "dsh-diff-viewer" },
+    { "name": "@omdsh-dev/dsh-drag-and-drop", "source": "git", "dir": "dsh-drag-and-drop" },
+    { "name": "@deepseek-ai/dsh-genui", "source": "git", "dir": "dsh-genui" },
+    { "name": "@loserfox/git-identity", "source": "git", "dir": "dsh-git-identity" },
+    { "name": "@dsh-external/dsh-input-history", "source": "git", "dir": "dsh-input-history" },
+    { "name": "dsh-llm-fallbacks", "source": "npm", "dir": "dsh-llm-fallbacks", "version": "0.1.0-alpha.1", "bundle": true },
+    { "name": "@dsh-community/multimedia-webui-input", "source": "git", "dir": "dsh-multimedia-webui-input" },
+    { "name": "@dsh-community/dsh-paste-input", "source": "git", "dir": "dsh-paste-input" },
+    { "name": "@dsh-external/dsh-sidechain", "source": "git", "dir": "dsh-sidechain" },
+    { "name": "dsh-sonar", "source": "git", "dir": "dsh-sonar" },
+    { "name": "@dsh-external/dsh-stickers", "source": "git", "dir": "dsh-stickers" },
+    { "name": "@dsh-external/dsh-suggested-replies", "source": "git", "dir": "dsh-suggested-replies" },
+    { "name": "@fakechris/dsh-track", "source": "git", "dir": "dsh-track" },
+    { "name": "@dsh-external/dsh-ui-progress", "source": "git", "dir": "dsh-ui-progress" },
+    { "name": "@dsh-external/dsh-vision-toolkit", "source": "git", "dir": "dsh-vision-toolkit" },
+    { "name": "@canglongcl/dsh-web-review", "source": "npm", "dir": "dsh-web-review", "version": "0.1.0" },
+    { "name": "@bill9109/dsh-web-ui-notify", "source": "git", "dir": "dsh-web-ui-approval-notify" },
+    { "name": "@huanlin/dsh-plugin-interpreters", "source": "npm", "dir": "interpreters", "version": "0.1.0" },
+    { "name": "@huanlin/dsh-plugin-mineru", "source": "npm", "dir": "mineru", "version": "0.2.1" },
+    { "name": "whale-girl", "source": "git", "dir": "whale-girl" },
+    { "name": "@huanlin/dsh-plugin-ya-workspace-sidebar", "source": "npm", "dir": "ya-workspace-sidebar", "version": "0.1.0" },
+    { "name": "@huanlin/dsh-plugin-yet-another-subagent", "source": "npm", "dir": "yet-another-subagent", "version": "0.1.2" }
+  ]
+}

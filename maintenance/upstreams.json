@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "harness": {
+    "mode": "fork",
+    "path": "harness",
+    "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
+    "baseline": "4e7fb95f",
+    "dshVersion": "0.1.0-rc.6",
+    "channel": "testing",
+    "diffDocument": "docs/upstream-diff.md"
+  },
+  "plugins": [
+    {
+      "id": "aigc-canvas",
+      "source": "npm",
+      "mode": "fork",
+      "repository": null,
+      "version": "0.1.0",
+      "diffDocument": "docs/plugins/aigc-canvas.md",
+      "note": "npm snapshot; client module id compatibility patch"
+    },
+    {
+      "id": "dsh_workflow",
+      "mode": "fork",
+      "repository": "https://github.com/dsh-external/dsh_workflow.git",
+      "baseline": "44b83c182aa02d1be8a0803e8446cb495f93cd8f",
+      "diffDocument": "docs/plugins/dsh_workflow.md"
+    },
+    {
+      "id": "dsh-a2a",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-a2a.git",
+      "baseline": "4da1129c201984cda7aaffa31c9ac7fdf158eb92"
+    },
+    {
+      "id": "dsh-artifact",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-artifact.git",
+      "baseline": "cad2c4dacccf2515f06fc89dfbac16cc92a037ed"
+    },
+    {
+      "id": "dsh-better-sidebar",
+      "source": "npm",
+      "mode": "fork",
+      "repository": "https://github.com/omdsh-dev/DSH-better-sidebar.git",
+      "version": "0.10.3",
+      "diffDocument": "docs/plugins/dsh-better-sidebar.md",
+      "note": "npm snapshot; install-time lifecycle scripts removed"
+    },
+    {
+      "id": "dsh-code-map",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-code-map.git",
+      "baseline": "c90e37d02da52cf3be42efcef16e08c0bedbddee"
+    },
+    {
+      "id": "dsh-diff-viewer",
+      "mode": "fork",
+      "repository": "https://github.com/dsh-external/dsh-diff-viewer.git",
+      "baseline": "75ded1bc49d0d63e6541b95f37e6e3acc184344d",
+      "diffDocument": "docs/plugins/dsh-diff-viewer.md"
+    },
+    {
+      "id": "dsh-drag-and-drop",
+      "mode": "mirror",
+      "repository": "https://github.com/omdsh-dev/dsh-drag-and-drop.git",
+      "baseline": "09088d6890866eda57adee6864cd2fbf8281f679"
+    },
+    {
+      "id": "dsh-genui",
+      "mode": "fork",
+      "repository": "https://github.com/dsh-external/dsh-genui.git",
+      "baseline": "ae8006d890d516ea63eba1f76f1dca399d85112f",
+      "diffDocument": "docs/plugins/dsh-genui.md"
+    },
+    {
+      "id": "dsh-git-identity",
+      "mode": "fork",
+      "repository": "https://github.com/dsh-external/dsh-git-identity.git",
+      "baseline": "39c608ca8e0779c93c66648ad457decffdf61903",
+      "diffDocument": "docs/plugins/dsh-git-identity.md"
+    },
+    {
+      "id": "dsh-input-history",
+      "mode": "fork",
+      "repository": "https://github.com/lhh010/dsh-input-history.git",
+      "baseline": "eaf9aab70df9220e2e7b7b07cfb61605909d110d",
+      "diffDocument": "docs/plugins/dsh-input-history.md"
+    },
+    {
+      "id": "dsh-llm-fallbacks",
+      "source": "npm",
+      "mode": "fork",
+      "repository": "https://github.com/omdsh-dev/dsh-llm-fallbacks.git",
+      "version": "0.1.0-alpha.1",
+      "diffDocument": "docs/plugins/dsh-llm-fallbacks.md",
+      "note": "npm snapshot; install-time lifecycle scripts removed, mounted only after rc6 client-event compat"
+    },
+    {
+      "id": "dsh-multimedia-webui-input",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-multimedia-webui-input.git",
+      "baseline": "fecdc67a4789175d6bfd42db1d4035716d798cb2"
+    },
+    {
+      "id": "dsh-paste-input",
+      "mode": "mirror",
+      "repository": "https://github.com/lhh010/dsh-paste-input.git",
+      "baseline": "7cf0698af7bf7b5e20a3af040047664b92412f92"
+    },
+    {
+      "id": "dsh-sidechain",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-sidechain.git",
+      "baseline": "ee6fadd9bae9efb36477ec17c58e1409eeabaf88"
+    },
+    {
+      "id": "dsh-sonar",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-sonar.git",
+      "baseline": "1de51055a30e23ede8ec8c5650ca583af432166d"
+    },
+    {
+      "id": "dsh-stickers",
+      "mode": "fork",
+      "repository": "https://github.com/dsh-external/dsh-stickers.git",
+      "baseline": "1703f09915db1058b6031b31e52fd404560e0a78",
+      "diffDocument": "docs/plugins/dsh-stickers.md"
+    },
+    {
+      "id": "dsh-suggested-replies",
+      "mode": "fork",
+      "repository": "https://github.com/dsh-external/dsh-suggested-replies.git",
+      "baseline": "eb7e41b82ae80d01ae09b6e2641156dc21fdd01e",
+      "diffDocument": "docs/plugins/dsh-suggested-replies.md"
+    },
+    {
+      "id": "dsh-track",
+      "mode": "fork",
+      "repository": "https://github.com/dsh-external/dsh-track.git",
+      "baseline": "4e6112b6b3c243e1867f876a68b16af2e2f2eb3c",
+      "diffDocument": "docs/plugins/dsh-track.md"
+    },
+    {
+      "id": "dsh-ui-progress",
+      "mode": "fork",
+      "repository": "https://github.com/lhh010/dsh-ui-progress.git",
+      "baseline": "e8ffef3bce21fa5d657e0c5e5f2d78c5d8e41631",
+      "diffDocument": "docs/plugins/dsh-ui-progress.md"
+    },
+    {
+      "id": "dsh-vision-toolkit",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-vision-toolkit.git",
+      "baseline": "8d35621cf955d10d9a76a02cd7b5b946fcc769ad"
+    },
+    {
+      "id": "dsh-web-review",
+      "source": "npm",
+      "mode": "mirror",
+      "repository": "https://github.com/CanglongCl/dsh-web-review.git",
+      "version": "0.1.0"
+    },
+    {
+      "id": "dsh-web-ui-approval-notify",
+      "mode": "fork",
+      "repository": "https://github.com/bill9109/dsh-web-ui-notify.git",
+      "baseline": "865d2f6fc93f2e0d051d53df772646cb831a43ed",
+      "diffDocument": "docs/plugins/dsh-web-ui-approval-notify.md"
+    },
+    {
+      "id": "interpreters",
+      "source": "npm",
+      "mode": "mirror",
+      "repository": null,
+      "version": "0.1.0",
+      "note": "npm snapshot; upstream repository not published"
+    },
+    {
+      "id": "mineru",
+      "source": "npm",
+      "mode": "mirror",
+      "repository": null,
+      "version": "0.2.1",
+      "note": "npm snapshot; upstream repository not published"
+    },
+    {
+      "id": "whale-girl",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/whale-girl.git",
+      "baseline": "ecba322be408138fcc265588cacf00737154d31e"
+    },
+    {
+      "id": "ya-workspace-sidebar",
+      "source": "npm",
+      "mode": "mirror",
+      "repository": null,
+      "version": "0.1.0",
+      "note": "npm snapshot; upstream repository not published"
+    },
+    {
+      "id": "yet-another-subagent",
+      "source": "npm",
+      "mode": "mirror",
+      "repository": null,
+      "version": "0.1.2",
+      "note": "npm snapshot; upstream repository not published"
+    }
+  ]
+}

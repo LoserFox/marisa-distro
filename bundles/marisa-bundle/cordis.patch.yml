@@ -3,17 +3,15 @@
 # 组成（v1 dsh-allinone 聚合 bundle 的内容，由 fork 的 marisa-bundle 持有）：
 #   (1) Windows 原生 PowerShell lane（取自 win-port profile）：禁用 bash 栈
 #       （bash-sandbox / tool-bash / permission），换入 pwsh-local + tool-pwsh；
-#   (2) 原 dsh-allinone 全部 insert 行（29 行），行 name 已对照 vendored
-#       插件 package.json 逐一核验（两处修正见下）；
+#   (2) 经 rc6 兼容性筛选后保留的 insert 行，行 name 已对照 vendored
+#       插件 package.json 逐一核验；
 #   (3) v1 已禁用插件对应的 disable 行：ui-workspace（官方工作区浏览器的
-#       disable 行）与 qwen-mm（insert 行内嵌 disabled: true）；
+#       disable 行）；
 #   (4) multimedia-webui-input 判定不兼容 → 禁用行（v1.2 验收报告）。
 #
 # name 修正记录（对照 plugins/<dir>/package.json 实际 name）：
 #   - drag-and-drop：原 allinone 行 '@bill9109/dsh-drag-and-drop'
 #     → 实际 '@omdsh-dev/dsh-drag-and-drop'
-#   - track：原 allinone 行 '@deepseek-ai/dsh-track'
-#     → 实际 '@fakechris/dsh-track'
 # 行 name 通过 profile node_modules（file: 链接安装的 vendored 包）解析，
 # 必须与包实际 name 一致，否则 Loader 解析不到。
 
@@ -124,15 +122,6 @@
 # fail-loud 挂起。v2 组合中移除；webServer 部分由 harness 源码别名提供
 # （fork 修复：packages/host/webserver 构造时 ctx.provide("webServer", ...)）。
 
-# ── @deepseek-ai/dsh-qwen-mm（v1 已禁用插件 1/2）──
-# Qwen-MM is an explicit opt-in bundle. The row is present so a profile can
-# enable it with a later overlay, but it never fetches a remote repository or
-# starts an MCP server merely because this bundle was installed.
-- insert:
-    - id: qwen-mm
-      name: '@deepseek-ai/dsh-qwen-mm'
-      disabled: true
-
 # ── @dsh-community/multimedia-webui-input（判定不兼容 → 禁用）──
 # 依赖 @deepseek-ai/dsh-client-ui-slash——官方 harness 不存在此包（rc.5 无此
 # 依赖），无法修复，禁用（同 v1.2 验收报告 legacy/docs-验收报告-20260814.md）。
@@ -163,42 +152,25 @@
     - id: code-map
       name: '@dsh-external/dsh-code-map'
 
-# ── dsh-sonar ──
-# The root row is the browser-roster face; the subpath row owns host services.
-- insert:
-    - id: sonar-view-client
-      name: dsh-sonar
-    - id: sonar-view-host
-      name: dsh-sonar/host
-      config:
-        locale: zh-CN
-        refreshIntervalMs: 2000
-        motion: full
-        backgroundReviewEnabled: true
-        backgroundReviewIntervalMs: 15000
+# ── dsh-sonar: NOT MOUNTED (rc6 compatibility) ──
+# Its published host/client contract targets obsolete Cordis services and the
+# removed conversation.view slot. Keep the vendored mirror for upstream sync,
+# but do not load it into a public rc6 release.
 
 # ── @dsh-external/dsh-sidechain ──
 - insert:
     - id: dsh-sidechain
       name: '@dsh-external/dsh-sidechain'
 
-# ── @dsh-external/dsh-diff-viewer ──
-- insert:
-    - id: dsh-diff-viewer
-      name: '@dsh-external/dsh-diff-viewer'
+# ── dsh-diff-viewer: NOT MOUNTED (rc6 compatibility) ──
+# Its browser contract references UI primitives and slot options unavailable in
+# rc6. The stock edit/write renderer remains active until an upstream-sync
+# build validates the replacement.
 
-# ── @fakechris/dsh-track ──
-# The dsh-track bundle patch: mounts the Track Bridge engine.
-# The web-app bundle already mounts storage (json backend under ~/.dsh/storages),
-# storage-domain, skill, and skill-local — this patch only inserts the track
-# engine row. The fat skill ships in skills/dsh-track/SKILL.md and is copied
-# to ~/.dsh/skills/dsh-track by the install script so skill-local's default
-# roots pick it up.
-# NOTE: vendored package.json name 为 @fakechris/dsh-track（非原 allinone 行的
-# @deepseek-ai/dsh-track，已按实际 name 修正）。
-- insert:
-    - id: track
-      name: '@fakechris/dsh-track'
+# ── dsh-track: NOT MOUNTED (rc6 compatibility) ──
+# The Track Bridge targets removed session-query and Context service contracts.
+# Keep the forked source and its upstream record, but wait for a compatible
+# upstream sync before rebuilding and exposing the engine.
 
 # ── @huanlin/dsh-plugin-yet-another-subagent: REMOVED (v2 incompatibility) ──
 # 2026-08-14 v2 standalone 实测：该插件启动时 registerGlobal 注册工具

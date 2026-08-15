@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'lts/**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11'
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/go.mod
+          cache-dependency-path: desktop/go.sum
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Verify repository and profile contracts
+        run: pnpm test
+      - name: Verify harness CLI contract
+        run: pnpm --dir harness exec vitest run apps/cli/tests/args.spec.ts
+      - name: Verify desktop build modes
+        shell: pwsh
+        run: |
+          go test -C desktop -tags installedbundle ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File scripts/prepare-embedded-test-bundle.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go test -C desktop -tags embeddedbundle ./...
+          exit $LASTEXITCODE
+      - name: Enforce vendored-source PR boundaries
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        env:
+          UPSTREAM_SYNC: ${{ contains(github.event.pull_request.labels.*.name, 'upstream-sync') }}
+          PR_BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          git diff --name-only "origin/${{ github.base_ref }}...HEAD" |
+            node scripts/verify-pr-boundaries.mjs

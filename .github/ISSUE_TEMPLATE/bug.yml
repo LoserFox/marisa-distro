@@ -1,0 +1,74 @@
+name: 可复现的发行版缺陷
+description: 仅用于 Marisa 本身可以完整复现的问题，不接受使用咨询
+title: '[Bug] '
+labels: ['bug', 'needs-reproduction']
+body:
+  - type: checkboxes
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我确认这不是使用咨询，并已在 Discussions、QQ群 956471685 和插件上游中检索
+          required: true
+        - label: 我确认问题属于 Marisa 组合、桌面壳或安装器，而不是单个插件自身
+          required: true
+        - label: 我愿意提供完整复现步骤和去敏日志
+          required: true
+  - type: input
+    attributes:
+      label: Marisa 版本
+      description: Release/tag，例如 v0.1.0；不要只写“最新版”
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: 平台
+      options:
+        - Windows 11 x64
+        - Windows 10 x64
+        - Linux x64（实验）
+        - macOS Apple Silicon（实验）
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: 安装格式
+      options:
+        - MSI
+        - standalone EXE
+        - Linux experimental tar.gz
+        - macOS experimental app.zip
+        - 源码构建
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 最小复现步骤
+      placeholder: |
+        1. 从哪个 Release 下载什么文件
+        2. 在干净目录或新用户环境执行什么操作
+        3. 点击或输入什么
+        4. 问题在第几步稳定出现
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 实际结果
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 去敏日志与截图
+      description: 删除 API key、Cookie、用户名和私人路径；日志请使用代码块。
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 复现频率与已排除项
+      description: 写明复现次数，以及是否在无额外插件、干净配置或重启后仍出现。
+    validations:
+      required: true

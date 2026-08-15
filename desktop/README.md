@@ -1,66 +1,98 @@
-# dsh-desktop
+# Marisa DSH Desktop
 
 English | [中文](README.zh.md)
 
-Packages dsh as a desktop **window** that does not depend on an external browser (Wails v3 shell + WebView2). A normal development build starts `dsh web` from the user environment; the `embeddedbundle` release build embeds Node, the harness, and the profile in one EXE and does not require system Node/pnpm/dsh at runtime.
+The `desktop/` application is the Wails v3 desktop shell for the Marisa DSH
+distribution. It owns the native window, system tray, backend supervision, and
+Windows installers. The Marisa harness and default plugins live in this same
+repository; a Windows Release runs the bundled Marisa runtime rather than a
+separately installed DSH checkout.
 
-## Architecture
+## Runtime behavior
 
 ```
-dsh-shell.exe        Wails shell (this Go program, the only executable)
-  └─ spawns  dsh web --port 0     from user environment (dev) or embedded backend (release)
-     └─ parses "dsh web: http://127.0.0.1:<port>" from the backend stdout
-        └─ loads it in an embedded WebviewWindow
+Marisa DSH desktop shell
+  -> starts the Marisa web backend
+     -> waits for "dsh web: http://127.0.0.1:<port>"
+        -> loads that URL in the embedded WebView window
 ```
 
-The shell is the single entry point and the daemon for the backend: it starts `dsh web --port 0` (port assigned by the OS to avoid conflicts), parses the actual listening address from the backend stdout, and loads it in an embedded WebviewWindow — never opening the system browser. If the backend exits abnormally (network/load failure etc.) it restarts with backoff (1s initial, 30s cap) and repoints to the new address.
+The shell is the only graphical entry point. It never opens the system
+browser, chooses an OS-assigned port by default, and restarts a failed backend
+with bounded backoff. Closing the window hides it in the system tray; choosing
+**Quit** from the tray stops the backend process tree and exits the app. The
+tray also provides show/hide and login-autostart controls.
 
-**Tray-resident background**: closing the window hides it to the system tray instead of quitting — the backend keeps running. The tray icon (left-click toggles the window) has a menu: 打开 dsh (show the window), 开机自启 (toggle autostart on login, checkbox reflects the current state), and 退出 — only quitting from the tray terminates the backend (process tree: taskkill /T on Windows, SIGTERM→SIGKILL group on POSIX), so no orphan node is left behind; main waits for the daemon goroutine to settle before actually exiting. A navigation-ready guard delays `SetURL` until the webview exists (the WebView2 controller is created asynchronously; navigating earlier panics in Wails v3 beta).
+Windows requires WebView2. It is included with current Windows 11 systems;
+Windows 10 systems may need the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
 
-## Backend requirements
+## Windows releases
 
-- `dsh` on PATH — installed by `scripts/install-windows.ps1` from the [dsh-win-port](https://github.com/dsh-external/dsh-win-port) repository, or run from a patched checkout.
-- The checkout must be built: `pnpm run build` (at least `build:web`).
-- `DSH_WEB_CMD` — optional full command line for the backend; `{port}` is replaced with the resolved port. Default: `dsh web --port {port}`.
+Download a tagged build from the [Marisa DSH Releases page](https://github.com/LoserFox/marisa-distro/releases).
+Releases are created only when a maintainer manually starts the gated Release
+workflow after checking the rendered desktop UI and the MSI install, launch,
+and uninstall flow. Pushes, pull requests, and scheduled checks do not publish
+user binaries.
 
-## Environment variables (read before loading, effective before the window/backend start)
+Each supported Windows Release has two self-contained choices:
 
-- `DSH_WEB_CMD` — backend command line (`{port}` placeholder), default `dsh web --port {port}`
-- `DSH_APP_WORKSPACE` — working directory (defaults to the user home; restricted/test environments can override)
-- `DSH_APP_PORT` — backend listen port (default `0`, OS-assigned random port to avoid conflicts; an explicit value pins the port)
+- `Marisa-DSH-windows-x64.msi`: the recommended per-user installer. It
+  installs the shell and prepares the packaged backend during installation, so
+  the first application launch does not need to unpack it.
+- `Marisa-DSH-windows-x64-standalone.exe`: a portable single executable. Its
+  first launch materializes the bundled backend under the current user's local
+  application-data directory; later launches reuse the matching version.
 
-Startup page: the window first shows the embedded "starting dsh…" HTML (not Wails' default blank page) and switches to the real address once the backend is ready. If the backend never becomes ready, the window stays on the startup page and the shell keeps retrying with backoff.
+Both formats contain Node, the Marisa harness, the release profile, and its
+default plugins. They do not require system Node, pnpm, or a separately
+installed `dsh`. Check the `SHA256SUMS.txt` asset before running a download.
+Windows artifacts are currently unsigned, so SmartScreen can show an unknown
+publisher warning.
 
-## Download (recommended — no Go needed)
+## Experimental platforms
 
-Prebuilt binaries are built by GitHub Actions on every push and attached to every `v*` tag:
+Linux x64 and macOS Apple Silicon artifacts, when attached to a Release, are
+explicitly experimental. They are desktop shells, not Windows-equivalent
+self-contained distributions: they use a compatible `dsh` from the user's
+environment. Linux also needs the system GTK/WebKit runtime; the macOS app is
+currently unsigned and not notarized. A failure to build either experimental
+asset does not block the verified Windows Release.
 
-- [Releases page](https://github.com/dsh-external/dsh-desktop/releases) — download `dsh-desktop-windows-amd64.zip` (contains `dsh-shell.exe`), unzip anywhere, run.
+## Development backend
 
-WebView2 is required at runtime (Windows 11 ships it; Windows 10 needs the Evergreen Runtime).
-
-## Install
+A plain development build does not embed a backend. It starts the local command
+described by `DSH_WEB_CMD`, or `dsh web --port {port}` when that variable is
+unset. Build the Marisa harness and profile first; contributors normally use
+the repository-root build pipeline on Windows:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\install-desktop-windows.ps1
+pwsh -NoProfile -File build.ps1
 ```
 
-Copies `dsh-shell.exe` (plus `icon.ico` for the shortcut) to `%LOCALAPPDATA%\dsh-desktop` with Start-menu and Desktop shortcuts. If no local build exists, the installer **downloads the latest prebuilt binary automatically** — no Go toolchain required. This repository is private, so the download needs GitHub authentication: the installer uses the `gh` CLI when available (falls back to a direct download, which works once the repo is public or the URL is authenticated).
+That pipeline requires Node 22 or newer, pnpm 11 or newer, Go, and `python3`.
+It builds the harness and required plugins, materializes the Marisa profile,
+performs the backend self-check, and writes a development shell to
+`release/dsh-shell.exe`. Use a local built `dsh` command or set
+`DSH_WEB_CMD` before starting that development shell.
 
-## Build from source (optional)
+The shell reads these variables before it creates the window or starts a
+development backend:
 
-One executable, one command, from this repository root (requires a Go toolchain):
+- `DSH_WEB_CMD`: complete backend command line. `{port}` is replaced with the
+  selected port. The default is `dsh web --port {port}`.
+- `DSH_APP_WORKSPACE`: working directory for the backend. It defaults to the
+  current user's home directory.
+- `DSH_APP_PORT`: requested backend port. It defaults to `0`, allowing the OS
+  to select an unused port.
 
-```sh
-go build -C . -o build/dsh-shell.exe .
-```
+Windows packaged builds deliberately replace `DSH_WEB_CMD` with their bundled
+launcher. Do not use those variables to substitute an arbitrary backend into a
+published Windows package.
 
-Run: `run-windows.cmd` (Windows) or `run.sh` (WSLg), or `build/dsh-shell.exe` directly.
+## Verification
 
-## Place in the ecosystem
-
-- The harness-side Windows changes travel as the patch series in the [dsh-win-port](https://github.com/dsh-external/dsh-win-port) repository (`patches/windows-port`, 9 patches) — this shell does NOT depend on them at runtime.
-- The Windows platform plugins (`dsh-pty-windows`, `dsh-shell-windows`) are separate Marisa (dshx) plugin repositories, mounted into a checkout with `dshx install`; the window shell does not mount them.
-- All of these repositories are private.
-
-User environment (POSIX): before starting the backend, the shell sources the user's shell configuration per `$SHELL` (bash → `~/.bashrc`, zsh → `~/.zshrc`) so the backend inherits environment variables exported in the user's terminal (e.g. API keys). Source output is redirected to /dev/null so it does not pollute the backend stdout; `exec` keeps the same process (unchanged PID), so the daemon's wait semantics are unaffected. Windows inherits the user/system environment directly.
+For the repository-wide validation and packaging rules, see
+[the packaging guide](../docs/packaging.md) and
+[the contributor guide](../CONTRIBUTING.md). A release requires more than an
+HTTP check: maintainers must observe a real rendered window and verify MSI
+installation, startup, and removal.

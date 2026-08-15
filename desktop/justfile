@@ -1,14 +1,14 @@
-# dsh-win-port desktop build recipes。
+# Marisa DSH desktop build recipes。
 
 # 用法（仓库根执行）：
-#   just build-windows   构建 Windows 窗口壳 -> desktop/build/dsh-shell.exe
+#   just build-windows   构建 Windows 窗口壳 -> release/dsh-shell.exe
 
 # 构建开发版 Windows 窗口壳（后端使用用户环境里的 dsh）。
 [working-directory("..")]
 build-windows:
-    go build -C desktop -o build/dsh-shell.exe .
+    go build -C desktop -o release/dsh-shell.exe .
 
 # 运行构建产物（Windows）。
 [working-directory("..")]
 run:
-    desktop/build/dsh-shell.exe
+    release/dsh-shell.exe

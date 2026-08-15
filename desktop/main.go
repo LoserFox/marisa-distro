@@ -204,8 +204,8 @@ func main() {
 	defer cancel()
 
 	app := application.New(application.Options{
-		Name:        "DeepSeek Harness",
-		Description: "DeepSeek Harness Desktop",
+		Name:        "Marisa DSH",
+		Description: "Marisa DSH Desktop",
 		Mac: application.MacOptions{
 			// 托盘常驻:关窗只隐藏,应用持续运行,托盘「退出」才结束。
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
@@ -216,7 +216,7 @@ func main() {
 	// 地址创建。HTML 是启动页（替代 Wails 默认空白页），就绪后由守护进程
 	// 用 SetURL 切到真实地址。
 	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:     "DeepSeek Harness Desktop",
+		Title:     "Marisa DSH",
 		Width:     1280,
 		Height:    800,
 		MinWidth:  800,

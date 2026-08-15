@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用交流与想法
+    url: https://github.com/LoserFox/marisa-distro/discussions
+    about: Issues 不接受使用咨询；请在 Discussions 或 QQ 群 956471685 进行社区交流。
+  - name: 插件自身问题
+    url: https://github.com/AdamPlatin123/awesome-dsh-plugins
+    about: 请先找到插件的上游仓库，并向插件作者提交问题。

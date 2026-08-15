@@ -4,7 +4,7 @@
 #   1. Prereq check        node>=22, pnpm>=11, go, python3
 #   2. Root install        pnpm install --no-frozen-lockfile (CI=true) at repo root
 #   3. Harness build       pnpm run build in harness/ (fallback: build:web)
-#   4. Plugin builds       7 plugins that need lib built (others ship lib)
+#   4. Plugin builds       6 plugins that need lib built (others ship lib)
 #   5. Materialize profile node profiles/marisa/generate-profile.mjs
 #   6. Profile install     pnpm install --no-frozen-lockfile in %USERPROFILE%\.dsh\profiles\marisa
 #   7. Self-check          boot backend, then verify MyGO API + browser bundle graph
@@ -17,9 +17,6 @@
 # Windows notes baked in:
 #   - plugins have no local node_modules; the root hoisted .bin is prepended to
 #     PATH before `npm run build` so tsc/tsdown shims resolve.
-#   - dsh-sonar / dsh-track build scripts hardcode `node node_modules/...` paths
-#     (or spawn .bin/tsc without an extension, which fails on Windows); both are
-#     built by invoking the root-hoisted tools directly.
 #
 # Run:  powershell -File build.ps1   (pwsh recommended)
 
@@ -30,7 +27,8 @@ param(
   [switch]$SkipPluginBuilds,
   [switch]$SkipProfileInstall,
   [switch]$SkipSelfCheck,
-  [switch]$SkipDesktopShell
+  [switch]$SkipDesktopShell,
+  [string]$ProfilePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,7 +38,7 @@ $Repo = $PSScriptRoot
 $RootBin = Join-Path $Repo 'node_modules\.bin'
 $RootNodeModules = Join-Path $Repo 'node_modules'
 $HomeDir = if ($env:USERPROFILE) { $env:USERPROFILE } else { [Environment]::GetFolderPath('UserProfile') }
-$ProfileDir = Join-Path $HomeDir '.dsh\profiles\marisa'
+$ProfileDir = if ($ProfilePath) { [System.IO.Path]::GetFullPath($ProfilePath) } else { Join-Path $HomeDir '.dsh\profiles\marisa' }
 $ReleaseDir = Join-Path $Repo 'release'
 $env:CI = 'true'   # pnpm non-interactive mode
 # registry.npmjs.org is flaky from this network (UND_ERR_DESTROYED / truncated
@@ -84,36 +82,6 @@ function Invoke-PluginNpmBuild([string]$dir) {
   try {
     & npm run build
     Assert-LastExit0 "npm run build in plugins\$dir"
-    if (-not (Test-Path 'lib\index.js')) { throw "plugins\$dir build produced no lib\index.js" }
-    $results["plugin:$dir"] = 'OK'
-    Write-Host "plugin $dir -> OK (lib/index.js present)"
-  } finally { Pop-Location }
-}
-
-function Invoke-PluginManualBuild([string]$dir) {
-  # dsh-sonar / dsh-track: build scripts hardcode `node node_modules/...` paths
-  # that do not exist (plugins have no local node_modules), and dsh-track also
-  # spawns extension-less .bin/tsc which fails on Windows. Run the steps with
-  # the root-hoisted tools instead.
-  Push-Location (Join-Path $Repo "plugins\$dir")
-  try {
-    $tscJs = Join-Path $RootNodeModules 'typescript\lib\tsc.js'
-    $tsdown = Join-Path $RootNodeModules 'tsdown\dist\run.mjs'
-    if (-not (Test-Path $tscJs)) { throw "root typescript lib/tsc.js missing after install: $tscJs" }
-    if (-not (Test-Path $tsdown)) { throw "root tsdown dist/run.mjs missing after install: $tsdown" }
-    if ($dir -eq 'dsh-sonar') {
-      & node $tscJs -p tsconfig.json
-      Assert-LastExit0 "tsc -p tsconfig.json (plugins\$dir)"
-      & node $tsdown --config tsdown.config.ts
-      Assert-LastExit0 "tsdown --config tsdown.config.ts (plugins\$dir)"
-    } elseif ($dir -eq 'dsh-track') {
-      & node $tscJs -p tsconfig.json
-      Assert-LastExit0 "tsc -p tsconfig.json (plugins\$dir)"
-      & node $tsdown -c tsdown.client.config.ts
-      Assert-LastExit0 "tsdown -c tsdown.client.config.ts (plugins\$dir)"
-      & node -e "require('fs').renameSync('lib/client.cjs','lib/client.js')"
-      Assert-LastExit0 "rename lib/client.cjs -> lib/client.js (plugins\$dir)"
-    }
     if (-not (Test-Path 'lib\index.js')) { throw "plugins\$dir build produced no lib\index.js" }
     $results["plugin:$dir"] = 'OK'
     Write-Host "plugin $dir -> OK (lib/index.js present)"
@@ -183,12 +151,11 @@ try {
 
   # ═══════════════ 4/8 plugin builds ═══════════════
   if (-not $SkipPluginBuilds) {
-    Write-Step '4/8 plugin builds (7 need lib; others ship lib)'
+    Write-Step '4/8 plugin builds (3 rc6-compatible plugins need lib; others ship lib or are compatibility-disabled)'
     $env:PATH = "$RootBin;$env:PATH"   # root hoisted .bin: tsc/tsdown shims for plugins
-    $manual = @('dsh-sonar', 'dsh-track')
-    foreach ($dir in @('Qwen-MM-Plugins', 'dsh-a2a', 'dsh-code-map', 'dsh-diff-viewer', 'dsh-sidechain', 'dsh-sonar', 'dsh-track')) {
+    foreach ($dir in @('dsh-a2a', 'dsh-code-map', 'dsh-sidechain')) {
       Write-Host "--- building plugin: $dir ---"
-      if ($dir -in $manual) { Invoke-PluginManualBuild $dir } else { Invoke-PluginNpmBuild $dir }
+      Invoke-PluginNpmBuild $dir
     }
   } else {
     Write-Step '4/8 plugin builds (SKIPPED by -SkipPluginBuilds)'
@@ -198,7 +165,10 @@ try {
   Write-Step '5/8 materialize profile (generate-profile.mjs)'
   Push-Location $Repo
   try {
+    $previousProfileOutput = $env:MARISA_PROFILE_DIR
+    $env:MARISA_PROFILE_DIR = $ProfileDir
     & node profiles/marisa/generate-profile.mjs
+    $env:MARISA_PROFILE_DIR = $previousProfileOutput
     Assert-LastExit0 'generate-profile.mjs'
   } finally { Pop-Location }
   if (-not (Test-Path (Join-Path $ProfileDir 'package.json'))) {
@@ -224,12 +194,12 @@ try {
     $stderrLog = Join-Path $ReleaseDir 'web-backend.err.log'
     Remove-Item $stdoutLog, $stderrLog -ErrorAction SilentlyContinue
 
-    $tsxLoader = 'file:///C:/Users/lf/.dsh/source/current/node_modules/tsx/dist/esm/index.mjs'
-    if (-not (Test-Path (Join-Path $HomeDir '.dsh\source\current\node_modules\tsx\dist\esm\index.mjs'))) {
-      throw "tsx loader shim missing: $tsxLoader"
-    }
     $patchPath = (Join-Path $ProfileDir 'desktop.overlay.yml').Replace('\', '/')
-    $binArgs = @('--import', $tsxLoader, 'apps/cli/src/bin.ts', '--profile', 'marisa', '--patch', $patchPath)
+    $builtCli = Join-Path $Repo 'harness\apps\cli\lib\bin.js'
+    if (-not (Test-Path -LiteralPath $builtCli -PathType Leaf)) {
+      throw "built harness CLI missing after step 3: $builtCli"
+    }
+    $binArgs = @('apps/cli/lib/bin.js', 'web', '--profile', 'marisa', '--patch', $patchPath)
     Write-Host "spawning: node $($binArgs -join ' ')"
     $webProc = Start-Process -FilePath 'node' -ArgumentList $binArgs `
       -WorkingDirectory (Join-Path $Repo 'harness') `
@@ -297,7 +267,7 @@ try {
   $profileCount = (Get-ChildItem (Join-Path $ProfileDir 'node_modules') -ErrorAction SilentlyContinue | Measure-Object).Count
   Write-Host "root node_modules entries:      $rootCount"
   Write-Host "profile node_modules entries:   $profileCount"
-  foreach ($dir in @('Qwen-MM-Plugins', 'dsh-a2a', 'dsh-code-map', 'dsh-diff-viewer', 'dsh-sidechain', 'dsh-sonar', 'dsh-track')) {
+  foreach ($dir in @('dsh-a2a', 'dsh-code-map', 'dsh-sidechain')) {
     Write-Host ("plugin {0,-16} {1}" -f $dir, $results["plugin:$dir"])
   }
   if ($webUrl) { Write-Host "self-check:                     $httpCode at $webUrl" }

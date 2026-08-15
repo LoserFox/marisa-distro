@@ -26,7 +26,8 @@ param(
   [switch]$SkipBodies,  # keep the existing staged bodies, only re-walk links and re-zip
   [string]$ProfilePath,
   [string]$NodePath,
-  [string]$SevenZipPath
+  [string]$SevenZipPath,
+  [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
@@ -130,7 +131,7 @@ function Resolve-LinkTarget([System.IO.FileSystemInfo]$item) {
 }
 
 function Invoke-PnpmProd([string]$cwd, [string]$what) {
-  Write-Host "==> pnpm install --prod at $what ..."
+  Write-Host "==> pnpm install --prod --frozen-lockfile at $what ..."
   Push-Location $cwd
   try {
     # --ignore-scripts: the staged runtime tree must not run lifecycle scripts
@@ -140,10 +141,10 @@ function Invoke-PnpmProd([string]$cwd, [string]$what) {
     # --offline first: everything is in the pnpm store (the live installs
     # fetched it); the registry is flaky from this network (UND_ERR_DESTROYED).
     # Fall back to online only when the store genuinely misses.
-    & pnpm install --prod --ignore-scripts --offline --no-frozen-lockfile 2>&1 | Out-Host
+    & pnpm install --prod --ignore-scripts --offline --frozen-lockfile 2>&1 | Out-Host
     if ($LASTEXITCODE -ne 0) {
       Write-Host "offline install failed (exit $LASTEXITCODE) — retrying online ..."
-      & pnpm install --prod --ignore-scripts --no-frozen-lockfile 2>&1 | Out-Host
+      & pnpm install --prod --ignore-scripts --frozen-lockfile 2>&1 | Out-Host
     }
     if ($LASTEXITCODE -ne 0) { throw "pnpm install --prod failed at $what (exit $LASTEXITCODE)" }
   } finally { Pop-Location }
@@ -158,7 +159,9 @@ New-Item -ItemType Directory -Force "$stage\marisa-distro", "$stage\.dsh\profile
 if (-not $SkipBodies) {
   $sha = & git -C $repo rev-parse --short HEAD 2>$null
   if (-not $sha) { $sha = 'nosha' }
-  Set-Content -Path "$stage\VERSION" -Value "marisa-backend-v2-$sha-$(Get-Date -Format yyyyMMddHHmmss)" -NoNewline
+  $bundleVersion = if ($Version) { $Version } else { (Get-Content "$repo\package.json" -Raw | ConvertFrom-Json).version }
+  if ($bundleVersion -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') { throw "invalid bundle version: $bundleVersion" }
+  Set-Content -Path "$stage\VERSION" -Value "marisa-backend-$bundleVersion-$sha" -NoNewline
   Copy-Item $node "$stage\node.exe"
   # launcher.cmd must be CRLF: cmd.exe mis-parses LF-only batch files
   # (each line loses its first two chars — `rem x` executes as `m x`).
@@ -171,6 +174,7 @@ if (-not $SkipBodies) {
 if (-not $SkipBodies) {
   Write-Host 'staging workspace files ...'
   Copy-Item "$repo\package.json" "$stage\marisa-distro\package.json" -Force
+  Copy-Item "$repo\pnpm-lock.yaml" "$stage\marisa-distro\pnpm-lock.yaml" -Force
   Copy-Item "$repo\pnpm-workspace.yaml" "$stage\marisa-distro\pnpm-workspace.yaml" -Force
   Write-Host 'copying harness body (node_modules excluded) ...'
   Copy-DerefTree "$repo\harness" "$stage\marisa-distro\harness" 'node_modules'
@@ -178,13 +182,14 @@ if (-not $SkipBodies) {
   Copy-DerefTree "$repo\plugins" "$stage\marisa-distro\plugins" 'node_modules'
   Write-Host 'copying bundles body (node_modules excluded) ...'
   Copy-DerefTree "$repo\bundles" "$stage\marisa-distro\bundles" 'node_modules'
+  Write-Host 'copying release profile workspace member (node_modules excluded) ...'
+  Copy-DerefTree "$repo\profiles\marisa\runtime" "$stage\marisa-distro\profiles\marisa\runtime" 'node_modules'
   Write-Host 'copying pnpm compatibility patches ...'
   Copy-DerefTree "$repo\patches" "$stage\marisa-distro\patches"
   Write-Host 'copying dsh-skill-manager body ...'
   Copy-DerefTree "$repo\dsh-skill-manager" "$stage\marisa-distro\dsh-skill-manager"
   Write-Host 'copying profile files (node_modules excluded) ...'
   Copy-DerefTree $profile "$stage\.dsh\profiles\marisa" 'node_modules'
-  Remove-Item "$stage\.dsh\profiles\marisa\pnpm-lock.yaml" -Force -ErrorAction SilentlyContinue
 
   # --- single production install (store-cached) ------------------------------
   # The root workspace is the ONE tree: harness + plugins + marisa-bundle +
@@ -193,35 +198,6 @@ if (-not $SkipBodies) {
   # (recorded in LINKS.json) — every composition row name resolves through it,
   # and nothing is duplicated.
   Invoke-PnpmProd "$stage\marisa-distro" 'repo root workspace'
-
-  # Registry rc.6 client bundles use the `dsh.client` graph and must stay on
-  # the registry client-modules implementation. dsh-sonar still injects the
-  # previous service name, so publish the same instance under that alias.
-  # The exact signature makes upstream drift fail the build instead of
-  # silently shipping a backend that loops after reporting its URL.
-  $clientModulesLib = "$stage\marisa-distro\node_modules\@deepseek-ai\dsh-client-modules\lib\index.js"
-  $clientModulesText = Read-Utf8Text $clientModulesLib
-  $clientModulesNeedle = "`tconstructor(ctx) {`n`t`tsuper(ctx, `"clientModules`");"
-  $clientModulesPatched = "$clientModulesNeedle`n`t`tctx.provide(`"clientModuleHost`", this);"
-  if ($clientModulesText.Contains($clientModulesNeedle) -and -not $clientModulesText.Contains($clientModulesPatched)) {
-    $clientModulesText = $clientModulesText.Replace($clientModulesNeedle, $clientModulesPatched)
-  } elseif (-not $clientModulesText.Contains($clientModulesPatched)) {
-    throw 'dsh-client-modules rc.6 compatibility signature not found'
-  }
-  Write-Utf8Text $clientModulesLib $clientModulesText
-
-  # marisa's diff-viewer replaces the stock edit/write rows. Registry rc.6
-  # keyed slots are exclusive, so omit the stock registrant in this distro.
-  $uiToolLib = "$stage\marisa-distro\node_modules\@deepseek-ai\dsh-client-ui-tool\lib\client.js"
-  $uiToolText = Read-Utf8Text $uiToolLib
-  $uiToolNeedle = "`t`t`tctx.plugin(fileMutationToolview);"
-  $uiToolPatched = "`t`t`t// marisa-distro: dsh-diff-viewer owns edit/write"
-  if ($uiToolText.Contains($uiToolNeedle)) {
-    $uiToolText = $uiToolText.Replace($uiToolNeedle, $uiToolPatched)
-  } elseif (-not $uiToolText.Contains($uiToolPatched)) {
-    throw 'dsh-client-ui-tool rc.6 compatibility signature not found'
-  }
-  Write-Utf8Text $uiToolLib $uiToolText
 
   foreach ($aliasPatch in @(
     @{ Path = "$stage\marisa-distro\harness\packages\client\ui-slash\lib\client.js"; Needle = 'super(ctx, "slash");'; Alias = 'ctx.provide("inputTriggers", this);' },
@@ -249,8 +225,6 @@ if (-not $SkipBodies) {
   Write-Utf8Text $aigcClientLib $aigcClientText
 
   Assert-JavaScriptSyntax @(
-    $clientModulesLib,
-    $uiToolLib,
     "$stage\marisa-distro\harness\packages\client\ui-slash\lib\client.js",
     "$stage\marisa-distro\harness\packages\client\ui-command\lib\client.js",
     $aigcClientLib

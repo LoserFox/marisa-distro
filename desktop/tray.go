@@ -25,19 +25,19 @@ func trayIcon() []byte {
 // setupTray 创建系统托盘(应用启动事件后调用,此时 impl 可用)。
 // 托盘行为:
 //   - 左键单击:切换主窗口显隐
-//   - 菜单「打开 dsh」:显示并聚焦主窗口
+//   - 菜单「打开 Marisa DSH」:显示并聚焦主窗口
 //   - 菜单「开机自启」:勾选状态来自 Autostart;点击即开关 HKCU\…\Run(Windows)
 //   - 菜单「退出」:application.Quit() → main 的 cancel → 后端进程树清理
 func setupTray(app *application.App, win *application.WebviewWindow) {
 	tray := app.SystemTray.New()
-	tray.SetTooltip("DeepSeek Harness Desktop")
+	tray.SetTooltip("Marisa DSH")
 	if icon := trayIcon(); icon != nil {
 		tray.SetIcon(icon)
 	}
 
 	menu := application.NewMenu()
 
-	openItem := menu.Add("打开 dsh")
+	openItem := menu.Add("打开 Marisa DSH")
 	openItem.OnClick(func(*application.Context) {
 		win.Show()
 	})
