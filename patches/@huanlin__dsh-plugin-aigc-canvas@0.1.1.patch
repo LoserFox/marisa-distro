@@ -1,0 +1,7 @@
+diff --git a/lib/client.js b/lib/client.js
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -1,2 +1,2 @@
+ window.__ModuleLoader__.load({
+-	id: "@dsh-external/dsh-aigc-canvas",
++	id: "@huanlin/dsh-plugin-aigc-canvas",

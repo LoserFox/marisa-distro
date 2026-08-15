@@ -4,9 +4,14 @@
   "private": true,
   "description": "魔理沙整合包 v2 — DSH harness fork + 31-plugin composition + standalone desktop shell",
   "scripts": {
-    "build": "powershell -File build.ps1"
+    "build": "pwsh -NoProfile -File build.ps1",
+    "test:profile": "node --test profiles/marisa/generate-profile.test.mjs"
   },
   "dependencies": {
+    "@r05en1cu/dsh-mygo": "0.2.0-rc.6",
+    "@r05en1cu/dsh-mygo-cli": "0.2.0-rc.6",
+    "@r05en1cu/dsh-mygo-ext-panel": "0.2.0-rc.6",
+    "@r05en1cu/dsh-mygo-loader-hub": "0.2.0-rc.6",
     "marisa-bundle": "file:./bundles/marisa-bundle",
     "dsh-better-sidebar": "^0.10.3",
     "dsh-llm-fallbacks": "^0.1.0-alpha.1",

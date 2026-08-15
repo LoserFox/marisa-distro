@@ -160,6 +160,13 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 }
 
 func main() {
+	if handled, err := handleBackendMaintenance(); handled {
+		if err != nil {
+			log.Fatalf("backend maintenance: %v", err)
+		}
+		return
+	}
+
 	// 加载前读取环境变量：全部在创建窗口/启动后端之前解析。
 	// DSH_APP_WORKSPACE — 工作目录（默认用户主目录；受限/测试环境可覆盖）。
 	// DSH_APP_PORT — 后端监听端口（默认 "0" 由 OS 分配，避免冲突）。

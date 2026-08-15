@@ -1,0 +1,41 @@
+name: build
+
+# 预编译 dsh-shell.exe:push 到 main 时上传工作流产物;打 v* 标签时发布到
+# GitHub Releases。用户无需安装 Go —— 直接下载产物即可(见 README「Download」)。
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test
+        run: go test ./...
+      - name: Build shell
+        run: go build -C . -o build/dsh-shell.exe .
+      - name: Package
+        shell: pwsh
+        run: Compress-Archive -Path build/dsh-shell.exe,assets/icon.ico -DestinationPath dsh-desktop-windows-amd64.zip -Force
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-windows-amd64
+          path: dsh-desktop-windows-amd64.zip
+          if-no-files-found: error
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dsh-desktop-windows-amd64.zip
+          generate_release_notes: true

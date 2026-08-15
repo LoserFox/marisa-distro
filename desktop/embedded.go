@@ -182,6 +182,10 @@ func backendWebCommand(dir string) string {
 	return fmt.Sprintf(`"%s"`, filepath.Join(dir, "launcher.cmd"))
 }
 
+func handleBackendMaintenance() (bool, error) {
+	return false, nil
+}
+
 // linkEntry mirrors one LINKS.json record written by the bundle build.
 type linkEntry struct {
 	Link   string `json:"link"`

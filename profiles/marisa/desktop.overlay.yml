@@ -1,0 +1,9 @@
+# Desktop shell overlay (dsh-desktop): boot the marisa profile's web surface
+# on an OS-assigned port so the shell can parse the URL without port conflicts.
+# Referenced via DSH_WEB_CMD:
+#   DSH_WEB_CMD=dsh --profile marisa --patch C:\Users\lf\.dsh\profiles\marisa\desktop.overlay.yml
+
+- id: webserver
+  config:
+    host: 127.0.0.1
+    port: 0

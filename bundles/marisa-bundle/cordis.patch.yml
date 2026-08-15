@@ -1,0 +1,290 @@
+# 魔理沙 fork 聚合 bundle patch（marisa-bundle，应用于 base / web-app 层之后）
+#
+# 组成（v1 dsh-allinone 聚合 bundle 的内容，由 fork 的 marisa-bundle 持有）：
+#   (1) Windows 原生 PowerShell lane（取自 win-port profile）：禁用 bash 栈
+#       （bash-sandbox / tool-bash / permission），换入 pwsh-local + tool-pwsh；
+#   (2) 原 dsh-allinone 全部 insert 行（29 行），行 name 已对照 vendored
+#       插件 package.json 逐一核验（两处修正见下）；
+#   (3) v1 已禁用插件对应的 disable 行：ui-workspace（官方工作区浏览器的
+#       disable 行）与 qwen-mm（insert 行内嵌 disabled: true）；
+#   (4) multimedia-webui-input 判定不兼容 → 禁用行（v1.2 验收报告）。
+#
+# name 修正记录（对照 plugins/<dir>/package.json 实际 name）：
+#   - drag-and-drop：原 allinone 行 '@bill9109/dsh-drag-and-drop'
+#     → 实际 '@omdsh-dev/dsh-drag-and-drop'
+#   - track：原 allinone 行 '@deepseek-ai/dsh-track'
+#     → 实际 '@fakechris/dsh-track'
+# 行 name 通过 profile node_modules（file: 链接安装的 vendored 包）解析，
+# 必须与包实际 name 一致，否则 Loader 解析不到。
+
+# ══ (1) Windows PowerShell lane（0808 baseline，同 win-port）══
+#
+# dsh-base bundle 自带 POSIX bash 栈：bash-sandbox 是 ctx.bash executor
+# （硬编码 bash + POSIX 进程组），tool-bash 是模型侧 bash 工具，permission
+# （审批预设 + sandbox 模式）在没有 sandboxMode 能力事实的 executor 上拒绝
+# 启动。Windows 上三者均无法工作，故整条 lane 置换：
+#   bash-sandbox -> disabled（Windows 主机无 bash）
+#   tool-bash    -> disabled（模型可见工具表只有 pwsh）
+#   permission   -> disabled（pwsh-local 按设计不设限；permission 服务在无
+#                   sandboxMode 的 executor 上会抛错）
+#   + pwsh-local  -> ctx.bash executor 官方 PowerShell 实现（spawn `pwsh -Command`）
+#   + tool-pwsh   -> 模型侧官方 pwsh 工具（bash 平替渲染，无 sandbox 面）
+#
+# Sandbox 姿态：本 lane 以 harness 进程权限运行命令。harness 已把 win32
+# 声明为 fail-closed（sandbox-local 中 PLATFORM_CHAINS.win32 保留为空），
+# 工具层策略（fs-policy、无审批权限面）仍约束模型动作。需要真实隔离 +
+# permission 服务时挂 MXC 提供者（@deepseek-ai/dsh-sandbox-mxc + 受限 pwsh
+# executor @deepseek-ai/dsh-pwsh-sandbox）并重新启用 permission。
+
+- id: bash-sandbox
+  name: '@deepseek-ai/dsh-bash-sandbox'
+  disabled: true
+
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: true
+
+- id: permission
+  name: '@deepseek-ai/dsh-permission'
+  disabled: true
+
+# The vendored 0808 web-app patch contains both its native input stack
+# (`ui-slash` + singular `ui-command`) and two unfinished rc6 migration rows.
+# Loading both stacks registers the same `slash.menu` locale twice. Keep the
+# native pair for this fork; MyGO only needs the shared settings slot service.
+- id: ui-input-trigger
+  name: '@deepseek-ai/dsh-client-ui-input-trigger'
+  disabled: true
+
+- id: ui-commands
+  name: '@deepseek-ai/dsh-client-ui-commands'
+  disabled: true
+
+- insert:
+    - id: pwsh-local
+      name: '@deepseek-ai/dsh-pwsh-local'
+
+    - id: tool-pwsh
+      name: '@deepseek-ai/dsh-tool-pwsh'
+
+# ══ (2) 原 dsh-allinone insert 行（聚合 bundle 退役后直接并入 profile）══
+
+# ── @loserfox/git-identity ──
+# git-identity bundle patch: mounts the git-identity row into the profile
+# composition. The row name resolves through the profile directory's
+# node_modules (the bundle is installed there by `dsh plugin --profile <name> add`).
+- insert:
+    - id: git-identity
+      name: '@loserfox/git-identity'
+
+# ── @deepseek-ai/dsh-genui ──
+# dsh-genui bundle for DeepSeek Harness (dsh).
+# Inserted into the profile's composition when this bundle is installed
+# (`dsh plugin --profile web add link:/path/to/dsh-genui`). The plugin row
+# resolves the package by name through the profile's node_modules; the node
+# half teaches the model the ```dsh-ui fence, the dshClient half registers
+# the browser renderer via the fence-registry extension point.
+- insert:
+    - id: genui
+      name: '@deepseek-ai/dsh-genui'
+
+# ── @dsh-external/workflow ──
+# Reusable, governed, durable multi-agent workflows over DSH subagent,
+# approval, Session, background-job, command, and tool extension seams.
+- insert:
+    - id: dsh-external-workflow
+      name: '@dsh-external/workflow'
+
+# ── @dsh-external/dsh-vision-toolkit ──
+# dsh-vision-toolkit bundle patch: mounts the plugin into a profile layer stack.
+# Runtime defaults live at the plugin's config boundary. Users override them in
+# their profile patch row with the same id.
+- insert:
+    - id: vision-toolkit
+      name: '@dsh-external/dsh-vision-toolkit'
+
+# ── @bill9109/dsh-web-ui-notify ──
+# dsh-web-ui-notify bundle patch: mount the desktop-notification plugin.
+# The host half (package root) tracks pending user interactions; the browser
+# half (dsh.client) is discovered automatically through the package's
+# dsh.client declaration + exports["./client"].
+- insert:
+    - id: ui-notify
+      name: '@bill9109/dsh-web-ui-notify'
+
+# ── @dsh-external/dsh-suggested-replies ──
+# ── @dsh-external/dsh-suggested-replies: REMOVED (v2 incompatibility) ──
+# 2026-08-14 v2 standalone 实测：插件 inject 服务 `workspaceRegistry`
+# （0808 snapshot API），v2 harness 无此服务（workspace 包提供
+# `workspace`/`workspaceContext` 等新键），boot fail-loud 挂起。v2 组合中移除。
+
+# ── whale-girl: REMOVED (v2 incompatibility) ──
+# 2026-08-14 v2 standalone 实测：插件 inject 服务 `jobs` + `webServer`，
+# v2 harness 无 `jobs` 服务（0808 的 dsh-jobs 不在 v2 源码树），boot
+# fail-loud 挂起。v2 组合中移除；webServer 部分由 harness 源码别名提供
+# （fork 修复：packages/host/webserver 构造时 ctx.provide("webServer", ...)）。
+
+# ── @deepseek-ai/dsh-qwen-mm（v1 已禁用插件 1/2）──
+# Qwen-MM is an explicit opt-in bundle. The row is present so a profile can
+# enable it with a later overlay, but it never fetches a remote repository or
+# starts an MCP server merely because this bundle was installed.
+- insert:
+    - id: qwen-mm
+      name: '@deepseek-ai/dsh-qwen-mm'
+      disabled: true
+
+# ── @dsh-community/multimedia-webui-input（判定不兼容 → 禁用）──
+# 依赖 @deepseek-ai/dsh-client-ui-slash——官方 harness 不存在此包（rc.5 无此
+# 依赖），无法修复，禁用（同 v1.2 验收报告 legacy/docs-验收报告-20260814.md）。
+# 保留行便于官方补包后以 overlay 恢复。
+- insert:
+    - id: community-multimedia-webui-input
+      name: '@dsh-community/multimedia-webui-input'
+      disabled: true
+
+# ── @omdsh-dev/dsh-drag-and-drop ──
+# dsh-drag-and-drop bundle patch: mount the file-drag path plugin.
+# The host half (package root) registers the file-locate HTTP route; the
+# browser half (dsh.client) is discovered automatically through the package's
+# dsh.client declaration + exports["./client"].
+# NOTE: vendored package.json name 为 @omdsh-dev/dsh-drag-and-drop（非原
+# allinone 行的 @bill9109/dsh-drag-and-drop，已按实际 name 修正）。
+- insert:
+    - id: drag-and-drop
+      name: '@omdsh-dev/dsh-drag-and-drop'
+
+# ── @dsh-external/dsh-stickers ──
+- insert:
+    - id: dsh-stickers
+      name: '@dsh-external/dsh-stickers'
+
+# ── @dsh-external/dsh-code-map ──
+- insert:
+    - id: code-map
+      name: '@dsh-external/dsh-code-map'
+
+# ── dsh-sonar ──
+# The root row is the browser-roster face; the subpath row owns host services.
+- insert:
+    - id: sonar-view-client
+      name: dsh-sonar
+    - id: sonar-view-host
+      name: dsh-sonar/host
+      config:
+        locale: zh-CN
+        refreshIntervalMs: 2000
+        motion: full
+        backgroundReviewEnabled: true
+        backgroundReviewIntervalMs: 15000
+
+# ── @dsh-external/dsh-sidechain ──
+- insert:
+    - id: dsh-sidechain
+      name: '@dsh-external/dsh-sidechain'
+
+# ── @dsh-external/dsh-diff-viewer ──
+- insert:
+    - id: dsh-diff-viewer
+      name: '@dsh-external/dsh-diff-viewer'
+
+# ── @fakechris/dsh-track ──
+# The dsh-track bundle patch: mounts the Track Bridge engine.
+# The web-app bundle already mounts storage (json backend under ~/.dsh/storages),
+# storage-domain, skill, and skill-local — this patch only inserts the track
+# engine row. The fat skill ships in skills/dsh-track/SKILL.md and is copied
+# to ~/.dsh/skills/dsh-track by the install script so skill-local's default
+# roots pick it up.
+# NOTE: vendored package.json name 为 @fakechris/dsh-track（非原 allinone 行的
+# @deepseek-ai/dsh-track，已按实际 name 修正）。
+- insert:
+    - id: track
+      name: '@fakechris/dsh-track'
+
+# ── @huanlin/dsh-plugin-yet-another-subagent: REMOVED (v2 incompatibility) ──
+# 2026-08-14 v2 standalone 实测：该插件启动时 registerGlobal 注册工具
+# "subagent"，与 v2 base bundle 的官方 tool-subagent 重名，boot fail-loud
+# 硬失败。v2 组合中该插件从 profile 层移除；官方 subagent 工具恢复生效。
+# fork 路径（tool-subagent-fork，工具名 subagent_fork）不冲突，保持可用。
+
+# ── @huanlin/dsh-plugin-ya-workspace-sidebar ──
+# Replace the official workspace browser. The official client package claims
+# both sidebar.workspaces and conversation.hero.workspace, so the replacement
+# provides both seats before taking over the browsing information architecture.
+- insert:
+    - id: ya-workspace-sidebar
+      name: '@huanlin/dsh-plugin-ya-workspace-sidebar'
+
+# ── @huanlin/dsh-plugin-interpreters ──
+# dsh-interpreters bundle layer: inserts the plugin row.
+# Defaults: python/node from PATH, 30s timeout.
+- insert:
+    - id: dsh-interpreters
+      name: '@huanlin/dsh-plugin-interpreters'
+      config:
+        pythonPath: 'python'
+        nodePath: 'node'
+        timeoutMs: 30000
+
+# ── @huanlin/dsh-plugin-mineru ──
+# baseURL is configured at runtime via the DSH GUI settings page (MinerU section);
+# the value below is the first-boot seed only.
+- insert:
+    - id: dsh-mineru
+      name: '@huanlin/dsh-plugin-mineru'
+      config:
+        baseURL: 'http://localhost:18000'
+
+# ── @huanlin/dsh-plugin-aigc-canvas ──
+# Provider config is editable at runtime via the DSH GUI settings page;
+# the values below are first-boot seeds only. The stub provider
+# (endpoint=stub://aigc-backend) produces synthetic test media — no real API calls.
+- insert:
+    - id: dsh-aigc-canvas
+      name: '@huanlin/dsh-plugin-aigc-canvas'
+      config:
+        providers:
+          - id: stub
+            name: ''
+            endpoint: 'stub://aigc-backend'
+            apiKey: ''
+            instructions: ''
+            builtin: true
+        requestTimeoutMs: 300000
+        mediaSizeLimit: 104857600
+
+# ── 纯 client 插件（host 挂载行，client 经 dsh.client 自动发现）──
+- insert:
+    - id: dsh-ui-progress
+      name: '@dsh-external/dsh-ui-progress'
+
+    - id: dsh-paste-input
+      name: '@dsh-community/dsh-paste-input'
+
+    - id: dsh-input-history
+      name: '@dsh-external/dsh-input-history'
+
+    - id: dsh-artifact
+      name: '@dsh-external/dsh-artifact'
+
+# ── 纯 host 插件 ──
+- insert:
+    - id: a2a
+      name: '@dpskh/a2a'
+
+# ── 自改层：agent 会话内 inspect/define/run/stop/undefine 插件（官方 demo:cordis 同款）──
+- insert:
+    - id: tool-cordis
+      name: '@deepseek-ai/dsh-tool-cordis'
+
+# ── skill 管理器（/skills /skill-remove + skill_manage 工具，读写 ~/.dsh/skills）──
+- insert:
+    - id: skill-manager
+      name: dsh-skill-manager
+
+# ══ (3) v1 已禁用插件 2/2：ui-workspace（官方工作区浏览器）──
+# ya-workspace-sidebar 提供 sidebar.workspaces + conversation.hero.workspace
+# 两个席位，禁用官方客户端包（原 allinone 行；官方插件名见
+# harness/packages/bundle/web-app/cordis.patch.yml）。
+- id: ui-workspace
+  name: '@deepseek-ai/dsh-client-ui-workspace'
+  disabled: true

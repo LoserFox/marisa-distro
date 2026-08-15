@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Name="Marisa DSH" Language="1033" Version="$(var.ProductVersion)" Manufacturer="Marisa DSH Community" UpgradeCode="9C3EF248-80BF-4CBB-A2DE-5A460E9A9ED9">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perUser" InstallPrivileges="limited" Platform="x64" Description="Marisa DSH ready-to-use desktop distribution" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Marisa DSH is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="none" />
+    <Icon Id="MarisaIcon" SourceFile="$(var.AppIcon)" />
+    <Property Id="ARPPRODUCTICON" Value="MarisaIcon" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="INSTALLFOLDER" Name="Marisa DSH" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Marisa DSH" />
+      </Directory>
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="ApplicationExecutable" Guid="E214C88D-96F3-44D2-8C36-B3EC463053F4" Win64="yes">
+        <File Id="MarisaExe" Source="$(var.SourceExe)" KeyPath="yes" Checksum="yes">
+          <Shortcut Id="StartMenuShortcut" Directory="ApplicationProgramsFolder" Name="Marisa DSH" WorkingDirectory="INSTALLFOLDER" Advertise="no" Icon="MarisaIcon" />
+          <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="Marisa DSH" WorkingDirectory="INSTALLFOLDER" Advertise="no" Icon="MarisaIcon" />
+        </File>
+        <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+      </Component>
+      <Component Id="BackendArchive" Guid="6DEC949A-6B7C-4467-873F-D94C862310E8" Win64="yes">
+        <File Id="BackendZip" Source="$(var.BackendZip)" Name="backend.zip" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="Complete" Title="Marisa DSH" Level="1">
+      <ComponentRef Id="ApplicationExecutable" />
+      <ComponentRef Id="BackendArchive" />
+    </Feature>
+
+    <CustomAction Id="PrepareBackend" FileKey="MarisaExe" ExeCommand="--prepare-installed-backend &quot;[INSTALLFOLDER]backend.zip&quot;" Execute="deferred" Impersonate="yes" Return="check" />
+    <CustomAction Id="RollbackPrepareBackend" FileKey="MarisaExe" ExeCommand="--remove-installed-backend &quot;[INSTALLFOLDER]backend&quot;" Execute="rollback" Impersonate="yes" Return="ignore" />
+    <CustomAction Id="RemoveBackend" FileKey="MarisaExe" ExeCommand="--remove-installed-backend &quot;[INSTALLFOLDER]backend&quot;" Execute="deferred" Impersonate="yes" Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="RollbackPrepareBackend" Before="PrepareBackend">NOT REMOVE~=&quot;ALL&quot;</Custom>
+      <Custom Action="PrepareBackend" After="InstallFiles">NOT REMOVE~=&quot;ALL&quot;</Custom>
+      <Custom Action="RemoveBackend" Before="RemoveFiles">REMOVE~=&quot;ALL&quot;</Custom>
+    </InstallExecuteSequence>
+  </Product>
+</Wix>

@@ -178,6 +178,8 @@ if (-not $SkipBodies) {
   Copy-DerefTree "$repo\plugins" "$stage\marisa-distro\plugins" 'node_modules'
   Write-Host 'copying bundles body (node_modules excluded) ...'
   Copy-DerefTree "$repo\bundles" "$stage\marisa-distro\bundles" 'node_modules'
+  Write-Host 'copying pnpm compatibility patches ...'
+  Copy-DerefTree "$repo\patches" "$stage\marisa-distro\patches"
   Write-Host 'copying dsh-skill-manager body ...'
   Copy-DerefTree "$repo\dsh-skill-manager" "$stage\marisa-distro\dsh-skill-manager"
   Write-Host 'copying profile files (node_modules excluded) ...'
@@ -348,7 +350,7 @@ if ($bad.Count -gt 0) {
 # External plugins resolve these names from the root production tree. They are
 # workspace packages (and therefore become junctions), so checking only the
 # general package count below can miss either one while still producing a zip.
-foreach ($requiredRootPackage in 'schemastery', '@deepseek-ai/dsh-workflow', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-host-apiproxy', '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-session-persistence', '@deepseek-ai/dsh-credentials') {
+foreach ($requiredRootPackage in 'schemastery', '@deepseek-ai/dsh-workflow', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-host-apiproxy', '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-session-persistence', '@deepseek-ai/dsh-credentials', '@r05en1cu/dsh-mygo', '@r05en1cu/dsh-mygo-loader-hub', '@r05en1cu/dsh-mygo-cli', '@r05en1cu/dsh-mygo-ext-panel') {
   $requiredPath = Join-Path "$stage\marisa-distro\node_modules" $requiredRootPackage
   if (-not (Test-Path -LiteralPath (Join-Path $requiredPath 'package.json'))) {
     throw "staged tree INCOMPLETE — required root runtime package missing: $requiredRootPackage"

@@ -128,3 +128,11 @@ minimumReleaseAgeExclude:
   - '@huanlin/dsh-plugin-mineru@0.2.1'
   - '@huanlin/dsh-plugin-ya-workspace-sidebar@0.1.0'
   - '@huanlin/dsh-plugin-yet-another-subagent@0.1.2'
+  - '@r05en1cu/dsh-mygo@0.2.0-rc.6'
+  - '@r05en1cu/dsh-mygo-cli@0.2.0-rc.6'
+  - '@r05en1cu/dsh-mygo-ext-panel@0.2.0-rc.6'
+  - '@r05en1cu/dsh-mygo-loader-hub@0.2.0-rc.6'
+  - '@r05en1cu/dsh-mygo-api@0.2.0-rc.6'
+  - '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.6'
+patchedDependencies:
+  '@deepseek-ai/dsh-client-modules@0.1.0-rc.6': patches/@deepseek-ai__dsh-client-modules@0.1.0-rc.6.patch

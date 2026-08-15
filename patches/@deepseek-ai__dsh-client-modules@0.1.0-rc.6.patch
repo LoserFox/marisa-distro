@@ -1,0 +1,6 @@
+diff --git a/lib/index.js b/lib/index.js
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -136 +136,2 @@ var ClientModuleRegistry = class extends Service {
+ 		super(ctx, "clientModules");
++		ctx.provide("clientModuleHost", this);
