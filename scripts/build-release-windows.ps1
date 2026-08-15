@@ -6,6 +6,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# registry.npmjs.org is flaky from runner networks (UND_ERR_DESTROYED /
+# truncated packuments); mirror build.ps1's tuning so every install in this
+# script inherits it.
+$env:npm_config_fetch_retries = '5'
+$env:npm_config_fetch_retry_mintimeout = '2000'
+$env:npm_config_network_concurrency = '8'
 $repo = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $release = Join-Path $repo 'release'
 $runtimeProfile = Join-Path $repo 'profiles\marisa\runtime'
@@ -38,9 +44,19 @@ function Invoke-ReleaseProfileVerification {
     # Root install has already populated the pnpm store. The temporary profile
     # is deliberately separate from the release runtime so the boot check
     # cannot accidentally use a maintainer's ~/.dsh profile.
-    & pnpm install --offline --no-frozen-lockfile
-    if ($LASTEXITCODE -ne 0) {
+    # registry.npmjs.org is flaky from runner networks (UND_ERR_DESTROYED);
+    # retry the online install like build.ps1 does.
+    $attempt = 1
+    while ($attempt -le 3) {
+      if ($attempt -gt 1) {
+        Write-Host "WARN: profile install failed on attempt $($attempt - 1); retrying (attempt $attempt of 3)..."
+        Start-Sleep -Seconds 10
+      }
+      & pnpm install --offline --no-frozen-lockfile
+      if ($LASTEXITCODE -eq 0) { break }
       & pnpm install --no-frozen-lockfile
+      if ($LASTEXITCODE -eq 0) { break }
+      $attempt++
     }
     if ($LASTEXITCODE -ne 0) { throw "release verification profile install failed: $LASTEXITCODE" }
   } finally {
