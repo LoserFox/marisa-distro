@@ -65,8 +65,10 @@ jobs:
       - name: Put python3 on PATH
         shell: pwsh
         run: |
-          $python = (Get-Command python.exe).Source
-          Copy-Item -LiteralPath $python -Destination (Join-Path (Split-Path $python) 'python3.exe') -Force
+          if (-not (Get-Command python3.exe -ErrorAction SilentlyContinue)) {
+            $python = (Get-Command python.exe).Source
+            Copy-Item -LiteralPath $python -Destination (Join-Path (Split-Path $python) 'python3.exe') -Force
+          }
       - name: Build, test and package Windows release
         shell: pwsh
         run: pwsh -NoProfile -File scripts/build-release-windows.ps1 -Version '${{ needs.validate.outputs.version }}'
