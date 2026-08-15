@@ -62,16 +62,8 @@ Push-Location $repo
 try {
   Invoke-MarisaProfileGeneration $runtimeProfile
 
-  # Two-phase install. Phase 1: --ignore-scripts so plugin prepare steps do
-  # not run before harness/vendor/schemastery has a built lib/ (dsh-code-map
-  # typechecks against it and TS2307s otherwise). Only the allowBuilds native
-  # packages are rebuilt so esbuild/koffi/node-pty binaries exist for the
-  # harness build that follows.
-  & pnpm install --frozen-lockfile --ignore-scripts
-  if ($LASTEXITCODE -ne 0) { throw "pnpm install (ignore-scripts) failed: $LASTEXITCODE" }
-
-  & pnpm rebuild esbuild koffi node-pty @google/genai @deepseek-ai/dsh-subprocess-local lefthook
-  if ($LASTEXITCODE -ne 0) { throw "pnpm rebuild (native allowBuilds) failed: $LASTEXITCODE" }
+  & pnpm install --frozen-lockfile
+  if ($LASTEXITCODE -ne 0) { throw "pnpm install failed: $LASTEXITCODE" }
 
   & pnpm test
   if ($LASTEXITCODE -ne 0) { throw "repository and profile tests failed: $LASTEXITCODE" }
