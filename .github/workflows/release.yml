@@ -49,7 +49,12 @@ jobs:
           ref: ${{ needs.validate.outputs.commit }}
       - uses: pnpm/action-setup@v4
         with:
-          version: '11'
+          # Pin to 11.7.0: pnpm >= 11.22 resolves workspace peers strictly and
+          # fails profile installs (third-party plugins declare ranges like
+          # bare cordis>=4.0.0 / @deepseek-ai/dsh-storage>=0.0.1-rc.1 that the
+          # fork's 0.0.1 harness packages cannot satisfy). 11.7.0 matches the
+          # version that generated the committed lockfile.
+          version: '11.7.0'
           run_install: false
       - uses: actions/setup-node@v4
         with:

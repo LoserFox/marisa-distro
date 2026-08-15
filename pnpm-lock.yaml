@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@dsh-external/dsh-code-map>schemastery': npm:@deepseek-ai/schemastery@3.18.1
+  cordis: 4.0.0-rc.7
 
 patchedDependencies:
   '@deepseek-ai/dsh-client-modules@0.1.0-rc.6': c0ca13acc7434e28b61d12402a060d5340e0e142e911a86f7c3907e905331213
@@ -232,19 +233,19 @@ importers:
         version: link:harness/packages/workflow/workflow
       '@huanlin/dsh-plugin-aigc-canvas':
         specifier: file:./plugins/aigc-canvas
-        version: file:plugins/aigc-canvas(c6188ef6df9faa98884a6991f9bf56bb)
+        version: file:plugins/aigc-canvas(3da9ec5220f26e12c954c9c38b5573fe)
       '@huanlin/dsh-plugin-interpreters':
         specifier: file:./plugins/interpreters
         version: file:plugins/interpreters(6c4997246cfeec8c302eafda06cf7111)
       '@huanlin/dsh-plugin-mineru':
         specifier: file:./plugins/mineru
-        version: file:plugins/mineru(852dcc7151e3e8bd025ce52733275c3a)
+        version: file:plugins/mineru(3150e5200b691d52a19d2db38893bb3f)
       '@huanlin/dsh-plugin-ya-workspace-sidebar':
         specifier: file:./plugins/ya-workspace-sidebar
-        version: file:plugins/ya-workspace-sidebar(a3489bd3b1b91a5e0060849f253f4617)
+        version: file:plugins/ya-workspace-sidebar(6fec16a64cf69df09a1c566571ea4fae)
       '@huanlin/dsh-plugin-yet-another-subagent':
         specifier: file:./plugins/yet-another-subagent
-        version: file:plugins/yet-another-subagent(34e7e5c18bce57a1cf1d97e0903993af)
+        version: file:plugins/yet-another-subagent(4befff816cefc421ffe246b8bf7fa504)
       '@r05en1cu/dsh-mygo':
         specifier: 0.2.0-rc.6
         version: 0.2.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-storage-domain@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-storage@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-storage@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/schemastery@3.18.1)
@@ -259,13 +260,13 @@ importers:
         version: 0.2.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/schemastery@3.18.1)
       dsh-better-sidebar:
         specifier: file:./plugins/dsh-better-sidebar
-        version: file:plugins/dsh-better-sidebar(312bdb0a09c7f6b626e8772f6d2d59e2)
+        version: file:plugins/dsh-better-sidebar(d764e561a3f5e5f99e82d0b716ee434d)
       dsh-llm-fallbacks:
         specifier: file:./plugins/dsh-llm-fallbacks
         version: link:plugins/dsh-llm-fallbacks
       marisa-bundle:
         specifier: file:./bundles/marisa-bundle
-        version: file:bundles/marisa-bundle(34fc3fec596333f12026b969dcb2adfe)
+        version: file:bundles/marisa-bundle(fca4f6dec208cd8f2514a1f8b6ea7e17)
       schemastery:
         specifier: workspace:^
         version: link:harness/vendor/schemastery
@@ -280,13 +281,13 @@ importers:
         version: file:plugins/dsh-genui(296047b28d364280ffb1d712d091e35e)
       '@deepseek-ai/dsh-pwsh-local':
         specifier: file:../../harness/packages/bash/pwsh-local
-        version: file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))
+        version: file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)
       '@deepseek-ai/dsh-tool-cordis':
         specifier: file:../../harness/packages/cordis/tool-cordis
-        version: file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))
+        version: file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@harness+vendor+cordis)
       '@deepseek-ai/dsh-tool-pwsh':
         specifier: file:../../harness/packages/bash/tool-pwsh
-        version: file:harness/packages/bash/tool-pwsh(3b9350641d96669c98fc83de110fe7ed)
+        version: file:harness/packages/bash/tool-pwsh(abe2674f6c5300b3f60f93fc9fd1aae7)
       '@dpskh/a2a':
         specifier: file:../../plugins/dsh-a2a
         version: link:../../plugins/dsh-a2a
@@ -304,7 +305,7 @@ importers:
         version: link:../../plugins/dsh-code-map
       '@dsh-external/dsh-diff-viewer':
         specifier: file:../../plugins/dsh-diff-viewer
-        version: file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))(react@18.3.1)
+        version: file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)(react@18.3.1)
       '@dsh-external/dsh-input-history':
         specifier: file:../../plugins/dsh-input-history
         version: file:plugins/dsh-input-history(@deepseek-ai/cordis@4.0.1)
@@ -322,7 +323,7 @@ importers:
         version: file:plugins/dsh-ui-progress(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tool-todo@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session-projection@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)))(react@18.3.1)
       '@dsh-external/dsh-vision-toolkit':
         specifier: file:../../plugins/dsh-vision-toolkit
-        version: file:plugins/dsh-vision-toolkit(bc9af95ee2afb2c55860a4bcf0be270c)
+        version: file:plugins/dsh-vision-toolkit(b29d5e05c03c8d513cd34aefabbe7a26)
       '@dsh-external/workflow':
         specifier: file:../../plugins/dsh_workflow
         version: file:plugins/dsh_workflow(cc7a38d9ec6f56c2fad29018e3033646)
@@ -340,7 +341,7 @@ importers:
         version: file:dsh-skill-manager
       dsh-sonar:
         specifier: file:../../plugins/dsh-sonar
-        version: file:plugins/dsh-sonar(df76915963b68d8e01e50f8e72b04923)
+        version: file:plugins/dsh-sonar(8317876a9e7bf0d606ea8aea5181cf41)
       whale-girl:
         specifier: file:../../plugins/whale-girl
         version: file:plugins/whale-girl
@@ -519,8 +520,8 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../vendor/cordis
       js-yaml:
         specifier: ^4.2.0
         version: 4.3.1
@@ -679,8 +680,8 @@ importers:
         specifier: workspace:^
         version: link:../../ui/user-approval
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/api/gateway:
     dependencies:
@@ -701,8 +702,8 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -732,8 +733,8 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bash/bash:
     devDependencies:
@@ -747,8 +748,8 @@ importers:
         specifier: workspace:^
         version: link:../../subprocess/subprocess
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bash/bash-env:
     dependencies:
@@ -778,8 +779,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bash/bash-local:
     dependencies:
@@ -803,8 +804,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bash/bash-sandbox:
     devDependencies:
@@ -833,8 +834,8 @@ importers:
         specifier: workspace:*
         version: link:../../../native/landlock-run/packages/entry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bash/pwsh-local:
     dependencies:
@@ -858,8 +859,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bash/tool-bash:
     dependencies:
@@ -925,8 +926,8 @@ importers:
         specifier: workspace:^
         version: link:../../ui/user-approval
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bash/tool-pwsh:
     dependencies:
@@ -974,8 +975,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bundle/base:
     dependencies:
@@ -1203,8 +1204,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bundle/headless:
     dependencies:
@@ -1231,8 +1232,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/bundle/web-app:
     dependencies:
@@ -1367,8 +1368,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/system-prompt
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/connection:
     dependencies:
@@ -1404,8 +1405,8 @@ importers:
         specifier: ^8.18.1
         version: 8.18.1
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/hmr:
     dependencies:
@@ -1426,8 +1427,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/locale:
     devDependencies:
@@ -1447,8 +1448,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1465,8 +1466,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/runtime:
     dependencies:
@@ -1526,8 +1527,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/schema-form:
     dependencies:
@@ -1539,8 +1540,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/test-runtime:
     dependencies:
@@ -1576,8 +1577,8 @@ importers:
         specifier: ~18.3.0
         version: 18.3.7(@types/react@18.3.31)
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1622,8 +1623,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1680,8 +1681,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1714,8 +1715,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/ui-goal:
     devDependencies:
@@ -1753,8 +1754,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1783,8 +1784,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1825,8 +1826,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1867,8 +1868,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1912,8 +1913,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -1954,8 +1955,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2033,8 +2034,8 @@ importers:
         specifier: ~18.3.0
         version: 18.3.7(@types/react@18.3.31)
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/ui-question:
     dependencies:
@@ -2085,8 +2086,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/ui-settings:
     dependencies:
@@ -2119,8 +2120,8 @@ importers:
         specifier: ~18.3.0
         version: 18.3.7(@types/react@18.3.31)
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2168,8 +2169,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2205,8 +2206,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2247,8 +2248,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2284,8 +2285,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2299,8 +2300,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/ui-subagent:
     dependencies:
@@ -2342,8 +2343,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/client/ui-theme:
     dependencies:
@@ -2373,8 +2374,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2419,8 +2420,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2459,8 +2460,8 @@ importers:
         specifier: ~18.3.0
         version: 18.3.7(@types/react@18.3.31)
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2502,8 +2503,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -2563,8 +2564,8 @@ importers:
         specifier: ~18.3.0
         version: 18.3.7(@types/react@18.3.31)
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -2588,8 +2589,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/code-runtime/code-runtime:
     devDependencies:
@@ -2597,8 +2598,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/code-runtime/code-runtime-worker:
     dependencies:
@@ -2619,8 +2620,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/compact/command-compact:
     devDependencies:
@@ -2649,8 +2650,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/compact/compact:
     devDependencies:
@@ -2664,8 +2665,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/compact/compact-basic:
     dependencies:
@@ -2713,8 +2714,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/compact/compact-tool-result-prune:
     dependencies:
@@ -2744,8 +2745,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/token-meter
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/context/session-reference:
     dependencies:
@@ -2775,8 +2776,8 @@ importers:
         specifier: workspace:^
         version: link:../../session-query/session-query
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/context/time-context:
     dependencies:
@@ -2812,8 +2813,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/context/tmux-context:
     dependencies:
@@ -2840,8 +2841,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/system-prompt
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/context/workspace-context:
     dependencies:
@@ -2889,8 +2890,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/cordis/repository-plugin:
     dependencies:
@@ -2923,8 +2924,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/cordis/tool-cordis:
     dependencies:
@@ -2966,8 +2967,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/core/agent:
     devDependencies:
@@ -2993,8 +2994,8 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/core/agent-loop:
     dependencies:
@@ -3030,8 +3031,8 @@ importers:
         specifier: workspace:^
         version: link:../tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/core/scope:
     devDependencies:
@@ -3039,8 +3040,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/core/session:
     devDependencies:
@@ -3063,8 +3064,8 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/core/system-prompt:
     dependencies:
@@ -3082,8 +3083,8 @@ importers:
         specifier: workspace:^
         version: link:../scope
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/core/tools:
     dependencies:
@@ -3116,8 +3117,8 @@ importers:
         specifier: workspace:^
         version: link:../../ui/user-approval
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/credentials/credentials:
     devDependencies:
@@ -3128,8 +3129,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/credentials/credentials-local:
     dependencies:
@@ -3159,8 +3160,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/paths
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/examples/acp-demo:
     devDependencies:
@@ -3207,8 +3208,8 @@ importers:
         specifier: workspace:^
         version: link:../../context/workspace-context
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       schemastery:
         specifier: ^3.17.0
         version: link:../../../vendor/schemastery
@@ -3322,8 +3323,8 @@ importers:
         specifier: workspace:*
         version: link:../../../native/landlock-run/packages/entry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/examples/jsonrpc-demo:
     dependencies:
@@ -3335,8 +3336,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/feedback/command-feedback:
     devDependencies:
@@ -3362,8 +3363,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/fs/fs:
     devDependencies:
@@ -3380,8 +3381,8 @@ importers:
         specifier: workspace:^
         version: link:../../sandbox/sandbox
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/fs/fs-local:
     dependencies:
@@ -3402,8 +3403,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/fs/fs-policy:
     devDependencies:
@@ -3417,8 +3418,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/fs/fs-sandbox:
     devDependencies:
@@ -3438,8 +3439,8 @@ importers:
         specifier: workspace:^
         version: link:../../sandbox/sandbox-policy
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/fs/tool-fs:
     dependencies:
@@ -3496,8 +3497,8 @@ importers:
         specifier: workspace:^
         version: link:../../ui/user-approval
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/fs/tool-fs-search:
     dependencies:
@@ -3542,8 +3543,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/fs/tool-str-replace-editor:
     dependencies:
@@ -3588,8 +3589,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/goal/command-goal:
     devDependencies:
@@ -3615,8 +3616,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/goal/goal:
     dependencies:
@@ -3655,8 +3656,8 @@ importers:
         specifier: workspace:^
         version: link:../../typert/type-meta
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/goal/goal-session:
     devDependencies:
@@ -3688,8 +3689,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/goal/tool-goal:
     dependencies:
@@ -3722,8 +3723,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/guard/repeat-tool-guard:
     dependencies:
@@ -3753,8 +3754,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/hooks/hook-protocol:
     devDependencies:
@@ -3768,8 +3769,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/hooks/hooks-claude:
     dependencies:
@@ -3820,8 +3821,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/hooks/hooks-codex:
     dependencies:
@@ -3869,8 +3870,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/host/apiproxy:
     dependencies:
@@ -3963,8 +3964,8 @@ importers:
         specifier: workspace:^
         version: link:../../typert/registry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/host/directory-picker:
     devDependencies:
@@ -3972,8 +3973,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/host/directory-picker-auto:
     devDependencies:
@@ -3999,8 +4000,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/host/directory-picker-browse:
     dependencies:
@@ -4039,8 +4040,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -4073,8 +4074,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -4098,8 +4099,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/host/webserver:
     dependencies:
@@ -4111,8 +4112,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/llm/llm:
     dependencies:
@@ -4130,8 +4131,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/llm/llm-deepseek:
     dependencies:
@@ -4161,8 +4162,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/llm/llm-pi-ai:
     dependencies:
@@ -4195,8 +4196,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/llm/llm-retry:
     dependencies:
@@ -4250,8 +4251,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/llm/token-meter:
     dependencies:
@@ -4278,8 +4279,8 @@ importers:
         specifier: workspace:^
         version: link:../../session-projection/session-projection
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/lsp/lsp:
     devDependencies:
@@ -4293,8 +4294,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/lsp/lsp-local:
     dependencies:
@@ -4324,8 +4325,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -4370,8 +4371,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/mcp/mcp-client:
     dependencies:
@@ -4404,8 +4405,8 @@ importers:
         specifier: ^2026.7.4
         version: 2026.7.10(zod@4.4.3)
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/plan/plan-mode:
     dependencies:
@@ -4447,8 +4448,8 @@ importers:
         specifier: workspace:^
         version: link:../../ui/user-interaction
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/pty/pty:
     devDependencies:
@@ -4465,8 +4466,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/pty/pty-local:
     dependencies:
@@ -4499,8 +4500,8 @@ importers:
         specifier: workspace:^
         version: link:../../subprocess/subprocess
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/pty/tool-bash-persistent:
     dependencies:
@@ -4548,8 +4549,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/pty/tool-pty:
     dependencies:
@@ -4606,8 +4607,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sandbox/sandbox:
     devDependencies:
@@ -4618,8 +4619,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sandbox/sandbox-local:
     dependencies:
@@ -4640,8 +4641,8 @@ importers:
         specifier: workspace:^
         version: link:../sandbox
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sandbox/sandbox-policy:
     dependencies:
@@ -4665,8 +4666,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/system-prompt
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sdk/create-sdk:
     dependencies:
@@ -4681,8 +4682,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sdk/helper:
     dependencies:
@@ -4733,8 +4734,8 @@ importers:
         specifier: workspace:^
         version: link:../../web/tool-web
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sdk/scripts:
     dependencies:
@@ -4758,8 +4759,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       tsdown:
         specifier: ^0.22.2
         version: 0.22.14(oxc-resolver@11.24.2)(publint@0.3.23)(tsx@4.23.12)(typescript@6.0.3)(unrun@0.3.1)
@@ -4782,8 +4783,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sdk/sdk-protocol:
     devDependencies:
@@ -4800,8 +4801,8 @@ importers:
         specifier: workspace:^
         version: link:../../subagent/subagent
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/sdk/telemetry:
     dependencies:
@@ -4819,8 +4820,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/paths
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-persistence/session-checkpoint-policy:
     devDependencies:
@@ -4858,8 +4859,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-persistence/session-persistence:
     devDependencies:
@@ -4879,8 +4880,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-persistence/session-persistence-jsonl:
     dependencies:
@@ -4901,8 +4902,8 @@ importers:
         specifier: workspace:^
         version: link:../session-persistence
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-persistence/session-persistence-sqlite:
     dependencies:
@@ -4920,8 +4921,8 @@ importers:
         specifier: workspace:^
         version: link:../session-persistence
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-projection/session-projection:
     dependencies:
@@ -4936,8 +4937,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-projection/session-projection-cache:
     dependencies:
@@ -4967,8 +4968,8 @@ importers:
         specifier: workspace:^
         version: link:../../storage/storage-domain
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-query/session-query:
     devDependencies:
@@ -4991,8 +4992,8 @@ importers:
         specifier: workspace:^
         version: link:../../session-title/session-title
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-query/session-query-sqlite:
     dependencies:
@@ -5019,8 +5020,8 @@ importers:
         specifier: workspace:^
         version: link:../session-query
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-query/tool-session-query:
     dependencies:
@@ -5068,8 +5069,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-title/session-title:
     dependencies:
@@ -5102,8 +5103,8 @@ importers:
         specifier: workspace:^
         version: link:../../session-projection/session-projection
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-title/session-title-all-messages-llm:
     dependencies:
@@ -5127,8 +5128,8 @@ importers:
         specifier: workspace:^
         version: link:../session-title-llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-title/session-title-first-message-llm:
     dependencies:
@@ -5161,8 +5162,8 @@ importers:
         specifier: workspace:^
         version: link:../session-title-llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/session-title/session-title-llm:
     dependencies:
@@ -5186,8 +5187,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/settings/settings:
     devDependencies:
@@ -5198,8 +5199,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       schemastery:
         specifier: ^3.18.0
         version: link:../../../vendor/schemastery
@@ -5229,8 +5230,8 @@ importers:
         specifier: workspace:^
         version: link:../settings
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/skill/skill:
     dependencies:
@@ -5245,8 +5246,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/skill/skill-badge:
     devDependencies:
@@ -5257,8 +5258,8 @@ importers:
         specifier: workspace:^
         version: link:../skill
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/skill/skill-local:
     dependencies:
@@ -5285,8 +5286,8 @@ importers:
         specifier: workspace:^
         version: link:../skill
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/skill/tool-skill:
     dependencies:
@@ -5319,8 +5320,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/spill/spill:
     devDependencies:
@@ -5337,8 +5338,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/spill/spill-local:
     dependencies:
@@ -5362,8 +5363,8 @@ importers:
         specifier: workspace:^
         version: link:../spill
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/spill/spill-policy:
     dependencies:
@@ -5396,8 +5397,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/storage/storage:
     devDependencies:
@@ -5405,8 +5406,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/storage/storage-domain:
     dependencies:
@@ -5424,8 +5425,8 @@ importers:
         specifier: workspace:^
         version: link:../storage
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/storage/storage-json:
     dependencies:
@@ -5440,8 +5441,8 @@ importers:
         specifier: workspace:^
         version: link:../storage
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/storage/storage-sqlite:
     dependencies:
@@ -5456,8 +5457,8 @@ importers:
         specifier: workspace:^
         version: link:../storage
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent:
     dependencies:
@@ -5505,8 +5506,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent-acp:
     dependencies:
@@ -5548,8 +5549,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent-claude-code:
     dependencies:
@@ -5591,8 +5592,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent-codex:
     dependencies:
@@ -5637,8 +5638,8 @@ importers:
         specifier: 0.146.0
         version: 0.146.0
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent-dsh-sdk:
     dependencies:
@@ -5677,8 +5678,8 @@ importers:
         specifier: workspace:^
         version: link:../../subprocess/subprocess
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent-fork:
     dependencies:
@@ -5717,8 +5718,8 @@ importers:
         specifier: workspace:^
         version: link:../subagent-spawn
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent-inprocess:
     devDependencies:
@@ -5762,8 +5763,8 @@ importers:
         specifier: workspace:^
         version: link:../../ui/user-approval
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/subagent-spawn:
     dependencies:
@@ -5814,8 +5815,8 @@ importers:
         specifier: workspace:^
         version: link:../tool-subagent
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/tool-subagent:
     dependencies:
@@ -5866,8 +5867,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/tool-subagent-control:
     devDependencies:
@@ -5908,8 +5909,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subagent/tool-subagent-report:
     dependencies:
@@ -5954,8 +5955,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subprocess/subprocess:
     devDependencies:
@@ -5963,8 +5964,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/subprocess/subprocess-local:
     devDependencies:
@@ -5978,8 +5979,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/support/acp-snapshot:
     dependencies:
@@ -6000,8 +6001,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/support/agent-loop-testkit:
     devDependencies:
@@ -6027,8 +6028,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/support/invariants:
     dependencies:
@@ -6037,8 +6038,8 @@ importers:
         version: link:../../../vendor/schemastery
     devDependencies:
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/support/llm-mock-server:
     devDependencies:
@@ -6046,8 +6047,8 @@ importers:
         specifier: workspace:^
         version: link:../invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/support/llm-replay:
     devDependencies:
@@ -6064,8 +6065,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/support/loader-smoke:
     dependencies:
@@ -6089,8 +6090,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/tasks/tasks:
     devDependencies:
@@ -6107,8 +6108,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/tasks/tasks-local:
     devDependencies:
@@ -6131,8 +6132,8 @@ importers:
         specifier: workspace:^
         version: link:../../util/timeout
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/tasks/tool-tasks:
     dependencies:
@@ -6168,8 +6169,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/telemetry/session-telemetry:
     devDependencies:
@@ -6183,8 +6184,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/telemetry/session-telemetry-otel:
     dependencies:
@@ -6235,8 +6236,8 @@ importers:
         specifier: workspace:^
         version: link:../session-telemetry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/timeout/timeout-policy:
     devDependencies:
@@ -6253,8 +6254,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/todo/tool-todo:
     dependencies:
@@ -6305,8 +6306,8 @@ importers:
         specifier: workspace:^
         version: link:../../ui/user-interaction
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/typert/generator:
     dependencies:
@@ -6327,8 +6328,8 @@ importers:
         specifier: workspace:^
         version: link:../registry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -6349,8 +6350,8 @@ importers:
         specifier: workspace:^
         version: link:../registry
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -6368,8 +6369,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/typert/type-meta:
     devDependencies:
@@ -6377,8 +6378,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/ui/app-boot:
     dependencies:
@@ -6414,8 +6415,8 @@ importers:
         specifier: ^4.0.9
         version: 4.0.9
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/ui/commands:
     devDependencies:
@@ -6435,8 +6436,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/ui/jsonrpc:
     dependencies:
@@ -6478,8 +6479,8 @@ importers:
         specifier: workspace:^
         version: link:../../subagent/subagent
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/ui/permission:
     dependencies:
@@ -6518,8 +6519,8 @@ importers:
         specifier: workspace:^
         version: link:../user-approval
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/ui/tool-ask-user:
     devDependencies:
@@ -6542,8 +6543,8 @@ importers:
         specifier: workspace:^
         version: link:../user-interaction
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/ui/user-approval:
     dependencies:
@@ -6573,8 +6574,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/system-prompt
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/ui/user-interaction:
     devDependencies:
@@ -6588,8 +6589,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/util/atomic-write:
     devDependencies:
@@ -6597,8 +6598,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/util/brand:
     devDependencies:
@@ -6606,8 +6607,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/util/environment:
     devDependencies:
@@ -6615,8 +6616,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/util/native-command:
     devDependencies:
@@ -6624,8 +6625,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/util/paths:
     devDependencies:
@@ -6633,8 +6634,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/util/retention:
     devDependencies:
@@ -6642,8 +6643,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.6
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/util/timeout:
     devDependencies:
@@ -6651,8 +6652,8 @@ importers:
         specifier: workspace:^
         version: link:../../support/invariants
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/web/tool-web:
     dependencies:
@@ -6706,8 +6707,8 @@ importers:
         specifier: ^5.0.6
         version: 5.0.6
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/web/web:
     dependencies:
@@ -6722,8 +6723,8 @@ importers:
         specifier: workspace:^
         version: link:../../llm/llm
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/web/web-fetch-local:
     dependencies:
@@ -6741,8 +6742,8 @@ importers:
         specifier: workspace:^
         version: link:../web
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/web/web-search-deepseek:
     dependencies:
@@ -6772,8 +6773,8 @@ importers:
         specifier: workspace:^
         version: link:../web
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/web/web-search-exa:
     dependencies:
@@ -6791,8 +6792,8 @@ importers:
         specifier: workspace:^
         version: link:../web
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/web/web-search-perplexity:
     dependencies:
@@ -6810,8 +6811,8 @@ importers:
         specifier: workspace:^
         version: link:../web
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/workflow/tool-ralph:
     dependencies:
@@ -6862,8 +6863,8 @@ importers:
         specifier: workspace:^
         version: link:../workflow-workerthread
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/workflow/tool-workflow:
     dependencies:
@@ -6899,8 +6900,8 @@ importers:
         specifier: workspace:^
         version: link:../workflow-workerthread
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/workflow/workflow:
     devDependencies:
@@ -6920,8 +6921,8 @@ importers:
         specifier: workspace:^
         version: link:../../core/session
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/packages/workflow/workflow-workerthread:
     dependencies:
@@ -6966,8 +6967,8 @@ importers:
         specifier: workspace:^
         version: link:../workflow
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
       tsx:
         specifier: ^4.19.2
         version: 4.23.12
@@ -6997,8 +6998,8 @@ importers:
         specifier: workspace:^
         version: link:../../storage/storage-domain
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../../vendor/cordis
 
   harness/vendor/cordis:
     dependencies:
@@ -7023,8 +7024,8 @@ importers:
         specifier: ^1.0.0-rc.5
         version: link:../loader
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../cordis
 
   harness/vendor/hmr:
     dependencies:
@@ -7038,8 +7039,8 @@ importers:
         specifier: ^4.0.3
         version: 4.0.3
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../cordis
       cosmokit:
         specifier: ^1.8.1
         version: link:../cosmokit
@@ -7066,8 +7067,8 @@ importers:
         specifier: ^1.0.0-rc.5
         version: link:../loader
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../cordis
       cosmokit:
         specifier: ^1.8.1
         version: link:../cosmokit
@@ -7078,8 +7079,8 @@ importers:
   harness/vendor/loader:
     dependencies:
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../cordis
       cosmokit:
         specifier: ^1.8.1
         version: link:../cosmokit
@@ -7093,8 +7094,8 @@ importers:
   harness/vendor/logger-console:
     dependencies:
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../cordis
       cosmokit:
         specifier: ^1.8.1
         version: link:../cosmokit
@@ -7117,8 +7118,8 @@ importers:
   harness/vendor/timer:
     dependencies:
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../cordis
       cosmokit:
         specifier: ^1.8.1
         version: link:../cosmokit
@@ -7175,8 +7176,8 @@ importers:
         specifier: ^8.5.10
         version: 8.18.1
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../harness/vendor/cordis
       dsh-better-sidebar:
         specifier: link:D:/Projects/deepseek-harness/DSH-better-sidebar
         version: link:../../D:/Projects/deepseek-harness/DSH-better-sidebar
@@ -7457,8 +7458,8 @@ importers:
         specifier: ^8.5.10
         version: 8.18.1
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../harness/vendor/cordis
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1(@noble/hashes@2.2.0)
@@ -7549,7 +7550,7 @@ importers:
         specifier: ^18.3.1
         version: 18.3.7(@types/react@18.3.31)
       cordis:
-        specifier: link:../../harness/vendor/cordis
+        specifier: 4.0.0-rc.7
         version: link:../../harness/vendor/cordis
       jsdom:
         specifier: ^26.0.0
@@ -7887,7 +7888,7 @@ importers:
         specifier: '*'
         version: link:../../harness/packages/core/tools
       cordis:
-        specifier: '*'
+        specifier: 4.0.0-rc.7
         version: link:../../harness/vendor/cordis
       react:
         specifier: ^18.2.0
@@ -8189,8 +8190,8 @@ importers:
         specifier: ^0.0.1
         version: link:../../harness/packages/core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../harness/vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -8376,8 +8377,8 @@ importers:
         specifier: ^0.0.1-rc.1
         version: link:../../harness/packages/core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../harness/vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -8441,8 +8442,8 @@ importers:
         specifier: ~18.3.31
         version: 18.3.31
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../harness/vendor/cordis
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
@@ -8513,8 +8514,8 @@ importers:
         specifier: ^0.0.1-rc.1
         version: link:../../harness/packages/core/tools
       cordis:
-        specifier: ^4.0.0-rc.7
-        version: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+        specifier: 4.0.0-rc.7
+        version: link:../../harness/vendor/cordis
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -8551,19 +8552,19 @@ importers:
         version: link:../../../plugins/dsh-web-review
       '@huanlin/dsh-plugin-aigc-canvas':
         specifier: file:../../../plugins/aigc-canvas
-        version: file:plugins/aigc-canvas(c6188ef6df9faa98884a6991f9bf56bb)
+        version: file:plugins/aigc-canvas(3da9ec5220f26e12c954c9c38b5573fe)
       '@huanlin/dsh-plugin-interpreters':
         specifier: file:../../../plugins/interpreters
         version: file:plugins/interpreters(6c4997246cfeec8c302eafda06cf7111)
       '@huanlin/dsh-plugin-mineru':
         specifier: file:../../../plugins/mineru
-        version: file:plugins/mineru(852dcc7151e3e8bd025ce52733275c3a)
+        version: file:plugins/mineru(3150e5200b691d52a19d2db38893bb3f)
       '@huanlin/dsh-plugin-ya-workspace-sidebar':
         specifier: file:../../../plugins/ya-workspace-sidebar
-        version: file:plugins/ya-workspace-sidebar(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-sidebar@harness+packages+client+ui-sidebar)(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))(react@18.3.1)
+        version: file:plugins/ya-workspace-sidebar(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-sidebar@harness+packages+client+ui-sidebar)(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(cordis@harness+vendor+cordis)(react@18.3.1)
       '@huanlin/dsh-plugin-yet-another-subagent':
         specifier: file:../../../plugins/yet-another-subagent
-        version: file:plugins/yet-another-subagent(0dbc03755fb4f9e1c58a3e8bb7b4cd8d)
+        version: file:plugins/yet-another-subagent(5c2527b4123406ece40fc1c164a165f7)
       '@r05en1cu/dsh-mygo':
         specifier: 0.2.0-rc.6
         version: 0.2.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-storage-domain@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-storage@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-storage@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/schemastery@3.18.1)
@@ -8578,13 +8579,13 @@ importers:
         version: 0.2.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/schemastery@3.18.1)
       dsh-better-sidebar:
         specifier: file:../../../plugins/dsh-better-sidebar
-        version: file:plugins/dsh-better-sidebar(312bdb0a09c7f6b626e8772f6d2d59e2)
+        version: file:plugins/dsh-better-sidebar(d764e561a3f5e5f99e82d0b716ee434d)
       dsh-llm-fallbacks:
         specifier: file:../../../plugins/dsh-llm-fallbacks
         version: link:../../../plugins/dsh-llm-fallbacks
       marisa-bundle:
         specifier: file:../../../bundles/marisa-bundle
-        version: file:bundles/marisa-bundle(5a8b8f0ceab44721c727a02859518f12)
+        version: file:bundles/marisa-bundle(b9749ef4f72c8c6dd55dc5645fb9db74)
 
 packages:
 
@@ -9998,7 +9999,7 @@ packages:
       '@deepseek-ai/dsh-invariants': ^0.0.1
       '@deepseek-ai/dsh-subprocess': ^0.0.1
       '@deepseek-ai/dsh-timeout': ^0.0.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
 
   '@deepseek-ai/dsh-scope@0.1.0-rc.6':
     resolution: {integrity: sha512-UlDLV4syLoJinNg9imhXrSAHrdaTa5Ff8gg46rzjFJGPUOhAk3DZff0hryT5OhrBi0A5Tj92qVpg2pRVvxnUzQ==}
@@ -10346,7 +10347,7 @@ packages:
       '@deepseek-ai/dsh-invariants': ^0.0.1
       '@deepseek-ai/dsh-scope': ^0.0.1
       '@deepseek-ai/dsh-tools': ^0.0.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
 
   '@deepseek-ai/dsh-tool-pwsh@file:harness/packages/bash/tool-pwsh':
     resolution: {directory: harness/packages/bash/tool-pwsh, type: directory}
@@ -10359,7 +10360,7 @@ packages:
       '@deepseek-ai/dsh-system-prompt': ^0.0.1
       '@deepseek-ai/dsh-tasks': ^0.0.1
       '@deepseek-ai/dsh-tools': ^0.0.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
 
   '@deepseek-ai/dsh-tool-todo@0.1.0-rc.6':
     resolution: {integrity: sha512-ll9xmgkrV6nsxjEZn5+YkNwQei7WrMMisnbr9mAKmqN5vpyOVHXisLvKdiASEmgpm4rsicnR8Y0wcBUfbeJTxA==}
@@ -10519,7 +10520,7 @@ packages:
     peerDependencies:
       '@deepseek-ai/dsh-client-ui-primitives': '*'
       '@deepseek-ai/dsh-client-ui-slots': '*'
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
 
   '@dsh-external/dsh-input-history@file:plugins/dsh-input-history':
@@ -10643,7 +10644,7 @@ packages:
       '@deepseek-ai/dsh-skill': ^0.0.1
       '@deepseek-ai/dsh-subprocess': ^0.0.1
       '@deepseek-ai/dsh-tools': ^0.0.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
       schemastery: ^3.18.0
     peerDependenciesMeta:
@@ -11110,7 +11111,7 @@ packages:
       '@deepseek-ai/dsh-invariants': ^0.0.1-rc.1
       '@deepseek-ai/dsh-session': ^0.0.1-rc.1
       '@deepseek-ai/dsh-tools': ^0.0.1-rc.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
       dsh-better-sidebar: ^0.4.0
       react: ^18.2.0
       react-dom: ^18.2.0
@@ -11201,7 +11202,7 @@ packages:
       '@deepseek-ai/dsh-client-ui-slots': ^0.0.1-rc.1
       '@deepseek-ai/dsh-host-apiproxy': ^0.0.1-rc.1
       '@deepseek-ai/dsh-tools': ^0.0.1-rc.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
     peerDependenciesMeta:
       '@deepseek-ai/dsh-client-connection':
@@ -11236,7 +11237,7 @@ packages:
       '@deepseek-ai/dsh-client-ui-sidebar': ^0.0.1-rc.1
       '@deepseek-ai/dsh-client-ui-slots': ^0.0.1-rc.1
       '@deepseek-ai/dsh-invariants': ^0.0.1-rc.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
     peerDependenciesMeta:
       '@deepseek-ai/dsh-client-locale':
@@ -11279,7 +11280,7 @@ packages:
       '@deepseek-ai/dsh-session-projection': ^0.0.1-rc.1
       '@deepseek-ai/dsh-subagent': ^0.0.1-rc.1
       '@deepseek-ai/dsh-tools': ^0.0.1-rc.1
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
       schemastery: ^3.18.0
     peerDependenciesMeta:
@@ -14643,18 +14644,6 @@ packages:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
 
-  cordis@4.0.0-rc.8:
-    resolution: {integrity: sha512-vXaYK6XZJlIFTnODp4Rd973Qnd/gm3cwFzWsMTaeu6cQQheA7N+aA0GqHRNl0cFIrxMXWU8dst1ZXHlUQvfyRw==}
-    hasBin: true
-    peerDependencies:
-      '@cordisjs/plugin-include': ^1.0.4
-      '@cordisjs/plugin-loader': ^1.0.0-rc.5
-    peerDependenciesMeta:
-      '@cordisjs/plugin-include':
-        optional: true
-      '@cordisjs/plugin-loader':
-        optional: true
-
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
 
@@ -14955,7 +14944,7 @@ packages:
       '@deepseek-ai/dsh-session': ^0.1.0-rc.6
       '@deepseek-ai/dsh-settings': ^0.1.0-rc.6
       '@deepseek-ai/dsh-tools': ^0.1.0-rc.6
-      cordis: ^4.0.0-rc.7
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
       react-dom: ^18.2.0
     peerDependenciesMeta:
@@ -14975,7 +14964,7 @@ packages:
       '@deepseek-ai/dsh-llm': '*'
       '@deepseek-ai/dsh-settings': '*'
       '@deepseek-ai/dsh-tools': '*'
-      cordis: '*'
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
       schemastery: '*'
 
@@ -20171,13 +20160,13 @@ snapshots:
     optionalDependencies:
       '@deepseek-ai/dsh-commands': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-typert-protocol@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
 
-  '@deepseek-ai/dsh-pwsh-local@file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))':
+  '@deepseek-ai/dsh-pwsh-local@file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)':
     dependencies:
       '@deepseek-ai/dsh-bash': link:harness/packages/bash/bash
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
       '@deepseek-ai/dsh-subprocess': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-timeout': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       schemastery: 3.18.0
 
   '@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))':
@@ -20583,15 +20572,15 @@ snapshots:
       '@deepseek-ai/schemastery': 3.18.1
       zod: 4.4.3
 
-  '@deepseek-ai/dsh-tool-cordis@file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))':
+  '@deepseek-ai/dsh-tool-cordis@file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@harness+vendor+cordis)':
     dependencies:
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
       '@deepseek-ai/dsh-scope': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       schemastery: 3.18.0
 
-  '@deepseek-ai/dsh-tool-pwsh@file:harness/packages/bash/tool-pwsh(3b9350641d96669c98fc83de110fe7ed)':
+  '@deepseek-ai/dsh-tool-pwsh@file:harness/packages/bash/tool-pwsh(abe2674f6c5300b3f60f93fc9fd1aae7)':
     dependencies:
       '@deepseek-ai/dsh-agent': 0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10)
       '@deepseek-ai/dsh-bash': link:harness/packages/bash/bash
@@ -20601,7 +20590,7 @@ snapshots:
       '@deepseek-ai/dsh-system-prompt': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-llm@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
       '@deepseek-ai/dsh-tasks': link:harness/packages/tasks/tasks
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       schemastery: 3.18.0
 
   '@deepseek-ai/dsh-tool-todo@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session-projection@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))':
@@ -20787,12 +20776,12 @@ snapshots:
       typescript: 5.9.3
       typescript-language-server: 5.3.0
 
-  '@dsh-external/dsh-diff-viewer@file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))(react@18.3.1)':
+  '@dsh-external/dsh-diff-viewer@file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)(react@18.3.1)':
     dependencies:
       '@deepseek-ai/dsh-client-ui-primitives': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       clsx: 2.1.1
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       diff: 8.0.4
       react: 18.3.1
 
@@ -20891,7 +20880,7 @@ snapshots:
       '@deepseek-ai/dsh-tool-todo': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session-projection@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))
       react: 18.3.1
 
-  '@dsh-external/dsh-vision-toolkit@file:plugins/dsh-vision-toolkit(495479c133bf311be9d1c3970a8ba792)':
+  '@dsh-external/dsh-vision-toolkit@file:plugins/dsh-vision-toolkit(ac7e3cef16ea5e7a1445cfe24e96050c)':
     dependencies:
       '@deepseek-ai/dsh-agent': 0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10)
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc)
@@ -20905,14 +20894,14 @@ snapshots:
       '@deepseek-ai/dsh-skill': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-llm@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
       '@deepseek-ai/dsh-subprocess': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       react: 18.3.1
       saxes: 6.0.0
       schemastery: link:harness/vendor/schemastery
     optionalDependencies:
       '@deepseek-ai/dsh-host-webserver': link:harness/packages/host/webserver
 
-  '@dsh-external/dsh-vision-toolkit@file:plugins/dsh-vision-toolkit(bc9af95ee2afb2c55860a4bcf0be270c)':
+  '@dsh-external/dsh-vision-toolkit@file:plugins/dsh-vision-toolkit(b29d5e05c03c8d513cd34aefabbe7a26)':
     dependencies:
       '@deepseek-ai/dsh-agent': 0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10)
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(2a7a03ee40588d970e259633ad1f21bd)
@@ -20926,7 +20915,7 @@ snapshots:
       '@deepseek-ai/dsh-skill': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-llm@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
       '@deepseek-ai/dsh-subprocess': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       react: 18.3.1
       saxes: 6.0.0
       schemastery: link:harness/vendor/schemastery
@@ -21293,7 +21282,7 @@ snapshots:
     dependencies:
       hono: 4.13.1
 
-  '@huanlin/dsh-plugin-aigc-canvas@file:plugins/aigc-canvas(c6188ef6df9faa98884a6991f9bf56bb)':
+  '@huanlin/dsh-plugin-aigc-canvas@file:plugins/aigc-canvas(3da9ec5220f26e12c954c9c38b5573fe)':
     dependencies:
       schemastery: 3.18.0
       ws: 8.21.3
@@ -21308,8 +21297,8 @@ snapshots:
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
       '@deepseek-ai/dsh-session': 0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
-      dsh-better-sidebar: file:plugins/dsh-better-sidebar(312bdb0a09c7f6b626e8772f6d2d59e2)
+      cordis: link:harness/vendor/cordis
+      dsh-better-sidebar: file:plugins/dsh-better-sidebar(d764e561a3f5e5f99e82d0b716ee434d)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
     transitivePeerDependencies:
@@ -21332,7 +21321,7 @@ snapshots:
       react: 18.3.1
       schemastery: link:harness/vendor/schemastery
 
-  '@huanlin/dsh-plugin-mineru@file:plugins/mineru(852dcc7151e3e8bd025ce52733275c3a)':
+  '@huanlin/dsh-plugin-mineru@file:plugins/mineru(3150e5200b691d52a19d2db38893bb3f)':
     dependencies:
       schemastery: 3.18.0
     optionalDependencies:
@@ -21344,22 +21333,10 @@ snapshots:
       '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-host-apiproxy': link:harness/packages/host/apiproxy
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       react: 18.3.1
 
-  '@huanlin/dsh-plugin-ya-workspace-sidebar@file:plugins/ya-workspace-sidebar(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-sidebar@harness+packages+client+ui-sidebar)(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))(react@18.3.1)':
-    optionalDependencies:
-      '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc)
-      '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf)
-      '@deepseek-ai/dsh-client-ui-conversation': 0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1)
-      '@deepseek-ai/dsh-client-ui-primitives': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
-      '@deepseek-ai/dsh-client-ui-sidebar': link:harness/packages/client/ui-sidebar
-      '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
-      '@deepseek-ai/dsh-invariants': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
-      react: 18.3.1
-
-  '@huanlin/dsh-plugin-ya-workspace-sidebar@file:plugins/ya-workspace-sidebar(a3489bd3b1b91a5e0060849f253f4617)':
+  '@huanlin/dsh-plugin-ya-workspace-sidebar@file:plugins/ya-workspace-sidebar(6fec16a64cf69df09a1c566571ea4fae)':
     optionalDependencies:
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc)
       '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf)
@@ -21368,33 +21345,22 @@ snapshots:
       '@deepseek-ai/dsh-client-ui-sidebar': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(react@18.3.1)
       '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       react: 18.3.1
 
-  '@huanlin/dsh-plugin-yet-another-subagent@file:plugins/yet-another-subagent(0dbc03755fb4f9e1c58a3e8bb7b4cd8d)':
+  '@huanlin/dsh-plugin-ya-workspace-sidebar@file:plugins/ya-workspace-sidebar(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-sidebar@harness+packages+client+ui-sidebar)(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(cordis@harness+vendor+cordis)(react@18.3.1)':
     optionalDependencies:
-      '@deepseek-ai/dsh-agent': 0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10)
-      '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(daa6b1945d5a5e12d3c788459e54f991)
       '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc)
       '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf)
       '@deepseek-ai/dsh-client-ui-conversation': 0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1)
       '@deepseek-ai/dsh-client-ui-primitives': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
-      '@deepseek-ai/dsh-client-ui-settings': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-api-remotes@0.1.0-rc.6(24bc2e82950aadcc4174dbd9493efc72))(@deepseek-ai/dsh-client-connection@0.1.0-rc.6)(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-schema-form@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-settings@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/schemastery@3.18.1))(react@18.3.1)
+      '@deepseek-ai/dsh-client-ui-sidebar': link:harness/packages/client/ui-sidebar
       '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
-      '@deepseek-ai/dsh-client-ui-tool': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-api-remotes@0.1.0-rc.6(24bc2e82950aadcc4174dbd9493efc72))(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(react@18.3.1)
-      '@deepseek-ai/dsh-host-apiproxy': link:harness/packages/host/apiproxy
       '@deepseek-ai/dsh-invariants': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
-      '@deepseek-ai/dsh-jobs': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))
-      '@deepseek-ai/dsh-llm': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
-      '@deepseek-ai/dsh-session': 0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)
-      '@deepseek-ai/dsh-session-projection': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))
-      '@deepseek-ai/dsh-subagent': link:harness/packages/subagent/subagent
-      '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
       react: 18.3.1
-      schemastery: link:harness/vendor/schemastery
 
-  '@huanlin/dsh-plugin-yet-another-subagent@file:plugins/yet-another-subagent(34e7e5c18bce57a1cf1d97e0903993af)':
+  '@huanlin/dsh-plugin-yet-another-subagent@file:plugins/yet-another-subagent(4befff816cefc421ffe246b8bf7fa504)':
     optionalDependencies:
       '@deepseek-ai/dsh-agent': 0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10)
       '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(daa6b1945d5a5e12d3c788459e54f991)
@@ -21413,7 +21379,30 @@ snapshots:
       '@deepseek-ai/dsh-session-projection': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))
       '@deepseek-ai/dsh-subagent': 0.1.0-rc.6(73ec98e753c9d00d956148104674eb73)
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
+      react: 18.3.1
+      schemastery: link:harness/vendor/schemastery
+
+  '@huanlin/dsh-plugin-yet-another-subagent@file:plugins/yet-another-subagent(5c2527b4123406ece40fc1c164a165f7)':
+    optionalDependencies:
+      '@deepseek-ai/dsh-agent': 0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10)
+      '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(daa6b1945d5a5e12d3c788459e54f991)
+      '@deepseek-ai/dsh-client-locale': 0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc)
+      '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf)
+      '@deepseek-ai/dsh-client-ui-conversation': 0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1)
+      '@deepseek-ai/dsh-client-ui-primitives': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
+      '@deepseek-ai/dsh-client-ui-settings': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-api-remotes@0.1.0-rc.6(24bc2e82950aadcc4174dbd9493efc72))(@deepseek-ai/dsh-client-connection@0.1.0-rc.6)(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-schema-form@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-settings@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/schemastery@3.18.1))(react@18.3.1)
+      '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
+      '@deepseek-ai/dsh-client-ui-tool': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-api-remotes@0.1.0-rc.6(24bc2e82950aadcc4174dbd9493efc72))(@deepseek-ai/dsh-client-locale@0.1.0-rc.6(479e2570ccf6dc9018a40dd77c6f6ccc))(@deepseek-ai/dsh-client-runtime@0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf))(@deepseek-ai/dsh-client-ui-conversation@0.1.0-rc.6(a011ea348c08f8ff4114a239afdc79f1))(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(react@18.3.1)
+      '@deepseek-ai/dsh-host-apiproxy': link:harness/packages/host/apiproxy
+      '@deepseek-ai/dsh-invariants': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)
+      '@deepseek-ai/dsh-jobs': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))
+      '@deepseek-ai/dsh-llm': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
+      '@deepseek-ai/dsh-session': 0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)
+      '@deepseek-ai/dsh-session-projection': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))
+      '@deepseek-ai/dsh-subagent': link:harness/packages/subagent/subagent
+      '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
+      cordis: link:harness/vendor/cordis
       react: 18.3.1
       schemastery: link:harness/vendor/schemastery
 
@@ -26448,14 +26437,6 @@ snapshots:
 
   cookie@0.7.2: {}
 
-  cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader):
-    dependencies:
-      '@standard-schema/spec': 1.1.0
-      cosmokit: 1.8.1
-    optionalDependencies:
-      '@cordisjs/plugin-include': link:harness/vendor/include
-      '@cordisjs/plugin-loader': link:harness/vendor/loader
-
   core-util-is@1.0.3: {}
 
   cors@2.8.6:
@@ -26748,7 +26729,7 @@ snapshots:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
-  dsh-better-sidebar@file:plugins/dsh-better-sidebar(312bdb0a09c7f6b626e8772f6d2d59e2):
+  dsh-better-sidebar@file:plugins/dsh-better-sidebar(d764e561a3f5e5f99e82d0b716ee434d):
     dependencies:
       '@aiden0z/pptx-renderer': 1.2.4
       '@codemirror/commands': 6.10.4
@@ -26802,7 +26783,7 @@ snapshots:
       xlsx: 0.18.5
       xterm: 5.3.0
     optionalDependencies:
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
@@ -26815,20 +26796,7 @@ snapshots:
     dependencies:
       yaml: 2.9.0
 
-  dsh-sonar@file:plugins/dsh-sonar(0e2c5732186d3b06e2b9d973c6dbe541):
-    dependencies:
-      '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(daa6b1945d5a5e12d3c788459e54f991)
-      '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf)
-      '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
-      '@deepseek-ai/dsh-commands': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-typert-protocol@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
-      '@deepseek-ai/dsh-llm': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
-      '@deepseek-ai/dsh-settings': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/schemastery@3.18.1)
-      '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
-      react: 18.3.1
-      schemastery: link:harness/vendor/schemastery
-
-  dsh-sonar@file:plugins/dsh-sonar(df76915963b68d8e01e50f8e72b04923):
+  dsh-sonar@file:plugins/dsh-sonar(8317876a9e7bf0d606ea8aea5181cf41):
     dependencies:
       '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(bfba759585d628abda5b88a60d04052a)
       '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(d850930d022a384c432fa314dc5a5e71)
@@ -26837,7 +26805,20 @@ snapshots:
       '@deepseek-ai/dsh-llm': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
       '@deepseek-ai/dsh-settings': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/schemastery@3.18.1)
       '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
-      cordis: 4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader)
+      cordis: link:harness/vendor/cordis
+      react: 18.3.1
+      schemastery: link:harness/vendor/schemastery
+
+  dsh-sonar@file:plugins/dsh-sonar(dc626915d9f895b500b5590f1a25e379):
+    dependencies:
+      '@deepseek-ai/dsh-client-connection': 0.1.0-rc.6(daa6b1945d5a5e12d3c788459e54f991)
+      '@deepseek-ai/dsh-client-runtime': 0.1.0-rc.6(398cd69ef0beb22516634f7174d7f6cf)
+      '@deepseek-ai/dsh-client-ui-slots': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))
+      '@deepseek-ai/dsh-commands': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-typert-protocol@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
+      '@deepseek-ai/dsh-llm': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))
+      '@deepseek-ai/dsh-settings': 0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/schemastery@3.18.1)
+      '@deepseek-ai/dsh-tools': 0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)
+      cordis: link:harness/vendor/cordis
       react: 18.3.1
       schemastery: link:harness/vendor/schemastery
 
@@ -27876,31 +27857,31 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  marisa-bundle@file:bundles/marisa-bundle(34fc3fec596333f12026b969dcb2adfe):
+  marisa-bundle@file:bundles/marisa-bundle(b9749ef4f72c8c6dd55dc5645fb9db74):
     dependencies:
       '@bill9109/dsh-web-ui-notify': file:plugins/dsh-web-ui-approval-notify
       '@deepseek-ai/dsh-genui': file:plugins/dsh-genui(e13232ed7b59a209afeac0aa44228e01)
-      '@deepseek-ai/dsh-pwsh-local': file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))
-      '@deepseek-ai/dsh-tool-cordis': file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))
-      '@deepseek-ai/dsh-tool-pwsh': file:harness/packages/bash/tool-pwsh(3b9350641d96669c98fc83de110fe7ed)
+      '@deepseek-ai/dsh-pwsh-local': file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)
+      '@deepseek-ai/dsh-tool-cordis': file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@harness+vendor+cordis)
+      '@deepseek-ai/dsh-tool-pwsh': file:harness/packages/bash/tool-pwsh(abe2674f6c5300b3f60f93fc9fd1aae7)
       '@dpskh/a2a': file:plugins/dsh-a2a(91e9462d7656a6b50a7fee9f3979dfd0)
       '@dsh-community/dsh-paste-input': file:plugins/dsh-paste-input
       '@dsh-community/multimedia-webui-input': file:plugins/dsh-multimedia-webui-input
       '@dsh-external/dsh-artifact': file:plugins/dsh-artifact(6316321ab3713b473571875c925bd345)
       '@dsh-external/dsh-code-map': file:plugins/dsh-code-map
-      '@dsh-external/dsh-diff-viewer': file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))(react@18.3.1)
+      '@dsh-external/dsh-diff-viewer': file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)(react@18.3.1)
       '@dsh-external/dsh-input-history': file:plugins/dsh-input-history(@deepseek-ai/cordis@4.0.1)
-      '@dsh-external/dsh-sidechain': file:plugins/dsh-sidechain(11fbb8695b82659d15d9e149973e4d4d)
+      '@dsh-external/dsh-sidechain': file:plugins/dsh-sidechain(71962e4f08cf945d5ee95e5dcf30f82b)
       '@dsh-external/dsh-stickers': file:plugins/dsh-stickers(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-commands@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-typert-protocol@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-host-webserver@harness+packages+host+webserver)(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(react@18.3.1)
       '@dsh-external/dsh-suggested-replies': file:plugins/dsh-suggested-replies(c92b086b5e2037c1927ac5e6176fa482)
       '@dsh-external/dsh-ui-progress': file:plugins/dsh-ui-progress(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tool-todo@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session-projection@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)))(react@18.3.1)
-      '@dsh-external/dsh-vision-toolkit': file:plugins/dsh-vision-toolkit(495479c133bf311be9d1c3970a8ba792)
-      '@dsh-external/workflow': file:plugins/dsh_workflow(c76b0bf8e269690538291f13bdab6cc0)
+      '@dsh-external/dsh-vision-toolkit': file:plugins/dsh-vision-toolkit(ac7e3cef16ea5e7a1445cfe24e96050c)
+      '@dsh-external/workflow': file:plugins/dsh_workflow(e0fa1d23763a34b1814bb2b39847fbb7)
       '@fakechris/dsh-track': file:plugins/dsh-track(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-llm@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-storage@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))
       '@loserfox/git-identity': file:plugins/dsh-git-identity
       '@omdsh-dev/dsh-drag-and-drop': file:plugins/dsh-drag-and-drop
       dsh-skill-manager: file:dsh-skill-manager
-      dsh-sonar: file:plugins/dsh-sonar(0e2c5732186d3b06e2b9d973c6dbe541)
+      dsh-sonar: file:plugins/dsh-sonar(dc626915d9f895b500b5590f1a25e379)
       whale-girl: file:plugins/whale-girl
     transitivePeerDependencies:
       - '@deepseek-ai/cordis'
@@ -27950,31 +27931,31 @@ snapshots:
       - schemastery
       - utf-8-validate
 
-  marisa-bundle@file:bundles/marisa-bundle(5a8b8f0ceab44721c727a02859518f12):
+  marisa-bundle@file:bundles/marisa-bundle(fca4f6dec208cd8f2514a1f8b6ea7e17):
     dependencies:
       '@bill9109/dsh-web-ui-notify': file:plugins/dsh-web-ui-approval-notify
       '@deepseek-ai/dsh-genui': file:plugins/dsh-genui(e13232ed7b59a209afeac0aa44228e01)
-      '@deepseek-ai/dsh-pwsh-local': file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))
-      '@deepseek-ai/dsh-tool-cordis': file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))
-      '@deepseek-ai/dsh-tool-pwsh': file:harness/packages/bash/tool-pwsh(3b9350641d96669c98fc83de110fe7ed)
+      '@deepseek-ai/dsh-pwsh-local': file:harness/packages/bash/pwsh-local(@deepseek-ai/dsh-bash@harness+packages+bash+bash)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-subprocess@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)
+      '@deepseek-ai/dsh-tool-cordis': file:harness/packages/cordis/tool-cordis(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(cordis@harness+vendor+cordis)
+      '@deepseek-ai/dsh-tool-pwsh': file:harness/packages/bash/tool-pwsh(abe2674f6c5300b3f60f93fc9fd1aae7)
       '@dpskh/a2a': file:plugins/dsh-a2a(91e9462d7656a6b50a7fee9f3979dfd0)
       '@dsh-community/dsh-paste-input': file:plugins/dsh-paste-input
       '@dsh-community/multimedia-webui-input': file:plugins/dsh-multimedia-webui-input
       '@dsh-external/dsh-artifact': file:plugins/dsh-artifact(6316321ab3713b473571875c925bd345)
       '@dsh-external/dsh-code-map': file:plugins/dsh-code-map
-      '@dsh-external/dsh-diff-viewer': file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@4.0.0-rc.8(@cordisjs/plugin-include@harness+vendor+include)(@cordisjs/plugin-loader@harness+vendor+loader))(react@18.3.1)
+      '@dsh-external/dsh-diff-viewer': file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-client-ui-slots@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(cordis@harness+vendor+cordis)(react@18.3.1)
       '@dsh-external/dsh-input-history': file:plugins/dsh-input-history(@deepseek-ai/cordis@4.0.1)
-      '@dsh-external/dsh-sidechain': file:plugins/dsh-sidechain(71962e4f08cf945d5ee95e5dcf30f82b)
+      '@dsh-external/dsh-sidechain': file:plugins/dsh-sidechain(11fbb8695b82659d15d9e149973e4d4d)
       '@dsh-external/dsh-stickers': file:plugins/dsh-stickers(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-commands@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-scope@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-typert-protocol@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-host-webserver@harness+packages+host+webserver)(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))(react@18.3.1)
       '@dsh-external/dsh-suggested-replies': file:plugins/dsh-suggested-replies(c92b086b5e2037c1927ac5e6176fa482)
       '@dsh-external/dsh-ui-progress': file:plugins/dsh-ui-progress(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tool-todo@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-agent@0.1.0-rc.6(b0514d7a320728b6d8f5a31eb3960e10))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session-projection@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6)))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0)))(react@18.3.1)
-      '@dsh-external/dsh-vision-toolkit': file:plugins/dsh-vision-toolkit(495479c133bf311be9d1c3970a8ba792)
-      '@dsh-external/workflow': file:plugins/dsh_workflow(e0fa1d23763a34b1814bb2b39847fbb7)
+      '@dsh-external/dsh-vision-toolkit': file:plugins/dsh-vision-toolkit(ac7e3cef16ea5e7a1445cfe24e96050c)
+      '@dsh-external/workflow': file:plugins/dsh_workflow(c76b0bf8e269690538291f13bdab6cc0)
       '@fakechris/dsh-track': file:plugins/dsh-track(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-llm@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-attachment@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-brand@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-timeout@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1))))(@deepseek-ai/dsh-session@0.1.0-rc.6(6fd26f59436a18b115f326d6060415e6))(@deepseek-ai/dsh-storage@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.0-rc.6(@deepseek-ai/cordis@4.0.1)))(@deepseek-ai/dsh-tools@0.1.0-rc.6(f8724372086ccc1457fc84e7becee2e0))
       '@loserfox/git-identity': file:plugins/dsh-git-identity
       '@omdsh-dev/dsh-drag-and-drop': file:plugins/dsh-drag-and-drop
       dsh-skill-manager: file:dsh-skill-manager
-      dsh-sonar: file:plugins/dsh-sonar(0e2c5732186d3b06e2b9d973c6dbe541)
+      dsh-sonar: file:plugins/dsh-sonar(dc626915d9f895b500b5590f1a25e379)
       whale-girl: file:plugins/whale-girl
     transitivePeerDependencies:
       - '@deepseek-ai/cordis'

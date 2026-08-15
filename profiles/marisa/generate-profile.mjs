@@ -214,6 +214,12 @@ nodeLinker: hoisted
 linkWorkspacePackages: true
 install-links: false
 
+# Some third-party plugin declares bare 'cordis: >=4.0.0 <5.0.0-0', which no
+# version satisfies (npm has no stable cordis 4; vendored copy is rc.7).
+# pnpm >= 11.22 resolves peers strictly and fails; force the workspace version.
+overrides:
+  cordis: 4.0.0-rc.7
+
 allowBuilds:
   '@google/genai': true
   esbuild: true
