@@ -32,6 +32,15 @@ allowBuilds:
   node-pty: true
   protobufjs: true
   sharp: true
+
+# dsh-code-map (vendored standalone plugin) declares bare `schemastery`
+# (^3.18.0). In this workspace that name resolves to harness/vendor/schemastery,
+# whose lib/ only exists after the harness build — its prepare-time tsc then
+# fails with TS2307. Redirect only that plugin's dependency to the published
+# @deepseek-ai/schemastery (same code, ships lib/types), leaving the vendored
+# workspace package and all harness links untouched.
+overrides:
+  '@dsh-external/dsh-code-map>schemastery': 'npm:@deepseek-ai/schemastery@3.18.1'
 # 近期发布的 registry 包会被 minimumReleaseAge 默认拦截；
 # 根 workspace 与 profile 生成器各自维护其依赖的 exclude 列表。
 minimumReleaseAgeExclude:
