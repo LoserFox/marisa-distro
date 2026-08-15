@@ -33,4 +33,4 @@
 ## 删除差异的原则
 
 上游已经提供等价能力时，应优先删除 Marisa 补丁，而不是永久维护双实现。每次 rc 同步 PR 必须逐项判断“重放、迁移或删除”，并更新本文件。
-| `tsconfig.host.json` | 从 include 移除 `examples/*/src`、`examples/*/start.ts`、`examples/*/tests`、`website/**` | fork 精简删除了 `packages/workspace` 与 `packages/session-persistence` 组,遗留的 examples 快照测试与 website 站点无法通过 tsc;examples/website 不是发行构建目标 | 若上游恢复完整包结构,重放时逐项移回 include |
+| `tsconfig.host.json` | 从 include 移除 `examples/*/src`、`examples/*/start.ts`、`examples/*/tests`、`website/**`,仅保留 `website/docs.ts`(被 `scripts/project-doc-site.spec.ts` 引用,纯类型无外部依赖) | fork 精简删除了 `packages/workspace` 与 `packages/session-persistence` 组,遗留的 examples 快照测试与 website 站点无法通过 tsc;examples/website 不是发行构建目标 | 若上游恢复完整包结构,重放时逐项移回 include |

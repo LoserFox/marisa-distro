@@ -68,7 +68,8 @@
     "apps/web/stress-tests/reasoning-chunks.stress.ts",
     "apps/cli/tests/**/*.ts",
     "packages/*/*/tests/**/*.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "website/docs.ts"
   ],
   "exclude": [
     "packages/client/**",
