@@ -1,0 +1,12 @@
+# The root row is the browser-roster face; the subpath row owns host services.
+- insert:
+    - id: sonar-view-client
+      name: dsh-sonar
+    - id: sonar-view-host
+      name: dsh-sonar/host
+      config:
+        locale: zh-CN
+        refreshIntervalMs: 2000
+        motion: full
+        backgroundReviewEnabled: true
+        backgroundReviewIntervalMs: 15000

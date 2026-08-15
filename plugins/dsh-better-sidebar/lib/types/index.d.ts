@@ -1,0 +1,39 @@
+import type { Context } from './context-types.ts';
+import { Config, type ResolvedSidebarConfig, type SidebarConfig } from './config.ts';
+export { Config };
+export type { SidebarConfig, ResolvedSidebarConfig };
+export type { Context } from './context-types.ts';
+export type { BetterSidebarService, TabDescriptor, TabComponentProps, FileViewerDescriptor, FileViewerProps, FileFetchStrategy, } from './client/service.ts';
+/** Plugin identity for cordis.yml rows. */
+export declare const name = "dsh-better-sidebar";
+/** Services required before mounting: the webserver routes, the session store, the loader's connection row, and the tool registry. */
+export declare const inject: string[];
+/** Content type served by /sidebar/file (binary-safe fallback for unknowns). */
+export declare function mediaTypeForPath(path: string): string;
+/**
+ * The live face of the side card settings namespace, bound to the settings
+ * service when it is mounted. The DSH settings RPC domain only serves
+ * allowlisted namespaces (api-proxy exposedNamespaces), so the client reads
+ * and writes THIS namespace through the plugin's own fenced /sidebar routes,
+ * which call the seam in-process — no configuration-client gate involved.
+ */
+export interface SidebarSettingsFace {
+    /** The current resolved value + revision (undefined while the settings service is absent). */
+    get(): {
+        value?: unknown;
+        revision?: number;
+    };
+    /** Merge a patch (revision-guarded) and return the fresh resolved view. */
+    update(patch: Record<string, unknown>, expectedRevision?: number): Promise<{
+        value?: unknown;
+        revision?: number;
+    }>;
+}
+/**
+ * Plugin body: mount the fenced routes and the pty lifecycle.
+ * @param ctx - host plugin context (webServer, sessions, loader).
+ * @param config - deployment-provided limits; the Loader validates against
+ * {@link Config} and fills defaults, direct callers get them from
+ * {@link resolveSidebarConfig}.
+ */
+export declare function apply(ctx: Context, config?: SidebarConfig): void;

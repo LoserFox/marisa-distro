@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-06-token-surface-unpriced-replace-compatibility.md
+2026-08-06-token-surface-unpriced-replace-compatibility.md: 77b778fba695f560eb68af6da2f416e61ccff181
+2026-08-06-token-surface-unpriced-replace-compatibility.zh.md: dd4c5883c4c6d37809c2f8100f266655d8ba600c

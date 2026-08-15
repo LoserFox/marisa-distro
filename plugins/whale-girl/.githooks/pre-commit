@@ -1,0 +1,14 @@
+#!/bin/sh
+# 本地精选门禁组。窄而必过的 hook 才是真防线——慢 hook 会被 --no-verify 绕过，
+# 绕过一次就永久失效。全量覆盖交给 CI（scripts/gates/run.mjs --group ci）。
+set -e
+cd "$(git rev-parse --show-toplevel)"
+# 并行/在途改动保护（漏洞 C 审查落地）：存在未暂存改动时提醒显式路径 add——
+# 防止 git add -A 吞入其他 agent 的在途修改。本 hook 不阻止提交（未暂存改动合法），
+# 只把暂存范围暴露给提交者复核。
+if ! git diff --quiet; then
+  echo "[pre-commit] 注意：存在未暂存改动（可能是并行 agent 在途修改），本次提交只含已暂存内容："
+  git diff --name-only | sed 's/^/  - /'
+  echo "[pre-commit] 请确认 add 范围显式、未误用 git add -A（见 AGENTS.md 并行/在途改动保护）。"
+fi
+node scripts/gates/run.mjs

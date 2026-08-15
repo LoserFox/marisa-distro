@@ -1,0 +1,14 @@
+# The dsh-track bundle patch: mounts the Track Bridge engine.
+#
+# Install into a profile with:
+#   dsh plugin --profile web add github:dsh-external/dsh-track
+#
+# The web-app bundle already mounts storage (json backend under ~/.dsh/storages),
+# storage-domain, skill, and skill-local — this patch only inserts the track
+# engine row. The fat skill ships in skills/dsh-track/SKILL.md and is copied
+# to ~/.dsh/skills/dsh-track by the install script so skill-local's default
+# roots pick it up.
+
+- insert:
+    - id: track
+      name: '@fakechris/dsh-track'

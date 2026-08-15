@@ -1,0 +1,62 @@
+{
+  "name": "@dsh-external/dsh-stickers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "人类 cannot live without 表情包：让 DSH 和用户在 WebUI 里发表情",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./invariant": "./lib/invariant.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["assets/stickers", "docs/screenshots/webui-real-conversation-v2.png", "docs/sticker-thumbnails-v2", "lib", "cordis.patch.yml", "README.md"],
+  "engines": { "node": "^22.19.0 || >=24.0.0" },
+  "scripts": {
+    "assets:stickers": "node scripts/build-stickers.mjs",
+    "assets:readme": "node scripts/build-readme-thumbnails.mjs",
+    "assets:wechat": "node scripts/build-wechat-submission.mjs",
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts",
+    "prepare": "npm run build"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "inject": ["@deepseek-ai/dsh-client-locale", "@deepseek-ai/dsh-client-runtime", "@deepseek-ai/dsh-client-ui-conversation", "@deepseek-ai/dsh-client-ui-tool"],
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-commands": "*",
+    "@deepseek-ai/dsh-host-webserver": "*",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/cordis": "^4.0.1-rc.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-agent": "link:../../harness/packages/core/agent",
+    "@deepseek-ai/dsh-client-locale": "link:../../harness/packages/client/locale",
+    "@deepseek-ai/dsh-client-runtime": "link:../../harness/packages/client/runtime",
+    "@deepseek-ai/dsh-client-ui-conversation": "link:../../harness/packages/client/ui-conversation",
+    "@deepseek-ai/dsh-client-ui-slots": "link:../../harness/packages/client/ui-slots",
+    "@deepseek-ai/dsh-client-ui-tool": "link:../../harness/packages/client/ui-tool",
+    "@deepseek-ai/dsh-commands": "link:../../harness/packages/ui/commands",
+    "@deepseek-ai/dsh-host-webserver": "link:../../harness/packages/host/webserver",
+    "@deepseek-ai/dsh-invariants": "link:../../harness/packages/support/invariants",
+    "@deepseek-ai/dsh-tools": "link:../../harness/packages/core/tools",
+    "@types/node": "^24.0.0",
+    "@types/react": "~18.3.1",
+    "@deepseek-ai/cordis": "link:../../harness/vendor/cordis",
+    "lightningcss": "^1.32.0",
+    "react": "^18.2.0",
+    "sharp": "^0.34.3",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.1"
+  },
+  "license": "BSD-3-Clause"
+}

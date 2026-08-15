@@ -1,0 +1,11 @@
+- insert:
+    - id: dpskh-a2a
+      name: '@dpskh/a2a'
+      config:
+        hub:
+          host: 127.0.0.1
+          port: 43123
+          maxPort: 43223
+        mesh:
+          project: main
+          persistConnections: true

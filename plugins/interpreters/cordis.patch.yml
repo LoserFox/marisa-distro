@@ -1,0 +1,11 @@
+# dsh-interpreters bundle layer: inserts the plugin row.
+# Loaded by `dsh plugin --profile <name> add link:./dsh-interpreters`.
+# The `name` is the package entry; Loader resolves it from profile node_modules.
+# Defaults: python/node from PATH, 30s timeout.
+- insert:
+    - id: dsh-interpreters
+      name: '@huanlin/dsh-plugin-interpreters'
+      config:
+        pythonPath: 'python'
+        nodePath: 'node'
+        timeoutMs: 30000

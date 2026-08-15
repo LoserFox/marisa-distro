@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Local install artifacts (file: devDeps point at a local harness checkout —
+# lockfiles are not portable and are not committed)
+package-lock.json
+pnpm-lock.yaml
+
+# Debug/diagnostic leftovers
+.loader-dump.json
+*.bak
+
+# Build output is committed (the harness serves lib/ directly) — keep lib/

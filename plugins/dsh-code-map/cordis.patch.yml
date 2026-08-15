@@ -1,0 +1,3 @@
+- insert:
+    - id: code-map
+      name: '@dsh-external/dsh-code-map'

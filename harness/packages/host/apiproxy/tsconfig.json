@@ -1,0 +1,90 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../goal/goal"
+    },
+    {
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../credentials/credentials"
+    },
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../../../vendor/schemastery"
+    },
+    {
+      "path": "../../api/remotes/tsconfig.host.json"
+    },
+    {
+      "path": "../../util/brand"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../core/tools"
+    },
+    {
+      "path": "../../session-persistence/session-persistence"
+    },
+    {
+      "path": "../../session-projection/session-projection"
+    },
+    {
+      "path": "../../session-projection/session-projection-cache"
+    },
+    {
+      "path": "../../session-query/session-query"
+    },
+    {
+      "path": "../../session-title/session-title"
+    },
+    {
+      "path": "../../session-query/session-query"
+    },
+    {
+      "path": "../../subagent/subagent"
+    },
+    {
+      "path": "../../skill/skill"
+    },
+    {
+      "path": "../../ui/commands"
+    },
+    {
+      "path": "../../ui/user-approval"
+    },
+    {
+      "path": "../../ui/user-interaction"
+    },
+    {
+      "path": "../../workspace/workspace"
+    },
+    {
+      "path": "../directory-picker"
+    },
+    {
+      "path": "../../support/invariants"
+    },
+    {
+      "path": "../../util/native-command"
+    }
+  ]
+}

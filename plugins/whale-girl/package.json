@@ -1,0 +1,36 @@
+{
+  "name": "whale-girl",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DSH Web GUI 内的桌面宠物（QQ 宠物形态）",
+  "scripts": {
+    "gates": "node scripts/gates/run.mjs",
+    "gates:ci": "node scripts/gates/run.mjs --group ci",
+    "test": "node --test 'tests/*.test.mjs'",
+    "build:client": "node scripts/build-client.mjs",
+    "check:client": "node scripts/build-client.mjs --check"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  },
+  "main": "./.dsh-plugin/index.mjs",
+  "exports": {
+    ".": "./.dsh-plugin/index.mjs",
+    "./client": "./.dsh-plugin/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "dependencies": {
+    "schemastery": "^3.18.0"
+  },
+  "license": "MIT"
+}

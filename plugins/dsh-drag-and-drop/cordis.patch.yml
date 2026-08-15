@@ -1,0 +1,10 @@
+# dsh-drag-and-drop bundle patch: mount the file-drag path plugin.
+#
+# Applied when this bundle appears in a profile's dsh.profile.bundles list.
+# The host half (package root) registers the file-locate HTTP route; the
+# browser half (dsh.client) is discovered automatically through the package's
+# dsh.client declaration + exports["./client"].
+
+- insert:
+    - id: drag-and-drop
+      name: '@omdsh-dev/dsh-drag-and-drop'

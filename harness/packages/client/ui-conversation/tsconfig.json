@@ -1,0 +1,60 @@
+{
+  "extends": "../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../web-react"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../../session-projection/session-projection"
+    },
+    {
+      "path": "../../llm/token-meter"
+    },
+    {
+      "path": "../../plan/plan-mode"
+    },
+    {
+      "path": "../../goal/goal"
+    },
+    {
+      "path": "../../todo/tool-todo"
+    },
+    {
+      "path": "../ui-slash"
+    },
+    {
+      "path": "../ui-layout"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../../support/invariants"
+    },
+    {
+      "path": "../../ui/permission"
+    }
+  ],
+  "exclude": [
+    "**/*.legacy.*"
+  ]
+}

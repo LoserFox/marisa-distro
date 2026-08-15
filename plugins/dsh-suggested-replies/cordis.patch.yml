@@ -1,0 +1,18 @@
+# Suggested replies is a Web bundle. It observes completed turns, asks the
+# configured model for candidate next user messages, and projects them into the
+# official strip immediately above the message input. Clicking a candidate
+# writes the draft only; sending remains an explicit input-bar action.
+- insert:
+    - id: suggested-replies
+      name: '@dsh-external/dsh-suggested-replies'
+      config:
+        enabled: true
+        suggestionCount: 3
+        contextMessageCount: 4
+        maxSuggestionChars: 160
+        maxTokens: 384
+        timeoutMs: 15000
+        # Optional explicit auxiliary route. Omit to inherit the current
+        # session provider/model.
+        # suggestionProvider: deepseek-official
+        # suggestionModel: deepseek-v4-flash

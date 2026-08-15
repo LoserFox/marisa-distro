@@ -1,0 +1,70 @@
+{
+  "name": "dsh-sonar",
+  "version": "0.1.0",
+  "description": "View infrastructure plugin for DeepSeek Harness",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./host": {
+      "types": "./lib/types/host.d.ts",
+      "default": "./lib/host.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dshClient": {
+    "platform": "web",
+    "inject": [
+      "@deepseek-ai/dsh-client-connection",
+      "@deepseek-ai/dsh-client-runtime",
+      "@deepseek-ai/dsh-client-ui-slots",
+      "@deepseek-ai/dsh-client-ui-plugin-config"
+    ]
+  },
+  "scripts": {
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json && node node_modules/tsdown/dist/run.mjs --config tsdown.config.ts",
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json --emitDeclarationOnly false --noEmit",
+    "test": "node node_modules/vitest/vitest.mjs run"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-connection": "*",
+    "@deepseek-ai/dsh-client-runtime": "*",
+    "@deepseek-ai/dsh-client-ui-slots": "*",
+    "@deepseek-ai/dsh-commands": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-settings": "*",
+    "cordis": "*",
+    "schemastery": "*",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^6.0.0",
+    "vitest": "^4.0.0"
+  },
+  "files": [
+    "lib",
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "docs"
+  ]
+}

@@ -1,0 +1,292 @@
+[
+  {
+    "file": "wechat-submission/upload/stickers/01-daily-chat.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 22443,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/02-human-questions.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 27753,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/03-use-ai-for-this.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 26365,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/04-fish-philosophy.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 21162,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/05-enough.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 20938,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/06-server-busy.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 23136,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/07-thinking-stopped.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 20244,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/08-great-question.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 26733,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/09-deep-thought.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 27492,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/10-no-thanks.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 24452,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/11-self-destruct.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 25979,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/12-restart-myself.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 23210,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/13-hot-update.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 21188,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/14-restore-session.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 24395,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/15-browser-left.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 24135,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/16-not-stuck.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 27509,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/17-memory-alive.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 22709,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/18-subagents-down.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 26698,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/19-plugins.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 21087,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/20-session-locked.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 24007,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/21-tests-passed.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 25736,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/22-root-cause.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 23987,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/23-running-tests.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 25748,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/stickers/24-fixed-review.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 25142,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/cover.png",
+    "width": 240,
+    "height": 240,
+    "format": "png",
+    "bytes": 21125,
+    "expectedWidth": 240,
+    "expectedHeight": 240,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/chat-icon.png",
+    "width": 50,
+    "height": 50,
+    "format": "png",
+    "bytes": 2825,
+    "expectedWidth": 50,
+    "expectedHeight": 50,
+    "maxBytes": 102400
+  },
+  {
+    "file": "wechat-submission/upload/detail-banner.jpg",
+    "width": 750,
+    "height": 400,
+    "format": "jpeg",
+    "bytes": 133249,
+    "expectedWidth": 750,
+    "expectedHeight": 400,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/artist-avatar.png",
+    "width": 640,
+    "height": 640,
+    "format": "png",
+    "bytes": 105542,
+    "expectedWidth": 640,
+    "expectedHeight": 640,
+    "maxBytes": 512000
+  },
+  {
+    "file": "wechat-submission/upload/artist-banner.jpg",
+    "width": 750,
+    "height": 400,
+    "format": "jpeg",
+    "bytes": 55307,
+    "expectedWidth": 750,
+    "expectedHeight": 400,
+    "maxBytes": 81920
+  }
+]

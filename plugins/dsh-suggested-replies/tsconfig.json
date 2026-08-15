@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2024",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "composite": false,
+    "incremental": false,
+    "rootDir": "src",
+    "outDir": "lib",
+    "declarationDir": "lib/types",
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

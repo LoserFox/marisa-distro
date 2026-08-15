@@ -1,0 +1,42 @@
+{
+  "name": "@dsh-external/dsh-code-map",
+  "version": "0.0.1",
+  "description": "DSH 代码地图插件：symbol 索引 / 文档符号 / 调用层级 / 继承树——给模型补上「地图型」语义查询（LSP 之上，零 SDK 依赖）",
+  "private": true,
+  "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit --pretty false",
+    "prepack": "pnpm run build",
+    "prepare": "pnpm run build"
+  },
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "schemastery": "^3.18.0",
+    "typescript": "5.9.3",
+    "typescript-language-server": "5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsdown": "^0.22.14",
+    "typescript": "5.9.3"
+  }
+}

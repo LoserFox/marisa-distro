@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "outDir": "lib",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationDir": "lib/types",
+    "strict": true,
+    "skipLibCheck": true,
+    "emitDeclarationOnly": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["tests", "lib"]
+}

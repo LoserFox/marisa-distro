@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@deepseek-ai/cordis": ["../../harness/vendor/cordis/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-agent": ["../../harness/packages/core/agent/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-commands": ["../../harness/packages/ui/commands/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-llm": ["../../harness/packages/llm/llm/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-session": ["../../harness/packages/core/session/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-session-title": ["../../harness/packages/session-title/session-title/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-session/types": ["../../harness/packages/core/session/lib/types/types.d.ts"],
+      "@deepseek-ai/dsh-subagent": ["../../harness/packages/subagent/subagent/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-system-prompt": ["../../harness/packages/core/system-prompt/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-jobs": ["../../harness/packages/jobs/jobs/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-tool-workflow/types": ["../../harness/packages/workflow/tool-workflow/lib/types/types.d.ts"],
+      "@deepseek-ai/dsh-tools": ["../../harness/packages/core/tools/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-user-approval": ["../../harness/packages/ui/user-approval/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-user-questions": ["../../harness/packages/interaction/user-questions/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-workflow": ["../../harness/packages/workflow/workflow/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-workflow/types": ["../../harness/packages/workflow/workflow/lib/types/types.d.ts"],
+      "@deepseek-ai/dsh-workflow-worker-thread": ["../../harness/packages/workflow/workflow-workerthread/lib/types/index.d.ts"],
+      "@deepseek-ai/schemastery": ["../../harness/vendor/schemastery/lib/types/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+}

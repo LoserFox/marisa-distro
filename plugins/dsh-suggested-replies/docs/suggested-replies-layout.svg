@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="300" viewBox="0 0 840 300" role="img" aria-labelledby="title desc">
+  <title id="title">Suggested reply bubbles above a chat input</title>
+  <desc id="desc">Three candidate reply bubbles appear directly above the message input card.</desc>
+  <rect width="840" height="300" fill="#f6f8fb"/>
+  <rect x="130" y="28" width="580" height="238" rx="20" fill="#ffffff" stroke="#d8dee9"/>
+  <rect x="158" y="54" width="260" height="38" rx="10" fill="#eef3ff"/>
+  <text x="178" y="78" font-family="Arial, sans-serif" font-size="14" fill="#355baf">AI: 已完成当前回复</text>
+  <text x="158" y="137" font-family="Arial, sans-serif" font-size="13" fill="#6b7280">下一步建议 · 点击填入输入框</text>
+  <rect x="158" y="150" width="146" height="34" rx="17" fill="#edf3ff" stroke="#9db8ee"/>
+  <text x="175" y="172" font-family="Arial, sans-serif" font-size="12" fill="#254a91">请帮我验证一下</text>
+  <rect x="314" y="150" width="154" height="34" rx="17" fill="#edf3ff" stroke="#9db8ee"/>
+  <text x="331" y="172" font-family="Arial, sans-serif" font-size="12" fill="#254a91">下一步该怎么做？</text>
+  <rect x="478" y="150" width="160" height="34" rx="17" fill="#edf3ff" stroke="#9db8ee"/>
+  <text x="495" y="172" font-family="Arial, sans-serif" font-size="12" fill="#254a91">我选择第一个方案</text>
+  <rect x="158" y="198" width="524" height="46" rx="12" fill="#ffffff" stroke="#6e96e5" stroke-width="2"/>
+  <text x="178" y="226" font-family="Arial, sans-serif" font-size="14" fill="#8b94a4">输入消息…</text>
+  <path d="M418 184v12" stroke="#557ecb" stroke-width="2"/>
+  <path d="M412 190l6 6 6-6" fill="none" stroke="#557ecb" stroke-width="2"/>
+  <text x="432" y="195" font-family="Arial, sans-serif" font-size="12" fill="#557ecb">候选在输入框上方</text>
+</svg>

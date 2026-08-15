@@ -1,0 +1,70 @@
+{
+  "name": "@fakechris/dsh-track",
+  "description": "Track Bridge: embedded task-management engine for DeepSeek Harness — decision-point protocol, capture wall, and Linear-shaped issue store over session events + storage KV",
+  "version": "0.3.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "scripts": {
+    "build": "node scripts/dsh-env.mjs tsc -p \"${DSH_TSCONFIG:-tsconfig.json}\" && node scripts/dsh-env.mjs tsdown -c tsdown.client.config.ts && node -e \"require('fs').renameSync('lib/client.cjs','lib/client.js')\"",
+    "prepack": "npm run build && node scripts/prepack-cordis-rewrite.mjs",
+    "test": "node scripts/dsh-env.mjs vitest run tests",
+    "typecheck": "node scripts/dsh-env.mjs tsc -p \"${DSH_TSCONFIG:-tsconfig.json}\" --noEmit"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-session": "*",
+    "@deepseek-ai/dsh-storage": "*",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-llm": "*",
+    "@deepseek-ai/cordis": "*"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json",
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    }
+  },
+  "files": [
+    "lib",
+    "src",
+    "cordis.patch.yml",
+    "skills"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "dsh-bundle",
+    "task-management",
+    "track-bridge",
+    "agent",
+    "plugin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

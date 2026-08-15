@@ -1,0 +1,88 @@
+{
+  "name": "@dpskh/a2a",
+  "private": true,
+  "description": "Agent2Agent interop for the DeepSeek Harness in one package — the realtime mesh hub (project registry, immutable message history, WebSocket presence) and mesh client (per-agent connections, serial injection), the model-facing a2a_peers / a2a_message / a2a_history tools, and the /a2a command surface",
+  "version": "0.3.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./view": {
+      "types": "./lib/types/view.d.ts",
+      "default": "./lib/types/view.js"
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.js",
+    "lib/types/**/*.d.ts",
+    "lib/types/**/*.d.ts.map",
+    "src",
+    "cordis.patch.yml"
+  ],
+  "license": "BSD-3-Clause",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-agent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-brand": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-commands": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-invariants": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-session": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-storage-domain": "^0.1.0-rc.6",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-agent": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-brand": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-commands": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-invariants": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-session": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-storage": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-storage-sqlite": "^0.1.0-rc.6",
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.1",
+    "jsdom": "^26.1.0",
+    "lightningcss": "^1.30.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.18.2",
+    "typescript": "^5.9.2",
+    "vitest": "^4.0.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsdown",
+    "build:all": "pnpm run build && pnpm --dir ui-a2a run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:all": "pnpm run typecheck && pnpm --dir ui-a2a run typecheck",
+    "test": "vitest run",
+    "prepare": "pnpm run build"
+  }
+}

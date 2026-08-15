@@ -1,0 +1,17 @@
+{
+  "name": "whale-girl",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "index.mjs",
+    "src",
+    "client",
+    "client.js",
+    "assets"
+  ],
+  "dependencies": {
+    "schemastery": "^3.18.0"
+  },
+  "license": "MIT"
+}

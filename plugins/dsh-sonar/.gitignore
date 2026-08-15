@@ -1,0 +1,20 @@
+# Dependencies
+node_modules
+.pnpm-store/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+
+# Generated test and package artifacts
+coverage/
+*.tgz
+*.log
+
+# macOS metadata
+.DS_Store
+node_modules/
+lib/
+coverage/
+.DS_Store

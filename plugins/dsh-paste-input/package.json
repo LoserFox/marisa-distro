@@ -1,0 +1,29 @@
+{
+  "name": "@dsh-community/dsh-paste-input",
+  "version": "0.1.3",
+  "description": "DSH WebUI 文件输入增强：Ctrl+V 粘贴（带首次告知弹窗）与拖拽/选择文件，发送时复制进会话工作区临时目录",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "LICENSE",
+    "README.md"
+  ],
+  "license": "MIT"
+}

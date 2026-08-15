@@ -1,0 +1,256 @@
+{
+  "schemaVersion": 2,
+  "annotator": "fakechris (proto draft — needs second annotator + adjudication)",
+  "annotationDate": "2026-08-10",
+  "purpose": "P0 golden proto v2: 5 sessions annotated with the request-intent layering rule (high-level requirement vs detail work directive). Task boundaries are subjective; report inter-annotator agreement before trusting any metric.",
+  "intentLayering": {
+    "note": "Semantic judgement performed by the LLM (few-shot), NOT a rule keyword list — object-domain relevance ('is pnpm an env tool or the product core?') depends on workspace context, and a keyword list breaks outside this repo. Rules only filter source.kind and validate outputs. This block doubles as the few-shot exemplar set for the LLM.",
+    "requirement": "High-level goal/problem/investigation with an independently verifiable deliverable — issue/epic candidate. e.g. '回到我们的目标', '提取质量不高，想清楚这件事', '研究官方有没有 branch from this', bug reports describing a problem.",
+    "directive": "Detail-level work instruction — concrete operation (fork/restart/commit/pr/push/install/configure/build/clone/submit/continue). NOT an issue by itself; it is a step toward some requirement. e.g. '帮我提交吧', '你来试一次重启', '继续查'.",
+    "interruption": "User interruption/correction ('你搞砸了', '不对'). A signal (acceptance feedback, requirement change, blocker) — only becomes a new issue if it articulates a new independently verifiable goal.",
+    "objectDomainRelevance": "Deciding factor for install/configure-style verbs: does the object belong to the product core domain (turtle-ui, harness components, project deps → requirement) or the environment domain (pnpm/git/node/brew → not an issue)? Assessed by the LLM from workspace context, not a hardcoded list.",
+    "boundaryCases": [
+      "'帮我安装配置turtle-ui' — requirement-leaning: turtle-ui is a product-domain object (dsh's TUI client), so installing/configuring it advances the product goal and may be an independent issue candidate (also serves the TUI research task).",
+      "'安装配置 pnpm/git' — environment-domain object (generic dev tooling), NOT an issue; pure environment prep.",
+      "'更新 issue #514 表述' / '补一条评论' — directives that belong to the bug-fix task they serve.",
+      "'重启失败、session 挂掉' — a problem report (could be an issue), distinct from the directive '你来试一次重启' (not an issue)."
+    ]
+  },
+  "notes": [
+    "Task = independently-verifiable deliverable; a directive is never a task by itself.",
+    "session-a057ec58 and session-8afdc9d1 are fork copies: identical event sequences. Both are annotated with the SAME 3 tasks; the dedup assertion treats them as one task set.",
+    "ad53353c: seq182559-235265 previously annotated as a separate ops task; revised — the restart directive is execution detail of the implementation task, and '重启失败' is acceptance feedback, so it folds into task 7 as evidence, not a standalone issue."
+  ],
+  "sessions": [
+    {
+      "sessionId": "main",
+      "label": "greeting-no-task",
+      "providerTitle": "Hello",
+      "tasks": []
+    },
+    {
+      "sessionId": "session-026b244d-f934-4dd4-9c26-8fffad53353c",
+      "label": "multi-topic-long",
+      "providerTitle": "分析项目结构",
+      "tasks": [
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "分析 test-fakechris 项目结构与代码",
+          "goal": "了解 ~/source/test-fakechris 项目结构与代码",
+          "deliverable": "项目结构分析结论",
+          "seqStart": 7,
+          "seqEnd": 4615,
+          "evidence": ["user/message seq7"],
+          "state": { "workflow": "done", "verification": "verified" }
+        },
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "dsh-external 组织仓库全景调研",
+          "goal": "用 gh 工具 fetch dsh-external 全部仓库与描述，做社区全景分析",
+          "deliverable": "全景分析报告",
+          "seqStart": 4620,
+          "seqEnd": 13253,
+          "evidence": ["user/message seq4620", "tool/call gh (directive serving the task)"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        },
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "新进入 dsh 社区需要了解的官方文档与社区形态",
+          "goal": "整理官方文档指引与社区成长路径，供新人上手",
+          "deliverable": "文档指引清单",
+          "seqStart": 32385,
+          "seqEnd": 46359,
+          "evidence": ["user/message seq32385"],
+          "state": { "workflow": "done", "verification": "partial" }
+        },
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "个人项目（Lumen/OVP/Turnkey）与官方结合点调研",
+          "goal": "梳理个人项目与官方可结合的点",
+          "deliverable": "结合点清单",
+          "seqStart": 46364,
+          "seqEnd": 66971,
+          "evidence": ["user/message seq46364"],
+          "state": { "workflow": "done", "verification": "partial" }
+        },
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "harness 多 session/长任务通讯机制调研",
+          "goal": "研究官方对多 session、长任务、跨 session 通讯机制的支持",
+          "deliverable": "机制调研结论",
+          "seqStart": 75015,
+          "seqEnd": 81882,
+          "evidence": ["user/message seq75015"],
+          "state": { "workflow": "done", "verification": "partial" }
+        },
+        {
+          "kind": "decision",
+          "intent": "requirement",
+          "title": "Involute 产品方向与方案设计（方案 A/B/C 选型）",
+          "goal": "想清楚 involute 的产品定位、用户场景、存储方案，选定方案 C",
+          "deliverable": "方案 C 细化文档 + 决策",
+          "seqStart": 66976,
+          "seqEnd": 122101,
+          "evidence": ["user/message seq66976", "user/message seq111473", "user/message seq118216", "user/message seq122106"],
+          "state": { "workflow": "done", "verification": "verified" }
+        },
+        {
+          "kind": "implementation",
+          "intent": "requirement",
+          "title": "实现 Involute Bridge 插件（goal 驱动）",
+          "goal": "按 goal-3e2349e4 objective 实现 Involute Bridge 插件：读契约、建仓库、MVP 决策点闭环、打包安装、验证",
+          "deliverable": "可运行的 dsh-involute 插件 + skill",
+          "seqStart": 128844,
+          "seqEnd": 235265,
+          "evidence": [
+            "goal/change seq130277 create goal-3e2349e4",
+            "user/message seq128844",
+            "user/message seq182559 (interruption: 重启失败 — acceptance feedback, not a new issue)",
+            "user/message seq234354 (directive: 重启 — execution detail, not a new issue)"
+          ],
+          "crossSessionContinuation": "session-7dac9239 (same work line)",
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        }
+      ]
+    },
+    {
+      "sessionId": "session-7dac9239-253f-4877-98e1-ba946c5c0b49",
+      "label": "single-workline-multistep",
+      "providerTitle": "dsh-track handoff 交接继续",
+      "tasks": [
+        {
+          "kind": "implementation",
+          "intent": "requirement",
+          "title": "dsh-track 会话历史同步引擎（计划+实现）",
+          "goal": "为 dsh-track 增加从 workspace session 历史提取 epic/issue 任务的同步能力",
+          "deliverable": "track_sync_history 工具 + /api/track/sync + 测试",
+          "seqStart": 16,
+          "seqEnd": 90537,
+          "evidence": [
+            "todo/write seq24265 (items pending→completed)",
+            "todo/write seq53512 (all completed)",
+            "user/message seq5895 (需求：计划一下)",
+            "user/message seq72777 (提取质量不高，起草 research prompt)"
+          ],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        },
+        {
+          "kind": "decision",
+          "intent": "requirement",
+          "title": "调研：会话历史→任务提取的三轮 research 与方案决策",
+          "goal": "通过三轮 research 想清楚'从对话到任务'的方案，产出 v2 设计",
+          "deliverable": "三份研究报告 + dsh-track-v2-design.md",
+          "seqStart": 72777,
+          "seqEnd": 89749,
+          "evidence": ["user/message seq72777", "user/message seq80870", "user/message seq82748", "user/message seq89749"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        }
+      ]
+    },
+    {
+      "sessionId": "session-a057ec58-ebc3-48ba-910b-d938a54c142b",
+      "label": "fork-copy-a",
+      "providerTitle": "TUI与移动端运行支持情况分析",
+      "tasks": [
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "TUI 与移动端运行支持情况分析",
+          "goal": "分析 dsh 对 TUI/移动端运行的支持情况（含安装配置 turtle-ui 作为调研手段）",
+          "deliverable": "支持情况结论",
+          "seqStart": 7,
+          "seqEnd": 162721,
+          "evidence": [
+            "user/message seq7",
+            "user/message seq4997 (install/configure turtle-ui — product-domain object, requirement-leaning; evidence for this investigation AND independent issue candidate)",
+            "user/message seq34923 (directive: cd/ls — execution detail)",
+            "user/message seq143401 (directive: 继续查)",
+            "user/message seq162721 (requirement: turtle-ui 文档/稳定版本 tag)"
+          ],
+          "forkSiblings": ["session-8afdc9d1-a3f7-4283-98fb-30255119e7d3"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        },
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "review cordis/vendor fiber 调度的本质设计问题",
+          "goal": "审查 vendor/cordis 的 fiber 调度设计缺陷，判断问题严重性",
+          "deliverable": "fiber 调度设计 review 结论",
+          "seqStart": 171242,
+          "seqEnd": 205172,
+          "evidence": [
+            "user/message seq171242 (requirement: 继续查一下，review fiber 调度设计问题 — NEW independent task)",
+            "user/message seq205172 (problem report: 为什么测试发现不了，严重静态问题)"
+          ],
+          "forkSiblings": ["session-8afdc9d1-a3f7-4283-98fb-30255119e7d3"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        },
+        {
+          "kind": "bug",
+          "intent": "requirement",
+          "title": "turtle-ui 死锁问题调查与修复（含 issue #514 更新）",
+          "goal": "定位并修复 turtle-ui 触发 dsh SDK 死锁的问题，更新 issue #514 表述与验证评论",
+          "deliverable": "修复 + issue #514 更新 + 验证记录",
+          "seqStart": 166472,
+          "seqEnd": 236178,
+          "evidence": [
+            "user/message seq166472 (bug report: 死锁在 dsh SDK 内部？)",
+            "user/message seq218987 (directive: 更新 issue 表述 — serves this task)",
+            "user/message seq226631 (directive: 验证补评论 — serves this task)",
+            "user/message seq236178 (directive: 帮我提交吧 — serves this task)"
+          ],
+          "forkSiblings": ["session-8afdc9d1-a3f7-4283-98fb-30255119e7d3"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        }
+      ]
+    },
+    {
+      "sessionId": "session-8afdc9d1-a3f7-4283-98fb-30255119e7d3",
+      "label": "fork-copy-b",
+      "providerTitle": "TUI与移动端运行支持情况分析",
+      "tasks": [
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "TUI 与移动端运行支持情况分析（fork 副本）",
+          "goal": "与 session-a057ec58 相同工作线（fork 副本），不应重复建 issue",
+          "deliverable": "同 fork 父",
+          "seqStart": 7,
+          "seqEnd": 162721,
+          "evidence": ["user/message seq7 (identical to sibling)"],
+          "forkSiblings": ["session-a057ec58-ebc3-48ba-910b-d938a54c142b"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        },
+        {
+          "kind": "investigation",
+          "intent": "requirement",
+          "title": "review cordis/vendor fiber 调度的本质设计问题（fork 副本）",
+          "goal": "与 fork 父相同任务",
+          "deliverable": "同 fork 父",
+          "seqStart": 171242,
+          "seqEnd": 205172,
+          "evidence": ["user/message seq171242 (identical to sibling)"],
+          "forkSiblings": ["session-a057ec58-ebc3-48ba-910b-d938a54c142b"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        },
+        {
+          "kind": "bug",
+          "intent": "requirement",
+          "title": "turtle-ui 死锁问题调查与修复（fork 副本）",
+          "goal": "与 fork 父相同任务",
+          "deliverable": "同 fork 父",
+          "seqStart": 166472,
+          "seqEnd": 236178,
+          "evidence": ["user/message seq166472 (identical to sibling)"],
+          "forkSiblings": ["session-a057ec58-ebc3-48ba-910b-d938a54c142b"],
+          "state": { "workflow": "in_progress", "verification": "partial" }
+        }
+      ]
+    }
+  ]
+}

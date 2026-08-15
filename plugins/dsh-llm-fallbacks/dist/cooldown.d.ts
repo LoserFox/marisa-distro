@@ -1,0 +1,48 @@
+/**
+ * Cooldown store + per-step failure set (spec §5.1; plan Task 2).
+ *
+ * `CooldownStore` maps `provider/model` keys to an expiry epoch ms with lazy
+ * evaluation: expired entries are dropped on read. `revertPolicy: 'never'`
+ * is expressed by suppressing with `Infinity` — the entry never expires
+ * within the session.
+ *
+ * `StepFailureSet` is the step's failed-model set (spec §5.1 `failed`).
+ * `switchCount` / `maxSwitchesPerStep` judgement belongs to the caller
+ * (Task 3) — this task only provides the data structure.
+ *
+ * @module dsh-llm-fallbacks/cooldown
+ */
+/**
+ * Per-agent model cooldown: `suppress(key, untilEpochMs)` then
+ * `isSuppressed(key, now?)` with lazy expiry.
+ */
+export declare class CooldownStore {
+    private entries;
+    /** Number of tracked keys (expired entries are dropped lazily on read). */
+    get size(): number;
+    /** Suppress `key` until `untilEpochMs` (use `Infinity` for `revertPolicy: 'never'`). */
+    suppress(key: string, untilEpochMs: number): void;
+    /** True while `key` is suppressed at time `now` (default `Date.now()`); expired entries are removed. */
+    isSuppressed(key: string, now?: number): boolean;
+    /**
+     * Read-only diagnostic accessor: the active (non-expired) entries, in
+     * insertion order. This is a pure read — expired entries are FILTERED OUT
+     * but left in the store; the lazy delete happens only in
+     * {@link isSuppressed} (the decision path). `Infinity` entries are always
+     * active. Consumed by the `/fallbacks` command's cooldown display.
+     */
+    snapshot(now?: number): Array<{
+        key: string;
+        untilEpochMs: number;
+    }>;
+}
+/**
+ * The current step's failed-model set (`${provider}/${model}` keys).
+ */
+export declare class StepFailureSet {
+    private keys;
+    get size(): number;
+    add(key: string): void;
+    has(key: string): boolean;
+    reset(): void;
+}

@@ -1,0 +1,6 @@
+# git-identity bundle patch: mounts the git-identity row into the profile
+# composition. The row name resolves through the profile directory's
+# node_modules (the bundle is installed there by `dsh plugin --profile <name> add`).
+- insert:
+    - id: git-identity
+      name: '@loserfox/git-identity'

@@ -1,0 +1,61 @@
+{
+  "name": "@dsh-external/dsh-ui-progress",
+  "version": "0.9.1",
+  "private": true,
+  "type": "module",
+  "description": "DSH Web UI 会话进度插件：输入框停靠区常驻会话进度条（todos 真实进度 / 无投影默认 100% / 中断橘红态 / 实时 token 生成速率），零核心改动。",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./invariant": "./lib/invariant.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-ui-primitives": "*",
+    "@deepseek-ai/dsh-tool-todo": "*",
+    "@deepseek-ai/cordis": "^4.0.1-rc.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-client-locale": "link:../../harness/packages/client/locale",
+    "@deepseek-ai/dsh-client-runtime": "link:../../harness/packages/client/runtime",
+    "@deepseek-ai/dsh-client-ui-conversation": "link:../../harness/packages/client/ui-conversation",
+    "@deepseek-ai/dsh-client-ui-primitives": "link:../../harness/packages/client/ui-primitives",
+    "@deepseek-ai/dsh-client-ui-slots": "link:../../harness/packages/client/ui-slots",
+    "@deepseek-ai/dsh-invariants": "link:../../harness/packages/support/invariants",
+    "@deepseek-ai/dsh-tool-todo": "link:../../harness/packages/todo/tool-todo",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "~18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "clsx": "^2.1.1",
+    "@deepseek-ai/cordis": "link:../../harness/vendor/cordis",
+    "jsdom": "^26.0.0",
+    "lightningcss": "^1.32.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.1"
+  },
+  "license": "BSD-3-Clause"
+}

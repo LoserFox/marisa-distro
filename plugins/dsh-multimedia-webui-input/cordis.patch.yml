@@ -1,0 +1,3 @@
+- insert:
+    - id: community-multimedia-webui-input
+      name: '@dsh-community/multimedia-webui-input'

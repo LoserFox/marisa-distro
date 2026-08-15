@@ -1,0 +1,4 @@
+packages:
+  # Local dev-only stand-in for the private registry package; not committed.
+  - dev-packages/*
+linkWorkspacePackages: true

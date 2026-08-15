@@ -1,0 +1,2 @@
+Feature: folder attachment traversal
+Expected behavior: preserve relative paths in the copied workspace batch.

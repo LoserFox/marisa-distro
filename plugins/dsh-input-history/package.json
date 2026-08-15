@@ -1,0 +1,47 @@
+{
+  "name": "@dsh-external/dsh-input-history",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "description": "DSH Web 输入历史插件：Ctrl+Up / Ctrl+Down 像终端一样召回与切换已发送消息，零核心改动",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./invariant": "./lib/invariant.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1-rc.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-client-runtime": "link:../../harness/packages/client/runtime",
+    "@deepseek-ai/dsh-client-ui-conversation": "link:../../harness/packages/client/ui-conversation",
+    "@deepseek-ai/dsh-invariants": "link:../../harness/packages/support/invariants",
+    "@deepseek-ai/cordis": "link:../../harness/vendor/cordis",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "license": "BSD-3-Clause"
+}

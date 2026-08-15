@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        # 默认两矩阵（发布负责人可按支持面增删）：
+        #  - Node 22 + 最低宿主：目标宿主 ref 需在受支持分支上稳定可拉取；
+        #    宿主契约合并后，把 HOST_REF_22 填成含该契约的完整 SHA。
+        #  - Node 24 + main：前向集成（拉当前 main 的 HEAD）。
+        include:
+          - node: 22
+            host-ref: "main" # TODO: 宿主阶段 1 契约进入受支持分支后填完整 SHA
+          - node: 24
+            host-ref: "main"
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      # 宿主 checkout 统一落在 $GITHUB_WORKSPACE/../../.dsh/source/current
+      # （= $GITHUB_WORKSPACE 的规范化父级 .dsh）——这样 vitest alias 与
+      # tsconfig paths 里 `../../.dsh/...` 的相对解析在 GitHub 上同样成立。
+      - name: Clone dsh main repo at DSH_ROOT
+        run: |
+          DSH_ROOT="$GITHUB_WORKSPACE/../../.dsh/source/current"
+          mkdir -p "$(dirname "$DSH_ROOT")"
+          git clone --depth 1 "https://x-access-token:${{ secrets.DSH_REPO_TOKEN }}@github.com/dsh2026/test-taekchef.git" "$DSH_ROOT"
+          git -C "$DSH_ROOT" checkout "${{ matrix.host-ref }}"
+          test -f "$DSH_ROOT/packages/client/ui-primitives/src/index.ts" || { echo "::error::宿主预检失败：ui-primitives 源码缺失"; exit 1; }
+          echo "HOST_SHA=$(git -C "$DSH_ROOT" rev-parse HEAD)" >> "$GITHUB_ENV"
+        env:
+          DSH_REPO_TOKEN: ${{ secrets.DSH_REPO_TOKEN }}
+
+      - name: Install + build host
+        working-directory: $GITHUB_WORKSPACE/../../.dsh/source/current
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Install plugin dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check (typecheck + full tests + build)
+        run: pnpm run check
+        env:
+          DSH_ROOT: $GITHUB_WORKSPACE/../../.dsh/source/current
+
+      - name: Pack verification gate
+        run: node scripts/verify-pack.mjs
+
+      # 提交进仓的 lib/ 必须与 src 一致：漂移 = 上次源码改动从未构建发布。
+      - name: Verify lib matches src
+        run: |
+          git diff --exit-code -- lib/ || {
+            echo "::error::lib/ 与 src/ 不一致：请运行 pnpm run build 并提交 lib/ 产物"
+            exit 1
+          }
+
+      # no-key smoke：隔离 DSH_HOME + 精确宿主二进制 + 固定端口，绝不触碰
+      # 任何活跃实例；宿主二进制必须位于本次 checkout 内。
+      - name: Smoke e2e (no model key)
+        run: |
+          node scripts/e2e.mjs --smoke --install link --port 3190
+        env:
+          DSH_ROOT: $GITHUB_WORKSPACE/../../.dsh/source/current
+          DSH_BIN: $GITHUB_WORKSPACE/../../.dsh/source/current/apps/cli/lib/bin.js
+
+      - name: Archive e2e artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            e2e-*.png
+            dsh-web.log
+          if-no-files-found: ignore

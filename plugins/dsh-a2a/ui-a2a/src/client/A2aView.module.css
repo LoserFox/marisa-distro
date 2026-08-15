@@ -1,0 +1,497 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 24px clamp(16px, 3vw, 36px) 32px;
+  overflow: auto;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.header,
+.sectionHeader,
+.currentProject,
+.disconnectRow,
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header > div,
+.currentProject > div {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.subtitle,
+.sectionHeader > span,
+.currentProject span,
+.empty,
+.topologyEmpty {
+  margin: 4px 0 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+
+.tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  color: var(--dsw-alias-label-tertiary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.tabActive {
+  border-bottom-color: var(--dsw-static-deepseek-500);
+  color: var(--dsw-alias-label-primary);
+}
+
+.tab:focus-visible,
+.orbitPeer:focus-visible {
+  outline: 2px solid var(--dsw-static-deepseek-500);
+  outline-offset: 2px;
+}
+
+.live:empty {
+  display: none;
+}
+
+.error {
+  border: 1px solid var(--dsw-alias-state-error-primary);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.loading {
+  padding: 28px 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.panelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.onboarding {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px 12px;
+  max-width: 680px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.onboarding h2,
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.onboarding p {
+  margin: 6px 0 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.connectForm {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stat,
+.card {
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.stat > span {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat > strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) minmax(320px, 0.85fr);
+  gap: 16px;
+}
+
+.card {
+  min-width: 0;
+  padding: 16px;
+}
+
+.rows,
+.projectRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.row,
+.projectRows li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 9px;
+  padding: 10px 12px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.row > span:last-child,
+.projectRows span,
+.projectRows p {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.rowName,
+.projectRows li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowName,
+.projectRows strong,
+.projectRows span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectRows li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.projectRows p {
+  margin: 2px 0 0;
+  white-space: normal;
+}
+
+.tint {
+  width: 3px;
+  height: 18px;
+  flex: none;
+  border-radius: 2px;
+}
+
+.tintGreen { background: var(--dsw-static-green-500); }
+.tintBlue { background: var(--dsw-static-blue-500); }
+.tintAmber { background: var(--dsw-static-amber-500); }
+.tintRed { background: var(--dsw-static-red-500); }
+.tintDeepseek { background: var(--dsw-static-deepseek-500); }
+
+.topology {
+  min-height: 330px;
+}
+
+.canvas {
+  position: relative;
+  height: 270px;
+  margin-top: 10px;
+}
+
+.edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.edges line {
+  stroke: var(--dsw-alias-border-l3);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.conversingEdge {
+  fill: none;
+  stroke: var(--dsw-static-deepseek-500);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  animation: dsh-a2a-breathe-opacity 1.6s ease-in-out infinite;
+}
+
+@keyframes dsh-a2a-breathe-opacity {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.center,
+.gridPeer {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 9px;
+  background: var(--dsw-alias-bg-layer-1);
+  font-size: 12px;
+}
+
+/* Orbit nodes keep overflow visible so the working ring can extend outside. */
+.orbitPeer {
+  position: absolute;
+  box-sizing: border-box;
+  width: min(34%, 130px);
+  transform: translate(-50%, -50%);
+  padding: 8px 10px;
+  text-align: center;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 9px;
+  background: var(--dsw-alias-bg-layer-1);
+  font-size: 12px;
+}
+
+.peerName {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peerYou,
+.gridPeer span {
+  display: block;
+  margin-top: 2px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+}
+
+.center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(44%, 170px);
+  transform: translate(-50%, -50%);
+  padding: 12px;
+  text-align: center;
+  font-weight: 600;
+}
+/* Conversation activity: a breathing glow while the pair converses, a
+   spinning ring while the node works on a received conversation. */
+.orbitPeer[data-activity='conversing'] {
+  border-color: color-mix(in srgb, var(--dsw-static-deepseek-500) 45%, transparent);
+  animation: dsh-a2a-breathe 1.6s ease-in-out infinite;
+}
+
+.orbitPeer[data-activity='working'] {
+  border-color: color-mix(in srgb, var(--dsw-static-deepseek-500) 55%, transparent);
+}
+
+.orbitPeer[data-activity='working']::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 2px solid var(--dsw-alias-border-l2);
+  border-top-color: var(--dsw-static-deepseek-500);
+  border-radius: 12px;
+  animation: dsh-a2a-spin 0.9s linear infinite;
+}
+
+@keyframes dsh-a2a-breathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--dsw-static-deepseek-500) 25%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 16px 4px color-mix(in srgb, var(--dsw-static-deepseek-500) 40%, transparent);
+  }
+}
+
+@keyframes dsh-a2a-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* The roster and badge dot: same activity language around the live dot. */
+.dotWrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.dotWrap[data-activity='conversing']::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1.5px solid color-mix(in srgb, var(--dsw-static-deepseek-500) 60%, transparent);
+  border-radius: 50%;
+  animation: dsh-a2a-breathe-ring 1.6s ease-in-out infinite;
+}
+
+.dotWrap[data-activity='working']::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1.5px solid var(--dsw-alias-border-l2);
+  border-top-color: var(--dsw-static-deepseek-500);
+  border-radius: 50%;
+  animation: dsh-a2a-spin 0.8s linear infinite;
+}
+
+@keyframes dsh-a2a-breathe-ring {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.gridPeer[data-activity='conversing'] {
+  border-color: color-mix(in srgb, var(--dsw-static-deepseek-500) 45%, transparent);
+  animation: dsh-a2a-breathe 1.6s ease-in-out infinite;
+}
+
+.gridPeer[data-activity='working'] {
+  border-color: color-mix(in srgb, var(--dsw-static-deepseek-500) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversingEdge,
+  .orbitPeer[data-activity],
+  .orbitPeer[data-activity]::after,
+  .dotWrap[data-activity]::after,
+  .gridPeer[data-activity] {
+    animation: none;
+  }
+}
+
+.peerGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.gridPeer {
+  padding: 10px;
+}
+
+.topologyEmpty {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+}
+
+.disconnectRow {
+  justify-content: flex-end;
+}
+
+.currentProject strong {
+  display: block;
+  font-size: 15px;
+}
+
+.currentProject span {
+  display: block;
+}
+
+.createForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .root {
+    padding: 16px 12px 24px;
+  }
+
+  .stats,
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .topology {
+    display: none;
+  }
+
+  .connectForm,
+  .createForm {
+    grid-template-columns: 1fr;
+  }
+
+  .connectForm button,
+  .createForm button {
+    width: 100%;
+  }
+
+  .header {
+    align-items: flex-start;
+  }
+
+  .onboarding {
+    padding: 16px;
+  }
+}

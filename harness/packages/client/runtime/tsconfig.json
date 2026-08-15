@@ -1,0 +1,57 @@
+{
+  "extends": "../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../web-react"
+    },
+    {
+      "path": "../connection"
+    },
+    {
+      "path": "../../host/apiproxy"
+    },
+    {
+      "path": "../../ui/commands"
+    },
+    {
+      "path": "../../compact/compact"
+    },
+    {
+      "path": "../../session-projection/session-projection"
+    },
+    {
+      "path": "../../session-title/session-title"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../llm/llm-retry"
+    },
+    {
+      "path": "../../support/invariants"
+    },
+    {
+      "path": "../../typert/type-meta"
+    },
+    {
+      "path": "../../typert/registry"
+    }
+  ],
+  "exclude": [
+    "**/*.legacy.*"
+  ]
+}

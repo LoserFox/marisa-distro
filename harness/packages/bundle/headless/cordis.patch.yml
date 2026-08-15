@@ -1,0 +1,21 @@
+# The dsh-headless bundle patch: one-shot task mode over dsh-base +
+# dsh-web-app. The web composition stays mounted (the session is observable
+# in a browser while it runs); this layer silences the URL line and the
+# GUI-orientation surface context (this user is not in the GUI), moves the
+# webserver to an OS-assigned port so parallel headless runs never collide,
+# and mounts the one-shot runner. The launcher patches the runner's `task`.
+
+- id: webserver
+  config:
+    host: 127.0.0.1
+    port: 0
+
+- id: web-runtime
+  config:
+    mode: production
+    printUrl: false
+    surfaceContext: false
+
+- insert:
+    - id: headless-runner
+      name: '@deepseek-ai/dsh-headless'

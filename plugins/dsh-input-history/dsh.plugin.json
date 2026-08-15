@@ -1,0 +1,20 @@
+{
+  "id": "@dsh-external/dsh-input-history",
+  "version": "0.1.0",
+  "main": "./lib/index.js",
+  "description": "DSH Web 输入历史插件：Ctrl+Up / Ctrl+Down 召回与切换已发送消息，零核心改动",
+  "engines": {
+    "dsh": ">=0.0.1"
+  },
+  "contributes": {
+    "tools": [],
+    "skills": []
+  },
+  "client": {
+    "main": "./lib/client.js",
+    "inject": [
+      "@deepseek-ai/dsh-client-runtime",
+      "@deepseek-ai/dsh-client-ui-conversation"
+    ]
+  }
+}

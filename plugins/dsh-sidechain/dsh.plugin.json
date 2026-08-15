@@ -1,0 +1,13 @@
+{
+  "id": "dsh-sidechain",
+  "version": "0.6.3",
+  "main": "./lib/index.js",
+  "description": "DSH side-conversation plugin: /side and /btw start a side conversation in an ephemeral fork of the current session (Codex /side & /btw semantics).",
+  "engines": {
+    "dsh": ">=0.0.1-rc.5 <0.1.0"
+  },
+  "contributes": {
+    "tools": [],
+    "skills": []
+  }
+}

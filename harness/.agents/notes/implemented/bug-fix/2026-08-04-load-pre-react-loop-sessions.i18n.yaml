@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-04-load-pre-react-loop-sessions.md
+2026-08-04-load-pre-react-loop-sessions.md: b7dcad1ff7fe0aa8239ac03f52b50dfa55417515
+2026-08-04-load-pre-react-loop-sessions.zh.md: 14c6dcc7b4da016ebef424a66fae0b96fb469cd4
