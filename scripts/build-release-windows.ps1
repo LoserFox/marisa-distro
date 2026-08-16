@@ -6,9 +6,6 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-# registry.npmjs.org is flaky from runner networks (UND_ERR_DESTROYED /
-# truncated packuments); mirror build.ps1's tuning so every install in this
-# script inherits it.
 $env:npm_config_fetch_retries = '5'
 $env:npm_config_fetch_retry_mintimeout = '2000'
 $env:npm_config_network_concurrency = '8'
@@ -20,6 +17,16 @@ $verificationProfile = Join-Path $verificationHome 'profiles\marisa'
 $standalone = Join-Path $release 'Marisa-DSH-windows-x64-standalone.exe'
 $msi = Join-Path $release 'Marisa-DSH-windows-x64.msi'
 $checksums = Join-Path $release 'SHA256SUMS.txt'
+
+function Write-ReleaseStep {
+  param([Parameter(Mandatory = $true)][string]$Name)
+
+  Write-Host "::group::release: $Name"
+}
+
+function Complete-ReleaseStep {
+  Write-Host '::endgroup::'
+}
 
 function Invoke-MarisaProfileGeneration {
   param([Parameter(Mandatory = $true)][string]$ProfilePath)
@@ -36,33 +43,38 @@ function Invoke-MarisaProfileGeneration {
 }
 
 function Invoke-ReleaseProfileVerification {
+  Write-ReleaseStep 'generate isolated verification profile'
   New-Item -ItemType Directory -Force -Path $verificationProfile | Out-Null
   Invoke-MarisaProfileGeneration $verificationProfile
+  Complete-ReleaseStep
 
+  Write-ReleaseStep 'install isolated verification profile'
   Push-Location $verificationProfile
   try {
     # Root install has already populated the pnpm store. The temporary profile
     # is deliberately separate from the release runtime so the boot check
     # cannot accidentally use a maintainer's ~/.dsh profile.
-    # registry.npmjs.org is flaky from runner networks (UND_ERR_DESTROYED);
-    # retry the online install like build.ps1 does.
     $attempt = 1
     while ($attempt -le 3) {
-      if ($attempt -gt 1) {
-        Write-Host "WARN: profile install failed on attempt $($attempt - 1); retrying (attempt $attempt of 3)..."
-        Start-Sleep -Seconds 10
-      }
       & pnpm install --offline --no-frozen-lockfile
       if ($LASTEXITCODE -eq 0) { break }
+
       & pnpm install --no-frozen-lockfile
       if ($LASTEXITCODE -eq 0) { break }
+
+      if ($attempt -lt 3) {
+        Write-Warning "verification profile install attempt $attempt failed; retrying in 10 seconds"
+        Start-Sleep -Seconds 10
+      }
       $attempt++
     }
     if ($LASTEXITCODE -ne 0) { throw "release verification profile install failed: $LASTEXITCODE" }
   } finally {
     Pop-Location
+    Complete-ReleaseStep
   }
 
+  Write-ReleaseStep 'verify isolated runtime and client bundle'
   $previousDshHome = $env:DSH_HOME
   try {
     $env:DSH_HOME = $verificationHome
@@ -71,51 +83,67 @@ function Invoke-ReleaseProfileVerification {
   } finally {
     if ($null -eq $previousDshHome) { Remove-Item Env:DSH_HOME -ErrorAction SilentlyContinue }
     else { $env:DSH_HOME = $previousDshHome }
+    Complete-ReleaseStep
   }
 }
 
 Push-Location $repo
 try {
+  Write-ReleaseStep 'generate runtime profile'
   Invoke-MarisaProfileGeneration $runtimeProfile
+  Complete-ReleaseStep
 
+  Write-ReleaseStep 'install root workspace'
   & pnpm install --frozen-lockfile
   if ($LASTEXITCODE -ne 0) { throw "pnpm install failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
 
+  Write-ReleaseStep 'run repository tests'
   & pnpm test
   if ($LASTEXITCODE -ne 0) { throw "repository and profile tests failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
 
+  Write-ReleaseStep 'build harness and profile'
   & pwsh -NoProfile -File build.ps1 -ProfilePath $runtimeProfile -SkipDesktopShell -SkipRootInstall -SkipProfileInstall -SkipSelfCheck
   if ($LASTEXITCODE -ne 0) { throw "Marisa build failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
 
-  # Phase 2: fire every workspace prepare script now that the harness build
-  # above produced harness/vendor/schemastery/lib. Plugin prepare steps
-  # (dsh-a2a, dsh-code-map, dsh-sidechain) typecheck and bundle successfully.
+  Write-ReleaseStep 'run package prepare scripts after harness build'
   & pnpm install --frozen-lockfile
   if ($LASTEXITCODE -ne 0) { throw "pnpm install (prepare phase) failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
 
   Invoke-ReleaseProfileVerification
 
+  Write-ReleaseStep 'assemble backend bundle'
   & pwsh -NoProfile -File desktop/bundle/make-bundle.ps1 -ProfilePath $runtimeProfile -Version $Version
   if ($LASTEXITCODE -ne 0) { throw "backend bundle failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
 
+  Write-ReleaseStep 'test installed and embedded bundles'
   & go test -C desktop -tags installedbundle ./...
   if ($LASTEXITCODE -ne 0) { throw "installedbundle tests failed: $LASTEXITCODE" }
   & go test -C desktop -tags embeddedbundle ./...
   if ($LASTEXITCODE -ne 0) { throw "embeddedbundle tests failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
 
+  Write-ReleaseStep 'build standalone executable and MSI'
   New-Item -ItemType Directory -Force -Path $release | Out-Null
   & go build -C desktop -tags embeddedbundle -trimpath -ldflags '-s -w' -o $standalone .
   if ($LASTEXITCODE -ne 0) { throw "standalone build failed: $LASTEXITCODE" }
 
   & pwsh -NoProfile -File desktop/scripts/build-msi.ps1 -Output $msi -Version $Version
   if ($LASTEXITCODE -ne 0) { throw "MSI build failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
 
+  Write-ReleaseStep 'write release checksums'
   $lines = foreach ($path in @($standalone, $msi)) {
     $hash = Get-FileHash -LiteralPath $path -Algorithm SHA256
     "$($hash.Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($path))"
   }
   [System.IO.File]::WriteAllLines($checksums, $lines, [System.Text.UTF8Encoding]::new($false))
   Get-Item $standalone, $msi, $checksums | Select-Object FullName, Length
+  Complete-ReleaseStep
 } finally {
   Pop-Location
 }

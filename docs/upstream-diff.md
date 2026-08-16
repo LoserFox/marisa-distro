@@ -21,6 +21,7 @@
 | `packages/host/webserver/src/index.ts` | 把同一 HTTP 服务额外提供为旧名 `webServer` | 兼容仍注入旧服务名的插件 | 上游提供正式兼容层后删除 |
 | `packages/client/web/src/platform.ts`、`seed.ts` | scoped Cordis 名称映射到相同实例 | rc6 registry client bundle 与 workspace Web 壳的模块名不同 | 上游统一模块表后删除 |
 | `packages/client/ui-tool/src/client/apply.ts` | 保持官方 edit/write toolview 注册 | `dsh-diff-viewer` 当前兼容停用，不能留下空的独占 slot | 上游兼容后重新评估替换 UI |
+| `tsconfig.host.json`、`apps/web/package.json` | 发行 host 检查排除 examples 与 VitePress，仅保留运行时 `website/docs.ts`；Vite 使用 runner 加载配置 | Windows 发行构建不应依赖示例和文档站工具，受限环境也不应由 esbuild 扫描 workspace 之外 | 上游拆分发行类型检查且默认 config loader 不再越界后删除 |
 
 `harness/pnpm-lock.yaml` 与 `harness/pnpm-workspace.yaml` 不进入 vendored 源码；根 workspace 和根 lockfile 是唯一依赖图。
 
@@ -28,6 +29,8 @@
 
 - MyGO Core、Hub、CLI 和 Web Panel 精确锁定 `0.2.0-rc.6`，作为设置页内的插件市场与生命周期入口。
 - Windows 使用 PowerShell 通道；Linux/macOS 实验桌面壳暂时继承用户环境中的 `dsh`。
+- `marisa-bundle` 将 vendored `cordis` 作为直接 file 依赖：`tool-cordis` 在生产 bundle
+  中直接导入它，不能只依赖开发 workspace 的 peer 解析。
 - `multimedia-webui-input`、`dsh-llm-fallbacks`、`yet-another-subagent`、`dsh-diff-viewer`、`dsh-sonar` 和 `dsh-track` 因 rc6 API/时序不兼容而默认停用。
 
 ## 删除差异的原则

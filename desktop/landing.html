@@ -40,6 +40,8 @@
                 }
             }
             .box {
+                max-width: 360px;
+                padding: 24px;
                 text-align: center;
             }
             .logo {
@@ -67,6 +69,18 @@
             .dot:nth-child(3) {
                 animation-delay: 0.4s;
             }
+            .elapsed {
+                font-variant-numeric: tabular-nums;
+                font-size: 13px;
+            }
+            .hint {
+                display: none;
+                margin: 16px 0 0;
+                font-size: 13px;
+            }
+            .hint.visible {
+                display: block;
+            }
             @keyframes pulse {
                 0%,
                 100% {
@@ -89,11 +103,31 @@
                 </svg>
             </div>
             <h1 style="font-size: 20px; margin: 0 0 12px">Marisa DSH</h1>
-            <p class="sub" style="margin: 0 0 8px">正在启动本地服务…</p>
+            <p id="status" class="sub" style="margin: 0 0 8px">正在启动本地服务…</p>
             <div>
                 <span class="dot"></span><span class="dot"></span
                 ><span class="dot"></span>
             </div>
+            <p id="elapsed" class="sub elapsed" aria-live="polite" style="margin: 12px 0 0">已等待 0 秒</p>
+            <p id="hint" class="sub hint">首次启动可能需要解包运行环境。若持续无法进入，请从托盘退出后重新打开。</p>
         </div>
+        <script>
+            const startedAt = Date.now();
+            const status = document.getElementById("status");
+            const elapsed = document.getElementById("elapsed");
+            const hint = document.getElementById("hint");
+
+            function updateLoadingState() {
+                const seconds = Math.floor((Date.now() - startedAt) / 1000);
+                elapsed.textContent = `已等待 ${seconds} 秒`;
+                if (seconds >= 15) {
+                    status.textContent = "正在准备 Marisa 运行环境…";
+                    hint.classList.add("visible");
+                }
+            }
+
+            updateLoadingState();
+            window.setInterval(updateLoadingState, 1000);
+        </script>
     </body>
 </html>

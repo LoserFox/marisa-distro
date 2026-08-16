@@ -76,4 +76,43 @@ for (const plugin of profileManifest.plugins) {
   }
 }
 
+const releaseWorkflow = readFileSync(join(root, '.github', 'workflows', 'release.yml'), 'utf8')
+assert.match(releaseWorkflow, /windows:\s*[\s\S]*?timeout-minutes:\s*60\b/, 'Windows release jobs must have a bounded runtime')
+assert.match(releaseWorkflow, /version:\s*['"]11\.7\.0['"]/, 'release builds must use the pnpm version that generated the lockfile')
+assert.match(
+  releaseWorkflow,
+  /if \(-not \(Get-Command python3\.exe -ErrorAction SilentlyContinue\)\)/,
+  'release setup must preserve an existing python3.exe',
+)
+
+const rootWorkspace = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf8')
+assert.match(
+  rootWorkspace,
+  /'@dsh-external\/dsh-code-map>schemastery': 'npm:@deepseek-ai\/schemastery@3\.18\.1'/,
+  'the root workspace must redirect dsh-code-map to a built schemastery package',
+)
+assert.match(rootWorkspace, /^  cordis: 4\.0\.0-rc\.7$/m, 'root peer resolution must use the vendored cordis version')
+
+const hostTypecheck = readFileSync(join(root, 'harness', 'tsconfig.host.json'), 'utf8')
+assert.doesNotMatch(hostTypecheck, /"examples\/\*\//, 'release host typechecking must not include example fixtures')
+assert.doesNotMatch(hostTypecheck, /"website\/\.vitepress\//, 'release host typechecking must not require VitePress')
+assert.match(hostTypecheck, /"website\/docs\.ts"/, 'the host build must retain the website runtime docs module')
+
+const webPackage = JSON.parse(readFileSync(join(root, 'harness', 'apps', 'web', 'package.json'), 'utf8'))
+assert.match(
+  webPackage.scripts.build,
+  /vite build --configLoader runner/,
+  'the Windows-compatible web build must not let esbuild scan outside the workspace while loading Vite config',
+)
+
+const windowsReleaseScript = readFileSync(join(root, 'scripts', 'build-release-windows.ps1'), 'utf8')
+assert.match(windowsReleaseScript, /npm_config_fetch_retries = '5'/, 'Windows release installs must retry transient registry failures')
+assert.match(windowsReleaseScript, /while \(\$attempt -le 3\)/, 'the isolated release profile install must be bounded and retried')
+assert.match(windowsReleaseScript, /pnpm install \(prepare phase\) failed/, 'package prepare scripts must run after the harness build')
+assert.match(windowsReleaseScript, /::group::release:/, 'Windows release output must identify the active release stage')
+
+const bundleScript = readFileSync(join(root, 'desktop', 'bundle', 'make-bundle.ps1'), 'utf8')
+assert.doesNotMatch(bundleScript, /dir \/a:l \/s/, 'bundle link discovery must not recurse through cyclic junctions')
+assert.match(bundleScript, /FileAttributes\]::ReparsePoint/, 'bundle link discovery must explicitly stop at reparse points')
+
 console.log(`repository policy ok: harness fork + ${manifest.plugins.length} plugins (${manifest.plugins.filter(p => p.mode === 'mirror').length} mirrors, ${manifest.plugins.filter(p => p.mode === 'fork').length} forks)`)

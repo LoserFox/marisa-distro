@@ -24,6 +24,7 @@
  *   - Extra file: deps required by patch rows that reference non-plugin
  *     packages:
  *       @deepseek-ai/dsh-tool-cordis -> harness/packages/cordis/tool-cordis
+ *       cordis                           -> harness/vendor/cordis
  *       dsh-skill-manager            -> <REPO>/dsh-skill-manager
  *       @deepseek-ai/dsh-pwsh-local  -> harness/packages/bash/pwsh-local
  *       @deepseek-ai/dsh-tool-pwsh   -> harness/packages/bash/tool-pwsh
@@ -84,6 +85,9 @@ for (const p of gitPlugins) {
 
 // Patch-row extras (not in plugins.json — see header comment).
 const EXTRA_DIRS = {
+  // tool-cordis imports this peer at runtime. Keep it as a direct bundle
+  // dependency: production bundle pruning does not preserve undeclared peers.
+  cordis: path.join(REPO, 'harness', 'vendor', 'cordis'),
   '@deepseek-ai/dsh-tool-cordis': path.join(REPO, 'harness', 'packages', 'cordis', 'tool-cordis'),
   'dsh-skill-manager': path.join(REPO, 'dsh-skill-manager'),
   // Windows pwsh lane (cordis.patch.yml disables the bash stack and inserts
@@ -228,6 +232,10 @@ allowBuilds:
   node-pty: true
   protobufjs: true
   sharp: true
+
+overrides:
+  '@dsh-external/dsh-code-map>schemastery': 'npm:@deepseek-ai/schemastery@3.18.1'
+  cordis: 4.0.0-rc.7
 
 minimumReleaseAgeExclude:
 ${minimumReleaseAgeExclude.map((p) => `  - '${p}'`).join('\n')}

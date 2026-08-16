@@ -25,6 +25,7 @@
     "@dsh-external/dsh-vision-toolkit": "file:../../plugins/dsh-vision-toolkit",
     "@bill9109/dsh-web-ui-notify": "file:../../plugins/dsh-web-ui-approval-notify",
     "whale-girl": "file:../../plugins/whale-girl",
+    "cordis": "file:../../harness/vendor/cordis",
     "@deepseek-ai/dsh-tool-cordis": "file:../../harness/packages/cordis/tool-cordis",
     "dsh-skill-manager": "file:../../dsh-skill-manager",
     "@deepseek-ai/dsh-pwsh-local": "file:../../harness/packages/bash/pwsh-local",

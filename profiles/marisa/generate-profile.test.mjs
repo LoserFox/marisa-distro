@@ -41,11 +41,18 @@ test('generated Marisa profile mounts the complete MyGO rc6 market stack', () =>
     const bundle = JSON.parse(readFileSync(path.join(REPO, 'bundles', 'marisa-bundle', 'package.json'), 'utf8'));
     const composition = readFileSync(path.join(REPO, 'bundles', 'marisa-bundle', 'cordis.patch.yml'), 'utf8');
     assert.equal(bundle.main, './package.json', 'MyGO preflight must be able to resolve marisa-bundle');
+    assert.match(bundle.dependencies.cordis, /^file:/, 'production bundle must retain Cordis for tool-cordis runtime imports');
     assert.equal(bundle.dependencies['@deepseek-ai/dsh-qwen-mm'], undefined);
     assert.doesNotMatch(composition, /name: dsh-sonar(?:\/host)?/);
     assert.doesNotMatch(composition, /name: '@dsh-external\/dsh-diff-viewer'/);
     assert.doesNotMatch(composition, /name: '@fakechris\/dsh-track'/);
     assert.doesNotMatch(workspace, /patchedDependencies/);
+    assert.match(
+      workspace,
+      /'@dsh-external\/dsh-code-map>schemastery': 'npm:@deepseek-ai\/schemastery@3\.18\.1'/,
+      'the standalone dsh-code-map plugin must use a published schemastery build',
+    );
+    assert.match(workspace, /^  cordis: 4\.0\.0-rc\.7$/m, 'profile peer resolution must use the vendored cordis version');
     for (const name of [
       'dsh-better-sidebar',
       'dsh-llm-fallbacks',

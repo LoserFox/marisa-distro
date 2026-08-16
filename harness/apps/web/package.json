@@ -12,7 +12,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build --configLoader runner",
     "dev": "vite",
     "watch": "vite build --watch"
   },

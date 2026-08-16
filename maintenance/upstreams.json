@@ -5,6 +5,7 @@
     "path": "harness",
     "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
     "baseline": "4e7fb95f",
+    "baselineReviewed": "2026-08-16",
     "dshVersion": "0.1.0-rc.6",
     "channel": "testing",
     "diffDocument": "docs/upstream-diff.md"

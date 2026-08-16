@@ -130,6 +130,31 @@ function Resolve-LinkTarget([System.IO.FileSystemInfo]$item) {
   } catch { return $null }
 }
 
+function Get-ReparsePointsNoFollow([string]$root) {
+  $pending = New-Object System.Collections.Generic.Stack[string]
+  $pending.Push([System.IO.Path]::GetFullPath($root))
+  while ($pending.Count -gt 0) {
+    $directory = $pending.Pop()
+    try {
+      $entries = [System.IO.Directory]::EnumerateFileSystemEntries($directory)
+      foreach ($entry in $entries) {
+        try {
+          $attributes = [System.IO.File]::GetAttributes($entry)
+          if (($attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            Write-Output $entry
+          } elseif (($attributes -band [System.IO.FileAttributes]::Directory) -ne 0) {
+            $pending.Push($entry)
+          }
+        } catch {
+          Write-Warning "cannot inspect staged entry: $entry ($($_.Exception.Message))"
+        }
+      }
+    } catch {
+      Write-Warning "cannot enumerate staged directory: $directory ($($_.Exception.Message))"
+    }
+  }
+}
+
 function Invoke-PnpmProd([string]$cwd, [string]$what) {
   Write-Host "==> pnpm install --prod --frozen-lockfile at $what ..."
   Push-Location $cwd
@@ -386,10 +411,10 @@ $links.Add(@{
 # plugin-internal deps like @deepseek-ai/dsh-workflow, member deps like
 # schemastery) were wiped by the junction-delete phase without being recorded
 # — boot then died with ERR_MODULE_NOT_FOUND for each. Collect EVERY staged
-# reparse point via `dir /a:l` (never dereferences), record {link,target}
+# reparse point with an explicit non-following directory walk, record {link,target}
 # pairs into LINKS.json (deduped), and reuse the same list for deletion.
-Write-Host 'recording ALL staged links (dir /a:l, no deref) ...'
-$stagedLinks = @(& cmd /c "dir /a:l /s /b `"$stage`"" 2>$null | Where-Object { $_ })
+Write-Host 'recording ALL staged links (explicit no-follow walk) ...'
+$stagedLinks = @(Get-ReparsePointsNoFollow $stage)
 $seenLinks = New-Object System.Collections.Generic.HashSet[string]
 foreach ($existingLink in $links) { [void]$seenLinks.Add([string]$existingLink.link) }
 $recordedExtra = 0
@@ -418,9 +443,9 @@ $links | ConvertTo-Json | Set-Content "$stage\LINKS.json" -Encoding utf8
 # pwsh 7 Remove-Item NREs on junctions (esp. when the target was pruned);
 # cmd rmdir removes the junction link itself and never follows into the
 # target. File symlinks (.bin shims) fall back to Remove-Item.
-# IMPORTANT: collect links with `dir /a:l` — Get-ChildItem -Recurse follows
-# junctions INTO their targets (racing the deletes and touching live trees),
-# which corrupted staged source dirs on 2026-08-15. `dir` never dereferences.
+# IMPORTANT: the explicit walker records reparse points but never descends into
+# them. Recursive filesystem commands can follow junctions into live trees,
+# racing deletion and corrupting staged source dirs.
 Write-Host 'deleting staged junctions (links live in LINKS.json only) ...'
 $junctions = @($stagedLinks)
 $junctions | ForEach-Object {
