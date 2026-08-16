@@ -42,6 +42,14 @@ pwsh -NoProfile -File build.ps1
 
 该流程需要 Node 22 或更新版本、pnpm 11 或更新版本、Go 和 `python3`。它会构建 harness 与所需插件、生成 Marisa profile、执行后端自检，并写出 `release/dsh-shell.exe` 开发壳。启动这个开发壳前，请准备本地已构建的 `dsh` 命令，或设置 `DSH_WEB_CMD`。
 
+完成首次构建后，日常桌面开发直接从仓库根目录运行：
+
+```powershell
+pnpm dev:desktop
+```
+
+根开发启动器会设置指向当前检出与 Marisa profile 的 `DSH_WEB_CMD`，启用客户端 HMR，并在退出时清理桌面壳、后端和 watcher。只需要浏览器界面时使用 `pnpm dev`；完整说明见[贡献指南](../docs/contributing.md#本地开发循环)。
+
 桌面壳会在创建窗口和启动开发后端前读取以下变量：
 
 - `DSH_WEB_CMD`：完整后端命令行，`{port}` 会替换为所选端口。默认值是 `dsh web --port {port}`。

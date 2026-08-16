@@ -21,6 +21,31 @@
 4. 插件新增网络、进程、文件写入或密钥访问能力时，必须在 PR 中说明权限影响。
 5. 不把后端 HTTP 200 描述成完整桌面启动证明。
 
+## 本地开发循环
+
+首次检出或依赖、profile 发生变化后，先完成一次构建：
+
+```powershell
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+之后可直接启动浏览器开发模式：
+
+```powershell
+pnpm dev
+```
+
+该命令先完成 Harness 客户端插件的首轮增量构建，再启动 Marisa profile 后端，并在后端就绪后打开浏览器。使用 `pnpm dev -- --no-open` 可禁止自动打开浏览器。按 `Ctrl+C` 会清理后端和 watcher 的子进程树。仓库禁止 `pnpm run` 隐式安装依赖；预检提示缺少产物时，应显式运行上面的 frozen install 和构建命令。
+
+需要验证原生窗口时运行：
+
+```powershell
+pnpm dev:desktop
+```
+
+桌面模式使用同一个 `--dev` 后端和 HMR watcher，但由 Wails 壳启动、守护并加载后端。Harness 的 `dshClient` 源码会由 watcher 自动重建；vendored 插件沿用各自的构建约定，没有 `watch` 脚本的插件修改后仍需运行该插件的 `build`。profile、依赖图或服务端组合发生变化时，应重新运行 `pnpm build`。
+
 本地最低验证：
 
 ```powershell

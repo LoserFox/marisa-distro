@@ -5,9 +5,12 @@
   "description": "魔理沙发行版 — DSH harness fork + 28 个 vendored 插件 + 独立桌面发行",
   "scripts": {
     "build": "pwsh -NoProfile -File build.ps1",
+    "dev": "node scripts/dev.mjs",
+    "dev:desktop": "node scripts/dev.mjs --desktop",
+    "test:dev": "node --test scripts/dev.test.mjs",
     "test:profile": "node --test profiles/marisa/generate-profile.test.mjs",
     "test:repository": "node scripts/verify-repository.mjs",
-    "test": "pnpm test:repository && pnpm test:profile",
+    "test": "pnpm test:repository && pnpm test:dev && pnpm test:profile",
     "upstream:check": "node scripts/check-upstreams.mjs"
   },
   "dependencies": {

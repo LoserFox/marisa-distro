@@ -23,6 +23,10 @@ packages:
 nodeLinker: hoisted
 linkWorkspacePackages: true
 install-links: false
+# Builds and HMR rewrite workspace lib/ outputs. Never let `pnpm run` turn that
+# expected development state into an implicit install; installs are explicit
+# and frozen at repository/CI boundaries.
+verifyDepsBeforeRun: false
 allowBuilds:
   '@deepseek-ai/dsh-subprocess-local': true
   '@google/genai': true

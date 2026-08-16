@@ -88,6 +88,11 @@ assert.match(
 const rootWorkspace = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf8')
 assert.match(
   rootWorkspace,
+  /^verifyDepsBeforeRun: false$/m,
+  'repository scripts must not implicitly install after builds rewrite workspace outputs',
+)
+assert.match(
+  rootWorkspace,
   /'@dsh-external\/dsh-code-map>schemastery': 'npm:@deepseek-ai\/schemastery@3\.18\.1'/,
   'the root workspace must redirect dsh-code-map to a built schemastery package',
 )
