@@ -108,9 +108,6 @@ export class VisionToolkitWebBackend {
         this.onRuntimeActivated = onRuntimeActivated;
     }
     async credential(config) {
-        if (config.provider.authMode === 'none') {
-            return { configured: true, source: 'anonymous', writable: false };
-        }
         return this.ctx.credentials.describe(credentialRef(String(config.provider.credential)));
     }
     /** Build the current settings/runtime/credential snapshot without secrets. */

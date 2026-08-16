@@ -185,9 +185,6 @@ export class VisionToolkitWebBackend {
   ) {}
 
   private async credential(config: ResolvedVisionToolkitConfig): Promise<CredentialInfo> {
-    if (config.provider.authMode === 'none') {
-      return { configured: true, source: 'anonymous', writable: false }
-    }
     return this.ctx.credentials.describe(credentialRef(String(config.provider.credential)))
   }
 

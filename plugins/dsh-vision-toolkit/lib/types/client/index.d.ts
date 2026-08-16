@@ -9,17 +9,6 @@ declare const en: {
     readonly settingsIntro: "Configure the pinned visual engineering runtime, its external vision endpoint, and local safety limits.";
     readonly externalNotice: "Remote tools send the selected image bytes to the configured external vision API. Local crop, trace, pixel diff, palette, foreground extraction, and HTML rendering do not upload images.";
     readonly provider: "Vision service";
-    readonly providerPreset: "Service preset";
-    readonly presetZen: "OpenCode Zen · MiMo 2.5 Free";
-    readonly presetGlm: "BigModel · GLM-4.6V-Flash";
-    readonly presetCustom: "Custom OpenAI-compatible service";
-    readonly authMode: "Authentication";
-    readonly anonymous: "No account or API key";
-    readonly credentialAuth: "DSH Credential";
-    readonly zenGuide: "Free anonymous access with no account or API key. OpenCode states that this offer is time-limited and free-period data may be used to improve the model; do not send sensitive images.";
-    readonly glmGuide: "GLM-4.6V-Flash is a free official endpoint. Register, create an API key, save it as ZHIPU_API_KEY in Models credentials, then save this preset.";
-    readonly registerGlm: "Register or sign in";
-    readonly createGlmKey: "Create API key";
     readonly baseUrl: "Base URL";
     readonly credential: "Credential reference";
     readonly model: "Model";
@@ -47,7 +36,7 @@ declare const en: {
     readonly runHealth: "Run health check";
     readonly testConnection: "Test connection";
     readonly testing: "Checking…";
-    readonly connectionHint: "Connection testing sends GET /models without an image or completion. Credential mode includes the selected DSH Credential; anonymous mode sends no user credential.";
+    readonly connectionHint: "Connection testing explicitly sends the configured credential to GET /models. It uploads no image and creates no completion.";
     readonly pluginVersion: "Plugin";
     readonly upstreamVersion: "Upstream";
     readonly activeGeneration: "Runtime generation";
@@ -109,7 +98,6 @@ interface HealthResult {
 interface SettingsValue {
     provider?: {
         baseUrl?: string;
-        authMode?: 'none' | 'credential';
         credential?: string;
         model?: string;
     };
