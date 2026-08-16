@@ -12,12 +12,20 @@ import {
   missingPrerequisites,
   parseArgs,
   resolveLayout,
+  supportsNativeTypeScript,
 } from './dev.mjs'
 
 test('development options expose browser and desktop modes', () => {
   assert.deepEqual(parseArgs([]), { desktop: false, open: true, help: false })
   assert.deepEqual(parseArgs(['--desktop', '--no-open']), { desktop: true, open: false, help: false })
   assert.throws(() => parseArgs(['--wat']), /unknown option: --wat/u)
+})
+
+test('development runtime requires native TypeScript support', () => {
+  assert.equal(supportsNativeTypeScript('22.18.0'), false)
+  assert.equal(supportsNativeTypeScript('22.19.0'), true)
+  assert.equal(supportsNativeTypeScript('23.11.0'), false)
+  assert.equal(supportsNativeTypeScript('24.0.0'), true)
 })
 
 test('backend command selects the Marisa profile, HMR, overlay, and requested port', () => {

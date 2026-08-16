@@ -17,6 +17,11 @@ export function parseArgs(argv) {
   return options
 }
 
+export function supportsNativeTypeScript(version = process.versions.node) {
+  const [major, minor] = version.split('.').map(Number)
+  return major >= 24 || (major === 22 && minor >= 19)
+}
+
 export function resolveLayout({
   root = path.resolve(import.meta.dirname, '..'),
   home = homedir(),
@@ -167,6 +172,9 @@ async function stopProcessTree(child) {
 }
 
 export async function runDev(options, layout = resolveLayout()) {
+  if (!supportsNativeTypeScript()) {
+    throw new Error(`Node ${process.versions.node} is unsupported; development requires Node 22.19+ or 24+`)
+  }
   const missing = missingPrerequisites(layout, options)
   if (missing.length > 0) {
     const detail = missing.map(([label, target]) => `  - ${label}: ${target}`).join('\n')

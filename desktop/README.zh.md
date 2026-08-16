@@ -40,7 +40,7 @@ Release 中若附带 Linux x64 或 macOS Apple Silicon 文件，均明确属于�
 pwsh -NoProfile -File build.ps1
 ```
 
-该流程需要 Node 22 或更新版本、pnpm 11 或更新版本、Go 和 `python3`。它会构建 harness 与所需插件、生成 Marisa profile、执行后端自检，并写出 `release/dsh-shell.exe` 开发壳。启动这个开发壳前，请准备本地已构建的 `dsh` 命令，或设置 `DSH_WEB_CMD`。
+该流程需要 Node 22.19 或更新的受支持版本（也支持 Node 24+）、pnpm 11 或更新版本、Go 和 `python3`。它会构建 harness 与所需插件、生成 Marisa profile、执行后端自检，并写出 `release/dsh-shell.exe` 开发壳。启动这个开发壳前，请准备本地已构建的 `dsh` 命令，或设置 `DSH_WEB_CMD`。
 
 完成首次构建后，日常桌面开发直接从仓库根目录运行：
 

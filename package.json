@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "魔理沙发行版 — DSH harness fork + 28 个 vendored 插件 + 独立桌面发行",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
   "scripts": {
     "build": "pwsh -NoProfile -File build.ps1",
     "dev": "node scripts/dev.mjs",
