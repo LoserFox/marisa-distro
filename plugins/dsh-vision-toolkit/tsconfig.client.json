@@ -24,18 +24,18 @@
     "types": ["react", "react-dom"],
     "typeRoots": [
       "./node_modules/@types",
-      "../packages/client/ui-primitives/node_modules/@types",
-      "../node_modules/@types"
+      "../../harness/packages/client/ui-primitives/node_modules/@types",
+      "../../node_modules/@types"
     ],
     "noEmitOnError": true,
     "paths": {
-      "cordis": ["../vendor/cordis/lib/types/index.d.ts"],
-      "@deepseek-ai/dsh-client-runtime/client": ["../packages/client/runtime/lib/types/client/index.d.ts"],
-      "@deepseek-ai/dsh-client-ui-settings/client": ["../packages/client/ui-settings/lib/types/client/index.d.ts"],
-      "@deepseek-ai/dsh-client-ui-conversation/client": ["../packages/client/ui-conversation/lib/types/client/index.d.ts"],
-      "@deepseek-ai/dsh-client-locale/client": ["../packages/client/locale/lib/types/client/index.d.ts"],
-      "@deepseek-ai/dsh-client-ui-slots": ["../packages/client/ui-slots/lib/types/index.d.ts"],
-      "@deepseek-ai/dsh-client-ui-primitives": ["../packages/client/ui-primitives/lib/types/index.d.ts"]
+      "cordis": ["../../harness/vendor/cordis/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-client-runtime/client": ["../../harness/packages/client/runtime/lib/types/client/index.d.ts"],
+      "@deepseek-ai/dsh-client-ui-settings/client": ["../../harness/packages/client/ui-settings/lib/types/client/index.d.ts"],
+      "@deepseek-ai/dsh-client-ui-conversation/client": ["../../harness/packages/client/ui-conversation/lib/types/client/index.d.ts"],
+      "@deepseek-ai/dsh-client-locale/client": ["../../harness/packages/client/locale/lib/types/client/index.d.ts"],
+      "@deepseek-ai/dsh-client-ui-slots": ["../../harness/packages/client/ui-slots/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-client-ui-primitives": ["../../harness/packages/client/ui-primitives/lib/types/index.d.ts"]
     }
   },
   "include": ["src/client/**/*.ts", "src/client/**/*.tsx"],

@@ -20,6 +20,8 @@ export interface VisionToolkitConfig {
   provider?: {
     /** OpenAI-compatible chat/completions base URL. */
     baseUrl?: string
+    /** Whether the endpoint is anonymous or uses a DSH Credential. */
+    authMode?: 'none' | 'credential'
     /** DSH Credential reference holding the API key (an environment-style name). */
     credential?: string
     /** Multimodal model name. */
@@ -51,6 +53,7 @@ export interface VisionToolkitConfig {
 export const Config: Schema<VisionToolkitConfig> = z.object({
   provider: z.object({
     baseUrl: z.string().default('https://api.inferera.com/v1'),
+    authMode: z.union(['none', 'credential'] as const).default('credential'),
     credential: z.string().default('VISION_API_KEY'),
     model: z.string().default('gemini-3.6-flash'),
   }),
@@ -71,6 +74,7 @@ export const Config: Schema<VisionToolkitConfig> = z.object({
 export interface ResolvedVisionToolkitConfig {
   provider: {
     baseUrl: string
+    authMode: 'none' | 'credential'
     credential: CredentialRef
     model: string
   }
@@ -106,6 +110,10 @@ export function resolveConfig(config: VisionToolkitConfig = {}): ResolvedVisionT
   const baseUrl = (provider.baseUrl ?? 'https://api.inferera.com/v1').trim().replace(/\/+$/, '')
   if (!/^https?:\/\//i.test(baseUrl) || baseUrl.length <= 'https://'.length) {
     throw new VisionToolkitError('config', 'provider.baseUrl must be an http(s) URL')
+  }
+  const authMode = provider.authMode ?? 'credential'
+  if (authMode !== 'none' && authMode !== 'credential') {
+    throw new VisionToolkitError('config', 'provider.authMode must be "none" or "credential"')
   }
   let credential: CredentialRef
   try {
@@ -161,7 +169,7 @@ export function resolveConfig(config: VisionToolkitConfig = {}): ResolvedVisionT
   }
   const allowedDirs = (config.allowedDirs ?? []).map(dir => dir.trim()).filter(dir => dir.length > 0)
   return {
-    provider: { baseUrl, credential, model },
+    provider: { baseUrl, authMode, credential, model },
     language,
     timeoutMs,
     maxImageBytes,

@@ -5,6 +5,7 @@ describe('resolveConfig', () => {
   it('applies documented defaults', () => {
     const config = resolveConfig({})
     expect(config.provider.baseUrl).toBe('https://api.inferera.com/v1')
+    expect(config.provider.authMode).toBe('credential')
     expect(config.provider.credential).toBe('VISION_API_KEY')
     expect(config.provider.model).toBe('gemini-3.6-flash')
     expect(config.language).toBe('zh')
@@ -19,12 +20,13 @@ describe('resolveConfig', () => {
 
   it('normalizes the provider URL and credential', () => {
     const config = resolveConfig({
-      provider: { baseUrl: 'https://example.com/v1/', credential: 'MY_VISION_KEY', model: 'model-x' },
+      provider: { baseUrl: 'https://example.com/v1/', authMode: 'none', credential: 'MY_VISION_KEY', model: 'model-x' },
       language: 'en',
       runtime: { mode: 'external', agentVisionToolkitPath: '/tmp/toolkit', python: 'python3.12' },
       allowedDirs: ['~/Pictures'],
     })
     expect(config.provider.baseUrl).toBe('https://example.com/v1')
+    expect(config.provider.authMode).toBe('none')
     expect(config.provider.credential).toBe('MY_VISION_KEY')
     expect(config.runtime.agentVisionToolkitPath).toBe('/tmp/toolkit')
     expect(config.allowedDirs).toEqual(['~/Pictures'])
@@ -38,6 +40,11 @@ describe('resolveConfig', () => {
   it('rejects an invalid credential reference', () => {
     expect(() => resolveConfig({ provider: { credential: 'not a ref!' } }))
       .toThrowError(/credential/)
+  })
+
+  it('rejects an invalid authentication mode', () => {
+    expect(() => resolveConfig({ provider: { authMode: 'optional' as 'credential' } }))
+      .toThrowError(/authMode/)
   })
 
   it('rejects an empty model', () => {

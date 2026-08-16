@@ -61,13 +61,19 @@ function fakeClientContext() {
   return { ctx, slots, registrations, effects }
 }
 
-function settingsSnapshot(runtime: { ready: boolean; lastError?: string } = { ready: true }) {
+function settingsSnapshot(
+  runtime: { ready: boolean; lastError?: string } = { ready: true },
+  provider: { baseUrl: string; authMode?: 'none' | 'credential'; credential: string; model: string } = {
+    baseUrl: 'https://api.inferera.com/v1', authMode: 'credential',
+    credential: 'VISION_API_KEY', model: 'gemini-3.6-flash',
+  },
+) {
   return {
     schemaVersion: 1,
     writable: true,
     settings: {
       value: {
-        provider: { baseUrl: 'https://api.inferera.com/v1', credential: 'VISION_API_KEY', model: 'gemini-3.6-flash' },
+        provider,
         language: 'zh',
         timeoutMs: 61000,
         maxImageBytes: 10485760,
@@ -308,5 +314,36 @@ describe('Vision Toolkit client plugin', () => {
     expect(screen.getByText('runtimeCandidateRejected')).toBeTruthy()
     expect(screen.queryByText('runtimeUnavailable')).toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('switches from the anonymous Zen preset to GLM and then to custom settings', async () => {
+    const snapshot = settingsSnapshot({ ready: true }, {
+      baseUrl: 'https://opencode.ai/zen/v1', authMode: 'none',
+      credential: 'VISION_API_KEY', model: 'mimo-v2.5-free',
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ ok: true, value: snapshot })))
+
+    const { ctx, registrations } = fakeClientContext()
+    apply(ctx as never)
+    const settings = registrations.find(entry => entry.options.name === 'settings.section')
+    if (settings === undefined) throw new Error('Settings component was not registered')
+    render(createElement(settings.component, {
+      controller: new VisionSettingsController(),
+      t: (key: string) => key,
+    }))
+
+    const preset = await screen.findByLabelText('providerPreset') as HTMLSelectElement
+    expect(preset.value).toBe('zen')
+    expect(screen.queryByLabelText('credential')).toBeNull()
+
+    fireEvent.change(preset, { target: { value: 'glm' } })
+    expect((screen.getByLabelText('baseUrl') as HTMLInputElement).value).toBe('https://open.bigmodel.cn/api/paas/v4')
+    expect((screen.getByLabelText('model') as HTMLInputElement).value).toBe('glm-4.6v-flash')
+    expect((screen.getByLabelText('credential') as HTMLInputElement).value).toBe('ZHIPU_API_KEY')
+    expect(screen.getByRole('link', { name: 'registerGlm' }).getAttribute('href')).toBe('https://bigmodel.cn/console/overview')
+
+    fireEvent.change(preset, { target: { value: 'custom' } })
+    expect(preset.value).toBe('custom')
+    expect(screen.getByLabelText('authMode')).toBeTruthy()
   })
 })

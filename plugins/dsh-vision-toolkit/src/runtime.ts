@@ -757,6 +757,16 @@ export class VisionToolkitRuntime {
 
   /** Resolve the configured credential at the remote-operation boundary. */
   async resolveVisionEnv(): Promise<UpstreamEnvironment> {
+    if (this.config.provider.authMode === 'none') {
+      return {
+        // The pinned upstream client requires a non-empty value. OpenCode Zen
+        // treats Bearer public as anonymous and never as a secret credential.
+        VISION_API_KEY: 'public',
+        VISION_BASE_URL: this.config.provider.baseUrl,
+        VISION_MODEL: this.config.provider.model,
+        LANG: this.config.language,
+      }
+    }
     const resolved: ResolvedCredential | undefined = await this.ctx.credentials.resolve(this.config.provider.credential)
     if (resolved === undefined) {
       throw new VisionToolkitError(
@@ -1707,13 +1717,17 @@ export class VisionToolkitRuntime {
       }
       let resolvedCredential: ResolvedCredential | undefined
       let credential: HealthCheck
-      try {
-        resolvedCredential = await this.ctx.credentials.resolve(this.config.provider.credential)
-        credential = resolvedCredential === undefined
-          ? { status: 'error', detail: `credential ${this.config.provider.credential} is not configured` }
-          : { status: 'ok', detail: `credential ${this.config.provider.credential} is resolvable` }
-      } catch {
-        credential = { status: 'error', detail: `credential ${this.config.provider.credential} could not be resolved` }
+      if (this.config.provider.authMode === 'none') {
+        credential = { status: 'ok', detail: 'Anonymous provider; no user credential is required' }
+      } else {
+        try {
+          resolvedCredential = await this.ctx.credentials.resolve(this.config.provider.credential)
+          credential = resolvedCredential === undefined
+            ? { status: 'error', detail: `credential ${this.config.provider.credential} is not configured` }
+            : { status: 'ok', detail: `credential ${this.config.provider.credential} is resolvable` }
+        } catch {
+          credential = { status: 'error', detail: `credential ${this.config.provider.credential} could not be resolved` }
+        }
       }
       let artifactDirectory: HealthCheck
       try {
@@ -1728,7 +1742,7 @@ export class VisionToolkitRuntime {
         detail: 'Connection was not tested; pass testConnection=true to query the configured /models endpoint',
       }
       if (testConnection) {
-        if (resolvedCredential === undefined) {
+        if (this.config.provider.authMode === 'credential' && resolvedCredential === undefined) {
           service = { status: 'error', detail: 'Connection test skipped because the configured credential is unavailable' }
         } else {
           operation.metrics.usedVisionService = true
@@ -1737,7 +1751,10 @@ export class VisionToolkitRuntime {
             const started = Date.now()
             const response = await fetch(endpoint, {
               method: 'GET',
-              headers: { Authorization: `Bearer ${resolvedCredential.value}`, Accept: 'application/json' },
+              headers: {
+                Accept: 'application/json',
+                ...(resolvedCredential === undefined ? {} : { Authorization: `Bearer ${resolvedCredential.value}` }),
+              },
               signal: operation.signal,
             })
             operation.metrics.upstreamMs += Date.now() - started

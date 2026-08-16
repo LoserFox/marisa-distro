@@ -151,9 +151,10 @@
     },
     {
       "id": "dsh-vision-toolkit",
-      "mode": "mirror",
+      "mode": "fork",
       "repository": "https://github.com/dsh-external/dsh-vision-toolkit.git",
-      "baseline": "8d35621cf955d10d9a76a02cd7b5b946fcc769ad"
+      "baseline": "8d35621cf955d10d9a76a02cd7b5b946fcc769ad",
+      "diffDocument": "docs/plugins/dsh-vision-toolkit.md"
     },
     {
       "id": "dsh-web-review",

@@ -14,6 +14,8 @@ export interface VisionToolkitConfig {
     provider?: {
         /** OpenAI-compatible chat/completions base URL. */
         baseUrl?: string;
+        /** Whether the endpoint is anonymous or uses a DSH Credential. */
+        authMode?: 'none' | 'credential';
         /** DSH Credential reference holding the API key (an environment-style name). */
         credential?: string;
         /** Multimodal model name. */
@@ -46,6 +48,7 @@ export declare const Config: Schema<VisionToolkitConfig>;
 export interface ResolvedVisionToolkitConfig {
     provider: {
         baseUrl: string;
+        authMode: 'none' | 'credential';
         credential: CredentialRef;
         model: string;
     };

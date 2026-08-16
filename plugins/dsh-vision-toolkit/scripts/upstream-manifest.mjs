@@ -26,12 +26,18 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex')
 }
 
-async function snapshot() {
+async function snapshot(expectedFiles = new Map()) {
   const rows = []
   for (const path of (await filesBelow(sourceRoot)).sort()) {
-    const bytes = await readFile(path)
+    let bytes = await readFile(path)
+    const manifestPath = relative(sourceRoot, path).split('\\').join('/')
+    const expected = expectedFiles.get(manifestPath)
+    if (expected !== undefined && (bytes.length !== expected.bytes || sha256(bytes) !== expected.sha256)) {
+      const normalized = Buffer.from(bytes.toString('utf8').replaceAll('\r\n', '\n'))
+      if (normalized.length === expected.bytes && sha256(normalized) === expected.sha256) bytes = normalized
+    }
     rows.push({
-      path: relative(sourceRoot, path).split('\\').join('/'),
+      path: manifestPath,
       bytes: bytes.length,
       sha256: sha256(bytes),
     })
@@ -47,12 +53,14 @@ async function snapshot() {
   }
 }
 
-const next = await snapshot()
 if (process.argv.includes('--write')) {
+  const next = await snapshot()
   await writeFile(manifestPath, `${JSON.stringify(next, null, 2)}\n`)
   process.stdout.write(`wrote ${manifestPath}\n`)
 } else {
   const current = JSON.parse(await readFile(manifestPath, 'utf8'))
+  const expectedFiles = new Map(current.files.map(entry => [entry.path, entry]))
+  const next = await snapshot(expectedFiles)
   if (JSON.stringify(current) !== JSON.stringify(next)) {
     process.stderr.write('vendored agent-vision-toolkit snapshot differs from UPSTREAM_MANIFEST.json; run npm run upstream:manifest\n')
     process.exitCode = 1

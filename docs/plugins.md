@@ -29,7 +29,7 @@
 | `dsh-suggested-replies` | fork | 默认停用 | rc6 依赖与路径兼容 |
 | `dsh-track` | fork | 兼容停用 | rc6 session-query、Context 与客户端契约不兼容 |
 | `dsh-ui-progress` | fork | 组合启用 | workspace 路径兼容 |
-| `dsh-vision-toolkit` | mirror | 组合启用 | 视觉模型工具链 |
+| `dsh-vision-toolkit` | fork | 组合启用 | 默认匿名 Zen MiMo；设置页可切换免费 GLM |
 | `dsh-web-ui-approval-notify` | fork | 组合启用 | rc6 测试路径兼容 |
 | `whale-girl` | mirror | 默认停用 | rc6 时序不兼容 |
 

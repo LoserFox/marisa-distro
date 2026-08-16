@@ -129,6 +129,31 @@ describe('VisionToolkitWebBackend', () => {
     expect(ctx.credentials.resolve).not.toHaveBeenCalled()
   })
 
+  it('reports anonymous providers as ready without consulting Credentials', async () => {
+    const { ctx, post } = await setup()
+    const response = await post({
+      action: 'save',
+      expectedRevision: 0,
+      value: {
+        provider: {
+          baseUrl: 'https://opencode.ai/zen/v1', authMode: 'none',
+          credential: 'VISION_API_KEY', model: 'mimo-v2.5-free',
+        },
+        language: 'zh', timeoutMs: 60000, maxImageBytes: 10485760, maxImagePixels: 40000000,
+        concurrency: 4, runtime: { mode: 'managed' }, allowedDirs: [],
+      },
+    })
+    const body = await response.json() as {
+      ok: true
+      value: { credential: { configured: boolean; source?: string; writable: boolean } }
+    }
+
+    expect(response.status).toBe(200)
+    expect(body.value.credential).toMatchObject({ configured: true, source: 'anonymous', writable: false })
+    expect(ctx.credentials.describe).not.toHaveBeenCalled()
+    expect(ctx.credentials.resolve).not.toHaveBeenCalled()
+  })
+
   it('preflights, persists, activates, and rejects a stale revision', async () => {
     const { manager, activated, post } = await setup()
     const value = {

@@ -98,6 +98,25 @@ function mockTraceDocument(
 const signal = new AbortController().signal
 
 describe('VisionToolkitRuntime', () => {
+  it('uses the anonymous provider without resolving a credential', async () => {
+    const { ctx, runtime } = await setup({
+      provider: {
+        baseUrl: 'https://opencode.ai/zen/v1',
+        authMode: 'none',
+        credential: 'VISION_API_KEY',
+        model: 'mimo-v2.5-free',
+      },
+    }, null)
+    const resolve = vi.spyOn(ctx.credentials, 'resolve')
+
+    await expect(runtime.resolveVisionEnv()).resolves.toMatchObject({
+      VISION_API_KEY: 'public',
+      VISION_BASE_URL: 'https://opencode.ai/zen/v1',
+      VISION_MODEL: 'mimo-v2.5-free',
+    })
+    expect(resolve).not.toHaveBeenCalled()
+  })
+
   it('glance describes an image', async () => {
     const { runtime } = await setup()
     const workspace = await tempWorkspace()
