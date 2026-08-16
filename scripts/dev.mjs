@@ -26,6 +26,8 @@ export function resolveLayout({
   const profileRoot = path.join(dshHome || path.join(home, '.dsh'), 'profiles', 'marisa')
   return {
     root,
+    rootModules: path.join(root, 'node_modules'),
+    tsdownManifest: path.join(root, 'node_modules', 'tsdown', 'package.json'),
     harness: path.join(root, 'harness'),
     cli: path.join(root, 'harness', 'apps', 'cli', 'lib', 'bin.js'),
     watcherScript: path.join(root, 'harness', 'scripts', 'dev-web.ts'),
@@ -38,6 +40,8 @@ export function resolveLayout({
 
 export function missingPrerequisites(layout, { desktop = false } = {}) {
   const required = [
+    ['root workspace dependencies', layout.rootModules],
+    ['tsdown HMR build dependency', layout.tsdownManifest],
     ['built Harness CLI', layout.cli],
     ['Harness HMR watcher', layout.watcherScript],
     ['generated Marisa profile', layout.profileManifest],
@@ -228,9 +232,11 @@ export async function runDev(options, layout = resolveLayout()) {
       children.push(backend)
       watch(backend, 'web backend')
       let opened = false
+      let backendOutputTail = ''
       const maybeOpenBrowser = (chunk) => {
         if (!opened && options.open) {
-          const url = extractWebUrl(chunk)
+          backendOutputTail = `${backendOutputTail}${chunk}`.slice(-4096)
+          const url = extractWebUrl(backendOutputTail)
           if (url) {
             opened = true
             console.log(`[dev] opening ${url}`)

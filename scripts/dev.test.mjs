@@ -38,6 +38,8 @@ test('backend command selects the Marisa profile, HMR, overlay, and requested po
 
 test('web URL extraction accepts only the loopback boot line', () => {
   assert.equal(extractWebUrl('dsh web: http://127.0.0.1:43125'), 'http://127.0.0.1:43125')
+  const splitBootLine = ['dsh web: http://127.0.', '0.1:43125'].reduce((tail, chunk) => `${tail}${chunk}`.slice(-4096), '')
+  assert.equal(extractWebUrl(splitBootLine), 'http://127.0.0.1:43125')
   assert.equal(extractWebUrl('dsh web: http://0.0.0.0:43125'), undefined)
   assert.equal(extractWebUrl('noise http://127.0.0.1:43125'), undefined)
 })
@@ -50,6 +52,9 @@ test('preflight reports only missing artifacts and includes the shell in desktop
       mkdirSync(path.dirname(target), { recursive: true })
       writeFileSync(target, '')
     }
+    mkdirSync(layout.rootModules, { recursive: true })
+    mkdirSync(path.dirname(layout.tsdownManifest), { recursive: true })
+    writeFileSync(layout.tsdownManifest, '{}')
     mkdirSync(layout.profileModules, { recursive: true })
     assert.deepEqual(missingPrerequisites(layout), [])
     assert.deepEqual(missingPrerequisites(layout, { desktop: true }), [
