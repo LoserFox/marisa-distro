@@ -52,6 +52,11 @@ test('generated Marisa profile mounts the complete MyGO rc6 market stack', () =>
       /'@dsh-external\/dsh-code-map>schemastery': 'npm:@deepseek-ai\/schemastery@3\.18\.1'/,
       'the standalone dsh-code-map plugin must use a published schemastery build',
     );
+    assert.equal(
+      workspace.match(/^overrides:$/gm)?.length,
+      1,
+      'profile workspace must contain exactly one top-level overrides mapping',
+    );
     assert.match(workspace, /^  cordis: 4\.0\.0-rc\.7$/m, 'profile peer resolution must use the vendored cordis version');
     for (const name of [
       'dsh-better-sidebar',
