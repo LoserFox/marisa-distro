@@ -6,16 +6,18 @@ Marisa 是面向日常生产力的 DSH 社区发行版：把经过筛选的插�
 
 ## 下载
 
-前往 [Release 页面](https://github.com/LoserFox/marisa-distro/releases) 选择已验证的预发布版本，并查看 SHA256。
+**Windows 用户请优先安装 [MSI 安装包（v0.1.1）](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.1/Marisa-DSH-windows-x64.msi)。** 它会完成按用户安装，并在首次启动时准备好随包运行时。
+
+当前预发布版本为 [`v0.1.1`](https://github.com/omdsh-dev/marisa-distro/releases/tag/v0.1.1)。所有二进制包均可直接下载：
 
 | 平台 | 下载 | 状态 |
 |---|---|---|
-| Windows 10/11 x64 | Release 页面中的 `Marisa-DSH-windows-x64.msi` | 推荐 |
-| Windows 10/11 x64 | Release 页面中的 `Marisa-DSH-windows-x64-standalone.exe` | 首次运行自解压 |
-| Linux x64 | Release 中名称含 `experimental` 的 tar.gz | 实验性；依赖系统 DSH/GTK/WebKit |
-| macOS Apple Silicon | Release 中名称含 `experimental` 的 app.zip | 实验性；未签名、未公证，可能无法运行 |
+| Windows 10/11 x64 | [MSI 安装包（推荐）](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.1/Marisa-DSH-windows-x64.msi) | 推荐 |
+| Windows 10/11 x64 | [便携版 EXE](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.1/Marisa-DSH-windows-x64-standalone.exe) | 首次运行自解压 |
+| Linux x64 | [实验性 tar.gz](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.1/Marisa-DSH-linux-x64-experimental.tar.gz) | 实验性；依赖系统 DSH/GTK/WebKit |
+| macOS Apple Silicon | [实验性 app.zip](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.1/Marisa-DSH-macos-arm64-experimental.app.zip) | 实验性；未签名、未公证，可能无法运行 |
 
-Windows 产物目前没有代码签名，Windows Defender SmartScreen 可能显示未知发布者。请只从本仓库 Release 下载，并核对 Release 中的 `SHA256SUMS.txt`。
+Windows 产物目前没有代码签名，Windows Defender SmartScreen 可能显示未知发布者。请只从本仓库 Release 下载，并使用 [SHA256SUMS.txt](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.1/SHA256SUMS.txt) 校验下载文件。
 
 ## 为什么选择魔理沙作为 DSH 发行版？
 
@@ -29,9 +31,9 @@ Marisa 不是离线包，也不会代替 DSH 与插件上游。它提供的是�
 
 ## 使用与反馈
 
-使用交流请进入 [GitHub Discussions](https://github.com/LoserFox/marisa-distro/discussions) 或 QQ 群 `956471685`。维护者不承诺提供一对一使用支持。
+使用交流请进入 [GitHub Discussions](https://github.com/omdsh-dev/marisa-distro/discussions) 或 QQ 群 `956471685`。维护者不承诺提供一对一使用支持。
 
-[Issues](https://github.com/LoserFox/marisa-distro/issues/new/choose) 只接收可以完整复现的发行版缺陷；插件自身问题应优先反馈到对应插件上游。发错位置的内容会被关闭并引导，重复灌水、骚扰或辱骂可能被锁定或封禁。
+[Issues](https://github.com/omdsh-dev/marisa-distro/issues/new/choose) 只接收可以完整复现的发行版缺陷；插件自身问题应优先反馈到对应插件上游。发错位置的内容会被关闭并引导，重复灌水、骚扰或辱骂可能被锁定或封禁。
 
 ## 文档
 

@@ -216,6 +216,20 @@ if (-not $SkipBodies) {
   Write-Host 'copying profile files (node_modules excluded) ...'
   Copy-DerefTree $profile "$stage\.dsh\profiles\marisa" 'node_modules'
 
+  # Marisa is a packaged distribution, not an upstream internal-test build.
+  # A bundled DSH home is recreated for each backend version, so seed the
+  # upstream acknowledgement with the version that ships in this bundle.
+  $onboardingCopy = "$stage\marisa-distro\harness\packages\client\ui-settings-general\src\onboarding-copy.ts"
+  $onboardingMatch = [regex]::Match((Read-Utf8Text $onboardingCopy), "(?m)^export const WELCOME_NOTICE_VERSION = '([^']+)'$")
+  if (-not $onboardingMatch.Success) {
+    throw "cannot determine the bundled Harness welcome-notice version: $onboardingCopy"
+  }
+  @"
+# Marisa acknowledges the upstream internal-test notice for its bundled home.
+ui-onboarding:
+  welcomeNoticeVersion: '$($onboardingMatch.Groups[1].Value)'
+"@ | Set-Content -Path "$stage\.dsh\settings.yaml" -NoNewline -Encoding utf8
+
   # --- single production install (store-cached) ------------------------------
   # The root workspace is the ONE tree: harness + plugins + marisa-bundle +
   # the 8 npm plugins (root package.json deps). The profile in the bundle is

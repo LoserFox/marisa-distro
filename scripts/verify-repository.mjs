@@ -114,5 +114,7 @@ assert.match(windowsReleaseScript, /::group::release:/, 'Windows release output 
 const bundleScript = readFileSync(join(root, 'desktop', 'bundle', 'make-bundle.ps1'), 'utf8')
 assert.doesNotMatch(bundleScript, /dir \/a:l \/s/, 'bundle link discovery must not recurse through cyclic junctions')
 assert.match(bundleScript, /FileAttributes\]::ReparsePoint/, 'bundle link discovery must explicitly stop at reparse points')
+assert.match(bundleScript, /WELCOME_NOTICE_VERSION/, 'bundled Marisa homes must acknowledge the shipped Harness welcome notice')
+assert.match(bundleScript, /welcomeNoticeVersion/, 'bundled Marisa homes must persist the welcome-notice acknowledgement')
 
 console.log(`repository policy ok: harness fork + ${manifest.plugins.length} plugins (${manifest.plugins.filter(p => p.mode === 'mirror').length} mirrors, ${manifest.plugins.filter(p => p.mode === 'fork').length} forks)`)
