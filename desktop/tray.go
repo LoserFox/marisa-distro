@@ -5,6 +5,9 @@ package main
 import (
 	"embed"
 	"log"
+	"os"
+	"os/exec"
+	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -27,6 +30,8 @@ func trayIcon() []byte {
 //   - 左键单击:切换主窗口显隐
 //   - 菜单「打开 Marisa DSH」:显示并聚焦主窗口
 //   - 菜单「开机自启」:勾选状态来自 Autostart;点击即开关 HKCU\…\Run(Windows)
+//   - 菜单「打开日志目录/打开数据目录」:系统文件管理器打开日志/数据目录
+//   - 菜单「重启后端」:终止当前后端,supervise 自动重启并重新导航
 //   - 菜单「打开 DevTools」:打开 WebView2 DevTools(仅非 production 构建)
 //   - 菜单「退出」:application.Quit() → main 的 cancel → 后端进程树清理
 func setupTray(app *application.App, win *application.WebviewWindow) {
@@ -54,6 +59,41 @@ func setupTray(app *application.App, win *application.WebviewWindow) {
 				log.Printf("autostart disable failed: %v", err)
 			}
 		}
+	})
+
+	menu.AddSeparator()
+
+	// 日志/数据目录入口：点击时先确保目录存在，再交给系统文件管理器打开。
+	if logDir, err := appLogDir(); err == nil {
+		logDirItem := menu.Add("打开日志目录")
+		logDirItem.OnClick(func(*application.Context) {
+			if err := ensureAndOpenFolder(logDir); err != nil {
+				log.Printf("open log dir failed: %v", err)
+			}
+		})
+	} else {
+		log.Printf("log dir unavailable: %v", err)
+	}
+	if dataDir, err := appDataDir(); err == nil {
+		dataDirItem := menu.Add("打开数据目录")
+		dataDirItem.OnClick(func(*application.Context) {
+			if err := ensureAndOpenFolder(dataDir); err != nil {
+				log.Printf("open data dir failed: %v", err)
+			}
+		})
+	} else {
+		log.Printf("data dir unavailable: %v", err)
+	}
+
+	// 重启后端：终止当前后端进程树，supervise 收到 exitCh 后自动以 1s
+	// 退避重启并重新导航窗口——改完 harness/服务端组合无需关应用。
+	restartItem := menu.Add("重启后端")
+	restartItem.OnClick(func(*application.Context) {
+		if !backendMgr.restart() {
+			log.Printf("backend restart requested but no backend is running")
+			return
+		}
+		log.Printf("backend restart requested; supervise will relaunch it")
 	})
 
 	// DevTools 调试入口：生产构建隐藏（devToolsAvailable=false，wails 的
@@ -84,6 +124,22 @@ func setupTray(app *application.App, win *application.WebviewWindow) {
 	})
 	tray.Run()
 	log.Printf("system tray ready")
+}
+
+// ensureAndOpenFolder 确保目录存在后，用系统文件管理器打开它（Explorer /
+// Finder / xdg-open）。
+func ensureAndOpenFolder(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	switch runtime.GOOS {
+	case "windows":
+		return exec.Command("explorer", dir).Start()
+	case "darwin":
+		return exec.Command("open", dir).Start()
+	default:
+		return exec.Command("xdg-open", dir).Start()
+	}
 }
 
 // autostartEnabled 读取当前开机自启状态(失败按未启用处理)。

@@ -25,6 +25,7 @@ func subscribeWebviewReady(win *application.WebviewWindow) <-chan struct{} {
 	switch runtime.GOOS {
 	case "windows":
 		win.OnWindowEvent(events.Windows.WebViewNavigationCompleted, func(*application.WindowEvent) {
+			logDebugf("webview navigation completed")
 			select {
 			case ready <- struct{}{}:
 			default:
@@ -32,6 +33,7 @@ func subscribeWebviewReady(win *application.WebviewWindow) <-chan struct{} {
 		})
 	case "darwin":
 		win.OnWindowEvent(events.Mac.WebViewDidFinishNavigation, func(*application.WindowEvent) {
+			logDebugf("webview navigation completed")
 			select {
 			case ready <- struct{}{}:
 			default:

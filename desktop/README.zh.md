@@ -57,8 +57,15 @@ pnpm dev:desktop
 - `DSH_APP_PORT`：请求的后端端口，默认 `0`，由操作系统选择未占用端口。
 - `MARISA_DEVTOOLS`：设为 `1` 时窗口就绪后自动打开 WebView2 DevTools（仅非 production 构建生效）。
 - `MARISA_LOG_DIR`：持久日志目录，默认操作系统缓存目录（Windows 为 `%LOCALAPPDATA%\marisa-distro\logs`）。
+- `MARISA_LOG_LEVEL`：设为 `debug` 时记录后端 stdout 逐行、窗口显隐与 webview 导航等高频事件，默认 `info`。
+
+托盘菜单还提供调试捷径：「打开日志目录」「打开数据目录」用系统文件管理器打开对应目录；「重启后端」终止当前后端、由守护进程自动重启（harness/profile 变更后无需关应用）；「打开 DevTools」打开 webview 检查器。
 
 Windows 打包版本会把 `DSH_WEB_CMD` 替换为随包 launcher。不要用这些变量把已发布的 Windows 包替换成任意外部后端。
+
+## 启动日志
+
+桌面壳与随包后端启动时总会写入同一份持久日志：Windows 下为 `%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop.log`（`MARISA_LOG_DIR` 可覆盖目录）。后端 stdout（debug 级）与 stderr、壳的启动/就绪/退出/重启/托盘诊断都记录在此。日志在启动时超过 5 MiB 即轮转，保留上一份为 `marisa-desktop.log.1`。壳自身的日志行带 `file:line`，后端透传内容保持原样。分享日志前请检查其中是否包含本地路径、插件配置等敏感信息。
 
 ## 验证
 

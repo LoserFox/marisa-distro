@@ -104,10 +104,29 @@ development backend:
   ready (non-production builds only).
 - `MARISA_LOG_DIR`: persistent log directory. Defaults to the OS cache
   directory (`%LOCALAPPDATA%\marisa-distro\logs` on Windows).
+- `MARISA_LOG_LEVEL`: set to `debug` for per-line backend stdout, window
+  visibility, and webview navigation events. Defaults to `info`.
+
+The tray menu also carries diagnostics shortcuts: 「打开日志目录」「打开数据
+目录」open the respective folders in the system file manager, 「重启后端」
+kills the current backend so the supervisor relaunches it (useful after
+harness or profile changes), and 「打开 DevTools」 opens the webview inspector.
 
 Windows packaged builds deliberately replace `DSH_WEB_CMD` with their bundled
 launcher. Do not use those variables to substitute an arbitrary backend into a
 published Windows package.
+
+## Startup logs
+
+The desktop shell and bundled backend always write to a shared persistent log
+on startup: `%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop.log` on Windows
+(`MARISA_LOG_DIR` overrides the directory). Backend stdout (debug level) and
+stderr, plus the shell's startup, readiness, exit, restart, and tray
+diagnostics, are recorded there. The file rotates on startup after reaching
+5 MiB, retaining the previous file as `marisa-desktop.log.1`. Shell log lines
+carry `file:line`; backend passthrough stays verbatim. Review logs for local
+paths, plugin configuration, and other sensitive information before sharing
+them.
 
 ## Verification
 

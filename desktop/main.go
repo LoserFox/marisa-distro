@@ -10,14 +10,13 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	_ "embed"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -57,8 +56,8 @@ func startServer(ctx context.Context, port string) (cmd *exec.Cmd, url string, e
 	if err != nil {
 		return cmd, "", nil, fmt.Errorf("stdout pipe: %w", err)
 	}
-	// 后端 stderr 直接透传到壳的 stderr，便于诊断。
-	cmd.Stderr = os.Stderr
+	// 后端 stderr 同时写入终端与桌面持久日志。
+	cmd.Stderr = backendLogOutput
 	if err := cmd.Start(); err != nil {
 		return cmd, "", nil, fmt.Errorf("start dsh web: %w", err)
 	}
@@ -70,19 +69,8 @@ func startServer(ctx context.Context, port string) (cmd *exec.Cmd, url string, e
 		exitChRaw <- serverExit{err: err}
 	}()
 
-	// 逐行读 stdout，直到出现 URL 行。
-	urlCh := make(chan string, 1)
-	go func() {
-		defer close(urlCh)
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "dsh web: ") {
-				urlCh <- strings.TrimSpace(strings.TrimPrefix(line, "dsh web: "))
-				return
-			}
-		}
-	}()
+	// 持续消费并记录 stdout；首次 URL 行单独通知启动流程。
+	urlCh := scanBackendStdout(stdout)
 
 	select {
 	case u := <-urlCh:
@@ -100,6 +88,43 @@ func startServer(ctx context.Context, port string) (cmd *exec.Cmd, url string, e
 	}
 }
 
+// backendManager 暴露当前后端进程句柄供托盘「重启后端」使用：restart 终止
+// 当前进程树，supervise 的 exitCh 收到终结后自动按原路径重启（退避 1s）。
+type backendManager struct {
+	mu     sync.Mutex
+	cmd    *exec.Cmd
+	exitCh <-chan serverExit
+}
+
+// set 记录本次迭代的后端句柄；进入下一轮启动前先清空。
+func (m *backendManager) set(cmd *exec.Cmd, exitCh <-chan serverExit) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cmd, m.exitCh = cmd, exitCh
+}
+
+// restart 请求重启当前后端；无活动后端时返回 false（调用方记录日志即可）。
+// 只杀不等：exitCh 由 Wait goroutine 恰好发送一次，stopServer 会消费掉它，
+// 导致 supervise 的等待 select 永远收不到终结事件；这里让 supervise 自己
+// 收到 exit 并走统一重启路径，进程回收仍由 Wait goroutine 完成。
+func (m *backendManager) restart() bool {
+	m.mu.Lock()
+	cmd, exitCh := m.cmd, m.exitCh
+	m.mu.Unlock()
+	if cmd == nil || exitCh == nil {
+		return false
+	}
+	go func() {
+		killServerTree(cmd.Process.Pid, false)
+		time.Sleep(serverStopGrace)
+		killServerTree(cmd.Process.Pid, true)
+	}()
+	return true
+}
+
+// backendMgr 是托盘重启入口与 supervise 之间的共享句柄。
+var backendMgr backendManager
+
 // supervise 守护后端：启动 → 就绪后把窗口指向其 URL → 进程退出则退避重启，
 // 直到 ctx 取消（应用退出）。后端在任意时刻意外终结都会走同一重启路径。
 // ready 是 subscribeWebviewReady 在窗口创建时订阅的首次导航完成信号。
@@ -112,6 +137,7 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 		default:
 		}
 
+		backendMgr.set(nil, nil)
 		cmd, url, exitCh, err := startServer(ctx, port)
 		if err != nil {
 			if ctx.Err() != nil {
@@ -119,6 +145,7 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 			}
 			log.Printf("dsh server 启动失败：%v（%s 后重试）", err, backoff)
 		} else {
+			backendMgr.set(cmd, exitCh)
 			backoff = restartBackoff
 			if err := awaitWebviewReady(ready, ctx); err != nil {
 				// Webview 未就绪（或应用退出）：跳过本次导航，窗口停留在
@@ -160,6 +187,14 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 }
 
 func main() {
+	logPath, closeLog, err := setupLogging()
+	if err != nil {
+		log.Printf("persistent logging unavailable: %v", err)
+	} else {
+		defer closeLog()
+		log.Printf("persistent log: %s", logPath)
+	}
+
 	if handled, err := handleBackendMaintenance(); handled {
 		if err != nil {
 			log.Fatalf("backend maintenance: %v", err)
