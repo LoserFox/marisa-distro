@@ -1,5 +1,5 @@
-import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { spawn, spawnSync } from 'node:child_process'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -40,10 +40,14 @@ export function resolveLayout({
     profileModules: path.join(profileRoot, 'node_modules'),
     overlay: path.join(profileRoot, 'desktop.overlay.yml'),
     desktopShell: path.join(root, 'release', platform === 'win32' ? 'dsh-shell.exe' : 'dsh-shell'),
+    desktopDir: path.join(root, 'desktop'),
+    // dev 模式日志目录：MARISA_LOG_DIR 覆盖壳的默认缓存日志位置，日志落在
+    // 仓库内而非 %LOCALAPPDATA%，便于查看与清理。
+    devLogDir: path.join(root, '.dev', 'logs'),
   }
 }
 
-export function missingPrerequisites(layout, { desktop = false } = {}) {
+export function missingPrerequisites(layout) {
   const required = [
     ['root workspace dependencies', layout.rootModules],
     ['tsdown HMR build dependency', layout.tsdownManifest],
@@ -53,8 +57,62 @@ export function missingPrerequisites(layout, { desktop = false } = {}) {
     ['installed Marisa profile dependencies', layout.profileModules],
     ['Marisa desktop overlay', layout.overlay],
   ]
-  if (desktop) required.push(['development desktop shell', layout.desktopShell])
   return required.filter(([, target]) => !existsSync(target))
+}
+
+// desktopGoFiles 递归收集 desktop 下的 Go 源文件（排除 _test.go：测试不影响
+// 壳产物，改测试无需重建壳）。
+export function desktopGoFiles(desktopDir) {
+  const sources = []
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (entry.name.endsWith('.go') && !entry.name.endsWith('_test.go')) sources.push(full)
+    }
+  }
+  walk(desktopDir)
+  return sources
+}
+
+// desktopShellBuildCommand 构造 `go build` 重建桌面壳的命令。-C 必须是 go
+// 的第一个 flag；-o 必须用绝对路径（相对 -o 会相对 -C 之后的目录解析，
+// 产物会落到 desktop/release/ 而非仓库 release/）。
+export function desktopShellBuildCommand(layout) {
+  return {
+    command: 'go',
+    args: ['build', '-C', layout.desktopDir, '-o', layout.desktopShell, '.'],
+    cwd: layout.root,
+  }
+}
+
+// needsDesktopShellRebuild 报告壳产物是否缺失或落后于任一 Go 源文件。
+export function needsDesktopShellRebuild(layout) {
+  let exeMtime = 0
+  try {
+    exeMtime = statSync(layout.desktopShell).mtimeMs
+  } catch {
+    return true
+  }
+  return desktopGoFiles(layout.desktopDir).some((file) => statSync(file).mtimeMs > exeMtime)
+}
+
+// rebuildDesktopShell 运行 go build 重建桌面壳；失败抛出带编译输出的错误。
+// go 不在 PATH 时给出可操作的指引。
+export function rebuildDesktopShell(layout) {
+  const { command, args, cwd } = desktopShellBuildCommand(layout)
+  const result = spawnSync(command, args, { cwd, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
+  if (result.error?.code === 'ENOENT') {
+    throw new Error(
+      `Go 工具链未找到（${command} 不在 PATH）：无法自动重建桌面壳。请安装 Go，或先运行 \`pnpm build\`。`,
+    )
+  }
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim()
+  if (result.status !== 0) {
+    throw new Error(`desktop shell build failed (exit ${String(result.status)}):\n${output}`)
+  }
+  return output
 }
 
 export function buildBackendArgs(layout, { port = '0' } = {}) {
@@ -223,12 +281,29 @@ export async function runDev(options, layout = resolveLayout()) {
       watch(watcher, 'HMR watcher')
 
       if (options.desktop) {
+        // 壳产物缺失或落后于 Go 源码时自动重建（webui 路径不涉及）。
+        if (needsDesktopShellRebuild(layout)) {
+          console.log('[dev] rebuilding desktop shell (Go sources changed)...')
+          const output = rebuildDesktopShell(layout)
+          if (output) console.log(output)
+        }
         const desktop = spawnService(layout.desktopShell, [], {
           cwd: layout.root,
-          env: { ...process.env, DSH_WEB_CMD: buildDesktopBackendCommand(layout) },
+          // GUI 子系统进程双击启动时无可用 stderr；显式 pipe 并转发，
+          // 保证 dev 模式下壳日志与后端日志都出现在终端。
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: {
+            ...process.env,
+            DSH_WEB_CMD: buildDesktopBackendCommand(layout),
+            MARISA_LOG_DIR: layout.devLogDir,
+          },
         })
         children.push(desktop)
         watch(desktop, 'desktop shell', { normalExit: true })
+        relayStream(desktop.stdout, process.stdout)
+        relayStream(desktop.stderr, process.stderr)
+        console.log(`[dev] desktop logs: ${layout.devLogDir}`)
+        console.log('[dev] DevTools: 托盘菜单「打开 DevTools」；MARISA_DEVTOOLS=1 启动即开')
         console.log('[dev] desktop development shell started; Ctrl+C stops it and the HMR watcher')
         return
       }

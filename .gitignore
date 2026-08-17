@@ -1,6 +1,7 @@
 node_modules/
 **/node_modules/
 *.log
+.dev/
 release/
 *.tsbuildinfo
 .pnpm-store/

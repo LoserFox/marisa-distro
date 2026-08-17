@@ -46,7 +46,7 @@ pnpm dev
 pnpm dev:desktop
 ```
 
-桌面模式使用同一个 `--dev` 后端和 HMR watcher，但由 Wails 壳启动、守护并加载后端。Harness 的 `dshClient` 源码会由 watcher 自动重建；vendored 插件沿用各自的构建约定，没有 `watch` 脚本的插件修改后仍需运行该插件的 `build`。profile、依赖图或服务端组合发生变化时，应重新运行 `pnpm build`。
+桌面模式使用同一个 `--dev` 后端和 HMR watcher，但由 Wails 壳启动、守护并加载后端。壳二进制缺失或落后于 `desktop/` 下的 Go 源码时会自动重建；壳的日志会转发到终端，并同时落在 `<repo>/.dev/logs/`。WebView2 DevTools 可通过托盘菜单「打开 DevTools」打开，`MARISA_DEVTOOLS=1` 可在窗口就绪后自动打开。Harness 的 `dshClient` 源码会由 watcher 自动重建；vendored 插件沿用各自的构建约定，没有 `watch` 脚本的插件修改后仍需运行该插件的 `build`。profile、依赖图或服务端组合发生变化时，应重新运行 `pnpm build`。
 
 本地最低验证：
 

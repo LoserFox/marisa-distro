@@ -48,13 +48,15 @@ pwsh -NoProfile -File build.ps1
 pnpm dev:desktop
 ```
 
-根开发启动器会设置指向当前检出与 Marisa profile 的 `DSH_WEB_CMD`，启用客户端 HMR，并在退出时清理桌面壳、后端和 watcher。只需要浏览器界面时使用 `pnpm dev`；完整说明见[贡献指南](../docs/contributing.md#本地开发循环)。
+根开发启动器会设置指向当前检出与 Marisa profile 的 `DSH_WEB_CMD`，启用客户端 HMR，并在退出时清理桌面壳、后端和 watcher。壳二进制缺失或落后于 `desktop/` 的 Go 源码时会自动重建；壳日志转发到终端并落在 `<repo>/.dev/logs/`；DevTools 可从托盘菜单「打开 DevTools」打开（或 `MARISA_DEVTOOLS=1` 启动即开）。只需要浏览器界面时使用 `pnpm dev`；完整说明见[贡献指南](../docs/contributing.md#本地开发循环)。
 
 桌面壳会在创建窗口和启动开发后端前读取以下变量：
 
 - `DSH_WEB_CMD`：完整后端命令行，`{port}` 会替换为所选端口。默认值是 `dsh web --port {port}`。
 - `DSH_APP_WORKSPACE`：后端工作目录，默认当前用户的主目录。
 - `DSH_APP_PORT`：请求的后端端口，默认 `0`，由操作系统选择未占用端口。
+- `MARISA_DEVTOOLS`：设为 `1` 时窗口就绪后自动打开 WebView2 DevTools（仅非 production 构建生效）。
+- `MARISA_LOG_DIR`：持久日志目录，默认操作系统缓存目录（Windows 为 `%LOCALAPPDATA%\marisa-distro\logs`）。
 
 Windows 打包版本会把 `DSH_WEB_CMD` 替换为随包 launcher。不要用这些变量把已发布的 Windows 包替换成任意外部后端。
 

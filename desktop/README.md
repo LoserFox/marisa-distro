@@ -75,6 +75,22 @@ performs the backend self-check, and writes a development shell to
 `release/dsh-shell.exe`. Use a local built `dsh` command or set
 `DSH_WEB_CMD` before starting that development shell.
 
+### Development loop
+
+`pnpm dev:desktop` starts the same HMR watcher and `--dev` backend as `pnpm dev`,
+then launches the desktop shell instead of a browser. It rebuilds
+`release/dsh-shell.exe` automatically whenever `desktop/` Go sources are newer
+than the binary, so a shell change only needs a restart (Ctrl+C and re-run) —
+no manual `go build`. The shell's stdout/stderr are relayed to the terminal,
+and its persistent log goes to `<repo>/.dev/logs/marisa-desktop.log`
+(`MARISA_LOG_DIR`) instead of the default cache directory.
+
+WebView2 DevTools are available from the tray menu item 「打开 DevTools」 in
+non-production builds; `MARISA_DEVTOOLS=1` opens them automatically once the
+window is ready. Client-plugin source changes hot-reload through the same
+watcher as the web mode; harness server-side or profile composition changes
+still need `pnpm build` and a restart.
+
 The shell reads these variables before it creates the window or starts a
 development backend:
 
@@ -84,6 +100,10 @@ development backend:
   current user's home directory.
 - `DSH_APP_PORT`: requested backend port. It defaults to `0`, allowing the OS
   to select an unused port.
+- `MARISA_DEVTOOLS`: set to `1` to open WebView2 DevTools when the window is
+  ready (non-production builds only).
+- `MARISA_LOG_DIR`: persistent log directory. Defaults to the OS cache
+  directory (`%LOCALAPPDATA%\marisa-distro\logs` on Windows).
 
 Windows packaged builds deliberately replace `DSH_WEB_CMD` with their bundled
 launcher. Do not use those variables to substitute an arbitrary backend into a

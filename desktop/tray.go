@@ -27,6 +27,7 @@ func trayIcon() []byte {
 //   - 左键单击:切换主窗口显隐
 //   - 菜单「打开 Marisa DSH」:显示并聚焦主窗口
 //   - 菜单「开机自启」:勾选状态来自 Autostart;点击即开关 HKCU\…\Run(Windows)
+//   - 菜单「打开 DevTools」:打开 WebView2 DevTools(仅非 production 构建)
 //   - 菜单「退出」:application.Quit() → main 的 cancel → 后端进程树清理
 func setupTray(app *application.App, win *application.WebviewWindow) {
 	tray := app.SystemTray.New()
@@ -54,6 +55,16 @@ func setupTray(app *application.App, win *application.WebviewWindow) {
 			}
 		}
 	})
+
+	// DevTools 调试入口：生产构建隐藏（devToolsAvailable=false，wails 的
+	// openDevTools 为 no-op）；MARISA_DEVTOOLS=1 可在启动时自动打开。
+	if devToolsAvailable {
+		devToolsItem := menu.Add("打开 DevTools")
+		devToolsItem.OnClick(func(*application.Context) {
+			log.Printf("opening DevTools")
+			win.OpenDevTools()
+		})
+	}
 
 	menu.AddSeparator()
 

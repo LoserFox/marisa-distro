@@ -170,6 +170,8 @@ func main() {
 	// 加载前读取环境变量：全部在创建窗口/启动后端之前解析。
 	// DSH_APP_WORKSPACE — 工作目录（默认用户主目录；受限/测试环境可覆盖）。
 	// DSH_APP_PORT — 后端监听端口（默认 "0" 由 OS 分配，避免冲突）。
+	// MARISA_DEVTOOLS — 窗口就绪后自动打开 WebView2 DevTools（仅非
+	// production 构建生效；托盘菜单「打开 DevTools」随时可用）。
 	workspace := os.Getenv("DSH_APP_WORKSPACE")
 	if workspace == "" {
 		home, err := os.UserHomeDir()
@@ -182,6 +184,7 @@ func main() {
 	if port == "" {
 		port = "0"
 	}
+	devtools := os.Getenv("MARISA_DEVTOOLS") == "1"
 	if err := os.Chdir(workspace); err != nil {
 		log.Fatalf("chdir %s: %v", workspace, err)
 	}
@@ -224,8 +227,14 @@ func main() {
 		Mac: application.MacWindow{
 			TitleBar: application.MacTitleBarDefault,
 		},
-		HTML: loadingHTML,
+		// OpenInspectorOnStartup 只在非 production 构建生效（wails 内部以
+		// isDebugMode 门控），production 构建下此选项被忽略。
+		OpenInspectorOnStartup: devtools,
+		HTML:                   loadingHTML,
 	})
+	if devtools {
+		log.Printf("MARISA_DEVTOOLS=1: DevTools 将在窗口就绪后自动打开（托盘菜单可随时开关）")
+	}
 	registerCloseToTray(win)
 	// 首次导航完成信号：必须在 app.Run() 之前订阅（启动页导航在应用启动后
 	// 数秒内完成，后端就绪前早已发出；事件流无回放，晚订阅会错过）。
