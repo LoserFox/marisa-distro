@@ -1,0 +1,11 @@
+{
+  "component": "harness",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "4e7fb95f",
+  "available": "99f6f02fecdb7dff40c3fbc9470f5907c29f74ca",
+  "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
+  "diffDocument": "docs/upstream-diff.md",
+  "checkedAt": "2026-08-18T04:00:49.857Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
