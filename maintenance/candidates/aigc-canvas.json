@@ -1,0 +1,12 @@
+{
+  "component": "aigc-canvas",
+  "source": "npm",
+  "mode": "fork",
+  "package": "@huanlin/dsh-plugin-aigc-canvas",
+  "currentVersion": "0.1.0",
+  "available": "0.1.4",
+  "repository": null,
+  "diffDocument": "docs/plugins/aigc-canvas.md",
+  "checkedAt": "2026-08-18T04:00:52.646Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
