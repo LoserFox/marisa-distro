@@ -1,0 +1,11 @@
+{
+  "component": "mineru",
+  "source": "npm",
+  "mode": "mirror",
+  "package": "@huanlin/dsh-plugin-mineru",
+  "currentVersion": "0.2.1",
+  "available": "0.2.2",
+  "repository": null,
+  "checkedAt": "2026-08-18T04:00:35.153Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
