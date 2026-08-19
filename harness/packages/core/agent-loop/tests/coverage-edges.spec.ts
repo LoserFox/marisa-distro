@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { createUserMessage, CallId, LlmError, StreamChunk, errorChain  } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { createUserMessage, CallId, LlmError, StreamChunk, errorChain  } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId, TurnEndReason } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
@@ -16,10 +16,10 @@ function driverDone(agent: Agent): Promise<void> {
 
 async function harness(adapter: MockAdapter) {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, { agents: [] })
   ctx.llm.registerAdapter(['mock'], adapter)
@@ -112,7 +112,7 @@ describe('thrown-value propagation', () => {
     let threwOnce = false
     ctx.on('internal/dispatch', (_mode, name, args) => {
       if (name !== 'session/event') return
-      const event: SessionEvent = args[1] as SessionEvent
+      const event = args[1] as SessionEvent
       if (event.type === 'turn/start' && !threwOnce) {
         threwOnce = true
         throw 'naked string error'
@@ -299,7 +299,7 @@ describe('stream failure edges', () => {
     let vetoed = false
     ctx.on('internal/dispatch', (_mode, name, args) => {
       if (name !== 'session/event') return
-      const event: SessionEvent = args[1] as SessionEvent
+      const event = args[1] as SessionEvent
       if (event.type === 'assistant/chunk' && !vetoed) {
         vetoed = true
         throw new Error('reject the first chunk')

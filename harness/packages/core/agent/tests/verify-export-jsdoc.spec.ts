@@ -1,5 +1,5 @@
 /**
- * Negative-path tests for the export-surface JSDoc gate (`scripts/verify-export-jsdoc.ts`).
+ * Negative-path tests for the exported-API JSDoc gate (`scripts/verify-export-jsdoc.ts`).
  */
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -46,7 +46,7 @@ export function hiddenFn(value: string): string { return value }
     expect(violations.every(violation => violation.includes('publicFn'))).toBe(true)
   })
 
-  it('accepts a fully documented surface', () => {
+  it('accepts a fully documented API', () => {
     expect(collectExportJsdocViolations(make(`
 /**
  * Add one to a count.
@@ -106,7 +106,7 @@ export const halve = (n: number): number => n / 2
       '/**\n * Docs.\n * @param ghost - not real.\n */\nexport function f({ a }: { a: number }): void {}\n',
     ))
     expect(violations).toEqual([
-      expect.stringMatching(/parameter '\{ a \}' is a binding pattern; the export surface needs simple identifier parameters/),
+      expect.stringMatching(/parameter '\{ a \}' is a binding pattern; the exported API needs simple identifier parameters/),
       expect.stringMatching(/@param ghost does not match any parameter \(stale tag\?\)/),
     ])
   })
@@ -154,7 +154,7 @@ describe('verify-export-jsdoc type-level exports', () => {
 
   it('skips `declare module` augmentation bodies (the cordis gate owns them)', () => {
     expect(collectExportJsdocViolations(make(
-      "declare module 'cordis' {\n  interface Events {\n    'fix/x'(): void\n  }\n}\nexport {}\n",
+      "declare module '@deepseek-ai/cordis' {\n  interface Events {\n    'fix/x'(): void\n  }\n}\nexport {}\n",
     ))).toEqual([])
   })
 })
@@ -166,9 +166,9 @@ describe('verify-export-jsdoc export forms', () => {
     ))).toEqual([expect.stringMatching(/exported function 'f' .* has no JSDoc\./)])
   })
 
-  it('does not treat a never-exported sibling declarator as surface', () => {
+  it('does not treat a never-exported sibling declarator as API', () => {
     // `export { publicValue }` resolves to the whole variable statement; only
-    // the named declarator is surface — the gate must not demand JSDoc for
+    // the named declarator is exported — the gate must not demand JSDoc for
     // the private sibling sharing the statement.
     expect(collectExportJsdocViolations(make(
       '/** The public knob. */\nconst publicValue = 1, privateHelper = 2\nexport { publicValue }\nvoid privateHelper\n',
@@ -177,7 +177,7 @@ describe('verify-export-jsdoc export forms', () => {
 
   it('unions declarators across multiple export lists over one statement', () => {
     // Two lists each name one declarator of the same undocumented statement:
-    // both are surface (deduplicating on first resolution would drop `b`),
+    // both are exported (deduplicating on first resolution would drop `b`),
     // while the never-exported `c` stays out.
     const violations = collectExportJsdocViolations(make(
       'const a = 1, b = 2, c = 3\nexport { a }\nexport { b }\nvoid c\n',
@@ -344,7 +344,7 @@ describe('verify-export-jsdoc fail-closed forms', () => {
     ))).toEqual([])
   })
 
-  it('treats an inline function-type annotation as the surface signature', () => {
+  it('treats an inline function-type annotation as the API signature', () => {
     expect(collectExportJsdocViolations(make(
       '/** Maps a number. */\nexport declare const f: (x: number) => number\n',
     ))).toEqual([
@@ -402,7 +402,7 @@ describe('verify-export-jsdoc fail-closed forms', () => {
     ])
   })
 
-  it('treats a single-call-signature type literal as the surface signature', () => {
+  it('treats a single-call-signature type literal as the API signature', () => {
     expect(collectExportJsdocViolations(make(
       '/** Maps. */\nexport declare const f: { (x: number): number }\n',
     ))).toEqual([

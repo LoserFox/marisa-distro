@@ -1,7 +1,7 @@
 /* Conversation column skeleton: header (breadcrumb row only for subagents not fork + tabs) over the view
    area, composer InputBar at the bottom. Column width/squeeze is layout's;
    this fills its cell. Figma: Header 39:27730 (83px two-row), tabs 13px with
-   a 3px active bar. */
+   a 2px active bar. */
 
 .root {
   display: flex;
@@ -26,9 +26,22 @@
 }
 
 .header {
+  position: relative;
   flex: none;
   padding: 12px 28px 0 20px;
-  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  border-bottom: 1px solid transparent;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  left: 0;
+  z-index: 0;
+  height: 1px;
+  background: var(--dsw-alias-border-l2);
+  pointer-events: none;
 }
 
 /* Blank hero/settling: keep the strict Session header mounted without taking
@@ -40,9 +53,18 @@
 .titleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   min-height: 32px;
 }
+
+.titleCluster {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .crumbs {
   display: flex;
   align-items: center;
@@ -98,15 +120,29 @@
   gap: 8px;
 }
 
+.headerUtilities {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: 20px;
+}
+
+.headerUtilities:empty {
+  display: none;
+}
+
 /* figma Tab_Group 34:11441: 35px strip, gap 36, pad-left 8, tabs bottom-aligned. */
 .tabs {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 36px;
   margin-top: 4px;
   padding-left: 8px;
 }
 
-/* figma .Tab 34:11442: 13/16 text (figma wt510, rendered 500), gap 8 to the 3px bar (no bottom rounding). */
+/* figma .Tab 34:11442: 13/16 text (figma wt510, rendered 500), gap 8 to the 2px bar. */
 .tab {
   position: relative;
   padding: 0 0 11px;
@@ -123,9 +159,10 @@
   content: '';
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: 1px;
   left: 0;
-  height: 3px;
+  height: 2px;
+  border-radius: 2px;
   background: transparent;
 }
 
@@ -235,15 +272,20 @@
 .scrollBody:has([data-conversation-composer-overlay]) {
   position: relative;
   /* A clipping box nothing scrolls out of, stated as a scroll container on both
-     axes rather than `overflow: hidden`: WebKit honours the reservation above
-     only in the `overflow-y: auto` form, and a single-axis scroller computes
-     the other axis to `auto`
-     ([decision](../../../../../../.agents/notes/implemented/bug-fix/2026-08-04-composer-tab-gutter-reservation.md)). */
+     axes rather than `overflow: hidden`: a single-axis scroller computes the
+     other axis to `auto`, and the seat's absolute positioning below needs the
+     box to stay a containing block in every engine. */
   overflow-x: hidden;
   overflow-y: auto;
+  /* The view owns its own scrollers (the trajectory ledger scrolls inside the
+     view), so this box never scrolls here; reserving a gutter would only
+     narrow the view's content by the bar's width. Chat keeps the reservation
+     on the same element, so the seat below compensates with the bar's width
+     ([decision](../../../../../../.agents/notes/implemented/bug-fix/2026-08-04-composer-tab-gutter-reservation.md)). */
+  scrollbar-gutter: auto;
 }
 
-.scrollBody:has([data-conversation-composer-overlay]) > .viewArea {
+.scrollBody:has([data-conversation-composer-overlay]) > :global([data-slot='conversation.session']) > .viewArea {
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
@@ -251,7 +293,15 @@
 
 .scrollBody:has([data-conversation-composer-overlay]) > .composerSeat {
   position: absolute;
-  right: 0;
+  /* Chat's seat rides this box's content box, which its own scrolling shortens
+     by the bar's width; the overlay seat is against the padding box, so it
+     must give back the same width to keep the input card in place across
+     tabs. Reads ui-theme's --dsh-scrollbar-width, which mirrors the WebKit
+     bar's layout width. Chat reserves the engine-resolved width, so on an
+     engine where the resolved width differs from this fixed 8px the card
+     drifts by half the difference — accepted residual risk, recorded in
+     ([decision](../../../../../../.agents/notes/implemented/bug-fix/2026-08-12-composer-overlay-seat-width-compensation.md)). */
+  right: var(--dsh-scrollbar-width);
   bottom: 0;
   left: 0;
 }
@@ -263,8 +313,9 @@
 .composerHero {
   position: relative; /* .heroGlow positioning context */
   align-self: center;
-  /* figma 75:8208: 12 between hero chrome / workspace row / card. */
-  gap: 12px;
+  /* figma 75:8208 drew 12 between all three rows; the workspace row now sits
+     8 above the card (its margin-top restores 12 under the hero chrome). */
+  gap: 8px;
   /* Foot inside the centered box floats the stack a bit above true center. */
   padding-bottom: 32px;
   /* Card cap + both clearances: the hero input card lands at exactly the same
@@ -292,7 +343,9 @@
 .heroWorkspaceRow {
   display: flex;
   align-items: center;
+  gap: 2px;
   min-width: 0;
+  margin-top: 4px;
   /* figma drew px 8; nudged +12 so the chip's folder glyph lines up closer to
      the card's inner controls below. */
   padding-left: 20px;

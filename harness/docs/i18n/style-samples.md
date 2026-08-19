@@ -6,7 +6,7 @@
 
 ## ① 架构叙述
 
-> This document describes the architecture of the DeepSeek Harness — the foundation of **DeepSeek Code**. The governing principle, from the microkernel design discussion: **everything is a plugin**. The core is deliberately tiny — a handful of abstract services plus one concrete loop plugin (`dsh-agent-loop`) — and every product feature is a plugin against the extension surface described here, without modifying the loop.
+> This document describes the architecture of the DeepSeek Harness — the foundation of **DeepSeek Code**. The governing principle, from the microkernel design discussion: **everything is a plugin**. The core is deliberately tiny — a handful of abstract services plus one concrete loop plugin (`dsh-agent-loop`) — and every product feature is a plugin against the extension API described here, without modifying the loop.
 
 本文介绍 DeepSeek Harness 整体架构，它是 **DeepSeek Code** 的底层基座。微内核设计讨论中确立了核心设计准则：**一切皆插件**。内核刻意做得极精简，仅包含少量抽象服务，外加一个实体循环插件 `dsh-agent-loop`。所有产品功能均基于本文定义的扩展接口开发为独立插件，无需改动主循环逻辑。
 
@@ -14,9 +14,9 @@
 
 依赖约束规范：各类扩展插件仅依赖抽象接口，严禁直接依赖 `dsh-agent-loop`（该主循环支持替换实现）；唯一允许的特例是组合包 `dsh-agent-spine-demo`，它的职责是组装整套实体主干。
 
-> This document covers **behavior**; type shapes live in [core-data-structures/](../core-data-structures/core.md), the per-event/service reference in the [generated catalog](../cordis-catalog/events.md), per-package contracts in the package READMEs ([map](../../packages/README.md)).
+> This document covers **behavior**; type definitions live in [subsystems/](../subsystems/core.md), the per-event/service reference lives in the generated regions of [subsystems/](../subsystems/core.md), and package contracts in the package READMEs state each package's required configuration and behavior ([map](../../packages/README.md)).
 
-本文档描述整体行为逻辑；类型定义存放于 [core-data-structures/](../core-data-structures/core.md)；各类事件、服务的详细参考见[生成目录](../cordis-catalog/events.md)；各包（package）的对外契约写在相应的 README 中（[索引](../../packages/README.md)）。
+本文档描述整体行为逻辑；类型定义存放于 [subsystems/](../subsystems/core.md)；各类事件、服务的详细参考见 [subsystems/](../subsystems/core.md) 中的生成区块；相应的 README 说明每个包（package）要求的配置和行为（[索引](../../packages/README.md)）。
 
 ## ② 防御模式规则
 
@@ -28,7 +28,7 @@
 
 **dispose（资源释放）必须等待所有任务完全停稳，不能仅下发终止指令就返回**：如果清理过程只发出终止或中断信号，却不等任务停止就返回，就会留下孤儿进程。清理应采用异步方式，等待所有子任务彻底退出（先发出终止信号，再等待退出）；发出信号前应先关闭监听器与通知注册表，使延迟到达的完成事件不再触发通知。测试要证明 dispose 的确等到清理完成：执行完 `await fiber.dispose()` 后进程 PID 立即消失，不能只检查进程最终会自行消亡。
 
-> **Async state is not synchronous state** — `agent.followup()` does not flip status before returning; a background task's completion races turn boundaries; `reader.close()` fires for both EOF and disposal. Never gate control flow on a status you only just requested — drive lifecycle off the events/promises that actually fire (`agent/status`, `task.done`), and observe the transition (saw `running` THEN `idle`) instead of treating status as a per-follow-up result: several queued follow-ups run as consecutive turns under one `running` interval, while cancellation or disposal can discard unstarted items.
+> **Async state is not synchronous state** — `agent.followup()` does not flip status before returning; a background job's completion races turn boundaries; `reader.close()` fires for both EOF and disposal. Never gate control flow on a status you only just requested — drive lifecycle off the events/promises that actually fire (`agent/status`, `task.done`), and observe the transition (saw `running` THEN `idle`) instead of treating status as a per-follow-up result: several queued follow-ups run as consecutive turns under one `running` interval, while cancellation or disposal can discard unstarted items.
 
 **异步状态不等同于同步瞬时状态**：调用 `agent.followup()` 不会在返回前同步更新状态；后台任务的完成时间与轮次边界存在竞态；`reader.close()` 既会在读到文件末尾时触发，也会在资源释放时触发。切勿把刚刚发起的状态变更当成已经生效，据此控制流程；生命周期逻辑应以实际触发的事件和已完成的 promise（`agent/status`、`task.done`）为准，并观察完整的状态变化（先 `running`，再 `idle`），不要把状态当作逐次 `followup()` 的结果：多次排队的 `followup()` 会作为连续轮次运行，但可能共用一个 `running` 区间；取消或资源释放还可能丢弃尚未启动的队列项。
 
@@ -46,9 +46,9 @@
 
 自带自动跳过逻辑，仅用于保障无密钥 CI 环境、无权限贡献者不会被流程拦截，不代表可以以此为由削减真实接口测试投入。
 
-> **Prefer the real implementation over a mock** — Mock only the genuinely expensive or non-deterministic boundary (the LLM adapter, the network, the clock); keep everything downstream real. A hand-rolled stand-in proves the bridge moves bytes, not that the shipping tool behaves as asserted — the two drift while the test stays green.
+> **Prefer the real implementation over a mock** — Mock only genuinely expensive or non-deterministic dependencies (the LLM adapter, the network, the clock); keep everything downstream real. A hand-rolled stand-in proves the bridge moves bytes, not that the shipping tool behaves as asserted — the two drift while the test stays green.
 
-**优先使用真实实现，而非 mock 替身**——仅对开销极大、结果不确定的边界模块做 mock（LLM（大语言模型）适配器、网络、时钟），其余下游组件全部使用真实实现。手写的 mock 替身只能验证数据通路能传输字节，无法保证线上工具符合预期逻辑；长期下来业务逻辑与 mock 实现会出现偏差，但测试仍会显示通过。
+**优先使用真实实现，而非 mock 替身**——仅对开销极大、结果不确定的依赖做 mock（LLM（大语言模型）适配器、网络、时钟），其余下游组件全部使用真实实现。手写的 mock 替身只能验证数据通路能传输字节，无法保证线上工具符合预期逻辑；长期下来业务逻辑与 mock 实现会出现偏差，但测试仍会显示通过。
 
 ## ④ 机制描述
 
@@ -58,9 +58,9 @@
 
 ## ⑤ 政策声明
 
-> The gate's limit, stated plainly: a green gate means the pair was confirmed consistent at these exact contents, not that the confirmation was sound. It checks hashes and shape; it cannot judge whether the two sides actually say the same thing — that is the reviewer's half of the contract. A re-recorded pair with a sloppy counterpart passes the gate; it must not pass review.
+> The gate's limit, stated plainly: a green gate means the pair was confirmed consistent at these exact contents, not that the confirmation was sound. It checks hashes and Markdown structure; it cannot judge whether the two sides actually say the same thing — that is the reviewer's half of the contract. A re-recorded pair with a sloppy counterpart passes the gate; it must not pass review.
 
-门禁的边界很明确：通过门禁只说明两侧文件当前的 blob hash 与伴随记录吻合，并且结构签名一致，也就是说，这组内容曾被确认一致；它不代表这次确认可靠。门禁无法判断两种语言是否真正表达了相同的意思；这部分契约要由评审人把关。即使译文粗糙、表意有误，重新记录配对后仍能通过门禁，但绝不能通过人工评审。
+门禁的限制很明确：通过门禁只说明两侧文件当前的 blob hash 与伴随记录吻合，并且 Markdown 结构签名一致，也就是说，这组内容曾被确认一致；它不代表这次确认可靠。评审人必须检查两种语言是否真正表达了相同的意思。即使译文粗糙、表意有误，重新记录配对后仍能通过门禁，但绝不能通过人工评审。
 
 ## ⑥ Agent Note 论证
 
@@ -84,4 +84,4 @@
 - 长段按语义单元拆段，一段一件事；名词短语展开为动词句。
 - 母语重写不等于删减：原文每个语义成分都要落地。
 - 样例与 [terminology.md](terminology.md) 冲突时，以术语表为准：收录样例前按表修正术语（例如 agent、mock、LLM 保留英文，cancellation 译「取消」）。
-- 代码体标识符（事件名 `agent/status`、状态值 `running`、包名 `dsh-bash-local` 等）在译文中保留 code span 原文，不得口语化改写——这是行文规则的硬边界，Pass 2 逐句核验的重点。
+- 代码体标识符（事件名 `agent/status`、状态值 `running`、包名 `dsh-bash-local` 等）在译文中保留 code span 原文，不得口语化改写；Pass 2 必须逐句核验。

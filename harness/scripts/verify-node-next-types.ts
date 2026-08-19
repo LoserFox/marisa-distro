@@ -41,7 +41,7 @@ function workspacePackages(): WorkspacePackage[] {
   ]
     .map(path => readPackage(resolve(root, path)))
     .filter(pkg => pkg !== null)
-    .sort((a, b) => { return a.name.localeCompare(b.name) })
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 const declarationSpecifierPattern = /(?:from\s*|import\s*\(\s*|import\s+|declare\s+module\s*)["'](\.{0,2}(?:\/[^"']*)?)["']/g
@@ -151,7 +151,7 @@ try {
     cwd: root,
     stdio: 'pipe',
   })
-  console.log(`verify-node-next-types: ${packages.length} workspace package declaration surface(s) compile under NodeNext.`)
+  console.log(`verify-node-next-types: ${packages.length} workspace package declaration API(s) compile under NodeNext.`)
 } catch (error: unknown) {
   failed = true
   const output = error as { stdout?: Buffer; stderr?: Buffer }

@@ -32,4 +32,4 @@ The hover card is now hit-testable and covers 244px of whatever it overlays whil
 
 ## Testing
 
-`packages/client/ui-primitives/tests/hover-card.spec.tsx` and `tests/atoms.spec.tsx` pin the grace boundary, cancel-on-return, no-second-dwell, disarm-on-owner-close, and the no-arming-while-closed case. The reachability gestures themselves — hovering onto the card, and moving between an open list and its trigger — are pinned in the real browser by `apps/web/tests/workspace-management.e2e.ts`, since they depend on hit testing and layout that jsdom does not model.
+`packages/client/ui-primitives/tests/hover-card.client.spec.tsx` and `tests/atoms.spec.tsx` pin the grace boundary, cancel-on-return, no-second-dwell, disarm-on-owner-close, and the no-arming-while-closed case. The reachability gestures themselves — hovering onto the card, and moving between an open list and its trigger — are pinned in the real browser by `apps/web/tests/workspace-management.e2e.ts`, since they depend on hit testing and layout that jsdom does not model.

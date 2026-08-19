@@ -17,7 +17,7 @@ describe('Oxlint invocation', () => {
   })
 
   it.each(['0', '-1', '1.5', 'auto'])('rejects invalid worker bound %s', (value) => {
-    expect(() => { return resolveOxlintInvocation(['.'], { DSH_OXLINT_THREADS: value }) })
+    expect(() => resolveOxlintInvocation(['.'], { DSH_OXLINT_THREADS: value }))
       .toThrow('DSH_OXLINT_THREADS must be a positive integer')
   })
 

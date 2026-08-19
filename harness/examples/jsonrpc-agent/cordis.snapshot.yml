@@ -8,7 +8,7 @@
 # `llm-replay` reads `DSH_SNAPSHOT_FILE` / `DSH_SNAPSHOT_CHILD_FILES` from the
 # harness. Stdout remains reserved for JSON-RPC frames.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:

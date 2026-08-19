@@ -1,69 +1,69 @@
-# Three-layer capability design
+# Three-role capability design
 
 English | [中文](index.zh.md)
 
-This page has two parts: a concept reference for the three-layer capability pattern, followed by an advanced tutorial that builds one capability. Complete the [basic plugin path](../basic/) and [services tutorial](../framework/service.md) first.
+This page has two parts: a concept reference for the three-role capability pattern, followed by an advanced tutorial that builds one capability. Complete the [basic plugin path](../basic/) and [services tutorial](../framework/service.md) first.
 
 ## Concept reference
 
-When a capability is general enough to need replaceable implementations, such as Bash execution, Harness splits it into three packages: an **interface**, an **implementation**, and a **consumer**. Each layer can evolve or be replaced independently.
+When a capability is general enough to need replaceable providers, such as Bash execution, Harness separates three roles: a **Service Definition**, a **Service Provider**, and a **Consumer**. Put the roles in separate packages when they need to evolve or be replaced independently; a package may otherwise own more than one role. The complete capability is its seam. No individual role is a seam.
 
 ## Bash example
 
 The Bash execution capability consists of:
 
-- **Interface** (`dsh-bash`) — defines Bash request and result shapes
-- **Implementation** (`dsh-bash-local`) — executes commands on the local machine
+- **Service Definition** (`dsh-shell`) — defines the Cordis service and Bash request and result types
+- **Service Provider** (`dsh-bash-local`) — executes commands on the local machine
 - **Consumer** (`dsh-tool-bash`) — exposes the capability as a model-callable tool
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌──────────────┐
-│  dsh-bash   │────▶│  dsh-bash-local  │     │ dsh-tool-bash│
-│ (interface) │     │ (implementation) │     │(consumer/tool)│
+│  dsh-shell   │────▶│  dsh-bash-local  │     │ dsh-tool-bash│
+│(definition) │     │    (provider)     │     │(consumer/tool)│
 └─────────────┘     └──────────────────┘     └──────────────┘
        ▲                                            │
        └────────────────────────────────────────────┘
-                    inject: ['bash']
+                    inject: ['shell']
 ```
 
 ## Benefits of the split
 
-### Replace implementations
+### Replace providers
 
-One interface can have multiple implementations selected through `cordis.yml`:
+One Service Definition can have multiple providers selected through `cordis.yml`:
 
 ```yaml
 # Local execution
 - name: '@deepseek-ai/dsh-bash-local'
 
-# Replace this row with another package that implements the same service.
+# Replace this row with another package that provides the same service.
 ```
 
-The interface and tool remain unchanged while the implementation changes.
+The Service Definition and tool remain unchanged while the provider changes.
 
 ### Evolve independently
 
-- The interface changes rarely after its contract stabilizes.
-- Implementations can improve performance and security independently.
+- The Service Definition changes rarely after callers depend on its contract.
+- Service Providers can improve performance and security independently.
 - Consumers can change how they present the capability to the model.
 
 ### Decouple dependencies
 
-- The implementation depends on the interface.
-- The consumer depends on the interface.
-- The implementation and consumer **do not depend on each other**.
+- The Service Provider depends on the Service Definition.
+- The Consumer depends on the Service Definition.
+- The Service Provider and Consumer **do not depend on each other**.
 
 The [capability-seam reference](../../../capability-seams.md) owns the current built-in families and package links.
 
-## Tutorial: develop a three-layer capability
+## Tutorial: develop a three-role capability
 
-### Step 1: define the interface
+### Step 1: write the Service Definition
 
 ```ts ignore-check
 // packages/my-cap/my-cap/src/index.ts
-import { Service, type Context } from 'cordis'
+import { Service, type Context } from '@deepseek-ai/cordis'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     myCap: MyCapService
   }
@@ -87,16 +87,16 @@ export interface MyCapResult {
 }
 ```
 
-### Step 2: write an implementation
+### Step 2: write a Service Provider
 
 ```ts ignore-check
 // packages/my-cap/my-cap-local/src/index.ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { MyCapService, type MyCapRequest, type MyCapResult } from '@deepseek-ai/dsh-my-cap'
 
 class MyCapLocal extends MyCapService {
   async execute(request: MyCapRequest): Promise<MyCapResult> {
-    // Concrete implementation.
+    // Local provider behavior.
     return { output: request.input.toUpperCase() }
   }
 }
@@ -112,7 +112,7 @@ export function apply(ctx: Context) {
 
 ```ts ignore-check
 // packages/my-cap/tool-my-cap/src/index.ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 export const name = 'tool-my-cap'
@@ -146,10 +146,10 @@ export function apply(ctx: Context) {
 
 ## Design points
 
-- **Do not split preemptively** — use three packages only when the capability needs replaceable implementations. A simple tool plugin does not.
-- **The interface owns Request/Result types** — implementations and consumers depend only on the interface package.
+- **Do not split preemptively** — use separate packages only when the roles need to evolve independently. A simple tool plugin does not.
+- **The Service Definition owns Request/Result types** — Service Providers and Consumers depend only on the Service Definition package.
 - **Explicit > implicit** — resolve defaults in an explicit `resolve(request): Spec` step rather than hiding `?? default` expressions inside `run()`.
 
 ## Next steps
 
-- [LLM adapter](./llm-adapter.md) — implement an LLM backend, a common capability interface extension
+- [LLM adapter](./llm-adapter.md) — implement an LLM provider

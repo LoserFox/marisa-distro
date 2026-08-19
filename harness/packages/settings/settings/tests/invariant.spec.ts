@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import z from 'schemastery'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import * as SettingsInvariant from '../src/invariant.ts'
 import { settingsNamespace } from '../src/index.ts'
 import { MemorySettings } from './memory.ts'
 
 async function setup(withProvider: boolean): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(SettingsInvariant)
   if (withProvider) await ctx.plugin(MemorySettings)
   return ctx

@@ -1,9 +1,9 @@
 /**
  * @deepseek-ai/dsh-host-webserver — Web route-registration plugin: a node:http
- * server plus the `httpServer` service (HTTP and upgrade route registries,
+ * server plus the `webServer` service (HTTP and upgrade route registries,
  * index transform taps, and the single fallback seat for everything no route
  * claims). Knows no harness concepts and serves no files; the composing
- * application's frontend plugin owns dist serving through the fallback seam.
+ * application's frontend plugin owns dist serving through the fallback hook.
  * Web shape only — Electron loads dist over file:// and carries fetch over an
  * IPC bridge. This package never prints: the URL line belongs to the shell.
  */
@@ -12,12 +12,12 @@ import { createServer } from 'node:http'
 import type { IncomingMessage, ServerResponse, Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { Duplex } from 'node:stream'
-import { Context, Service } from 'cordis'
-import z from 'schemastery'
+import { Context, Service } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    httpServer: HttpServerService
+    webServer: WebServer
   }
 }
 
@@ -50,14 +50,13 @@ export interface Config {
 }
 
 /**
- * The web-shape HTTP carrier service. Activation listens immediately (route
- * registration order carries no request-facing semantics: named routes are
- * composed to be disjoint, and the fallback seat answers anything not yet
- * claimed during the boot window — 404 until its owner registers). A listen
- * failure throws out of init — a FAILED fiber the boot's fail-loud sweep
- * reports.
+ * The browser HTTP carrier service. Activation listens immediately. Route
+ * registration order does not affect requests because configured named routes
+ * must be distinct, and the fallback handler answers anything not yet claimed
+ * during startup with 404 until its owner registers. A listen failure rejects
+ * initialization, and the boot process reports the failed fiber.
  */
-export class HttpServerService extends Service {
+export class WebServer extends Service {
   static Config: z<Config> = z.object({
     host: z.union([z.const('127.0.0.1'), z.const('0.0.0.0')]).required(),
     port: z.natural().max(65535).required(),
@@ -73,13 +72,7 @@ export class HttpServerService extends Service {
   private listenedPort!: number
 
   constructor(ctx: Context, private config: Config) {
-    super(ctx, 'httpServer')
-    // v1 `webServer` compatibility alias: 0808-snapshot plugins inject the
-    // `webServer` service name and call only register/registerUpgrade — the
-    // same surface this service exposes. Providing the v1 name as an alias
-    // of the same instance lets those plugins activate without a distro-side
-    // compat layer (formerly marisa-v2-compat bundle).
-    ctx.provide('webServer', this)
+    super(ctx, 'webServer')
   }
 
   /** The listening port (the OS-assigned value when config.port is 0). */
@@ -99,7 +92,7 @@ export class HttpServerService extends Service {
    * @returns the disposer removing the route.
    */
   register(route: WebRoute): () => void {
-    const table = route.kind !== 'exact' ? this.prefixes : this.exact
+    const table = route.kind === 'exact' ? this.exact : this.prefixes
     if (table.has(route.path)) {
       throw new Error(`webserver: duplicate ${route.kind} route "${route.path}"`)
     }
@@ -230,8 +223,8 @@ export class HttpServerService extends Service {
       })
     })
 
-    // Node does not include upgraded sockets in closeAllConnections(), so the
-    // service tracks and destroys them as part of the same ownership boundary.
+    // Node does not include upgraded sockets in closeAllConnections(). The service
+    // owns them with the other connections, so it tracks and destroys them explicitly.
     this.ctx.effect(() => async () => {
       const serverClosed = new Promise<void>((resolve) => {
         this.server.close(() => { resolve() })
@@ -242,7 +235,7 @@ export class HttpServerService extends Service {
         socket.destroy()
       }))
       await Promise.all([serverClosed, ...upgradedClosed])
-    }, 'httpServer.listen')
+    }, 'webServer.listen')
   }
 
   /** Longest-prefix-wins over the prefix table after an exact-table miss. */
@@ -270,4 +263,4 @@ export class HttpServerService extends Service {
   }
 }
 
-export default HttpServerService
+export default WebServer

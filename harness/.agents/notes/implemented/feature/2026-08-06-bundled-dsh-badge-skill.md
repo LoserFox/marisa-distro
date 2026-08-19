@@ -18,7 +18,7 @@ The provider uses the bundled rank after project, custom, and user filesystem so
 
 ## Alternatives considered
 
-**Mount packaged files through `dsh-skill-local`.** Rejected because filesystem discovery, parsing, and watching add lifecycle machinery that an immutable single-skill provider does not need.
+**Mount packaged files through `dsh-skill-filesystem`.** Rejected because filesystem discovery, parsing, and watching add lifecycle machinery that an immutable single-skill provider does not need.
 
 ## Consequences
 

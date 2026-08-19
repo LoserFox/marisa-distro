@@ -59,7 +59,7 @@ afterEach(() => {
 
 describe('hasLinuxChooserBinary', () => {
   it('finds a chooser binary in any PATH segment, skipping empty segments', () => {
-    const seen: Array<string> = []
+    const seen: string[] = []
     const path = ['', '/opt/none', '/usr/local/bin'].join(delimiter)
     const found = hasLinuxChooserBinary(path, (candidate) => {
       seen.push(candidate)
@@ -73,7 +73,7 @@ describe('hasLinuxChooserBinary', () => {
   })
 
   it('reports absence when no segment holds a chooser binary', () => {
-    expect(hasLinuxChooserBinary(['/a', '/b'].join(delimiter), () => { return false })).toBe(false)
+    expect(hasLinuxChooserBinary(['/a', '/b'].join(delimiter), () => false)).toBe(false)
     expect(hasLinuxChooserBinary('', () => true)).toBe(false)
     expect(hasLinuxChooserBinary(undefined, () => true)).toBe(false)
   })

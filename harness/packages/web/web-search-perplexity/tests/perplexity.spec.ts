@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import WebService from '@deepseek-ai/dsh-web'
+import { Context } from '@deepseek-ai/cordis'
+import WebRuntime from '@deepseek-ai/dsh-web'
 import {
   PerplexitySearchProvider,
   PERPLEXITY_PROVIDER_ID,
@@ -183,7 +183,7 @@ describe('web-search-perplexity plugin registration', () => {
   it('registers the provider into ctx.web (HMR-safe)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'a' } }], citations: [] })))
     const ctx = new Context()
-    await ctx.plugin(WebService, { searchProvider: PERPLEXITY_PROVIDER_ID })
+    await ctx.plugin(WebRuntime, { searchProvider: PERPLEXITY_PROVIDER_ID })
     const fiber = await ctx.plugin(perplexityPlugin, { apiKey: 'pplx-key' })
     await expect(ctx.web.search({ query: 'q' })).resolves.toMatchObject({ content: 'a', sources: [] })
     await fiber.dispose()
@@ -199,7 +199,7 @@ describe('web-search-perplexity plugin registration', () => {
     const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'a' } }], citations: [] }))
     vi.stubGlobal('fetch', fetchMock)
     const ctx = new Context()
-    await ctx.plugin(WebService, { searchProvider: PERPLEXITY_PROVIDER_ID })
+    await ctx.plugin(WebRuntime, { searchProvider: PERPLEXITY_PROVIDER_ID })
     const fiber = await ctx.plugin(perplexityPlugin, { apiKey: 'pplx-key', maxTokens: 256, searchRecency: 'month' })
     await ctx.web.search({ query: 'q' })
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
@@ -214,7 +214,7 @@ describe('web-search-perplexity plugin registration', () => {
       const fetchMock = vi.fn(async () => jsonResponse({ choices: [{ message: { content: 'a' } }], citations: [] }))
       vi.stubGlobal('fetch', fetchMock)
       const ctx = new Context()
-      await ctx.plugin(WebService, { searchProvider: PERPLEXITY_PROVIDER_ID })
+      await ctx.plugin(WebRuntime, { searchProvider: PERPLEXITY_PROVIDER_ID })
       const fiber = await ctx.plugin(perplexityPlugin, {})
       await ctx.web.search({ query: 'q' })
       const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
@@ -232,7 +232,7 @@ describe('web-search-perplexity plugin registration', () => {
     delete process.env.PERPLEXITY_API_KEY
     try {
       const ctx = new Context()
-      await ctx.plugin(WebService, { searchProvider: PERPLEXITY_PROVIDER_ID })
+      await ctx.plugin(WebRuntime, { searchProvider: PERPLEXITY_PROVIDER_ID })
       await ctx.plugin(perplexityPlugin, {})
       await expect(ctx.web.search({ query: 'q' }))
         .rejects.toThrow(expect.objectContaining({ code: 'WEB_PROVIDER_CONFIGURED_UNAVAILABLE' }))

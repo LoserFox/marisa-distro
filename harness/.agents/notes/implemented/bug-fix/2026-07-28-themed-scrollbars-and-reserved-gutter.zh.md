@@ -20,9 +20,9 @@ Status: implemented
 
 两种渲染互斥，而这种互斥是被强制的，不是假定的。`scrollbar-width` 或 `scrollbar-color` 只要取非 `auto` 值，Chromium 与 Safari 就会丢弃该元素上的全部 `::-webkit-scrollbar*` 规则，`::-webkit-scrollbar-thumb:hover` 也在其中。因此无条件地同时声明会让 hover token 在任何地方都得不到渲染：实现了 hover 伪元素的引擎，恰恰就是被标准属性静音的那些，而 Firefox 没有 hover 伪元素可作退路。于是标准属性写在 `@supports not selector(::-webkit-scrollbar)` 之内，该条件只在伪元素未被实现处为真，因此 Firefox 走标准属性路径，WebKit 系引擎走伪元素路径。WebKit 规则不再反向加门禁：不实现这些伪元素的引擎会把它们当作未知选择器丢弃，因此加门禁只是重述选择器匹配本身已经做的事。对于旧到不支持 `selector()` 函数的引擎，该条件无效，从而求值为假并选中伪元素路径——对于这条判断下现实存在的 16.4 之前的 Safari，这正是正确的一侧。
 
-两条路径都读取同一组间接变量 `--dsh-scrollbar-thumb` 与 `--dsh-scrollbar-thumb-hover`，它们在 `body` 上绑定到 l1（基础表面）token。**这就是重新绑定契约，也是单看 CSS 无法得知的部分**：抬升表面在自己的容器上设置 `--dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2)` 与 `--dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2)`，这一次重新绑定同时作用于标准属性和 WebKit 伪元素。这组变量必须成对重新绑定；只改静止态滑块会让 hover 状态仍留在基础表面的 token 上。这组变量另一个合法的目标是 `transparent`，它随侧边栏滚动条[改为跟随指针](../feature/2026-08-04-pointer-revealed-sidebar-scrollbars.md)一并引入；下文的门禁只接受这两种目标。可由机械检查发现的子集归 `packages/client/ui-theme/tests/scrollbar-styles.spec.ts` 所有：任何既滚动又绘制抬升表面的样式表都必须重新绑定，因此本 note 不再维护完整的表面清单。多数把这组变量声明在抬升卡片上而非滚动的后代元素上，因为抬升层级属于这个表面，而自定义属性会继承到真正滚动的那个子元素。
+两条路径都读取同一组间接变量 `--dsh-scrollbar-thumb` 与 `--dsh-scrollbar-thumb-hover`，它们在 `body` 上绑定到 l1（基础表面）token。**这就是重新绑定约定，也是单看 CSS 无法得知的部分**：抬升表面在自己的容器上设置 `--dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2)` 与 `--dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2)`，这一次重新绑定同时作用于标准属性和 WebKit 伪元素。这组变量必须成对重新绑定；只改静止态滑块会让 hover 状态仍留在基础表面的 token 上。这组变量另一个合法的目标是 `transparent`，它随侧边栏滚动条[改为跟随指针](../feature/2026-08-04-pointer-revealed-sidebar-scrollbars.md)一并引入；下文的门禁只接受这两种目标。可由机械检查发现的子集归 `packages/client/ui-theme/tests/scrollbar-styles.client.spec.ts` 所有：任何既滚动又绘制抬升表面的样式表都必须重新绑定，因此本 note 不再维护完整的表面清单。多数把这组变量声明在抬升卡片上而非滚动的后代元素上，因为抬升层级属于这个表面，而自定义属性会继承到真正滚动的那个子元素。
 
-`Menu`、`InputBar`、`QuestionComposer` 与 `TodoPanel` 这四个表面在最初的实现里被漏掉、由评审发现，因此逐样式表的重新绑定契约由机械检查而非人工审阅把关。
+`Menu`、`InputBar`、`QuestionComposer` 与 `TodoPanel` 这四个表面最初被漏掉，因此逐样式表的重新绑定约定由机械检查而非人工审阅把关。
 
 抬升表面集合是从调色板自身的暗色抬升阶梯解析出来的——暗色取值落在 `bg-layer-2` 或 `bg-layer-3` 上的那些表面 token，而这一档正是 l1/l2 之分所编码的层级差。最初的做法是从已经做了重新绑定的样式表反向推导，那是不成立的：这样得到的集合只能确认别人已经记得的部分，而尚无人重新绑定的表面——恰恰就是这项检查存在的理由——会把自己定义成「非抬升」。`--dsw-specific-tip` 证明了这一点：它解析到与菜单表面相同的那一档，待办面板在它上面滚动却没有重新绑定，而推导式的检查依然是绿的。
 
@@ -42,9 +42,9 @@ Status: implemented
 
 **把这两个属性绑定在 `html` 上。** 这是文档级皮肤最自然的落点，而它的失败是可测量的：规则挂在 `html` 上时，chromium 中滚动容器计算出的 `scrollbar-color` 为 `auto`，因为别名 token 在那个作用域内不存在。
 
-**只声明一次，靠继承下传。** 匹配的元素更少，但它破坏重新绑定契约——继承携带的是代入后的颜色，而不是变量引用，因此抬升表面无法给自己的滚动条换色。它本身也不完整，因为 `scrollbar-width` 不继承。
+**只声明一次，靠继承下传。** 匹配的元素更少，但它破坏重新绑定约定——继承携带的是代入后的颜色，而不是变量引用，因此抬升表面无法给自己的滚动条换色。它本身也不完整，因为 `scrollbar-width` 不继承。
 
-**不加 `@supports` 门禁，无条件同时声明标准属性与伪元素。** 这正是本次变更最初提交的形态，被评审发现。在 chromium 中于带 `scrollbar-gutter: stable`（使条带可观测）的探针元素上实测：单独一条 8px 的 `::-webkit-scrollbar` 预留出 30px 条带（样式表指定的宽度加上浏览器自带的按钮），而给同一元素加上 `scrollbar-width: thin` 后降到 `thin` 所预留的 10px——说明伪元素规则是被丢弃，而不是被合并。全部 `::-webkit-scrollbar-thumb:hover` 规则随之失效，因此两个 hover token 与四处抬升表面的 hover 重新绑定，在多数用户实际使用的引擎上都是死代码。
+**不加 `@supports` 门禁，无条件同时声明标准属性与伪元素。** 在 chromium 中于带 `scrollbar-gutter: stable`（使条带可观测）的探针元素上实测：单独一条 8px 的 `::-webkit-scrollbar` 预留出 30px 条带（样式表指定的宽度加上浏览器自带的按钮），而给同一元素加上 `scrollbar-width: thin` 后降到 `thin` 所预留的 10px——说明伪元素规则是被丢弃，而不是被合并。全部 `::-webkit-scrollbar-thumb:hover` 规则随之失效，因此两个 hover token 与四处抬升表面的 hover 重新绑定，在多数用户实际使用的引擎上都是死代码。
 
 **给 WebKit 规则也加门禁，写成 `@supports selector(::-webkit-scrollbar)`。** 读起来对称，但在一个方向上是错的：它会对「实现了伪元素但不支持 `selector()`」的引擎隐藏这些规则，而那正是不加门禁时能被正确服务的 16.4 之前的 Safari。未知选择器本就会被丢弃，因此这道门禁不提供任何能抵偿该代价的保护。
 
@@ -57,7 +57,7 @@ Status: implemented
 - 客户端的每个滚动容器都绘制带主题的滑块：亮色基础表面为 `rgb(229, 229, 229)`，暗色基础表面为 `rgb(60, 60, 61)`，重新绑定到 l2 的暗色抬升表面为 `rgb(84, 85, 87)`。侧边栏内的滚动区域经由同一组间接变量，只在指针到达时才绘制滑块。
 - 两种渲染分别指定，因此改动滑块的几何或 hover 行为需要改两处：一处在 `scrollbar-width`／`scrollbar-color`，一处在伪元素。让两者都经由这组间接变量，把这份重复限制在 Firefox 与 WebKit 不共用的那些属性上。
 - hover token（`--dsw-alias-scrollbar-hover-l1`／`-l2`）只在伪元素路径上渲染。Firefox 通过 `scrollbar-color` 只表述一个滑块颜色，其 hover 表现由引擎自行推导，因此对 hover 颜色的设计改动在 Chromium 与 Safari 上可见，在 Firefox 上不可见。这是 `scrollbar-color` 本身的限制，不是这张样式表的限制。
-- `body *` 匹配所有元素，涉及的两个属性其效果本就被浏览器限制在实际会滚动的元素上。代价是一个覆盖面很宽的选择器；另一种选择是一个不生效的重新绑定契约。
+- `body *` 匹配所有元素，涉及的两个属性其效果本就被浏览器限制在实际会滚动的元素上。代价是一个覆盖面很宽的选择器；另一种选择是一个不生效的重新绑定约定。
 - 工作区列表在任何列表长度下都永久少了预留空位那一条宽度。这正是该修复换来的代价：以稳定的行几何，换掉只在列表较短时才可读的时间戳。
 - 调色板中没有轨道 token，因此日后若设计需要不透明轨道，要新增一个别名 token，而不是在这张样式表里写字面颜色。
 

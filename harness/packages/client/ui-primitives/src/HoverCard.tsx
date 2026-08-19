@@ -123,7 +123,7 @@ export function HoverCard({
   // card's real height is measurable, correct the bottom-edge clamp. The
   // correction converges — a clamped top satisfies the guard, so it runs once.
   useLayoutEffect(() => {
-    if (!open || pos === null) { return }
+    if (!open || pos === null) return
     /* v8 ignore next -- the card is mounted whenever pos is set, so the ref is attached here. */
     const h = cardRef.current?.offsetHeight ?? 0
     if (pos.top + h > window.innerHeight - 8) {

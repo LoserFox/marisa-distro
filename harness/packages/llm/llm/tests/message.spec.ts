@@ -74,7 +74,7 @@ describe('message construction', () => {
     expect(Object.isFrozen(message.source)).toBe(true)
   })
 
-  it('couples tool-result content and provenance to one call identity', () => {
+  it('couples tool-result content and its cited call seq to one call identity', () => {
     const callId = CallId('call-1')
     const message = createToolResultMessage({
       callId,

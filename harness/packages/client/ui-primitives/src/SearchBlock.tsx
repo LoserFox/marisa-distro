@@ -138,7 +138,7 @@ function summaryText(props: SearchBlockProps, shown: number, truncated: boolean,
  */
 function toRows(props: SearchBlockProps, collapsed: ReadonlySet<number>): SearchRow[] {
   if (props.kind === 'paths') return props.paths.map((path): SearchRow => ({ type: 'path', path }))
-  const rows: Array<SearchRow> = []
+  const rows: SearchRow[] = []
   props.files.forEach((file, index) => {
     const isCollapsed = collapsed.has(index)
     rows.push({ type: 'file', path: file.path, count: file.matches.length, index, collapsed: isCollapsed })

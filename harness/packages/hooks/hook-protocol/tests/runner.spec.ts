@@ -1,22 +1,22 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
-import type { BashExecRequest, BashExecSpec, BashExecutor, BashRunResult } from '@deepseek-ai/dsh-bash'
+import type { ShellExecRequest, ShellExecSpec, ShellExecutor, ShellRunResult } from '@deepseek-ai/dsh-shell'
 import { DEFAULT_HOOK_TIMEOUT_MS, runHook } from '@deepseek-ai/dsh-hook-protocol'
 import type { RunHookOptions } from '@deepseek-ai/dsh-hook-protocol'
 
 /**
- * A minimal stand-in for the bits of {@link BashExecutor} that {@link runHook}
+ * A minimal stand-in for the bits of {@link ShellExecutor} that {@link runHook}
  * actually calls (`resolve` then `run`). `runHook` is pure plumbing over those
- * two methods, so a duck-typed recorder is the right test seam — the REAL
+ * two methods, so a duck-typed recorder is the right test hook — the REAL
  * executor (dsh-bash-local) is exercised end-to-end by the hook-bridge plugins
  * that consume this library, not here.
  */
-function recordingBash(run: (spec: BashExecSpec) => Promise<BashRunResult>): {
-  bash: BashExecutor
-  specs: BashExecSpec[]
+function recordingBash(run: (spec: ShellExecSpec) => Promise<ShellRunResult>): {
+  bash: ShellExecutor
+  specs: ShellExecSpec[]
 } {
-  const specs: Array<BashExecSpec> = []
+  const specs: ShellExecSpec[] = []
   const bash = {
-    resolve(request: BashExecRequest): BashExecSpec {
+    resolve(request: ShellExecRequest): ShellExecSpec {
       // Carry the request through verbatim, defaulting the required spec fields —
       // exactly what dsh-bash-local's resolve does for the fields runHook sets.
       return {
@@ -26,19 +26,19 @@ function recordingBash(run: (spec: BashExecSpec) => Promise<BashRunResult>): {
         stdoutMaxBytes: request.stdoutMaxBytes ?? 64_000,
         ...request.signal ? { signal: request.signal } : {},
         ...request.stdin !== undefined ? { stdin: request.stdin } : {},
-        ...request.env === undefined ? {} : { env: request.env },
+        ...request.env !== undefined ? { env: request.env } : {},
         sandboxPolicy: request.sandboxPolicy,
       }
     },
-    async run(spec: BashExecSpec): Promise<BashRunResult> {
+    async run(spec: ShellExecSpec): Promise<ShellRunResult> {
       specs.push(spec)
       return run(spec)
     },
-  } as unknown as BashExecutor
+  } as unknown as ShellExecutor
   return { bash, specs }
 }
 
-function result(over: Partial<BashRunResult> = {}): BashRunResult {
+function result(over: Partial<ShellRunResult> = {}): ShellRunResult {
   return {
     exitCode: 0,
     signal: null,

@@ -8,7 +8,7 @@ English | [中文](2026-07-19-persisted-same-session-goal-domain.zh.md)
 
 A long-running objective outlives one prompt, turn, or model request. Treating that objective as an in-memory loop variable loses it on process restart, while putting it only in UI state makes model behavior impossible to reconstruct. Treating every session turn as progress also charges unrelated human messages against an automatic-work budget.
 
-Durable lifecycle and permission to continue are different facts. A session may retain an active objective after restart or fork, but silently starting work when a user opens that session is surprising. The domain needs replayable state without persisted auto-execution authority, and it must remain a plugin on the public agent/session seams rather than a special case in the concrete loop.
+Durable lifecycle and permission to continue are different facts. A session may retain an active objective after restart or fork, but silently starting work when a user opens that session is surprising. The domain needs replayable state without persisted auto-execution authority, and it must remain a plugin on the public agent and session services rather than a special case in the concrete loop.
 
 ## Decision
 
@@ -28,7 +28,7 @@ Incremental replay advances its cursor after each valid event and remains positi
 
 At most one goal is current. Create requires no current non-complete goal and always generates a revision-one id not used earlier in the session; a completed goal may be replaced. Every other mutation carries the expected `GoalRef`, and stale ids or revisions reject. Resume accepts a paused or blocked phase, or a disarmed active goal, only when the round cap has remaining capacity. The domain validates blocker reason shape but deliberately leaves reason codes and the decision to block to policy consumers.
 
-A cache built from any seed starts disarmed, and every `agent/session-start` edge disarms it again. `GoalService.disarm(agent)` also lets a lifecycle owner remove process-local authority without a session event, revision change, or `goal/changed` notification. Resume, fork, and continuation-driver replacement therefore preserve the durable objective and history but never initiate work on their own. A later human prompt can be interpreted by the model, whose policy surface may explicitly call resume and arm the goal.
+A cache built from any seed starts disarmed, and every `agent/session-start` edge disarms it again. `GoalService.disarm(agent)` also lets a lifecycle owner remove process-local authority without a session event, revision change, or `goal/changed` notification. Resume, fork, and continuation-driver replacement therefore preserve the durable objective and history but never initiate work on their own. A later human prompt can be interpreted by the model, whose policy API may explicitly call resume and arm the goal.
 
 ### Service boundary
 

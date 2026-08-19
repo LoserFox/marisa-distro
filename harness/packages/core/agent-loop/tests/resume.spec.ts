@@ -1,17 +1,17 @@
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import LlmService from '@deepseek-ai/dsh-llm'
+import LlmRuntime from '@deepseek-ai/dsh-llm'
 import SessionStore, { SESSION_FORMAT_VERSION, Session, SessionId, SessionPreparation } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 
-import SessionPersistenceJsonl from '@deepseek-ai/dsh-session-persistence-jsonl'
+import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { MockAdapter, textResponse } from './mock-adapter.ts'
 
@@ -26,13 +26,13 @@ async function persistentHarness(adapter: MockAdapter): Promise<{ ctx: Context; 
 
 async function mountPersistentHarness(root: string, adapter: MockAdapter): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, { agents: [] })
-  await ctx.plugin(SessionPersistenceJsonl, { root })
+  await ctx.plugin(JsonlSessionPersistence, { root })
   ctx.llm.registerAdapter(['mock'], adapter)
   return ctx
 }
@@ -73,11 +73,11 @@ function waitForIdle(ctx: Context, agent: Agent): Promise<void> {
 }
 
 /** Fail a lifecycle regression promptly instead of waiting for Vitest's suite timeout. */
-async function promptly<T>(task: Promise<T>): Promise<T> {
+async function promptly<T>(job: Promise<T>): Promise<T> {
   const timeout = Promise.withResolvers<never>()
   const timer = setTimeout(() => { timeout.reject(new Error('lifecycle task did not settle promptly')) }, 1000)
   try {
-    return await Promise.race([task, timeout.promise])
+    return await Promise.race([job, timeout.promise])
   } finally {
     clearTimeout(timer)
   }
@@ -242,13 +242,13 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     // Lifecycle 2: resume it; the header cwd stays undefined (no-cwd branch).
     const adapter2 = new MockAdapter([textResponse('b')])
     const ctx2 = new Context()
-    await ctx2.plugin(LlmService)
+    await ctx2.plugin(LlmRuntime)
     await ctx2.plugin(SessionStore)
     await ctx2.plugin(SystemPrompt)
-    await ctx2.plugin(ToolRegistry)
+    await ctx2.plugin(ToolRuntime)
     await ctx2.plugin(AgentRegistry)
     await ctx2.plugin(AgentLoop, { agents: [] })
-    await ctx2.plugin(SessionPersistenceJsonl, { root })
+    await ctx2.plugin(JsonlSessionPersistence, { root })
     ctx2.llm.registerAdapter(['mock'], adapter2)
     const a2 = (await ctx2.agents.resume({ resumeSessionId: SessionId('nocwd-sess') })).agent
     expect(a2.session.header.cwd).toBeUndefined()
@@ -270,13 +270,13 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     // Lifecycle 2: resuming the persisted session emits session-start 'resume'.
     const adapter2 = new MockAdapter([textResponse('b')])
     const ctx2 = new Context()
-    await ctx2.plugin(LlmService)
+    await ctx2.plugin(LlmRuntime)
     await ctx2.plugin(SessionStore)
     await ctx2.plugin(SystemPrompt)
-    await ctx2.plugin(ToolRegistry)
+    await ctx2.plugin(ToolRuntime)
     await ctx2.plugin(AgentRegistry)
     await ctx2.plugin(AgentLoop, { agents: [] })
-    await ctx2.plugin(SessionPersistenceJsonl, { root })
+    await ctx2.plugin(JsonlSessionPersistence, { root })
     ctx2.llm.registerAdapter(['mock'], adapter2)
     const sources2: string[] = []
     ctx2.on('agent/session-start', ({ source }) => void sources2.push(source))
@@ -374,7 +374,7 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     const published: string[] = []
     ctx.on('session/created', () => void published.push('session/created'))
     ctx.on('agent/created', () => void published.push('agent/created'))
-    ctx.on('agent/session-start', () => { return void published.push('agent/session-start') })
+    ctx.on('agent/session-start', () => void published.push('agent/session-start'))
 
     await expect(ctx.agents.resume({
       resumeSessionId: sessionId,
@@ -520,13 +520,13 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     const sessionId = SessionId('resume-load-factory-unload')
     const root = await persistSession(sessionId)
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     const loopFiber = await ctx.plugin(AgentLoop, { agents: [] })
-    await ctx.plugin(SessionPersistenceJsonl, { root })
+    await ctx.plugin(JsonlSessionPersistence, { root })
     ctx.llm.registerAdapter(['mock'], new MockAdapter([textResponse('next')]))
 
     const snapshot = await ctx.sessionPersistence.load(sessionId)
@@ -583,13 +583,13 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     // boundary).
     const adapter2 = new MockAdapter([textResponse('b')])
     const ctx2 = new Context()
-    await ctx2.plugin(LlmService)
+    await ctx2.plugin(LlmRuntime)
     await ctx2.plugin(SessionStore)
     await ctx2.plugin(SystemPrompt)
-    await ctx2.plugin(ToolRegistry)
+    await ctx2.plugin(ToolRuntime)
     await ctx2.plugin(AgentRegistry)
     await ctx2.plugin(AgentLoop, { agents: [] })
-    await ctx2.plugin(SessionPersistenceJsonl, { root })
+    await ctx2.plugin(JsonlSessionPersistence, { root })
     ctx2.llm.registerAdapter(['mock'], adapter2)
     const a2 = (await ctx2.agents.resume({ resumeSessionId: SessionId('forked-sess') })).agent
     expect(a2.session.header.parentSession).toBe('parent-sess')
@@ -607,7 +607,7 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     const a1 = (await ctx1.agents.create({ sessionId: SessionId('inject-sess'), meta: { cwd: '/w' } })).agent
     a1.followup(createUserMessage({ content: [{ type: 'text', text: 'q' }], source: { kind: 'user' } }))
     await waitForIdle(ctx1, a1)
-    a1.inject(createUserMessage({ content: [{ type: 'text', text: 'background task 42 finished' }], source: { kind: 'plugin', plugin: 'tool-bash' } }))
+    a1.inject(createUserMessage({ content: [{ type: 'text', text: 'background job 42 finished' }], source: { kind: 'plugin', plugin: 'tool-bash' } }))
     await a1.whenIdle()
     await ctx1.sessions.flush(a1.session)
 
@@ -615,23 +615,23 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     // model-visible when the next turn admits it.
     const adapter2 = new MockAdapter([textResponse('next')])
     const ctx2 = new Context()
-    await ctx2.plugin(LlmService)
+    await ctx2.plugin(LlmRuntime)
     await ctx2.plugin(SessionStore)
     await ctx2.plugin(SystemPrompt)
-    await ctx2.plugin(ToolRegistry)
+    await ctx2.plugin(ToolRuntime)
     await ctx2.plugin(AgentRegistry)
     await ctx2.plugin(AgentLoop, { agents: [] })
-    await ctx2.plugin(SessionPersistenceJsonl, { root })
+    await ctx2.plugin(JsonlSessionPersistence, { root })
     ctx2.llm.registerAdapter(['mock'], adapter2)
     const loaded = await ctx2.sessionPersistence.load(SessionId('inject-sess'))
     expect(loaded.events.some(event => event.type === 'agent/inbox/spliced')).toBe(true)
-    expect(JSON.stringify(loaded.events)).toContain('background task 42 finished')
+    expect(JSON.stringify(loaded.events)).toContain('background job 42 finished')
     const a2 = (await ctx2.agents.resume({ resumeSessionId: SessionId('inject-sess') })).agent
-    expect(JSON.stringify(a2.inbox.nextStep)).toContain('background task 42 finished')
+    expect(JSON.stringify(a2.inbox.nextStep)).toContain('background job 42 finished')
     a2.followup(createUserMessage({ content: [{ type: 'text', text: 'continue' }], source: { kind: 'user' } }))
     await waitForIdle(ctx2, a2)
     const flat = JSON.stringify(a2.session.deriveMessages())
-    expect(flat).toContain('background task 42 finished')
+    expect(flat).toContain('background job 42 finished')
     await ctx2.fiber.dispose()
     await ctx1.fiber.dispose()
   })
@@ -651,13 +651,13 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     // Lifecycle 2: a brand-new context over the SAME root; resume the session.
     const adapter2 = new MockAdapter([textResponse('second answer')])
     const ctx2 = new Context()
-    await ctx2.plugin(LlmService)
+    await ctx2.plugin(LlmRuntime)
     await ctx2.plugin(SessionStore)
     await ctx2.plugin(SystemPrompt)
-    await ctx2.plugin(ToolRegistry)
+    await ctx2.plugin(ToolRuntime)
     await ctx2.plugin(AgentRegistry)
     await ctx2.plugin(AgentLoop, { agents: [] })
-    await ctx2.plugin(SessionPersistenceJsonl, { root })
+    await ctx2.plugin(JsonlSessionPersistence, { root })
     ctx2.llm.registerAdapter(['mock'], adapter2)
 
     const a2 = (await ctx2.agents.resume({ resumeSessionId: SessionId('sess-resume') })).agent
@@ -684,10 +684,10 @@ describe('the session-persistence Agent Note: AgentLoop factory create/resume', 
     // A harness WITHOUT the persistence plugin.
     const adapter = new MockAdapter([textResponse('x')])
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     ctx.llm.registerAdapter(['mock'], adapter)
@@ -873,12 +873,12 @@ describe('configured-start failure edges', () => {
     ctx.sessionPersistence.prepare = () => Promise.reject(new Error('artifact corrupt'))
 
     const configured = new Context()
-    await configured.plugin(LlmService)
+    await configured.plugin(LlmRuntime)
     await configured.plugin(SessionStore)
     await configured.plugin(SystemPrompt)
-    await configured.plugin(ToolRegistry)
+    await configured.plugin(ToolRuntime)
     await configured.plugin(AgentRegistry)
-    await configured.plugin(SessionPersistenceJsonl, { root })
+    await configured.plugin(JsonlSessionPersistence, { root })
     configured.llm.registerAdapter(['mock'], new MockAdapter([]))
     configured.sessionPersistence.prepare = (id, signal) => ctx.sessionPersistence.prepare(id, signal)
     const configFailures: unknown[] = []
@@ -918,12 +918,12 @@ describe('configured-start failure edges', () => {
     ctx.on('agent-loop/config-start-failed', ({ error }) => { failures.push(error) })
 
     const configured = new Context()
-    await configured.plugin(LlmService)
+    await configured.plugin(LlmRuntime)
     await configured.plugin(SessionStore)
     await configured.plugin(SystemPrompt)
-    await configured.plugin(ToolRegistry)
+    await configured.plugin(ToolRuntime)
     await configured.plugin(AgentRegistry)
-    await configured.plugin(SessionPersistenceJsonl, { root })
+    await configured.plugin(JsonlSessionPersistence, { root })
     configured.llm.registerAdapter(['mock'], new MockAdapter([]))
     configured.sessionPersistence.prepare = (id, signal) => ctx.sessionPersistence.prepare(id, signal)
     configured.on('agent-loop/config-start-failed', ({ error }) => { failures.push(error) })

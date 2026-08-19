@@ -21,7 +21,7 @@
       "path": "../../util/timeout"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

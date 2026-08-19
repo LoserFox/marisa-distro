@@ -37,7 +37,7 @@
   "devDependencies": {
     "@deepseek-ai/dsh-client-runtime": "link:../../harness/packages/client/runtime",
     "@deepseek-ai/dsh-client-ui-conversation": "link:../../harness/packages/client/ui-conversation",
-    "@deepseek-ai/dsh-invariants": "link:../../harness/packages/support/invariants",
+    "@deepseek-ai/dsh-invariants": "link:../../harness/packages/runtime-diagnostics/invariants",
     "@deepseek-ai/cordis": "link:../../harness/vendor/cordis",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",

@@ -1,66 +1,99 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
-import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
+import type { ToolExecutionResult, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import { WorkflowRunId, WorkflowService } from '@deepseek-ai/dsh-workflow'
-import type { WorkflowResult, WorkflowRun, WorkflowStartRequest } from '@deepseek-ai/dsh-workflow'
+import { WorkflowRunId, WorkflowEngine } from '@deepseek-ai/dsh-workflow'
+import type {
+  WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowResult, WorkflowRun,
+  WorkflowRunId as WorkflowRunIdType, WorkflowStartRequest,
+} from '@deepseek-ai/dsh-workflow'
 import { CallId } from '@deepseek-ai/dsh-llm'
-import SubagentService from '@deepseek-ai/dsh-subagent'
-import WorkerWorkflowEngine from '@deepseek-ai/dsh-workflow-workerthread'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
+import WorkerThreadWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as toolWorkflow from '../src/index.ts'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { Session, SessionId } from '@deepseek-ai/dsh-session'
 
 const testToolSignal = new AbortController().signal
 
-/** A controllable engine standing in behind ctx.workflows (the tool's only seam). */
-class StubEngine extends WorkflowService {
+/** A controllable engine standing in behind ctx.workflowEngine (the tool's only seam). */
+class StubEngine extends WorkflowEngine {
   requests: WorkflowStartRequest[] = []
   cancels: string[] = []
   disposed = 0
+  disposeBarrier: Promise<void> | undefined
   settle!: (result: WorkflowResult) => void
+  readonly settlements = new Map<WorkflowRunIdType, (result: WorkflowResult) => void>()
   startError: Error | undefined
 
   start(request: WorkflowStartRequest): WorkflowRun {
     if (this.startError) throw this.startError
     this.requests.push(request)
+    const id = WorkflowRunId(`run-${this.requests.length}`)
     const result = new Promise<WorkflowResult>((resolve) => { this.settle = resolve })
+    this.settlements.set(id, this.settle)
     request.signal?.addEventListener('abort', () => {
       this.settle({ value: null, stopReason: 'cancelled', error: 'signal', agentsStarted: 0 })
     }, { once: true })
     return {
-      id: WorkflowRunId('run-1'),
-      meta: { name: 'stub-flow', description: 'd' },
+      id,
+      meta: request.meta,
       result,
       cancel: (reason?: string) => {
         this.cancels.push(reason ?? 'cancelled')
         this.settle({ value: null, stopReason: 'cancelled', ...reason !== undefined ? { error: reason } : {}, agentsStarted: 0 })
       },
-      dispose: () => {
+      dispose: async () => {
         this.disposed += 1
-        return Promise.resolve()
+        await this.disposeBarrier
+        this.settlements.delete(id)
       },
     }
+  }
+
+  settleRun(id: WorkflowRunIdType, result: WorkflowResult): void {
+    const settle = this.settlements.get(id)
+    if (settle === undefined) throw new Error(`unknown stub workflow ${id}`)
+    settle(result)
+  }
+
+  agentStart(id: WorkflowRunIdType, agent: WorkflowAgentInfo): void {
+    this.emitWorkflowEvent('workflow/agent-start', {
+      id,
+      meta: this.requests[Number(String(id).slice(4)) - 1]!.meta,
+    }, agent)
+  }
+
+  agentEnd(id: WorkflowRunIdType, agent: WorkflowAgentEndInfo): void {
+    this.emitWorkflowEvent('workflow/agent-end', {
+      id,
+      meta: this.requests[Number(String(id).slice(4)) - 1]!.meta,
+    }, agent)
   }
 }
 
 async function setup(config?: { toolName?: string; maxResultChars?: number }) {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(StubEngine)
   await ctx.plugin(toolWorkflow, config ?? {})
-  const engine = ctx.workflows as StubEngine
-  const parent = { id: SessionId('caller'), options: {} } as unknown as Agent
-  return { ctx, engine, parent }
+  const engine = ctx.workflowEngine as StubEngine
+  const session = Session.create(SessionId('caller'))
+  const parent = { id: session.id, options: {}, session } as unknown as Agent
+  return { ctx, engine, parent, session }
 }
 
 const SCRIPT = 'return 1'
 const META = { name: 'audit', description: 'd' }
 
-function execute(ctx: Context, args: unknown, extra?: { agent?: Agent; signal?: AbortSignal }): Promise<ToolExecutionResult> {
+function execute(ctx: Context, args: unknown, extra?: {
+  agent?: Agent
+  signal?: AbortSignal
+  parent?: ToolExecutionToken
+}): Promise<ToolExecutionResult> {
   return ctx.tools.execute({
     signal: testToolSignal,
     callId: CallId('call-1'),
@@ -68,6 +101,7 @@ function execute(ctx: Context, args: unknown, extra?: { agent?: Agent; signal?: 
     arguments: args,
     ...extra?.agent ? { agent: extra.agent } : {},
     ...extra?.signal ? { signal: extra.signal } : {},
+    ...extra?.parent ? { parent: extra.parent } : {},
   })
 }
 
@@ -88,6 +122,150 @@ describe('dsh-tool-workflow', () => {
     expect(rendered).toContain('workflow "audit" completed (7 agents)')
     expect(rendered).toContain('"findings"')
     expect(engine.disposed).toBe(1)
+  })
+
+  it('records one top-level run and its members in the calling Session after cleanup', async () => {
+    const { ctx, engine, parent, session } = await setup()
+    const pending = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
+    await vi.waitFor(() => { expect(engine.requests).toHaveLength(1) })
+    const runId = WorkflowRunId('run-1')
+    engine.agentStart(runId, {
+      seq: 1,
+      label: '',
+      phase: '',
+      childId: SessionId('child-1'),
+    })
+    engine.agentEnd(runId, {
+      seq: 1,
+      label: '',
+      phase: '',
+      childId: SessionId('child-1'),
+      outcome: 'completed',
+    })
+    engine.settleRun(runId, { value: 1, stopReason: 'completed', agentsStarted: 1 })
+    expect((await pending).isError).toBe(false)
+    expect(engine.disposed).toBe(1)
+    expect(session.events.map(event => [event.type, event.data])).toEqual([
+      ['tool-workflow/run-start', { runId: 'run-1', name: 'audit' }],
+      ['tool-workflow/agent-start', {
+        runId: 'run-1', seq: 1, label: '', phase: '', childId: 'child-1',
+      }],
+      ['tool-workflow/agent-end', { runId: 'run-1', seq: 1, outcome: 'completed' }],
+      ['tool-workflow/run-end', { runId: 'run-1', stopReason: 'completed' }],
+    ])
+  })
+
+  it('writes run-end only after run disposal reaches quiescence', async () => {
+    const { ctx, engine, parent, session } = await setup()
+    const barrier = Promise.withResolvers<undefined>()
+    engine.disposeBarrier = barrier.promise
+    const pending = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
+    await vi.waitFor(() => { expect(engine.requests).toHaveLength(1) })
+    engine.settleRun(WorkflowRunId('run-1'), {
+      value: null, stopReason: 'completed', agentsStarted: 0,
+    })
+    await vi.waitFor(() => { expect(engine.disposed).toBe(1) })
+    expect(session.events.map(event => event.type)).toEqual(['tool-workflow/run-start'])
+    barrier.resolve(undefined)
+    expect((await pending).isError).toBe(false)
+    expect(session.events.map(event => event.type)).toEqual([
+      'tool-workflow/run-start', 'tool-workflow/run-end',
+    ])
+  })
+
+  it('records zero-member and concurrent runs independently', async () => {
+    const { ctx, engine, parent, session } = await setup()
+    const first = execute(ctx, { script: SCRIPT, meta: { ...META, name: 'first' } }, { agent: parent })
+    const second = execute(ctx, { script: SCRIPT, meta: { ...META, name: 'second' } }, { agent: parent })
+    await vi.waitFor(() => { expect(engine.requests).toHaveLength(2) })
+    const secondId = WorkflowRunId('run-2')
+    engine.agentStart(secondId, {
+      seq: 1, label: 'member', childId: SessionId('child-2'),
+    })
+    engine.agentEnd(secondId, {
+      seq: 1, label: 'member', childId: SessionId('child-2'), outcome: 'failed',
+    })
+    engine.settleRun(WorkflowRunId('run-1'), { value: null, stopReason: 'completed', agentsStarted: 0 })
+    engine.settleRun(secondId, { value: null, stopReason: 'error', error: 'child failed', agentsStarted: 1 })
+    expect((await first).isError).toBe(false)
+    expect((await second).isError).toBe(true)
+    expect(session.events.filter(event => event.type === 'tool-workflow/agent-start'))
+      .toHaveLength(1)
+    expect(session.events.filter(event => event.type === 'tool-workflow/run-end').map(event => event.data))
+      .toEqual([
+        { runId: 'run-1', stopReason: 'completed' },
+        { runId: 'run-2', stopReason: 'error' },
+      ])
+  })
+
+  it('does not record nested transport executions', async () => {
+    const { ctx, engine, parent, session } = await setup()
+    const pending = execute(ctx, { script: SCRIPT, meta: META }, {
+      agent: parent,
+      parent: Symbol('outer') as ToolExecutionToken,
+    })
+    await vi.waitFor(() => { expect(engine.requests).toHaveLength(1) })
+    engine.settleRun(WorkflowRunId('run-1'), { value: null, stopReason: 'completed', agentsStarted: 0 })
+    expect((await pending).isError).toBe(false)
+    expect(session.events).toEqual([])
+  })
+
+  it.each([
+    'tool-workflow/run-start',
+    'tool-workflow/agent-start',
+    'tool-workflow/agent-end',
+    'tool-workflow/run-end',
+  ] as const)('isolates a first append failure at %s and preserves a valid prefix', async (failedType) => {
+    const { ctx, engine, parent, session } = await setup()
+    const warnings: string[] = []
+    ctx.logger.warn = ((message: unknown) => { warnings.push(String(message)) }) as typeof ctx.logger.warn
+    const append = session.append.bind(session)
+    session.append = ((type: Parameters<Session['append']>[0], data: never) => {
+      if (type === failedType) throw new Error(`injected ${failedType} failure`)
+      return append(type, data)
+    }) as Session['append']
+
+    const pending = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
+    await vi.waitFor(() => { expect(engine.requests).toHaveLength(1) })
+    const runId = WorkflowRunId('run-1')
+    engine.agentStart(runId, {
+      seq: 1, label: 'member', childId: SessionId('child-1'),
+    })
+    engine.agentEnd(runId, {
+      seq: 1, label: 'member', childId: SessionId('child-1'), outcome: 'completed',
+    })
+    engine.settleRun(runId, { value: null, stopReason: 'completed', agentsStarted: 1 })
+    expect((await pending).isError).toBe(false)
+    expect(engine.disposed).toBe(1)
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain(failedType)
+    const types = session.events.map(event => event.type)
+    const expectedPrefixes = {
+      'tool-workflow/run-start': [],
+      'tool-workflow/agent-start': ['tool-workflow/run-start'],
+      'tool-workflow/agent-end': ['tool-workflow/run-start', 'tool-workflow/agent-start'],
+      'tool-workflow/run-end': [
+        'tool-workflow/run-start', 'tool-workflow/agent-start', 'tool-workflow/agent-end',
+      ],
+    } as const
+    expect(types).toEqual(expectedPrefixes[failedType])
+  })
+
+  it('contains an append failure whose thrown value cannot be rendered', async () => {
+    const { ctx, engine, parent, session } = await setup()
+    const warnings: string[] = []
+    ctx.logger.warn = ((message: unknown) => { warnings.push(String(message)) }) as typeof ctx.logger.warn
+    session.append = () => {
+      throw { toString: () => { throw new Error('coercion trap') } }
+    }
+    const pending = execute(ctx, { script: SCRIPT, meta: META }, { agent: parent })
+    await vi.waitFor(() => { expect(engine.requests).toHaveLength(1) })
+    engine.settleRun(WorkflowRunId('run-1'), {
+      value: null, stopReason: 'completed', agentsStarted: 0,
+    })
+    expect((await pending).isError).toBe(false)
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain('[unrenderable thrown value]')
   })
 
   it('maps a non-completed stop reason to an isError result (and still disposes)', async () => {
@@ -190,7 +368,7 @@ describe('dsh-tool-workflow', () => {
   it('registers under a configured toolName and unregisters on fiber dispose (HMR safety)', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(StubEngine)
     const fiber = await ctx.plugin(toolWorkflow, { toolName: 'orchestrate' })
     expect(ctx.tools.get('orchestrate')).toBeDefined()
@@ -228,7 +406,7 @@ describe('dsh-tool-workflow', () => {
   it('has the namespace-plugin export shape (no stray default)', () => {
     expect('default' in toolWorkflow).toBe(false)
     expect(toolWorkflow.name).toBe('tool-workflow')
-    expect(toolWorkflow.inject).toEqual(['tools', 'workflows', 'systemPrompt'])
+    expect(toolWorkflow.inject).toEqual(['tools', 'workflowEngine', 'systemPrompt'])
     const loader = Object.create(Loader.prototype) as Loader
     const unwrapped = loader.unwrapExports(toolWorkflow) as Record<string, unknown>
     expect(unwrapped).toBe(toolWorkflow)
@@ -241,17 +419,18 @@ describe('dsh-tool-workflow', () => {
       // parked on an unowned promise. Exercise that guarantee through the real registry and worker.
       const ctx = new Context()
       await ctx.plugin(SystemPrompt)
-      await ctx.plugin(ToolRegistry)
-      await ctx.plugin(SubagentService)
+      await ctx.plugin(ToolRuntime)
+      await ctx.plugin(SubagentRuntime)
       ctx.subagents.registerProvider({
         name: 'spawn',
         capabilities: { outputSchema: true, depthLimit: true, toolFilter: true, persona: true },
         inheritsParentContext: false,
         start: () => Promise.reject(new Error('the parked-script fixture must not start a child')),
       })
-      await ctx.plugin(WorkerWorkflowEngine, { disposeGraceMs: 30 })
+      await ctx.plugin(WorkerThreadWorkflowEngine, { disposeGraceMs: 30 })
       await ctx.plugin(toolWorkflow, {})
-      const parent = { id: SessionId('caller'), options: {} } as unknown as Agent
+      const session = Session.create(SessionId('caller'))
+      const parent = { id: session.id, options: {}, session } as unknown as Agent
       const controller = new AbortController()
       const pending = execute(ctx, {
         script: 'await new Promise(() => {})\nreturn 1',

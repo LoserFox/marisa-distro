@@ -42,7 +42,7 @@ function asObject(value: unknown): Record<string, unknown> | undefined {
  */
 export function parseCodexConfig(raw: unknown): ParsedCodexConfig {
   const config: CodexHookConfig = {}
-  const skipped: Array<SkippedHook> = []
+  const skipped: SkippedHook[] = []
   const root = asObject(raw)
   const hooksMap = root ? asObject(root.hooks) ?? root : undefined
   if (!hooksMap) return { config, skipped }

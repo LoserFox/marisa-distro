@@ -60,8 +60,8 @@ export interface GenericCallView {
   /** Category for icon/treatment; defaults to `other` when omitted. */
   kind?: ToolCallKind
   /**
-   * The salient input to surface in a detail/expanded view (e.g. a background
-   * task id). Omit to show nothing; a string renders as-is, an object as pretty
+   * The salient input to show in a detail/expanded view (e.g. a background
+   * job id). Omit to show nothing; a string renders as-is, an object as pretty
    * JSON. NOT the full raw args object unless that is genuinely what a reader wants.
    */
   rawInput?: unknown
@@ -310,8 +310,8 @@ export interface ReadResultView {
 /**
  * One citeable source in a completed {@link WebSearchResultView}, the faithful
  * projection of one web-search source. The presentation projection of `dsh-web`'s
- * `WebSearchSource`: that seam type is the authoritative shape (core cannot depend
- * on the web seam, so the two are declared separately and MUST evolve together).
+ * `WebSearchSource`: that Service Definition type is authoritative (core cannot depend
+ * on the web Service Definition, so the two are declared separately and MUST evolve together).
  * A web tool projects this shape through `output.presentationMeta` because the
  * render text cannot losslessly carry it (see the web-result-card Agent Note); its
  * `presentResult` reads it back.
@@ -361,7 +361,7 @@ export interface WebSearchResultView {
   sources: WebSource[]
   /** The provider-generated answer text, when any. */
   answer?: string
-  /** True when the seam cut the source list to honor the result cap. */
+  /** True when the web service cut the source list to honor the result cap. */
   truncated: boolean
 }
 

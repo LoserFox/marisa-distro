@@ -21,7 +21,7 @@ const retainedExamples = [
   ['### Stiff passive voice → Active and natural', 'a green gate means the pair was confirmed consistent at these exact contents, not that the confirmation was sound.', '门禁通过意味着这组文档在当前内容上的一致性得到了确认，不代表确认本身正确可靠。'],
   ['### Invented word → Natural expression', 'A sidecar record of both blob hashes makes consistency checkable', '伴随记录保存两侧 blob hash，使一致性可检查'],
   ['### Em-dash → Colon/period', 'FIXME — an issue that should block a new release.', 'FIXME：应当阻塞新版本发布的问题。'],
-  ['### Overly literal → Meaningful rendering', 'awkward phrasing is easier to hear without the source anchoring you', '不对照原文时，更容易察觉别扭的表达'],
+  ['### Overly literal → Meaningful rendering', 'awkward phrasing is easier to notice when you read the translation without comparing it with the source', '不对照原文阅读译文时，更容易察觉别扭的表达'],
   ['### Terminology — do not translate what should be kept in English', 'typed service seams, and explicit extension points', '类型化的服务 seam 与显式扩展点'],
   ['### Slang/jargon → Professional phrasing', 'The committed agent workflow lives in .agents/skills/dsh-translate-docs', '仓库内置的 agent 工作流见 .agents/skills/dsh-translate-docs'],
   ['### "For humans" — translate the intent, not the word', 'For humans, start with the development guide', '面向开发者：请先阅读开发指南'],
@@ -44,7 +44,7 @@ describe('translation prompt rendering', () => {
     expect(zh).toContain('from Chinese to English')
   })
 
-  it('retains every v4 embedded example', () => {
+  it('contains every embedded example', () => {
     for (const example of retainedExamples) {
       for (const fragment of example) expect(document).toContain(fragment)
     }

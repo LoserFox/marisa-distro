@@ -6,7 +6,7 @@ ACP（Agent Client Protocol）提供方会在全新的子进程中运行每个 s
 
 ## 启动与所有权
 
-`start(request)` 先解析子 agent 的工作目录，再依次执行 `spawn` → ACP `initialize` → `newSession`，然后才兑现。因此，兑现表示远程会话已就绪，所有权也已转移给调用方。spawn、初始化、新建会话或发布前取消失败时，只有在子进程已回收后才会拒绝；工作目录解析失败则会在尚未 spawn 任何内容时拒绝。
+`start(request)` 先解析子 agent 的工作目录，再依次执行 `spawn` → ACP `initialize` → `newSession`，然后才兑现。因此，兑现表示远程会话已就绪，所有权也已转移给调用方。spawn 失败、初始化失败、新建会话失败或因发布前取消而失败时，只有在子进程已回收后才会拒绝；工作目录解析失败则会在尚未 spawn 任何进程时拒绝。
 
 工作目录优先使用已配置的 `cwd` 覆盖值，否则使用执行委派的父会话 cwd，绝不使用服务器进程自身的 cwd，因为同一个服务器进程会服务来自多个工作区的会话。从父级取得的值必须是绝对路径，指向 harness 可以进入的目录（具备搜索权限，这是子进程 cwd 的要求）；解析后的同一路径同时作为子进程 cwd 和 ACP `session/new` 工作区。
 
@@ -14,7 +14,7 @@ ACP（Agent Client Protocol）提供方会在全新的子进程中运行每个 s
 
 发布后，提供方发送提示词，并把流式 `agent_message_chunk` 文本收集到 `SubagentResult.output`。提示词/传输失败会以 `stopReason: 'error'` 兑现；如果必需的请求信号或 dispose（资源释放）请求了取消，则以 `aborted` 兑现。
 
-`dispose()` 是幂等的。它会移除信号监听器，在可行时请求 ACP 取消，然后经由该 seam 的动词运行本后端自有的拆卸阶梯（`disposeAcpChild`）：先关闭 stdin 并等待 `disposeEofGraceMs` 让子进程协作式完全停稳，再触发句柄的 `terminate()` 升级（SIGTERM、spawn 宽限期、SIGKILL——Windows 直接强制终止），并等待子进程责任方给出整棵进程树的退出证明。每次运行都使用全新进程；尚未实现进程池。
+`dispose()` 是幂等的。它会移除信号监听器，在可行时请求 ACP 取消，然后使用该 seam 定义的操作运行本后端自有的拆卸阶梯（`disposeAcpChild`）：先关闭 stdin 并等待 `disposeEofGraceMs` 让子进程协作式完全停稳，再触发句柄的 `terminate()` 升级（SIGTERM、spawn 宽限期、SIGKILL——Windows 直接强制终止），并等待子进程责任方给出整棵进程树的退出证明。每次运行都使用全新进程；尚未实现进程池。
 
 ## 能力与上下文
 
@@ -28,7 +28,7 @@ ACP 不声明任何启动时能力，因为当前进程无法强制执行远程�
 | `command` | 必填 | 每次运行时 spawn 的可执行文件。 |
 | `args` | `[]` | 命令参数。 |
 | `cwd` | 父会话 cwd | 子进程及其 ACP 会话的工作目录覆盖值；不得为空。相对值会在加载时以 harness 启动目录为基准解析，结果必须指向 harness 可以进入的目录。 |
-| `permission` | `reject` | 自动回答权限请求：拒绝，或选择第一个允许形态的选项。 |
+| `permission` | `reject` | 自动回答权限请求：拒绝，或选择第一个 `allow_once` 或 `allow_always` 选项。 |
 | `env` | `{}` | 显式子进程环境，叠加到已清理凭据的父进程环境之上。 |
 | `disposeEofGraceMs` | `6000` | stdin EOF 之后、平台终止之前的宽限时间须为正值，且不得大于 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md)。 |
 | `disposeGraceMs` | `3000` | POSIX 在 SIGTERM 后、SIGKILL 前的宽限时间（Windows 直接强制终止），须为正值且不得大于 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md)。 |
@@ -94,7 +94,7 @@ ACP 不声明任何启动时能力，因为当前进程无法强制执行远程�
 ## 已知限制与暂缓事项
 
 - **每次运行使用全新进程**：持久进程池属于后续优化（见 [seam Agent Note](../../../.agents/notes/implemented/feature/2026-06-21-subagent-capability-seam.md)）。
-- **仅支持本地工作区**：解析后的 cwd 是交给同一台机器上子进程的本地路径；远程 ACP agent 的工作区映射需要独立的后端能力，本包尚未设计。
+- **仅支持本地工作区**：解析后的 cwd 是交给同一台机器上子进程的本地路径；远程 ACP agent 的工作区映射需要独立的后端能力，此处尚未设计这种能力。
 - **不支持可选启动时能力**：该提供方无法在远程进程内应用本地 harness 的 `outputSchema`、深度上限、工具过滤器或 persona，因此不会声明这些能力；服务会拒绝需要它们的请求。
 - **只收集已提交的 `agent_message_chunk` 文本**：自动化服务器把推理（reasoning）、工具活动、计划和其他 trace 数据保留在子 agent 会话日志中，不通过 ACP 发出。
-- **权限提示自动回答**（`permission: allow | reject`）：当前版本不会把子 agent 的 `session/request_permission` 呈现给人。
+- **权限提示自动回答**（`permission: allow | reject`）：不会把子 agent 的 `session/request_permission` 呈现给人。

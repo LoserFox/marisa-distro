@@ -20,7 +20,7 @@ Every opened child carries a catalog-derived address `{ parentSessionId, childSe
 
 The generic Host domain preserves the same ownership boundary. `session.history` and the source side of `session.fork` read an attached Session or inspect persistence without acquiring an Agent; history folds cold projection values from that exact inspected prefix, while a fork publishes an ordinary independent session. Generic Agent-bound session, command, and goal routes return `agent-busy` for session-backed subagents, as do explicit-id `session.create` adoption and attached-only queue controls. The denial classifier accepts the coarse `origin` marker, a `subagent/descriptor` in the session's own suffix, or exact live runtime ownership by the parent; these signals only prevent generic ownership and never replace catalog mode or direct-parent authorization.
 
-The ordinary Stop action is absent from addressed child conversations. `SubagentService.followup()` owns admission only until inbox acceptance and intentionally exposes no public child cancellation operation. A later cancellation design needs an explicit authority and lifecycle contract rather than falling through to `session.cancel`.
+Stopping an addressed child never falls through to `session.cancel`. `SubagentRuntime.followup()` owns admission only until inbox acceptance and grants no cancellation handle; a running continuable child is stopped through the dedicated `subagent.interrupt` route under the [current-turn interrupt contract](2026-08-06-continuable-subagent-interrupt.md), which parks pending work instead of discarding it. One-shot children remain uncancellable from the Web.
 
 This decision covers Web discovery, transcript viewing, and parent-authorized human continuation. It does not make a subagent independently user-owned; that product remains [interactive side sessions](../../proposed/feature/2026-07-08-interactive-side-sessions.md).
 
@@ -45,9 +45,9 @@ Healthy rows reuse the standard session projections retained in the list mirror.
 
 Selecting a row records its exact address before opening the resident client `Session`. History pagination, event folding, tool render intents, titles, and live mux reconciliation reuse the ordinary conversation machinery. Breadcrumbs use catalog labels, follow parent links only through `origin: 'subagent'` rows, include the first ordinary owner, and keep ordinary forks single-level. Forking an addressed subagent creates an ordinary fork with direct source lineage and attaches it to the nearest workspace-owning ancestor. The catalog is an ARIA tree with lazy ArrowRight/ArrowLeft disclosure, linear ArrowUp/ArrowDown navigation, Home/End, Escape, and focus restoration.
 
-A one-shot row always replaces the composer with copy explaining that the execution record is read-only. A continuable row does so only while `parentAvailable` is false. When enabled, its Send action admits another FIFO turn even if the child is currently running; it never becomes Stop. Prompt failures retain the draft through the ordinary error behavior.
+A one-shot row always replaces the composer with copy explaining that the execution record is read-only. A continuable row does so only while `parentAvailable` is false and the child is not running; a running parent-offline child keeps the ordinary composer with its input and Send action disabled so independent Stop stays reachable, and the read-only takeover returns once it stops. With a live parent, Enter and Send admit another FIFO turn even while the child runs, while independent Stop routes through `subagent.interrupt` ([interrupt contract](2026-08-06-continuable-subagent-interrupt.md)). Prompt failures retain the draft through the ordinary error behavior.
 
-Agent-bound auxiliary controls are unavailable in addressed child views. In particular, the model selector and `/model` contribution do not call ordinary `session.models` or `session.selectModel`; the Host also rejects any accidental call instead of activating persisted child history outside the direct-parent continuation seam.
+Agent-bound auxiliary controls are unavailable in addressed child views. In particular, the model selector and `/model` contribution do not call ordinary `session.models` or `session.selectModel`; the Host also rejects any accidental call instead of activating persisted child history outside the direct-parent continuation path.
 
 ## Host adapter and wire contract
 
@@ -77,7 +77,7 @@ The package's existing `@label` source remains separate plain-text model input. 
 
 ## Default Web assembly
 
-The shipped Web composition mounts SQLite session query beside JSONL persistence and configures spawn and fork background delegation as continuable. It also mounts the model-facing `send_message` and `list_agents` adapters for coordinator parity, but the GUI calls the shared `SubagentService` through the host RPC domain rather than invoking model tools. One-shot children remain catalog-visible and read-only.
+The shipped Web composition mounts SQLite session query beside JSONL persistence and configures spawn and fork background delegation as continuable. It also mounts the model-facing `send_message` and `list_agents` adapters for coordinator parity, but the GUI calls the shared `SubagentRuntime` through the host RPC domain rather than invoking model tools. One-shot children remain catalog-visible and read-only.
 
 ## Alternatives considered
 
@@ -89,7 +89,7 @@ The shipped Web composition mounts SQLite session query beside JSONL persistence
 
 **Auto-resume an absent parent.** Rejected because continuation requires the exact live direct parent. Child navigation must not mutate the parent lifecycle.
 
-**Expose ordinary cancellation.** Rejected because the accepted inbox turn outlives its admission request and the continuation seam exposes no authority-safe cancellation handle.
+**Expose ordinary cancellation.** Rejected because the accepted inbox turn outlives its admission request and, at this decision's time, the continuation contract exposed no authority-safe cancellation handle. The later [current-turn interrupt contract](2026-08-06-continuable-subagent-interrupt.md) added that explicit authority as a dedicated subagent route; falling through to `session.cancel` remains rejected.
 
 **Show only continuable children.** Rejected because the durable catalog deliberately describes both session-backed modes. One-shot transcripts remain useful even though they never accept follow-ups.
 
@@ -103,9 +103,9 @@ The shipped Web composition mounts SQLite session query beside JSONL persistence
 
 - Host protocol tests pin schemas including required boolean expandability, id echoing, mode verification, non-activating history, exact-parent enforcement, FIFO admission receipts, cancellation, and sanitized failure mapping.
 - Generic Host tests pin attached and cold history and forks without Agent publication, cold projection folding, descriptor/origin/runtime-owner denial, explicit-id adoption denial, and the direct queue-control fence.
-- Client object tests pin retained and restored addresses, one-shot read-only rejection, history routing, continuable prompt routing, no addressed cancellation, suppression of Agent-bound model controls, live activity flips including in-flight response replay and detach fallback, subagent-parent expandability flips, and membership refresh.
+- Client object tests pin retained and restored addresses, one-shot read-only and cancel rejection, history routing, continuable prompt and interrupt routing, suppression of Agent-bound model controls, live activity flips including in-flight response replay and detach fallback, subagent-parent expandability flips, and membership refresh.
 - jsdom tests pin the aggregate descendant count and activity, sidebar propagation across nested lineage and ordinary-fork boundaries, row-status precedence, token totals, second-precision running and frozen inactive durations, adaptive long-duration units with exact accessible text, the summary-backed root action across absent and stale-empty catalogs, known loading-row shape, mixed-mode rows, pre-click leaf disclosure, diagnostics, lazy descendant disclosure, direct-parent addresses, keyboard behavior, and both read-only reasons.
-- The keyless assembled Web snapshot contains an inactive continuable child with durable usage, an inactive one-shot sibling with a deterministic long duration, and a persisted grandchild; it pins the three-descendant trigger across a stale empty catalog response, usage and timing rows, and adaptive long-duration presentation, expands without activation, opens persisted history, admits a human FIFO follow-up, reconciles child mux events, and proves one-shot history remains read-only. A separate assembled scenario holds a real child Agent turn at the model seam while it pins the aggregate running state in both the header and visible idle owner row, then cancels the turn during teardown.
+- The keyless assembled Web snapshot contains an inactive continuable child with durable usage, an inactive one-shot sibling with a deterministic long duration, and a persisted grandchild; it pins the three-descendant trigger across a stale empty catalog response, usage and timing rows, adaptive long-duration presentation, and the aggregate running transition, expands without activation, opens persisted history, admits a human FIFO follow-up, reconciles child mux events, and proves one-shot history remains read-only. A separate assembled scenario holds a real child Agent turn at the LLM seam while it pins the aggregate running state in both the header and visible idle owner row, then cancels the turn during teardown.
 - Navigation tests pin subagent-only breadcrumbs, workspace placement for forks created from subagents, and `origin: 'subagent'` sidebar filtering without hiding ordinary forks.
 
 ## Consequences
@@ -114,4 +114,4 @@ The shipped Web composition mounts SQLite session query beside JSONL persistence
 - Parent availability, child activity, and `hasChildren` are snapshots. Publication, disposal, another sender, or another process may win after listing; typed prompt failure remains expected.
 - A child may publish between history fetch and mux subscription, so the existing sequence reconciliation also covers the cold-to-live addressed path.
 - Persisted origin adds one deliberately weak product-classification field to child headers and list projections; it cannot become an authorization shortcut.
-- The UI has no child cancellation, durable outcome, Activation identity, deletion, or independently interactive offline mode, and its text must not imply those capabilities. Active-turn duration measures logged work rather than Activation residency.
+- Beyond the current-turn Stop of a running continuable child ([interrupt contract](2026-08-06-continuable-subagent-interrupt.md)), the UI has no child cancellation, durable outcome, Activation identity, deletion, or independently interactive offline mode, and its text must not imply those capabilities. Active-turn duration measures logged work rather than Activation residency.

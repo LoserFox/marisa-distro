@@ -28,7 +28,7 @@ ACP advertises no start-time capabilities because this process cannot enforce th
 | `command` | required | Executable spawned for each run. |
 | `args` | `[]` | Command arguments. |
 | `cwd` | parent session cwd | Working-directory override for the child process and its ACP session; must be non-empty, a relative value resolves against the harness launch directory at load, and the result must name a directory the harness can enter. |
-| `permission` | `reject` | Auto-answer permission requests by rejecting or choosing the first allow-shaped option. |
+| `permission` | `reject` | Auto-answer permission requests by rejecting or choosing the first `allow_once` or `allow_always` option. |
 | `env` | `{}` | Explicit child environment layered over a credential-scrubbed parent environment. |
 | `disposeEofGraceMs` | `6000` | Positive grace after stdin EOF before platform termination; it cannot exceed [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md). |
 | `disposeGraceMs` | `3000` | Positive POSIX grace after SIGTERM before SIGKILL (Windows force-terminates directly); it cannot exceed [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md). |
@@ -97,4 +97,4 @@ Append-only; newly visible content follows the reusable request prefix and does 
 - **Local workspaces only** — the resolved cwd is a local path handed to a child on the same machine; workspace mapping for a remote ACP agent would need its own backend capability and is not designed here.
 - **No optional start-time capabilities** — this provider cannot apply the local harness's `outputSchema`, depth cap, tool filter, or persona inside the remote process, so it advertises none and the service rejects requests that require them.
 - **Only committed `agent_message_chunk` text is collected** — the automation server keeps reasoning, tool activity, plans, and other trace data in the child session log rather than emitting them on ACP.
-- **Permission prompts are auto-answered** (`permission: allow | reject`) — no human is surfaced a child's `session/request_permission` in this cut.
+- **Permission prompts are auto-answered** (`permission: allow | reject`) — no human is surfaced a child's `session/request_permission`.

@@ -36,7 +36,7 @@ export interface TypertPluginOptions {
  * @returns a rolldown-compatible plugin that lowers source decorators and emits local and Host-for-Client artifacts.
  */
 export function typertPlugin(pluginOptions: TypertPluginOptions = {}): TypertPlugin {
-  const artifactsByRoot = new Map<string, ReadonlyArray<WorkspaceEmitResult>>()
+  const artifactsByRoot = new Map<string, readonly WorkspaceEmitResult[]>()
   const emittedWorkspaces = new Set<string>()
   return {
     name: 'dsh-typert-generator',

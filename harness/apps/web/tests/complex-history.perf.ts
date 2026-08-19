@@ -1,7 +1,7 @@
 // Opt-in browser benchmark for high-cardinality workspace and history
 // rendering. It reports measurements without timing assertions because host
-// speed is not a correctness contract; structural assertions keep the load
-// shape from silently shrinking.
+// speed is not a correctness contract; structural assertions keep the number
+// of workspaces and history entries from silently shrinking.
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -356,15 +356,7 @@ function longHistoryFixture(): string {
 
     session.append('step/start', { turn, step: 1 })
     appendRequestHeader(session, turn, 1)
-    if (turn % TOOL_TURN_INTERVAL !== 0) {
-      appendAssistant(
-        session,
-        turn,
-        1,
-        `Synthetic assistant response for turn ${String(turn)}. ${'a'.repeat(320)}${fencedCode(turn)}`,
-      )
-      session.append('step/end', { turn, step: 1 })
-    } else {
+    if (turn % TOOL_TURN_INTERVAL === 0) {
       appendToolStep(session, turn, 1, TOOLS_PER_TOOL_TURN)
       session.append('step/end', { turn, step: 1 })
       session.append('step/start', { turn, step: 2 })
@@ -376,6 +368,14 @@ function longHistoryFixture(): string {
         `All synthetic tools completed for turn ${String(turn)}. ${'z'.repeat(320)}${fencedCode(turn)}`,
       )
       session.append('step/end', { turn, step: 2 })
+    } else {
+      appendAssistant(
+        session,
+        turn,
+        1,
+        `Synthetic assistant response for turn ${String(turn)}. ${'a'.repeat(320)}${fencedCode(turn)}`,
+      )
+      session.append('step/end', { turn, step: 1 })
     }
     session.append('turn/end', { turn, reason: { kind: 'completed' } })
   }
@@ -797,12 +797,11 @@ async function stableCount(
 }
 
 async function conversationTurns(page: Page): Promise<number> {
-  const stats = page.getByText(/\d+ turns · \d+ steps/, { exact: true }).last()
-  await stats.waitFor({ timeout: 15_000 })
-  const value = await stats.textContent()
-  const match = value?.match(/^(\d+) turns · \d+ steps$/)
-  if (match?.[1] === undefined) throw new Error(`unexpected conversation stats ${JSON.stringify(value)}`)
-  return Number(match[1])
+  // Loaded-window turn count: one mounted turn-tail footer per settled turn in
+  // the window (context keys are `${kind.length}:${kind}${id}`). The stats
+  // strip cannot serve as this probe: its counts ride the whole-log
+  // sessionStats projection and stay fixed across paging by design.
+  return stableCount(page.locator('[data-chat-flow-key^="9:turn-tail"]'), count => count > 0)
 }
 
 function retainedDelta(

@@ -4,7 +4,7 @@
  */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-client-ui-slots'
@@ -16,7 +16,7 @@ export const inject = ['invariants']
 
 /**
  * No runtime invariant: a zero-dependency pure registry core — it emits no
- * cordis events itself (the runtime SlotsService wrapper owns the event
+ * cordis events itself (the runtime SlotRegistry wrapper owns the event
  * bridge and its invariants); define/register/dispose sequencing is asserted
  * directly by this package's behavior specs.
  */

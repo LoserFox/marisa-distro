@@ -9,7 +9,7 @@
  * @module @deepseek-ai/dsh-storage-domain/src/domain
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { KvUnit } from '@deepseek-ai/dsh-storage'
 import { DomainError } from './error.ts'
 import type { DomainSpec, DomainGlobalSpec, TableKeyOf, TableValueOf } from './spec.ts'
@@ -118,7 +118,7 @@ export interface Domain<S extends DomainSpec> {
   close(): Promise<void>
 }
 
-/** Internal seam handing table handles their domain-owned write machinery. */
+/** Internal boundary handing table handles their domain-owned write machinery. */
 interface TableHost {
   readonly domainName: string
   readonly unit: KvUnit
@@ -270,7 +270,9 @@ export class DomainImpl {
   }
 
   private assertReadable(): void {
-    if (this.closed) throw new DomainError('closed', `domain '${this.name}' is closed`)
+    if (this.closed) {
+      throw new DomainError('closed', `domain '${this.name}' is closed`)
+    }
   }
 }
 
@@ -289,7 +291,7 @@ class KvTableImpl<K extends string, V> implements KvTable<K, V> {
 
   entries(): IterableIterator<[K, V]> {
     this.host.assertReadable()
-    return ([...this.records.entries()] as Array<[K, V]>)[Symbol.iterator]()
+    return ([...this.records.entries()] as [K, V][])[Symbol.iterator]()
   }
 
   keys(): IterableIterator<K> {

@@ -1,5 +1,5 @@
 /**
- * Pins shared client-bundle preset contracts: the module-edge purity gate and
+ * Pins shared client-bundle preset rules: the module-edge purity gate and
  * the physical watch dependencies hidden behind virtual CSS Modules.
  */
 import { fileURLToPath } from 'node:url'
@@ -85,7 +85,7 @@ describe('client bundle purity gate', () => {
   })
 
   it('throws on any other @deepseek-ai leak', () => {
-    expect(() => { return resolveId('@deepseek-ai/dsh-agent') }).toThrow(/purity/)
+    expect(() => resolveId('@deepseek-ai/dsh-agent')).toThrow(/purity/)
     expect(() => resolveId('@deepseek-ai/dsh-client-web')).toThrow(/purity/)
   })
 
@@ -97,9 +97,9 @@ describe('client bundle purity gate', () => {
 
   it('carries exactly one documented temporary exemption: runtime/client (store engine pending rehoming)', () => {
     expect(resolveId('@deepseek-ai/dsh-client-runtime/client')).toBeNull()
-    const dshClientChannels = CLIENT_EXTERNALS.filter(
+    const clientChannels = CLIENT_EXTERNALS.filter(
       entry => entry.startsWith('@deepseek-ai/') && entry.endsWith('/client'))
-    expect(dshClientChannels).toEqual(['@deepseek-ai/dsh-client-runtime/client'])
+    expect(clientChannels).toEqual(['@deepseek-ai/dsh-client-runtime/client'])
   })
 })
 

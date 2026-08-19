@@ -85,7 +85,7 @@ describe('runFolderDialog', () => {
   })
 
   it.each([
-    ['SetOptions', { setOptions: vi.fn(() => { return E_FAIL }) }],
+    ['SetOptions', { setOptions: vi.fn(() => E_FAIL) }],
     ['SetTitle', { setTitle: vi.fn(() => E_FAIL) }],
     ['Show', { show: vi.fn(() => E_FAIL) }],
     ['GetResult', { resultPath: vi.fn(() => ({ hr: E_FAIL })) }],

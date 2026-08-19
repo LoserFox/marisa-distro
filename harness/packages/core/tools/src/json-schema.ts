@@ -7,7 +7,7 @@
  *
  * Unsupported or misplaced keywords reject rather than being accepted without
  * enforcement. Consumers that require an object root apply
- * {@link assertObjectJsonSchema} at their own boundary.
+ * {@link assertObjectJsonSchema} before accepting input.
  * @module dsh-tools/json-schema
  */
 
@@ -25,7 +25,7 @@ type JsonSchemaScalarType = Exclude<JsonSchemaType, 'object' | 'array'>
 
 /**
  * One raw JSON Schema node in the enforced subset. The optional fields express
- * the external wire shape; {@link assertSupportedJsonSchema} rejects invalid
+ * the external wire schema; {@link assertSupportedJsonSchema} rejects invalid
  * combinations before a caller treats the node as trusted.
  */
 export interface JsonSchemaNode {

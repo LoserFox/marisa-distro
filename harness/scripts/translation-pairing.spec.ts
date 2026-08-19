@@ -1,17 +1,27 @@
 /** Regression tests for bilingual snapshots, corpus scope, and structure. */
 
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { gitBlobHash, storeGitBlob } from './translation-pairing-git.ts'
+import { gitBlobHash, readGitIndexBlob, storeGitBlob } from './translation-pairing-git.ts'
 import {
+  parseTranslationPairingRecord,
+  renderTranslationPairingRecord,
+  translationPairPaths,
+} from './translation-pairing-record.ts'
+import {
+  blobHash,
   isTranslationScopeFile,
+  languageSwitcherTargets,
+  linksTo,
   pairAnchorOfArgument,
   parseTranslationMarkdown,
   parseTranslationPairingCliArgs,
   parseTranslationPairingManifest,
+  partitionGeneratedRegions,
+  requiresSourceLanguageSwitcher,
   translationStructureDiff,
   translationStructureSignature,
 } from './translation-pairing.ts'
@@ -74,6 +84,28 @@ describe('translation pairing snapshots', () => {
     }
   })
 
+  it('reads staged bytes independently of the working tree', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-translation-pairing-index-'))
+    try {
+      execFileSync('git', ['init', '--quiet', root], {
+        env: { ...process.env, GIT_DEFAULT_HASH: 'sha1' },
+      })
+      execFileSync('git', ['-C', root, 'config', 'user.email', 'pairing@example.test'])
+      execFileSync('git', ['-C', root, 'config', 'user.name', 'Pairing Test'])
+      writeFileSync(join(root, 'owner.md'), 'staged')
+      execFileSync('git', ['-C', root, 'add', 'owner.md'])
+      writeFileSync(join(root, 'owner.md'), 'unstaged')
+
+      const indexed = readGitIndexBlob(root, 'owner.md')
+
+      expect(indexed?.content.toString('utf8')).toBe('staged')
+      expect(indexed?.objectId).toBe(gitBlobHash(Buffer.from('staged')))
+      expect(readGitIndexBlob(root, 'absent.md')).toBeUndefined()
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   it.skipIf(!supportsSha256ObjectFormat)('rejects an object format that pairing records cannot represent', () => {
     const root = mkdtempSync(join(tmpdir(), 'dsh-translation-pairing-'))
     try {
@@ -113,9 +145,62 @@ describe('translation pairing manifest', () => {
   })
 })
 
+describe('translation pairing switchers', () => {
+  it('exempts only paired generated English sources from reciprocal switchers', () => {
+    expect(requiresSourceLanguageSwitcher('docs/config-catalog.md')).toBe(false)
+    expect(requiresSourceLanguageSwitcher('docs/cordis-api/context.md')).toBe(false)
+    expect(requiresSourceLanguageSwitcher('docs/cordis-api/inherited.md')).toBe(false)
+    expect(requiresSourceLanguageSwitcher('docs/architecture.md')).toBe(true)
+    expect(requiresSourceLanguageSwitcher('packages/core/session/README.md')).toBe(true)
+  })
+
+  it('accepts only the canonical public URL for an absolute switcher', () => {
+    const targets = languageSwitcherTargets('python/sdk/README.zh.md')
+    const canonical = parseTranslationMarkdown(
+      '[中文](https://github.com/deepseek-ai/deepseek-harness/blob/master/python/sdk/README.zh.md)',
+    )
+    const wrongPath = parseTranslationMarkdown(
+      '[中文](https://github.com/deepseek-ai/deepseek-harness/blob/master/other/README.zh.md)',
+    )
+
+    expect(linksTo(canonical, targets)).toBe(true)
+    expect(translationStructureSignature(canonical, targets).links).toEqual([])
+    expect(linksTo(wrongPath, targets)).toBe(false)
+  })
+})
+
+describe('translation pairing records', () => {
+  const paths = translationPairPaths('docs/foo.md')
+  const record = {
+    sourceHash: '1'.repeat(40),
+    zhHash: '2'.repeat(40),
+  }
+
+  it('round-trips the canonical two-hash record', () => {
+    expect(parseTranslationPairingRecord(renderTranslationPairingRecord(paths, record), paths)).toEqual(record)
+  })
+
+  it('rejects duplicate or unexpected keys', () => {
+    expect(parseTranslationPairingRecord([
+      `foo.md: ${'1'.repeat(40)}`,
+      `foo.md: ${'3'.repeat(40)}`,
+      `foo.zh.md: ${'2'.repeat(40)}`,
+      '',
+    ].join('\n'), paths)).toBeUndefined()
+    expect(parseTranslationPairingRecord([
+      `foo.md: ${'1'.repeat(40)}`,
+      `bar.zh.md: ${'2'.repeat(40)}`,
+      '',
+    ].join('\n'), paths)).toBeUndefined()
+  })
+})
+
 describe('translation scope discovery', () => {
   it.each([
     'README.md',
+    'CONTRIBUTING.md',
+    'CONTRIBUTING.zh.md',
+    'CONTRIBUTING.i18n.yaml',
     'apps/cli/README.md',
     'future/subtree/readme.md',
     'packages/example/README.zh.md',
@@ -129,6 +214,7 @@ describe('translation scope discovery', () => {
 
   it.each([
     'packages/example/guide.md',
+    'packages/example/CONTRIBUTING.md',
     'examples/tutorial.md',
     'website/reference.md',
     'packages/example/README.txt',
@@ -186,28 +272,95 @@ describe('pair CLI arguments', () => {
 
   it('scopes a check to named pairs and dedupes the three spellings', () => {
     expect(parseTranslationPairingCliArgs(['docs/foo.zh.md', 'docs/foo.i18n.yaml', 'docs/bar.md'])).toEqual({
+      input: 'worktree',
       mode: 'check',
       scope: 'pairs',
       anchors: ['docs/bar.md', 'docs/foo.md'],
     })
-    expect(parseTranslationPairingCliArgs([])).toEqual({ mode: 'check', scope: 'corpus', anchors: [] })
+    expect(parseTranslationPairingCliArgs([])).toEqual({
+      input: 'worktree',
+      mode: 'check',
+      scope: 'corpus',
+      anchors: [],
+    })
   })
 
   it('requires --write to name confirmed pairs or opt into --all', () => {
     expect(() => parseTranslationPairingCliArgs(['--write'])).toThrow('requires the pair(s) you confirmed')
     expect(parseTranslationPairingCliArgs(['--write', 'docs/foo.md'])).toEqual({
+      input: 'worktree',
       mode: 'write',
       scope: 'pairs',
       anchors: ['docs/foo.md'],
     })
-    expect(parseTranslationPairingCliArgs(['--write', '--all'])).toEqual({ mode: 'write', scope: 'corpus', anchors: [] })
+    expect(parseTranslationPairingCliArgs(['--write', '--all'])).toEqual({
+      input: 'worktree',
+      mode: 'write',
+      scope: 'corpus',
+      anchors: [],
+    })
     expect(() => parseTranslationPairingCliArgs(['--write', '--all', 'docs/foo.md'])).toThrow('not both')
   })
 
   it('keeps --list corpus-only and rejects unknown flags', () => {
-    expect(parseTranslationPairingCliArgs(['--list'])).toEqual({ mode: 'list', scope: 'corpus', anchors: [] })
+    expect(parseTranslationPairingCliArgs(['--list'])).toEqual({
+      input: 'worktree',
+      mode: 'list',
+      scope: 'corpus',
+      anchors: [],
+    })
     expect(() => parseTranslationPairingCliArgs(['--list', 'docs/foo.md'])).toThrow('takes no other flags or paths')
     expect(() => parseTranslationPairingCliArgs(['--all'])).toThrow('--all only applies to --write')
     expect(() => parseTranslationPairingCliArgs(['--frobnicate'])).toThrow('unknown flag(s): --frobnicate')
+  })
+
+  it('makes cached verification a named, read-only index check', () => {
+    expect(parseTranslationPairingCliArgs(['--cached', 'docs/foo.i18n.yaml'])).toEqual({
+      input: 'index',
+      mode: 'check',
+      scope: 'pairs',
+      anchors: ['docs/foo.md'],
+    })
+    expect(() => parseTranslationPairingCliArgs(['--cached'])).toThrow('requires the staged pair paths')
+    expect(() => parseTranslationPairingCliArgs(['--cached', '--write', 'docs/foo.md'])).toThrow('read-only')
+  })
+})
+
+describe('generated regions', () => {
+  const BEGIN = '<!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->'
+  const END = '<!-- END GENERATED cordis-surface -->'
+
+  it('partitions marker-delimited regions from the hand-owned remainder', () => {
+    const doc = `# T\n\nprose\n\n${BEGIN}\ninjected\n${END}\ntail\n`
+    const { regions, stripped } = partitionGeneratedRegions(doc)
+    expect(regions).toEqual([`${BEGIN}\ninjected\n${END}`])
+    expect(stripped).toBe('# T\n\nprose\n\ntail\n')
+  })
+
+  it('treats a document without markers as one hand-owned remainder', () => {
+    const { regions, stripped } = partitionGeneratedRegions('# T\n\nprose\n')
+    expect(regions).toEqual([])
+    expect(stripped).toBe('# T\n\nprose\n')
+  })
+
+  it('rejects unbalanced or nested markers', () => {
+    expect(() => partitionGeneratedRegions(`${END}\n`)).toThrow('without a BEGIN')
+    expect(() => partitionGeneratedRegions(`${BEGIN}\n`)).toThrow('without an END')
+    expect(() => partitionGeneratedRegions(`${BEGIN}\n${BEGIN}\n${END}\n`)).toThrow('nested')
+  })
+
+  it('rejects mismatched slugs and malformed marker lines', () => {
+    expect(() => partitionGeneratedRegions('<!-- BEGIN GENERATED a -->\nx\n<!-- END GENERATED b -->\n'))
+      .toThrow("END slug 'b' does not match its BEGIN slug 'a'")
+    expect(() => partitionGeneratedRegions('<!-- BEGIN GENERATED a --> trailing\nx\n<!-- END GENERATED a -->\n'))
+      .toThrow('malformed generated region marker line')
+    expect(() => partitionGeneratedRegions('x\n<!-- END GENERATED a --> tail\n'))
+      .toThrow('malformed generated region marker line')
+  })
+
+  it('computes the exact git blob hash', () => {
+    // `git hash-object` of the empty file and of "x\n" — pinned upstream values.
+    expect(blobHash(Buffer.from(''))).toBe('e69de29bb2d1d6434b8b29ae775ad8c2e48c5391')
+    expect(blobHash(Buffer.from('x\n'))).toBe('587be6b4c3f93f93c489c0111bba5596147a26cb')
   })
 })

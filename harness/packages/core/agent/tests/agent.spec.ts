@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
-import { Context, Service, symbols } from 'cordis'
+import { Context, Service, symbols } from '@deepseek-ai/cordis'
 import { createUserMessage, freezeMessage } from '@deepseek-ai/dsh-llm'
 import { Session, SessionId, type UserMessage } from '@deepseek-ai/dsh-session'
 import AgentRegistry, {
@@ -143,7 +143,7 @@ describe('Inbox', () => {
 })
 
 describe('AgentRegistry', () => {
-  it('contributes Agent lookup and scoped Context providers while TypeRT is live', async () => {
+  it('contributes Agent lookup and scoped Context providers while Typert is live', async () => {
     const ctx = new Context()
     const agentFiber = ctx.plugin(AgentRegistry)
     await agentFiber
@@ -235,7 +235,7 @@ describe('AgentRegistry', () => {
     const ctx = new Context()
     await ctx.plugin(AgentRegistry)
     const warnings: string[] = []
-    const heard: Array<string> = []
+    const heard: string[] = []
     ctx.logger.warn = ((message: unknown) => { warnings.push(String(message)) }) as typeof ctx.logger.warn
     ctx.on('agent/created', () => Promise.reject(new Error('created async')) as never)
     ctx.on('agent/disposed', () => { throw new Error('disposed sync') })

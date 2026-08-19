@@ -6,7 +6,7 @@ export { bindSnapshotSelector } from './bind.ts'
 /**
  * Selector hook over a session's conversation snapshot. Wide (`object`) by
  * default inside this dependency-inverted package; runtime narrows it once at
- * its export surface (`UseSession<ConversationSnapshot>`) — the snapshot type
+ * its exports (`UseSession<ConversationSnapshot>`) — the snapshot type
  * never flows back into web-react.
  */
 export type UseSession<Snap extends object = object> = SnapshotSelectorHook<Snap>

@@ -1,5 +1,5 @@
 /**
- * Carrier-independent TypeRT Gateway request, service, and error contracts.
+ * Carrier-independent Typert Gateway request, service, and error contracts.
  * @module @deepseek-ai/dsh-api-gateway/types
  */
 
@@ -46,9 +46,9 @@ export interface TypertGateway {
   invoke(request: InvokeRemoteRequest): Promise<unknown>
 }
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    /** Host dispatcher for TypeRT Remote calls. */
+    /** Host dispatcher for Typert Remote calls. */
     typertGateway: TypertGateway
   }
 }

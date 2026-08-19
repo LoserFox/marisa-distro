@@ -24,7 +24,7 @@ export function ConversationRoot({
   const cwd = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.cwd)
   const summaryBlank = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.blank)
   const workspaces = useWorkspaces(s => s)
-  // A plugin this package cannot import (ui-model) says this session cannot
+  // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
   const composerBlock = useComposerBlock(block => block)
 
@@ -81,7 +81,6 @@ export function ConversationRoot({
   const zone: InputZone | undefined =
     session === undefined || inputState === undefined ? undefined : { session, input: inputState }
 
-  // Flow optimization — worth a close PR review for code/boundary issues.
   // The chip is a selector; label resolution walks the flow top-down:
   //   1. a just-picked workspace (pending) → its title;
   //   2. cold start, no session yet → placeholder ("Choose workspace");
@@ -115,15 +114,16 @@ export function ConversationRoot({
           setPickerOpen(false)
           setPendingWorkspaceId(workspaceId)
           void selectWorkspace(workspaceId).catch(() => {
-            setPendingWorkspaceId(current => current !== workspaceId ? current : undefined)
+            setPendingWorkspaceId(current => current === workspaceId ? undefined : current)
           })
         },
         onClose: () => { setPickerOpen(false) },
       })}
+      {renderSlot('conversation.hero.agentPreset', {})}
     </div>
   )
 
-  // The placeholder chip ("Choose workspace") and the inert input travel
+  // The placeholder chip ("Choose workspace") and the Workspace-trigger input travel
   // together: no workspace picked yet (cold start, no session at all), or a
   // blank session whose workspace vanished (deleted from the sidebar). The
   // bar is ONE session-maybe slot rendered unconditionally — inert is a prop,
@@ -136,7 +136,12 @@ export function ConversationRoot({
   const inputBar = renderSlot('conversation.composer.bar', {
     variant: hero ? 'hero' : 'composer',
     ...(inert
-      ? { disabled: true, placeholder: t('placeholder.workspace') }
+      ? {
+        disabled: true,
+        placeholder: t('placeholder.workspace'),
+        workspacePickerOpen: pickerOpen,
+        onRequestWorkspace: () => { setPickerOpen(true) },
+      }
       : blocked
         // `blocked`, not `disabled`: the bar refuses input either way, but a
         // block keeps the model seat live because choosing a model is how the

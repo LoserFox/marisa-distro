@@ -6,8 +6,8 @@
  * @module @deepseek-ai/dsh-subagent-claude-code
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import {
   assertPositiveFinite,
@@ -59,19 +59,25 @@ class ClaudeCodeProvider implements SubagentProvider {
     private readonly config: ResolvedConfig,
   ) {}
 
-  start(request: ResolvedSubagentStartRequest) {
+  async start(request: ResolvedSubagentStartRequest) {
     const parentCwd = request.parent.session.header.cwd
     if (parentCwd === undefined) {
       throw new Error(
         'subagent-claude-code: no working directory for the child — delegate from a parent session that has one',
       )
     }
+    const executable = await this.ctx.subprocess.resolveExecutable(
+      'claude',
+      this.config.env,
+      request.signal,
+    )
     const spec: ClaudeCodeRunSpec = {
       cwd: resolveChildCwd(
         'subagent-claude-code',
         undefined,
         parentCwd,
       ),
+      executable,
       env: this.config.env,
       disposeGraceMs: this.config.disposeGraceMs,
       spawn: spawnSpec => this.ctx.subprocess.spawn(spawnSpec),

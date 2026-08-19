@@ -3,7 +3,8 @@ import { Service, type Context } from '@deepseek-ai/cordis'
 import type { ConnectionHandle, SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import type { ISessions } from '@deepseek-ai/dsh-client-runtime/client'
 import { A2aDirectory } from './directory.ts'
-import { createA2aApiClient } from '../api.ts'
+import { createPluginEventStream, type PluginEventStream } from './event-stream.ts'
+import { A2A_EVENTS_PATH, createA2aApiClient } from '../api.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -16,12 +17,18 @@ export class A2aDirectoryService extends Service {
   static inject = ['connection', 'sessions']
 
   private readonly directories = new Map<SessionId, A2aDirectory>()
+  private readonly events: PluginEventStream
 
   /**
    * @param ctx - client root context.
    */
   constructor(ctx: Context) {
     super(ctx, 'a2aDirectory')
+    // One shared downlink for every session directory: N sessions, one socket.
+    this.events = createPluginEventStream(A2A_EVENTS_PATH)
+    ctx.effect(() => () => {
+      this.events.close()
+    }, 'ui-a2a: downlink stream')
     const refreshAll = (): void => {
       for (const directory of this.directories.values()) directory.invalidate()
     }
@@ -54,7 +61,7 @@ export class A2aDirectoryService extends Service {
     const scope = sessions.scope(sessionId)
     if (scope === undefined) throw new Error(`ui-a2a: session "${String(sessionId)}" resolved no scope`)
     const connection = this.ctx.get('connection') as ConnectionHandle
-    const directory = new A2aDirectory(createA2aApiClient(connection.rpc), sessionId)
+    const directory = new A2aDirectory(createA2aApiClient(connection.rpc), sessionId, this.events)
     this.directories.set(sessionId, directory)
     scope.effect(() => () => {
       directory.dispose()

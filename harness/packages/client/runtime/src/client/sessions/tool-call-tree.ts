@@ -1,5 +1,5 @@
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type {} from '@deepseek-ai/dsh-tools/types'
 import type {
   ConversationNode, RunningToolCall, ToolCallBlock, ToolResultNode,
 } from './conversation.ts'
@@ -55,13 +55,8 @@ export class ToolCallTree {
    * @returns Whether the event was consumed as a child-call lifecycle event.
    */
   apply(event: SessionEvent): boolean {
-    if ((event.type as string) === 'tool/code-dispatch-start') {
-      const data = event.data as unknown as {
-        parentCallId: string
-        subCallId: string
-        name: string
-        arguments: unknown
-      }
+    if (event.type === 'tool/code-dispatch-start') {
+      const data = event.data
       const running: RunningToolCall = {
         callId: data.subCallId,
         name: data.name,
@@ -78,15 +73,8 @@ export class ToolCallTree {
       this.revision++
       return true
     }
-    if ((event.type as string) !== 'tool/code-dispatch') return false
-    const data = event.data as unknown as {
-      parentCallId: string
-      subCallId: string
-      name: string
-      arguments: unknown
-      isError: boolean
-      content: ContentBlock[]
-    }
+    if (event.type !== 'tool/code-dispatch') return false
+    const data = event.data
     const siblings = this.childrenByParent.get(data.parentCallId) ?? []
     const at = siblings.findIndex(sub => sub.callId === data.subCallId)
     if (at === -1 && !this.acceptEdge(data.parentCallId, data.subCallId)) return true

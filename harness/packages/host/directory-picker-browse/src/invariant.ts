@@ -3,7 +3,7 @@
  * @module @deepseek-ai/dsh-host-directory-picker-browse/invariant
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-host-directory-picker-browse'

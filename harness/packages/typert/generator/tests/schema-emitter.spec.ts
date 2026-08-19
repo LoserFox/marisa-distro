@@ -13,7 +13,7 @@ import type {
   TypeNodeModel,
 } from '../src/model.ts'
 
-const temporaryRoots: Array<string> = []
+const temporaryRoots: string[] = []
 const location = { file: 'fixture.ts', line: 1, column: 1 } as const
 const documentation = { tags: [] } as const
 

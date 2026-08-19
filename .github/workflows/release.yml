@@ -43,19 +43,23 @@ jobs:
   windows:
     needs: validate
     runs-on: windows-latest
-    timeout-minutes: 60
+    # 90 min: the ~300MB tar.zst bundle + standalone/MSI builds take 40-50 min
+    # locally warm; CI cold installs need headroom (bumped 2026-08-19).
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.validate.outputs.commit }}
       - uses: pnpm/action-setup@v4
         with:
-          # Pin to 11.7.0: pnpm >= 11.22 resolves workspace peers strictly and
+          # Pin to 11.9.0: pnpm >= 11.22 resolves workspace peers strictly and
           # fails profile installs (third-party plugins declare ranges like
           # bare cordis>=4.0.0 / @deepseek-ai/dsh-storage>=0.0.1-rc.1 that the
-          # fork's 0.0.1 harness packages cannot satisfy). 11.7.0 matches the
-          # version that generated the committed lockfile.
-          version: '11.7.0'
+          # fork's 0.0.1 harness packages cannot satisfy). 11.9.0 matches the
+          # version that generated the committed lockfile (2026-08-19 regen
+          # after MyGO vendoring + fflate override; the lockfile now carries a
+          # settings: block older 11.7 may not parse).
+          version: '11.9.0'
           run_install: false
       - uses: actions/setup-node@v4
         with:

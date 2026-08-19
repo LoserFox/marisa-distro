@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-session/invariant
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { assertNever } from '@deepseek-ai/dsh-llm'
 import type { CallId } from '@deepseek-ai/dsh-llm'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
@@ -125,7 +125,7 @@ function validateEvent(
       break
     }
     case 'tool/result': {
-      // Session has already validated a provenance-backed content rewrite.
+      // Session has already validated a content rewrite that cites its replaced event.
       // It is durable turn work, not a second execution of the original call.
       if (event.surfaceOp !== 'append') {
         if (trace.openTurn === null) {
@@ -214,7 +214,7 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
   }
 
   /* v8 ignore next -- session/event always follows list() or session/created seeding */
-  const traceFor = (session: Session): SessionTrace => { return traces.get(session) ?? seedSession(session) }
+  const traceFor = (session: Session): SessionTrace => traces.get(session) ?? seedSession(session)
 
   for (const session of ctx.sessions.list()) seedSession(session)
 

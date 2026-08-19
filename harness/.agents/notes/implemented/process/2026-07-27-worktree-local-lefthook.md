@@ -12,7 +12,7 @@ Lefthook-generated hooks prefer an absolute binary path captured from the instal
 
 ## Decision
 
-Hook installation is worktree-scoped. With `CI=true` or `GITHUB_ACTIONS=true`, the installer returns before Git discovery or mutation because automated jobs do not consume contributor hooks. Otherwise, it requires Git 2.26 or newer for configuration-scope provenance, upgrades a format-0 repository to format 1, enables `extensions.worktreeConfig`, and assigns the current worktree an absolute `core.hooksPath` at `$GIT_DIR/dsh-hooks`.
+Hook installation is worktree-scoped. With `CI=true` or `GITHUB_ACTIONS=true`, the installer returns before Git discovery or mutation because automated jobs do not consume contributor hooks. Otherwise, it requires Git 2.26 or newer so `git config --show-scope` can report which scope supplied a value, upgrades a format-0 repository to format 1, enables `extensions.worktreeConfig`, and assigns the current worktree an absolute `core.hooksPath` at `$GIT_DIR/dsh-hooks`.
 
 Before upgrading format 0, the installer refuses direct common-config `extensions.*`; it also refuses direct `core.worktree` or `core.bare=true` and non-empty dormant worktree configs that enabling the extension would activate. The migration removes direct `core.bare=false` because false is Git's default. The common repository config and every existing `config.worktree` must be regular files. These checks disable include expansion because Git's repository-format parser also ignores included targets. A repository-scoped lock serializes migration and hook writes; its process ID, random token, file identity, and exact contents must still match at release. Dead or invalid locks require manual recovery rather than automatic breaking.
 

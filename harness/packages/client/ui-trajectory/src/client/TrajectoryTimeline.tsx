@@ -630,7 +630,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
               />
               <div
                 className={css.selectionEdges}
-                data-dragging={draft !== null ? 'true' : undefined}
+                data-dragging={draft === null ? undefined : 'true'}
                 aria-hidden="true"
                 style={{
                   '--trajectory-selection-left': `${visibleRange.start * 100}%`,
@@ -687,7 +687,7 @@ export const TrajectoryTimeline = memo(function TrajectoryTimeline({
                 return (
                   <Tooltip
                     key={span.index}
-                    label={timelineTooltipLabel(span.kind, detail)}
+                    label={() => timelineTooltipLabel(span.kind, detail)}
                     side="bottom"
                     delayMs={TIMELINE_TOOLTIP_DELAY_MS}
                   >

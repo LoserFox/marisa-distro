@@ -5,7 +5,7 @@
  * exact exported copy of the packaged snapshot.
  * @module dsh-vision-toolkit/runtime-install
  */
-import type { Context } from 'cordis';
+import type { Context } from '@deepseek-ai/cordis';
 import type { ResolvedVisionToolkitConfig } from './config.ts';
 /** One executable plus fixed prefix arguments (for example Windows `py -3`). */
 export interface RuntimeCommand {
@@ -38,10 +38,52 @@ interface UpstreamManifest {
 export declare function bundledUpstreamRoot(): string;
 /** Convert one command into a user-facing executable string. */
 export declare function displayCommand(command: RuntimeCommand): string;
+export declare function isolatedPythonEnvironment(home: string): NodeJS.ProcessEnv;
 /** Verify every packaged upstream file against the committed content manifest. */
 export declare function verifyBundledUpstream(): Promise<UpstreamManifest>;
+interface PythonBootstrapArtifact {
+    url: string;
+    sha256: string;
+    size: number;
+}
+interface PythonBootstrapManifest {
+    schemaVersion: 1;
+    pythonVersion: string;
+    buildTag: string;
+    artifacts: Record<string, PythonBootstrapArtifact>;
+}
+/** Map Node platform/arch to the pinned artifact name, including musl Linux. */
+export declare function pythonBootstrapTarget(platform: string, arch: string, musl: boolean): string;
+interface DownloadResponse {
+    statusCode: number;
+    headers: Record<string, string | string[] | undefined>;
+    body: NodeJS.ReadableStream;
+    close: () => Promise<void>;
+}
+type DownloadRequest = (url: string, signal: AbortSignal) => Promise<DownloadResponse>;
+export declare function acquireBundledPython(ctx: Context, stateRoot: string, cwd: string, manifestOverride?: PythonBootstrapManifest, requestImpl?: DownloadRequest): Promise<{
+    command: RuntimeCommand;
+    version: string;
+}>;
+export declare function resolveBootstrapPython(ctx: Context, configured: string | undefined, cwd: string, manifestOverride?: PythonBootstrapManifest, requestImpl?: DownloadRequest): Promise<{
+    command: RuntimeCommand;
+    version: string;
+    major: number;
+    minor: number;
+}>;
 /** Persistent per-DSH-home cache root shared by runtime and Web support files. */
 export declare function visionToolkitStateRoot(): string;
+/**
+ * Rewrite a staged venv's `pyvenv.cfg` `home`/`executable` to point at a given
+ * base directory (the app execution alias directory for the Microsoft Store
+ * Python). Pure helper so the transformation is testable cross-platform.
+ */
+export declare function rewriteVenvConfig(cfg: string, homeDir: string): string;
+/**
+ * Build the Microsoft Store probe environment while preserving Python-variable
+ * tombstones; only the user-directory variables must fall back to the host.
+ */
+export declare function storePythonProbeEnvironment(installEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
 /** Prepare the configured pinned runtime without making any vision API call. */
 export declare function prepareUpstreamRuntime(ctx: Context, config: ResolvedVisionToolkitConfig): Promise<PreparedUpstreamRuntime>;
 export {};

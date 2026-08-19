@@ -17,16 +17,16 @@ When the Windows sandbox phase is picked up, evaluate wrapping landstrip's Windo
 - **Probe synthesis.** landstrip has no `--probe`; the chain's functional-probe contract would have to be synthesized from a trap run.
 - **Dialect mapping.** Denial and runner-failure stderr dialects, and fail-closed exit-code classification, need explicit mapping into the chain's vocabulary.
 - **License.** The binaries are LGPL-2.1-or-later; distribution review is required before it enters the shipped closure.
-- **Provenance.** The in-house launcher's value is byte-pinned native-CI provenance over a ~300-line reviewable C file; landstrip is a single-maintainer Rust binary set. For the *existing Linux rung* that trade is already settled — do not swap it ([sandbox note](../../implemented/feature/2026-07-06-sandbox.md) and the launcher's own migration away from a Rust dependency). For a rung we have not built, weighing third-party maintenance against a second in-house native repo is a genuinely open question.
+- **Source and build record.** Each in-house launcher binary is byte-pinned to a native CI build of a ~300-line reviewable C file; landstrip is a single-maintainer Rust binary set. For the *existing Linux rung* that trade is already settled — do not swap it ([sandbox note](../../implemented/feature/2026-07-06-sandbox.md) and the launcher's own migration away from a Rust dependency). For a rung we have not built, weighing third-party maintenance against a second in-house native repo is a genuinely open question.
 
 ## Alternatives considered
 
-- **Build the in-house AppContainer launcher as planned.** Still the default if the evaluation fails on license, provenance, or probe fit; the cost is owning a second native security launcher repo indefinitely.
-- **Swap the Linux Landlock rung to landstrip too.** Rejected outright: sandbox correctness is a security invariant, the current launcher's reviewability and provenance chain were chosen deliberately, and it already migrated away from a Rust dependency for exactly this reason.
+- **Build the in-house AppContainer launcher as planned.** Still the default if the evaluation fails on license, source/build auditability, or probe fit; the cost is owning a second native security launcher repo indefinitely.
+- **Swap the Linux Landlock rung to landstrip too.** Rejected outright: sandbox correctness is a security invariant, the current launcher has reviewable C source and binaries byte-pinned to native CI builds, and it already migrated away from a Rust dependency for exactly this reason.
 
 ## Acceptance criteria
 
-- Before any Windows-rung implementation starts, an evaluation records the probe, dialect, license, and provenance answers, and the go/no-go is added to the sandbox note's deferred-phases plan.
+- Before any Windows-rung implementation starts, an evaluation records the probe, dialect, license, source repository, release process, and binary build answers, and the go/no-go is added to the sandbox note's deferred-phases plan.
 
 ## Risks
 

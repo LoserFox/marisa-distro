@@ -58,14 +58,16 @@ export function toolCallResponse(rawCallId: string, name: string, args: object, 
 /**
  * Mock adapter driven by a script: each model call consumes the next entry.
  * Records every request it receives for assertions. An entry may be a
- * function to compute chunks from the request, or a 'hang' marker that
- * streams one chunk then waits until aborted.
+ * function to compute chunks from the request, a 'hang' marker that
+ * streams one chunk then waits until aborted, or 'hang-slow' which takes
+ * 50ms to notice the abort — a stand-in for slow real-world teardown
+ * (LLM stream cancellation, tool unwinding).
  */
 export class MockAdapter extends LlmAdapter {
   requests: GenerateOptions[] = []
 
   constructor(
-    private script: (StreamChunk[] | ((options: GenerateOptions) => StreamChunk[]) | 'hang')[],
+    private script: (StreamChunk[] | ((options: GenerateOptions) => StreamChunk[]) | 'hang' | 'hang-slow')[],
     private readonly reasoning?: LlmModelReasoningInfo,
     private readonly defaultMaxTokens?: number,
   ) {
@@ -98,7 +100,17 @@ export class MockAdapter extends LlmAdapter {
       })
       return
     }
-    const chunks = typeof entry !== 'function' ? entry : entry(options)
+    if (entry === 'hang-slow') {
+      yield { type: 'block-start', index: 0, blockType: 'text' }
+      yield { type: 'text-delta', index: 0, text: 'partial' }
+      await new Promise<void>((_resolve, reject) => {
+        const fail = (): void => { reject(new Error('aborted')) }
+        if (options.signal?.aborted) { setTimeout(fail, 50); return }
+        options.signal?.addEventListener('abort', () => { setTimeout(fail, 50) }, { once: true })
+      })
+      return
+    }
+    const chunks = typeof entry === 'function' ? entry(options) : entry
     for (const chunk of chunks) {
       if (options.signal?.aborted) throw new Error('aborted')
       yield chunk

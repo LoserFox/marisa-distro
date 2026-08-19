@@ -15,18 +15,39 @@ import { createHash } from 'node:crypto'
 import type { KvFacet, KvUnit, KvUnitDescriptor } from '@deepseek-ai/dsh-storage'
 import {
   TRACK_UNIT,
+  DEFAULT_TRACK_CONFIG,
   type AuditEntry,
   type Capture,
   type Decision,
   type Epic,
   type TrackGlobal,
+  type TrackConfig,
   type Issue,
   type Link,
   type LlmUsageRecord,
   type EvidenceRef,
+  type SessionGraph,
+  type Project,
+  type CommitArtifact,
+  type ExtractionRun,
 } from './types.ts'
 import { MAX_EVIDENCE, isAutoCommit, nextInferred, sweepProposal } from './lifecycle/state-machine.ts'
+
+/** Open captures older than this are reported as stale by the auto-maintenance
+ *  loop (they should be promoted, archived, or deleted). */
+export const STALE_CAPTURE_MS = 14 * 24 * 60 * 60 * 1000
 import { normalizeTitle } from './sync/cluster.ts'
+import { contentTokens } from './sync/align.ts'
+
+/** Token-overlap similarity in [0,1]: shared / smaller set, requiring ≥3 shared
+ *  tokens (never merges on incidental bigram hits). */
+export function titleSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0
+  let shared = 0
+  for (const t of b) if (a.has(t)) shared += 1
+  if (shared < 3) return 0
+  return shared / Math.min(a.size, b.size)
+}
 
 /** Branded identifier prefixes keep record ids recognizable and collision-free. */
 export const ID_PREFIX = {
@@ -72,6 +93,34 @@ export type CaptureCreateResult =
 
 /** One serialized write chain per table keeps KV ordering sane. */
 type WriteChain = Promise<unknown>
+
+/**
+ * P6 — layered-discipline evidence guard (aligned with Better Harness:
+ * the semantic layer can never fabricate deterministic evidence).
+ *
+ * Only EXPLICIT declarations may claim `declared`/`observed` evidence:
+ * - explicit methods: typed commit trailers (`trailer`), direct user refs (`user`).
+ * Everything else is derived:
+ * - heuristic methods (commit-window / title-overlap): time/similarity hints;
+ * - semantic methods (promotion / identity / session-link / session-lineage /
+ *   parent / supersedes / decision-record): LLM or clustering-derived.
+ *
+ * A strong evidenceKind on a non-explicit method is COERCED DOWN to
+ * `candidate` (never the reverse — weak evidence is never presented as
+ * strong). The coercion is the guarantee; it cannot throw the pipeline.
+ */
+const EXPLICIT_LINK_METHODS = new Set(['trailer', 'user'])
+const STRONG_EVIDENCE = new Set<Link['evidenceKind']>(['declared', 'observed'])
+
+export function enforceEvidenceDiscipline(link: Link): Link {
+  if (link.evidenceKind !== undefined
+    && STRONG_EVIDENCE.has(link.evidenceKind)
+    && (link.linkMethod === undefined || !EXPLICIT_LINK_METHODS.has(link.linkMethod))) {
+    console.warn(`[dsh-track] evidence guard: ${link.kind} link via '${link.linkMethod ?? 'unknown'}' cannot be ${link.evidenceKind} — downgraded to candidate`)
+    return { ...link, evidenceKind: 'candidate' }
+  }
+  return link
+}
 
 export class TrackStore {
   private unit!: KvUnit
@@ -132,6 +181,25 @@ export class TrackStore {
     return g
   }
 
+  /** Effective auto-maintenance config: stored values merged over defaults. */
+  async readConfig(): Promise<TrackConfig> {
+    const g = await this.readGlobal()
+    return { ...DEFAULT_TRACK_CONFIG, ...(g?.config ?? {}) }
+  }
+
+  /** Persist a partial config patch (missing fields keep their current value). */
+  async writeConfig(patch: Partial<TrackConfig>): Promise<TrackConfig> {
+    await this.ready()
+    const g = (await this.readGlobal()) ?? {
+      version: 1 as const,
+      teams: {},
+      identifierCounter: 0,
+    }
+    const config = { ...(g.config ?? DEFAULT_TRACK_CONFIG), ...patch }
+    await this.chain('__global', () => this.unit.setGlobal({ ...g, config }))
+    return config
+  }
+
   async writeGlobal(g: TrackGlobal): Promise<void> {
   await this.ready()
     await this.chain('__global', () => this.unit.setGlobal(g))
@@ -152,10 +220,11 @@ export class TrackStore {
 
   // ---- captures ----
 
-  async listCaptures(status?: Capture['status']): Promise<Capture[]> {
+  async listCaptures(status?: Capture['status'], opts: { includeDeleted?: boolean } = {}): Promise<Capture[]> {
   await this.ready()
     const { tables } = await this.unit.loadAll()
-    const caps = Object.values(tables.captures ?? {}) as Capture[]
+    let caps = Object.values(tables.captures ?? {}) as Capture[]
+    if (!opts.includeDeleted) caps = caps.filter((c) => c.deletedAt === undefined)
     return status ? caps.filter((c) => c.status === status) : caps
   }
 
@@ -208,6 +277,30 @@ export class TrackStore {
     })
   }
 
+  /** Has this session's first long REQUIREMENT already been captured (durable)? */
+  async isSessionRequirementCaptured(sessionId: string): Promise<boolean> {
+  await this.ready()
+    const g = await this.readGlobal()
+    return g?.autoRequirementSessions?.[sessionId] !== undefined
+  }
+
+  /** Persist the per-session requirement-capture marker (idempotent). */
+  async markSessionRequirementCaptured(sessionId: string): Promise<void> {
+  await this.ready()
+    const g = (await this.readGlobal()) ?? {
+      version: 1 as const,
+      teams: {},
+      identifierCounter: 0,
+    }
+    await this.writeGlobal({
+      ...g,
+      autoRequirementSessions: {
+        ...(g.autoRequirementSessions ?? {}),
+        [sessionId]: new Date().toISOString(),
+      },
+    })
+  }
+
   /**
    * Dedup-aware capture creation — the single gate every capture path
    * (auto-observer, capture_thought, HTTP panel) goes through.
@@ -221,8 +314,14 @@ export class TrackStore {
    * A duplicate returns `{ status: 'duplicate' }` and inserts nothing, so
    * callers can surface the existing capture instead of a silent drop.
    */
-  async createCapture(capture: Capture, opts: { dedupeBySession?: boolean } = {}): Promise<CaptureCreateResult> {
+  async createCapture(capture: Capture, opts: { dedupeBySession?: boolean; dedupeRequirementBySession?: boolean } = {}): Promise<CaptureCreateResult> {
   await this.ready()
+    if (opts.dedupeRequirementBySession && capture.sourceSessionId !== undefined) {
+      if (await this.isSessionRequirementCaptured(capture.sourceSessionId)) {
+        return { status: 'duplicate' }
+      }
+      await this.markSessionRequirementCaptured(capture.sourceSessionId)
+    }
     if (opts.dedupeBySession && capture.sourceSessionId !== undefined) {
       // Durable marker hit, OR the session already has a todo-derived capture
       // (pre-fix sessions have no marker — backfill it so the next restart
@@ -250,7 +349,30 @@ export class TrackStore {
     return (tables.captures ?? {})[id] as Capture | undefined
   }
 
-  async deleteCapture(id: string): Promise<void> {
+  /**
+   * Soft-delete a capture (2026-08-18): marks `deletedAt`, never removes the
+   * row — deletion is a strong user negation and the record must stay
+   * complete and queryable. Default listings hide tombstones.
+   */
+  async deleteCapture(id: string, opts: { by?: 'user' | 'agent' | 'auto'; reason?: string } = {}): Promise<Capture | undefined> {
+  await this.ready()
+    const capture = await this.getCapture(id)
+    if (!capture) return undefined
+    const now = Date.now()
+    const updated: Capture = { ...capture, deletedAt: new Date(now).toISOString() }
+    await this.chain('captures', () => this.unit.putRecord('captures', id, updated))
+    await this.appendAudit({
+      id: makeId('audit'),
+      tool: 'track_delete_capture',
+      ts: now,
+      ok: true,
+      detail: `capture deleted (${opts.by ?? 'user'})${opts.reason ? `: ${opts.reason}` : ''}`,
+    })
+    return updated
+  }
+
+  /** Hard-delete a capture record (tests / storage cleanup — NOT the user path). */
+  async purgeCapture(id: string): Promise<void> {
   await this.ready()
     await this.chain('captures', () => this.unit.deleteRecord('captures', id))
   }
@@ -342,10 +464,11 @@ export class TrackStore {
 
   // ---- issues ----
 
-  async listIssues(teamId?: string, state?: Issue['state']): Promise<Issue[]> {
+  async listIssues(teamId?: string, state?: Issue['state'], opts: { includeDeleted?: boolean } = {}): Promise<Issue[]> {
   await this.ready()
     const { tables } = await this.unit.loadAll()
     let issues = Object.values(tables.issues ?? {}) as Issue[]
+    if (!opts.includeDeleted) issues = issues.filter((i) => i.deletedAt === undefined)
     if (teamId) issues = issues.filter((i) => i.teamId === teamId)
     if (state) issues = issues.filter((i) => i.state === state)
     return issues
@@ -362,7 +485,55 @@ export class TrackStore {
     await this.chain('issues', () => this.unit.putRecord('issues', issue.id, issue))
   }
 
-  async deleteIssue(id: string): Promise<void> {
+  /**
+   * Soft-delete an issue (2026-08-18): marks `deletedAt`/`deletedBy`/
+   * `deletedReason`, records the strong-negation `user-delete` evidence into
+   * the issue's ledger, clears any pending confirmation, and appends an
+   * audit entry. The row is NEVER removed by the user path — the identifier
+   * stays durable and the full record (title, description, evidence, links)
+   * remains queryable via includeDeleted. Default listings hide tombstones.
+   * @returns the tombstoned issue, or undefined when not found.
+   */
+  async deleteIssue(id: string, opts: { by?: Issue['deletedBy']; reason?: string; sessionId?: string } = {}): Promise<Issue | undefined> {
+  await this.ready()
+    const issue = await this.getIssueByInput(id)
+    if (!issue) return undefined
+    const now = Date.now()
+    const evidence: EvidenceRef = {
+      signal: 'user-delete',
+      at: now,
+      weight: -1,
+      sessionId: opts.sessionId,
+      pointer: opts.reason ?? 'user deleted',
+    }
+    const updated: Issue = {
+      ...issue,
+      deletedAt: new Date(now).toISOString(),
+      deletedBy: opts.by ?? 'user',
+      deletedReason: opts.reason,
+      pendingConfirm: undefined,
+      // The negation is ALWAYS recorded — even when the issue never had an
+      // `inferred` ledger (fresh issues): evidence must survive the tombstone.
+      inferred: {
+        ...(issue.inferred ?? { state: issue.state, confidence: 0, at: now, by: 'auto' }),
+        evidence: [...(issue.inferred?.evidence ?? []), evidence].slice(-MAX_EVIDENCE),
+      },
+      updatedAt: new Date(now).toISOString(),
+    }
+    await this.chain('issues', () => this.unit.putRecord('issues', issue.id, updated))
+    await this.appendAudit({
+      id: makeId('audit'),
+      tool: 'track_delete_issue',
+      ts: now,
+      sessionId: opts.sessionId,
+      ok: true,
+      detail: `${issue.identifier} deleted (${opts.by ?? 'user'})${opts.reason ? `: ${opts.reason}` : ''}`,
+    })
+    return updated
+  }
+
+  /** Hard-delete an issue record (tests / storage cleanup — NOT the user path). */
+  async purgeIssue(id: string): Promise<void> {
   await this.ready()
     await this.chain('issues', () => this.unit.deleteRecord('issues', id))
   }
@@ -406,16 +577,13 @@ export class TrackStore {
   }
 
   /**
-   * Record one evidence signal against an issue, re-evaluate the state
-   * machine, and apply the result: write `inferred`, update `lastProgressAt`
-   * on positive signals, and auto-commit `state` only for the safe
-   * todo → in_progress transition. Confirmation-gated proposals (done /
-   * canceled) are returned in `confirm` and NOT written to `state`.
+   * Apply one evidence signal to an issue in memory: re-evaluate the state
+   * machine, write `inferred`, bump `lastProgressAt` on positive signals,
+   * auto-commit only the safe todo → in_progress transition, and surface
+   * confirmation-gated proposals (done/canceled) as `pendingConfirm`.
+   * Shared by the single-signal path and the batch path (one loadAll).
    */
-  async recordIssueEvidence(issueId: string, signal: EvidenceRef, sessionId: string, now = Date.now()): Promise<{ issue: Issue; confirm?: { to: Issue['state']; reason: string } } | null> {
-  await this.ready()
-    const issue = await this.getIssue(issueId)
-    if (!issue) return null
+  private applyEvidenceToIssue(issue: Issue, signal: EvidenceRef, now: number): Issue {
     const evidence = [...(issue.inferred?.evidence ?? []), signal].slice(-MAX_EVIDENCE)
     const next = nextInferred(issue, evidence, now)
     const updated: Issue = {
@@ -424,7 +592,7 @@ export class TrackStore {
         ? Math.max(issue.lastProgressAt ?? 0, signal.at)
         : issue.lastProgressAt,
       inferred: next.inferred,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(now).toISOString(),
     }
     // Auto-commit only the reversible todo → in_progress transition.
     if (isAutoCommit(next, issue)) {
@@ -439,8 +607,49 @@ export class TrackStore {
       // the union to the pendingConfirm contract.
       updated.pendingConfirm = { to: next.confirm.to as 'done' | 'canceled', reason: next.confirm.reason, at: now }
     }
+    return updated
+  }
+
+  /**
+   * Record one evidence signal against an issue, re-evaluate the state
+   * machine, and apply the result: write `inferred`, update `lastProgressAt`
+   * on positive signals, and auto-commit `state` only for the safe
+   * todo → in_progress transition. Confirmation-gated proposals (done /
+   * canceled) are returned in `confirm` and NOT written to `state`.
+   */
+  async recordIssueEvidence(issueId: string, signal: EvidenceRef, sessionId: string, now = Date.now()): Promise<{ issue: Issue; confirm?: { to: Issue['state']; reason: string } } | null> {
+  await this.ready()
+    const issue = await this.getIssue(issueId)
+    if (!issue) return null
+    const updated = this.applyEvidenceToIssue(issue, signal, now)
     await this.chain('issues', () => this.unit.putRecord('issues', issue.id, updated))
-    return { issue: updated, confirm: next.confirm }
+    // The machine only ever gates done/canceled (state-machine.ts) — the
+    // pendingConfirm union's 'review' arm never comes from evidence signals.
+    return { issue: updated, confirm: updated.pendingConfirm ? { to: updated.pendingConfirm.to as 'done' | 'canceled', reason: updated.pendingConfirm.reason } : undefined }
+  }
+
+  /**
+   * Record many evidence signals with ONE store load — the batch face for
+   * scan pipelines (track_git_artifacts) that fire signals for many issues.
+   * Each issue is loaded once, updated in memory, and written once; signals
+   * for the same issue are applied in order.
+   */
+  async recordIssueEvidenceMany(items: Array<{ issueId: string; signal: EvidenceRef }>, now = Date.now()): Promise<number> {
+  await this.ready()
+    if (items.length === 0) return 0
+    const { tables } = await this.unit.loadAll()
+    const issues = Object.values(tables.issues ?? {}) as Issue[]
+    const byId = new Map(issues.map((i) => [i.id, i]))
+    let written = 0
+    for (const item of items) {
+      const issue = byId.get(item.issueId)
+      if (!issue) continue
+      const updated = this.applyEvidenceToIssue(issue, item.signal, now)
+      byId.set(issue.id, updated)
+      await this.chain('issues', () => this.unit.putRecord('issues', issue.id, updated))
+      written += 1
+    }
+    return written
   }
 
   /**
@@ -448,7 +657,7 @@ export class TrackStore {
    * confirmed_by_user tool call). Writes `state` and records the confirmed
    * state as the current inference.
    */
-  async confirmIssueState(issueId: string, state: Issue['state'], by: 'user' | 'model' = 'user', now = Date.now()): Promise<Issue | undefined> {
+  async confirmIssueState(issueId: string, state: Issue['state'], by: 'user' | 'model' | 'auto' = 'user', now = Date.now()): Promise<Issue | undefined> {
   await this.ready()
     const issue = await this.getIssue(issueId)
     if (!issue) return undefined
@@ -468,6 +677,31 @@ export class TrackStore {
     }
     await this.chain('issues', () => this.unit.putRecord('issues', issue.id, updated))
     return updated
+  }
+
+  /**
+   * Auto-confirm canceled proposals past their grace period (config
+   * autoCancelPendingDays, default 14d): a canceled proposal that has stood
+   * untouched for the whole grace is garbage-collected — the user never
+   * engaged, the work is abandoned. done is NEVER auto-confirmed (the
+   * confirmation-gate principle). Audited via the state commit itself.
+   */
+  async autoConfirmPendingCanceled(now = Date.now()): Promise<{ confirmed: number }> {
+    await this.ready()
+    const cfg = await this.readConfig()
+    if (!cfg.autoCancelPendingDays) return { confirmed: 0 }
+    const graceMs = cfg.autoCancelPendingDays * 86_400_000
+    const issues = await this.listIssues()
+    let confirmed = 0
+    for (const issue of issues) {
+      const pc = issue.pendingConfirm
+      if (!pc || pc.to !== 'canceled') continue
+      if (now - pc.at > graceMs) {
+        await this.confirmIssueState(issue.id, 'canceled', 'auto', now)
+        confirmed += 1
+      }
+    }
+    return { confirmed }
   }
 
   /**
@@ -523,6 +757,131 @@ export class TrackStore {
     return updated
   }
 
+  /**
+   * Merge `sourceId` into `canonicalId` (same work line, duplicate task):
+   * union linked sessions / description / labels onto the canonical, then
+   * mark the source canceled with an evidence pointer. The caller is the
+   * confirmation gate — user-confirmed via the API, or 'auto' for the
+   * deterministic exact-title dedup loop (state-machine discipline: only
+   * the auto loop uses by='auto', and only for EXACT normalized-title
+   * equality, which is mechanical not judgmental).
+   */
+  async mergeIntoCanonical(sourceId: string, canonicalId: string, by: 'user' | 'auto' = 'user', now = Date.now()): Promise<Issue | undefined> {
+    await this.ready()
+    const source = await this.getIssue(sourceId)
+    const canonical = await this.getIssue(canonicalId)
+    if (!source || !canonical) return undefined
+    if (source.id === canonical.id) return canonical
+    const merged: Issue = {
+      ...canonical,
+      linkedSessionIds: Array.from(new Set([...(canonical.linkedSessionIds ?? []), ...(source.linkedSessionIds ?? [])])),
+      description: canonical.description || source.description,
+      labels: Array.from(new Set([...canonical.labels, ...source.labels])),
+      updatedAt: new Date().toISOString(),
+    }
+    const closed: Issue = {
+      ...source,
+      state: 'canceled',
+      pendingConfirm: undefined,
+      inferred: {
+        state: 'canceled',
+        confidence: 1,
+        at: now,
+        by: by === 'user' ? 'user' : 'auto',
+        evidence: [
+          ...(source.inferred?.evidence ?? []),
+          { signal: 'model-propose' as const, at: now, weight: 0, pointer: `merged into ${canonical.identifier} (${canonical.id})` },
+        ].slice(-MAX_EVIDENCE),
+      },
+      updatedAt: new Date().toISOString(),
+    }
+    await this.chain('issues', () => this.unit.putRecord('issues', canonical.id, merged))
+    await this.chain('issues', () => this.unit.putRecord('issues', source.id, closed))
+    await this.appendAudit({
+      id: makeId('audit'),
+      tool: 'track_update_issue_state',
+      ts: now,
+      ok: true,
+      detail: `${source.identifier} merged into ${canonical.identifier} (${by})`,
+    })
+    return merged
+  }
+
+  /**
+   * Capture triage (deterministic, zero LLM — part of the auto-maintenance
+   * loop): an open capture whose content IS an existing issue's title
+   * (normalized equality) is the concrete form of that work — promote it
+   * onto the issue instead of leaving it open forever. Counts stale open
+   * captures (older than STALE_CAPTURE_MS) so the loop can surface them.
+   */
+  async triageCaptures(now = Date.now()): Promise<{ open: number; promoted: number; stale: number }> {
+    await this.ready()
+    const [captures, issues] = await Promise.all([this.listCaptures(), this.listIssues()])
+    const titles = new Set(issues.map((i) => normalizeTitle(i.title)))
+    let promoted = 0
+    let stale = 0
+    for (const capture of captures) {
+      if (capture.status !== 'open') continue
+      if (titles.has(normalizeTitle(capture.content))) {
+        await this.promoteCaptureToIssue(capture.id, 'INV')
+        promoted += 1
+        continue
+      }
+      if (now - Date.parse(capture.createdAt) > STALE_CAPTURE_MS) stale += 1
+    }
+    return { open: captures.filter((c) => c.status === 'open').length, promoted, stale }
+  }
+
+  /**
+   * Auto-merge exact-title duplicates (the dedup loop): group NON-terminal
+   * issues by normalized title; every group with more than one member is a
+   * mechanical duplicate — merge the later ones into the first. Audited via
+   * mergeIntoCanonical(by='auto'). Near-duplicates (different wording) are
+   * NOT touched here — they need a human call.
+   */
+  /**
+   * Auto-merge duplicate issues (the dedup loop): group NON-terminal issues
+   * by token similarity at or above the configured nearDupThreshold (exact
+   * titles are similarity 1.0 — one pass covers both). Each group's issues
+   * merge into the LOWEST identifier (canonical), unioning sessions; the
+   * sources are canceled with an audited pointer. Approved 2026-08-14: the
+   * user wants suspected duplicates merged automatically, not proposed —
+   * nothing is lost (canonical keeps union data) and every merge is audited.
+   */
+  async autoMergeDuplicates(now = Date.now()): Promise<{ groups: number; merged: number }> {
+    await this.ready()
+    const cfg = await this.readConfig()
+    const issues = (await this.listIssues())
+      .filter((i) => i.state !== 'done' && i.state !== 'canceled')
+      .sort((a, b) => a.identifier.localeCompare(b.identifier, undefined, { numeric: true }))
+    const tokenized = issues.map((i) => ({ issue: i, tokens: contentTokens(i.title) }))
+    const used = new Set<string>()
+    let groups = 0
+    let merged = 0
+    for (let i = 0; i < tokenized.length; i++) {
+      const entry = tokenized[i]!
+      if (used.has(entry.issue.id)) continue
+      const group = [entry]
+      used.add(entry.issue.id)
+      for (let j = i + 1; j < tokenized.length; j++) {
+        const other = tokenized[j]!
+        if (used.has(other.issue.id)) continue
+        if (titleSimilarity(entry.tokens, other.tokens) >= cfg.nearDupThreshold) {
+          group.push(other)
+          used.add(other.issue.id)
+        }
+      }
+      if (group.length < 2) continue
+      groups += 1
+      // Already identifier-sorted: group[0] is the canonical.
+      for (const dup of group.slice(1)) {
+        await this.mergeIntoCanonical(dup.issue.id, group[0]!.issue.id, 'auto', now)
+        merged += 1
+      }
+    }
+    return { groups, merged }
+  }
+
   // ---- epics ----
 
   async listEpics(): Promise<Epic[]> {
@@ -546,7 +905,8 @@ export class TrackStore {
 
   async upsertLink(link: Link): Promise<void> {
   await this.ready()
-    await this.chain('links', () => this.unit.putRecord('links', link.id, link))
+    const safe = enforceEvidenceDiscipline(link)
+    await this.chain('links', () => this.unit.putRecord('links', safe.id, safe))
   }
 
   /** All links touching one entity id (either direction). */
@@ -554,6 +914,105 @@ export class TrackStore {
   await this.ready()
     const links = await this.listLinks()
     return links.filter((l) => l.fromId === id || l.toId === id)
+  }
+  // ---- session execution graphs (M1 genealogy floor) ----
+
+  /** Persist (or replace) the execution graph of one session. Idempotent:
+   *  the deterministic builder produces the same nodes/edges for the same log. */
+  async upsertGraph(graph: SessionGraph): Promise<void> {
+  await this.ready()
+    await this.chain('graph', () => this.unit.putRecord('graph', graph.sessionId, graph))
+  }
+
+  async getGraph(sessionId: string): Promise<SessionGraph | undefined> {
+  await this.ready()
+    const { tables } = await this.unit.loadAll()
+    return (tables.graph ?? {})[sessionId] as SessionGraph | undefined
+  }
+
+  /** All stored session graphs (for status / build-all reporting). */
+  async listGraphs(): Promise<SessionGraph[]> {
+  await this.ready()
+    const { tables } = await this.unit.loadAll()
+    return Object.values(tables.graph ?? {}) as SessionGraph[]
+  }
+
+  /** Persist the per-session graph-built marker (observability only). */
+  async markGraphBuilt(sessionId: string, at = new Date().toISOString()): Promise<void> {
+  await this.ready()
+    const g = (await this.readGlobal()) ?? {
+      version: 1 as const,
+      teams: {},
+      identifierCounter: 0,
+    }
+    await this.writeGlobal({
+      ...g,
+      graphBuiltSessions: {
+        ...(g.graphBuiltSessions ?? {}),
+        [sessionId]: at,
+      },
+    })
+  }
+
+  // ---- projects (genealogy Layer 1 grouping) ----
+
+  /** Persist (or replace) a project. Idempotent: project ids are cwd hashes. */
+  async upsertProject(project: Project): Promise<void> {
+  await this.ready()
+    await this.chain('projects', () => this.unit.putRecord('projects', project.id, project))
+  }
+
+  /** Remove a project record (stale induction cleanup). */
+  async deleteProject(id: string): Promise<void> {
+  await this.ready()
+    await this.chain('projects', () => this.unit.deleteRecord('projects', id))
+  }
+
+  async getProject(id: string): Promise<Project | undefined> {
+  await this.ready()
+    const { tables } = await this.unit.loadAll()
+    return (tables.projects ?? {})[id] as Project | undefined
+  }
+
+  async listProjects(): Promise<Project[]> {
+  await this.ready()
+    const { tables } = await this.unit.loadAll()
+    return Object.values(tables.projects ?? {}) as Project[]
+  }
+
+  // ---- git commit artifacts (M3 — Layer 0 code anchor) ----
+
+  /** Persist (or replace) a commit artifact. Idempotent: ids are sha hashes. */
+  async upsertCommit(commit: CommitArtifact): Promise<void> {
+  await this.ready()
+    await this.chain('commits', () => this.unit.putRecord('commits', commit.id, commit))
+  }
+
+  async getCommit(id: string): Promise<CommitArtifact | undefined> {
+  await this.ready()
+    const { tables } = await this.unit.loadAll()
+    return (tables.commits ?? {})[id] as CommitArtifact | undefined
+  }
+
+  async listCommits(projectId?: string): Promise<CommitArtifact[]> {
+  await this.ready()
+    const { tables } = await this.unit.loadAll()
+    const commits = Object.values(tables.commits ?? {}) as CommitArtifact[]
+    return projectId ? commits.filter((c) => c.projectId === projectId) : commits
+  }
+
+  // ---- extraction runs (ledger-first: durable intermediate knowledge) ----
+
+  /** Persist one extraction run. Idempotent: deterministic run ids. */
+  async upsertExtraction(run: ExtractionRun): Promise<void> {
+  await this.ready()
+    await this.chain('extractions', () => this.unit.putRecord('extractions', run.id, run))
+  }
+
+  async listExtractions(limit = 20): Promise<ExtractionRun[]> {
+  await this.ready()
+    const { tables } = await this.unit.loadAll()
+    return (Object.values(tables.extractions ?? {}) as ExtractionRun[]).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit)
   }
 
   // ---- audit (observability) ----

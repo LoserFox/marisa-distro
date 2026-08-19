@@ -1,7 +1,7 @@
 {
   "name": "@fakechris/dsh-track",
   "description": "Track Bridge: embedded task-management engine for DeepSeek Harness — decision-point protocol, capture wall, and Linear-shaped issue store over session events + storage KV",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -12,11 +12,11 @@
     "typecheck": "node scripts/dsh-env.mjs tsc -p \"${DSH_TSCONFIG:-tsconfig.json}\" --noEmit"
   },
   "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-llm": "*",
     "@deepseek-ai/dsh-session": "*",
     "@deepseek-ai/dsh-storage": "*",
-    "@deepseek-ai/dsh-tools": "*",
-    "@deepseek-ai/dsh-llm": "*",
-    "@deepseek-ai/cordis": "*"
+    "@deepseek-ai/dsh-tools": "*"
   },
   "dsh": {
     "bundle": {

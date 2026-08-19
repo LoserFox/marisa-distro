@@ -1,6 +1,6 @@
 /**
  * Pure sequencing of the Win32 `IFileOpenDialog` folder-picker COM
- * conversation over an injectable bindings seam, so every outcome path
+ * conversation over injectable platform bindings, so every outcome path
  * (selection, cancellation, HRESULT failure, cleanup ordering) is testable on
  * any platform. The koffi-backed bindings live in
  * `win32-dialog-bindings.ts`, which only a real win32 process ever loads.
@@ -118,7 +118,7 @@ export function runFolderDialog(
       check(dialog.setTitle(title), 'SetTitle')
       onShowing(bindings.currentThreadId())
       const shown = dialog.show()
-      if (shown === HRESULT_CANCELLED) { return null }
+      if (shown === HRESULT_CANCELLED) return null
       check(shown, 'Show')
       const result = dialog.resultPath()
       check(result.hr, 'GetResult')

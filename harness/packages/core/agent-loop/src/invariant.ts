@@ -3,7 +3,7 @@
  * @module @deepseek-ai/dsh-agent-loop/invariant
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { isAgentLoopRequest, type GenerateOptions } from '@deepseek-ai/dsh-llm'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import { foldRequestHeader } from '@deepseek-ai/dsh-session'
@@ -19,7 +19,7 @@ export const inject = ['invariants']
 const install: InvariantInstaller = Object.assign((ctx: Context, fail: InvariantFailure) => {
   // Prepend prevents a short-circuiting replay listener from silencing the check.
   ctx.on('llm/stream', (options: GenerateOptions, next) => {
-    if (!isAgentLoopRequest(options)) { return next() }
+    if (!isAgentLoopRequest(options)) return next()
     if (!Object.isFrozen(options)) fail('a loop-built request must be frozen')
     if (options.sessionId === undefined) fail('a loop-built request must carry a session id')
     const session = ctx.sessions.get(options.sessionId)

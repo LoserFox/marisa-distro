@@ -86,7 +86,7 @@ function build(events: Appendable[]): Session {
   for (const e of events) {
     // Forward the generated intent verbatim; non-surface events carry none.
     if (e.intent !== undefined) session.append(e.type, e.data, e.intent)
-    else { session.append(e.type, e.data) }
+    else session.append(e.type, e.data)
   }
   return session
 }
@@ -144,7 +144,8 @@ describe('Session properties', () => {
         while (mi < messages.length || ni < noise.length) {
           // take from noise when chosen and available, else from messages
           const takeNoise = ni < noise.length && (mi >= messages.length || picker.next().value === true)
-          if (!takeNoise) { interleaved.push(messages[mi]!); mi++ } else { interleaved.push(noise[ni]!); ni++ }
+          if (takeNoise) { interleaved.push(noise[ni]!); ni++ }
+          else { interleaved.push(messages[mi]!); mi++ }
         }
         const withNoise = build(interleaved).deriveMessages()
         expect(withNoise).toEqual(clean)

@@ -1,6 +1,6 @@
 # 成长系统（唯一权威）
 
-本文是 whale-girl **成长系统**的权威现状文档：经验、成就、回忆、情绪/彩蛋的完整契约。README 与决策记录只链接本文件，不重复事实。代码实现见 [.dsh-plugin/src/pet-state.mjs](../.dsh-plugin/src/pet-state.mjs)（账本纯函数）与 [.dsh-plugin/index.mjs](../.dsh-plugin/index.mjs)（事件接线）。
+本文是 whale-girl **成长系统**的权威现状文档：经验、成就、回忆、情绪/彩蛋的完整契约。README 与决策记录只链接本文件，不重复事实。代码实现见 [lib/src/pet-state.mjs](../lib/src/pet-state.mjs)（账本纯函数）与 [lib/index.mjs](../lib/index.mjs)（事件接线）。
 
 ## 设计原则（积累型伙伴）
 
@@ -26,7 +26,7 @@
 ### 等级曲线
 
 - `xpForLevel(L) = 50·L·(L−1)/2`（L2=50、L3=150、L4=300…），反函数闭式解 O(1)。
-- XP 上限封顶（XP_CAP=1e12）与浮点取整在持久化归一化（[persistence.mjs](../.dsh-plugin/src/persistence.mjs)）。
+- XP 上限封顶（XP_CAP=1e12）与浮点取整在持久化归一化（[persistence.mjs](../lib/src/persistence.mjs)）。
 
 ### 账本结构
 
@@ -34,7 +34,7 @@
 
 ## 成就系统（称号）
 
-里程碑解锁，**封闭集合**（加称号要同时改本表与 [.dsh-plugin/src/pet-state.mjs](../.dsh-plugin/src/pet-state.mjs) 的 TITLES）：
+里程碑解锁，**封闭集合**（加称号要同时改本表与 [lib/src/pet-state.mjs](../lib/src/pet-state.mjs) 的 TITLES）：
 
 | id | 名称 | 解锁条件 |
 |---|---|---|

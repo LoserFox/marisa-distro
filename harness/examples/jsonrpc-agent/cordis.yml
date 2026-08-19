@@ -1,8 +1,8 @@
 # Unattended coding-agent deployment for the bundled dsh-jsonrpc-agent runtime.
 # stdout is reserved for JSON-RPC; do not add a console logger or terminal UI.
 
-- id: jsonrpc
-  name: '@deepseek-ai/dsh-jsonrpc'
+- id: sdk-jsonrpc-server
+  name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
   config:
     maxTokensAsSuccess: !!js "process.env.DSH_MAX_TOKENS_AS_SUCCESS === undefined ? true : JSON.parse(process.env.DSH_MAX_TOKENS_AS_SUCCESS)"
 
@@ -34,7 +34,7 @@
       enabled: false
     toolBash:
       enableRunInBackground: false
-    toolTasks: false
+    toolJobs: false
 
 - id: sessions
   name: '@deepseek-ai/dsh-session-persistence-jsonl'
@@ -49,8 +49,8 @@
 - id: subagent
   name: '@deepseek-ai/dsh-subagent'
 
-- id: subagent-spawn
-  name: '@deepseek-ai/dsh-subagent-spawn'
+- id: subagent-spawn-in-process
+  name: '@deepseek-ai/dsh-subagent-spawn-in-process'
   config:
     providerName: spawn
 
@@ -71,8 +71,8 @@
   config:
     cwd: !!js process.env.DSH_CWD ?? process.cwd()
 
-- id: fs-policy
-  name: '@deepseek-ai/dsh-fs-policy'
+- id: fs-observation-policy
+  name: '@deepseek-ai/dsh-fs-observation-policy'
 
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
@@ -80,8 +80,8 @@
 - id: token-meter
   name: '@deepseek-ai/dsh-token-meter'
 
-- id: compact-basic
-  name: '@deepseek-ai/dsh-compact-basic'
+- id: compaction-basic
+  name: '@deepseek-ai/dsh-compaction-basic'
   config:
     thresholdRatio: 0.8
     retainRatio: 0.16

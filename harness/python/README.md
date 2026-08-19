@@ -8,12 +8,12 @@ Python packages for driving DeepSeek Harness as a subprocess. The client SDK com
 
 | Directory | Dist / module | Role |
 |---|---|---|
-| [sdk](sdk/README.md) | `deepseek-harness` / `deepseek_harness` | High-level turns API and lower-level JSON-RPC client |
+| [sdk](sdk/README.md) | `deepseek-harness-sdk` / `deepseek_harness` | High-level turns API and lower-level JSON-RPC client |
 | [sdk-runtime](sdk-runtime/README.md) | `deepseek-harness-runtime-bin` / `deepseek_harness_runtime` | Bundled runtime binaries and default agent configuration |
 
 ## Behavior
 
-The SDK starts the matching bundled runtime unless the caller selects an explicit channel. The client owns channel selection and default-configuration injection; the runtime itself always requires an explicit configuration. The [SDK reference](sdk/README.md) and [runtime carrier reference](sdk-runtime/README.md) own the complete resolution and configuration contracts.
+The SDK starts the matching bundled runtime unless the caller selects an explicit channel. The client selects the channel and supplies default configuration; the runtime itself always requires an explicit configuration. The [SDK reference](sdk/README.md) and [runtime carrier reference](sdk-runtime/README.md) own the complete runtime-selection and configuration contracts.
 
 ## Contributor workflows
 

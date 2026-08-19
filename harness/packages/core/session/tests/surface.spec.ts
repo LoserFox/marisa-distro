@@ -74,12 +74,12 @@ function toolResultEvent(
       }),
     },
     surfaceOp,
-    ...sourceEventSeqs !== undefined ? { sourceEventSeqs } : {},
+    ...sourceEventSeqs === undefined ? {} : { sourceEventSeqs },
   }
 }
 
-describe('foldSurface provenance', () => {
-  it('accepts absent or valid provenance and complete replacement coverage', () => {
+describe('foldSurface source-event references', () => {
+  it('accepts absent or valid source-event references and complete replacement coverage', () => {
     const events = [
       provenanceEvent(0, undefined),
       provenanceEvent(1, undefined),
@@ -91,7 +91,7 @@ describe('foldSurface provenance', () => {
     expect(() => foldSurface(events)).not.toThrow()
   })
 
-  it('rejects provenance on a non-surface event', () => {
+  it('rejects source-event references on a non-surface event', () => {
     const event = {
       type: 'turn/start',
       seq: 0,
@@ -102,7 +102,7 @@ describe('foldSurface provenance', () => {
     expect(() => foldSurface([event])).toThrow(/cannot carry sourceEventSeqs/)
   })
 
-  it('accepts explicit empty provenance on an assistant message', () => {
+  it('accepts an explicit empty source-event list on an assistant message', () => {
     const event = {
       type: 'assistant/message',
       seq: 0,
@@ -697,7 +697,7 @@ describe('SurfaceManager', () => {
     }, { surfaceOp: op, sourceEventSeqs: [0] })
     // Mutate caller's object after append.
     op.start = 99
-    const logged: SurfaceEvent = s.events[1]! as SurfaceEvent
+    const logged = s.events[1]! as SurfaceEvent
     expect(logged.surfaceOp).toEqual({ op: 'replace', start: 0, end: 0 })
   })
 })

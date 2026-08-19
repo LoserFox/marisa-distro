@@ -22,7 +22,7 @@ No session-query or session-persistence surface changed. The shipped TUI composi
 
 ## Alternatives considered
 
-**Keep per-row route/turn/goal columns via a generic batch projection (`projectSessions`).** Implemented first, then rejected: it still decompressed and parsed every log on every `/resume`, so browsing cost stayed O(total log bytes), and it grew the session-query public API for one consumer. The public seam was reverted; `readTitleSnapshots` keeps using the internal `projectMany` unchanged.
+**Keep per-row route/turn/goal columns via a generic batch projection (`projectSessions`).** Implemented first, then rejected: it still decompressed and parsed every log on every `/resume`, so browsing cost stayed O(total log bytes), and it grew the session-query public API for one consumer. The public contract was reverted; `readTitleSnapshots` keeps using the internal `projectMany` unchanged.
 
 **Fix only the O(N²) listing inside `SessionCorpus.load()`.** Rejected as the primary fix: the per-candidate full decompress, replay validation, and triple clone dominated on large logs. The redundant pre-listing in `load()` remains a candidate cleanup with error-semantics implications.
 

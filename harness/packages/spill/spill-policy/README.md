@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 The **tool-result spill policy**: a `tools/post-execute` transformer that keeps oversized plain-text tool results out of the model's context. When a final result exceeds `maxInlineBytes`, it saves the FULL text through [`ctx.spillStore`](../spill) and replaces the model-facing result with a bounded head/tail preview plus the backend's locator and retrieval hint.
 
-This plugin registers **no service** and owns no storage or preview mechanics: preview is [`@deepseek-ai/dsh-retention`](../../util/retention) (`TextRetainer`), storage is `ctx.spillStore`. It only decides WHEN to spill and composes the notice.
+This plugin registers **no service** and owns no storage or preview mechanics: preview is [`@deepseek-ai/dsh-output-retention`](../../util/output-retention) (`TextRetainer`), storage is `ctx.spillStore`. It only decides WHEN to spill and composes the notice.
 
 ## Config
 
@@ -34,7 +34,7 @@ This plugin registers **no service** and owns no storage or preview mechanics: p
 
 ## Scope
 
-The policy sees only the FINAL formatted surface result—not a tool's internal resource or canonical value. If a provider already truncated (e.g. `web-fetch-local.maxBodyChars`), the spill artifact holds the full formatted result the tool returned, not the full original source. Provider/resource caps stay mandatory and separate. `glob`/`grep` own item-level surface spill because their complete acquired values still exist before rendering; bash streams own acquisition-time spill. The generic policy prepends its waterfall listener, then delegates, so ordinary tool-owned asynchronous projections complete before generic byte bounding regardless of plugin load order. See the [tool output spill Agent Note](../../../.agents/notes/implemented/architecture/2026-07-08-tool-output-spill-files.md).
+The policy sees only the FINAL formatted model-facing result—not a tool's internal resource or canonical value. If a provider already truncated (e.g. `web-fetch-http.maxBodyChars`), the spill artifact holds the full formatted result the tool returned, not the full original source. Provider/resource caps stay mandatory and separate. `glob`/`grep` own item-level presentation spill because their complete acquired values still exist before rendering; bash streams own acquisition-time spill. The generic policy prepends its waterfall listener, then delegates, so ordinary tool-owned asynchronous projections complete before generic byte bounding regardless of plugin load order. See the [tool output spill Agent Note](../../../.agents/notes/implemented/architecture/2026-07-08-tool-output-spill-files.md).
 
 ## Model Experience
 
@@ -42,7 +42,7 @@ The policy sees only the FINAL formatted surface result—not a tool's internal 
 
 #### What the model sees
 
-Results at or below `maxInlineBytes`, nested results, `read` results, blocked decisions, and results containing non-text blocks are unchanged. An oversized plain-text surface result becomes a bounded head/tail preview followed by `(Omitted <bytes> bytes. Full formatted result stored at: <locator>. <retrievalHint>)`; storage or ownership failures leave the original result visible.
+Results at or below `maxInlineBytes`, nested results, `read` results, blocked decisions, and results containing non-text blocks are unchanged. An oversized plain-text model-facing result becomes a bounded head/tail preview followed by `(Omitted <bytes> bytes. Full formatted result stored at: <locator>. <retrievalHint>)`; storage or ownership failures leave the original result visible.
 
 #### Token effect
 

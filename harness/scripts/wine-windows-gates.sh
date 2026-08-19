@@ -2,8 +2,8 @@
 # Run the blocking Windows gates (workspace build, production site) with real
 # win-x64 Node.js under Wine — the same script the pull-request `windows` job
 # in ci.yml executes and the optional local gate `pnpm run check:windows-wine`
-# wraps. Owning rationale, fidelity limits, and measured timings:
-# .agents/notes/implemented/process/2026-07-27-wine-windows-gates-experiment.md
+# wraps. Owning rationale and fidelity limits:
+# .agents/notes/implemented/process/2026-08-08-native-windows-pull-request-ci.md
 #
 # The working tree is never mutated: tracked plus untracked-unignored files
 # are snapshotted into a scratch directory, the Wine-specific pnpm overrides
@@ -74,19 +74,54 @@ trap cleanup EXIT
 mkdir -p "$cache_dir" "$scratch/logs"
 
 # ---- provision Windows Node, boot Wine, snapshot + install concurrently ----
+curl_metadata_args=(
+  --fail --silent --show-error --location
+  --retry 3 --retry-all-errors --retry-delay 2
+  --http1.1 --connect-timeout 10 --max-time 30 --retry-max-time 120
+)
+
+download_node_archive() {
+  local version="$1" output="$2" attempt status=0
+  local archive="node-$version-win-x64.zip"
+  local primary_url="https://nodejs.org/dist/$version/$archive"
+  local mirror_url="https://npmmirror.com/mirrors/node/$version/$archive"
+
+  if curl --fail --silent --show-error --location --http1.1 \
+    --connect-timeout 10 --max-time 300 --speed-limit 1024 --speed-time 30 \
+    -o "$output" "$primary_url"; then
+    return 0
+  fi
+  echo 'wine-windows-gates: nodejs.org archive transfer stalled; resuming from the checksum-untrusted transport mirror' >&2
+  for attempt in 1 2 3; do
+    if curl --fail --silent --show-error --location --http1.1 \
+      --continue-at - --connect-timeout 10 --max-time 300 \
+      --speed-limit 1024 --speed-time 30 \
+      -o "$output" "$mirror_url"; then
+      return 0
+    else
+      status=$?
+    fi
+    (( attempt < 3 )) || break
+    echo "wine-windows-gates: mirror transfer failed (exit $status) on attempt $attempt; resuming partial download" >&2
+  done
+  return "$status"
+}
+
 provision_node() {
   # Latest release of the primary line, checksum-verified against the same
-  # dist directory. Offline runs fall back to the newest cached zip, loudly.
+  # dist directory. Bound and retry every transfer so a stalled nodejs.org
+  # response cannot consume the entire CI job. Offline runs fall back to the
+  # newest cached zip, loudly.
   local version zip
-  version="$(curl -fsSL --max-time 30 https://nodejs.org/dist/index.json 2> /dev/null \
+  version="$(curl "${curl_metadata_args[@]}" https://nodejs.org/dist/index.json 2> /dev/null \
     | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const v=JSON.parse(d).find(r=>r.version.startsWith('v$node_major.'));if(v)console.log(v.version)})" \
     || true)"
   if [ -n "$version" ]; then
     zip="$cache_dir/node-$version-win-x64.zip"
     if [ ! -f "$zip" ]; then
-      curl -fsSL -o "$zip.tmp" "https://nodejs.org/dist/$version/node-$version-win-x64.zip"
+      download_node_archive "$version" "$zip.tmp"
       local expected
-      expected="$(curl -fsSL "https://nodejs.org/dist/$version/SHASUMS256.txt" \
+      expected="$(curl "${curl_metadata_args[@]}" "https://nodejs.org/dist/$version/SHASUMS256.txt" \
         | awk -v a="node-$version-win-x64.zip" '$2 == a { print $1; exit }')"
       [ -n "$expected" ] || { echo "wine-windows-gates: no SHASUMS256 entry for node-$version-win-x64.zip" >&2; exit 1; }
       verify_sha256 "$expected" "$zip.tmp"

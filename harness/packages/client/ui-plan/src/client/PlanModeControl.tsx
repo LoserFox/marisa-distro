@@ -42,7 +42,7 @@ export function PlanChip({ useProjection, locked, exitPlanMode, t }: PlanChipPro
       setLeaving(false)
       setError(failure)
     }, (reason: unknown) => {
-      if (!aliveRef.current) { return }
+      if (!aliveRef.current) return
       setLeaving(false)
       setError(reason instanceof Error ? reason.message : String(reason))
     })

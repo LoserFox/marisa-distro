@@ -154,7 +154,7 @@ export function errorChain(value: unknown): string {
 }
 
 /**
- * Narrow an arbitrary thrown value to a HarnessError (for `instanceof` at seams).
+ * Narrow an arbitrary thrown value to a HarnessError (for `instanceof` at runtime boundaries).
  * @param value - the caught value (`unknown` in catch clauses).
  * @returns true only for real instances; duck-typed or cross-realm errors do not narrow.
  */

@@ -19,7 +19,7 @@ ACP `session/load` 可以将先前的 assistant 消息作为完整内容块回�
 ## 验收标准
 
 - `SessionEventMap` 移除 `assistant/chunk`，或在需要过渡性实时事件时将其标记为非持久化。
-- [会话持久化文档](../../../../packages/session-persistence/session-persistence/README.md)不再要求逐字存储每个流式分片。
+- [会话持久化文档](../../../../packages/session/session-persistence/README.md)不再要求逐字存储每个流式分片。
 - `llm-replay` 和 ACP 快照使用显式的回放 fixture 格式或伴随文件来存储模型分片。
 - `session/load` 从 `assistant/message` 渲染已完成的 assistant 消息。
 - 存储的日志大幅缩小，且删除分片后仍保持 `seq` 连续，不留下序号缺口。
@@ -27,7 +27,7 @@ ACP `session/load` 可以将先前的 assistant 消息作为完整内容块回�
 
 ## 放弃了什么
 
-规范的用户会话不再能重建旧轮次的精确 token 流。它也会丢失失败或中止流的部分 assistant 输出，除非另有事件或 fixture 记录。对于当前的恢复、加载和快照契约而言，这是过大的信息损失。需要精确确定性流的测试应当直接拥有该 fixture，前提是生产会话日志为用户可见的恢复保留了足够的保真度。
+规范的用户会话不再能重建旧轮次的精确 token 流。它也会丢失失败或中止流的部分 assistant 输出，除非另有事件或 fixture 记录。对于当前的恢复、加载和快照约定而言，这是过大的信息损失。需要精确确定性流的测试应当直接拥有该 fixture，前提是生产会话日志为用户可见的恢复保留了足够的保真度。
 
 ## 相关
 

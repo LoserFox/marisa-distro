@@ -7,10 +7,11 @@
  * must stub); runtime-internal entry points (history staging, wire-frame
  * dispatch) stay on the class, invisible out here.
  */
-import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
+import type { AttachmentIdType, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type {
-  MessageId, QueueAction, RpcResult, SessionId,
-} from '@deepseek-ai/dsh-client-connection/client'
+  MessageId, PromptContentPart, QueueAction, RpcResult, SessionId,
+} from '@deepseek-ai/dsh-api-remotes/client'
+import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type { ConversationSnapshot } from '../sessions/conversation.ts'
 import type { ObservableSnapshot } from './store.ts'
 
@@ -33,11 +34,19 @@ export interface ISession {
   readonly projections: ProjectionsFace
   /**
    * Send a prompt into the session.
-   * @param content - model-facing content blocks.
+   * @param content - text plus browser-owned temporary image uploads.
    * @param mode - 'queue' appends a turn; 'steer' interrupts the running one.
    * @returns acceptance, or the business error (also mirrored into snapshot.promptError).
    */
-  prompt(content: ContentBlock[], mode: 'queue' | 'steer'): Promise<RpcResult<{ accepted: true }>>
+  prompt(content: PromptContentPart[], mode: 'queue' | 'steer'): Promise<RpcResult<{ accepted: true }>>
+  /**
+   * Resolve one durable image referenced by this session.
+   * @param attachmentId - opaque id found in the folded session log.
+   * @returns the authenticated reference and decoded bytes.
+   */
+  readAttachment(
+    attachmentId: AttachmentIdType,
+  ): Promise<RpcResult<{ attachment: ImageAttachmentRef; data: Uint8Array }>>
   /**
    * Apply one edit, remove, or strict steer action to a still-pending queue occurrence.
    * @param itemId - agent-owned inbox occurrence identity.
@@ -67,9 +76,9 @@ export interface ISession {
    * Execute one slash-command line against this session's agent — pure
    * admission semantics (the host executor durably logs the lifecycle).
    * @param line - the full command line, leading slash included.
-   * @returns the admission result, or the error branch on transport failure.
+   * @returns the admission result, or the Remote face's error branch.
    */
-  command(line: string): Promise<RpcResult<{ matched: boolean }>>
+  command(line: string): Promise<RemoteResult<{ matched: boolean }>>
 }
 
 /**

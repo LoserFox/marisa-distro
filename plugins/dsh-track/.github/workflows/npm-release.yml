@@ -1,0 +1,73 @@
+name: npm release
+
+# npm now requires IP-trusted publishers + hardware-2FA (fingerprint) authorization,
+# so GitHub Actions CANNOT publish (its IPs are not trusted, and the fingerprint is a
+# physical user action). This workflow therefore does everything EXCEPT the publish:
+# on a v* tag push (or manual dispatch) it validates the tag against package.json,
+# sanity-checks the committed bundle (lib/), builds the tarball, and uploads it as a
+# release artifact — the final publish runs LOCALLY (user's trusted IP + hardware key):
+#   npm publish --ignore-scripts --registry=https://registry.npmjs.org
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to verify and pack (default: v<package.json version>)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate tag vs package.json version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG=${GITHUB_REF_NAME:-v$VERSION}
+          echo "package.json version: $VERSION | tag: $TAG"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::tag $TAG does not match package.json version v$VERSION"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        id: version
+
+      # lib/ is committed; verify it exists and the client bundle is present.
+      - name: Verify committed bundle
+        run: |
+          test -f lib/index.js || { echo '::error::lib/index.js missing (run pnpm run build and commit lib/)'; exit 1; }
+          test -f lib/client.js || { echo '::error::lib/client.js missing'; exit 1; }
+          echo 'committed bundle OK'
+
+      - name: Build release tarball (npm pack --dry-run)
+        run: npm pack --dry-run --ignore-scripts --json | head -c 2000
+
+      - name: Create npm tarball artifact
+        run: npm pack --ignore-scripts
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-tarball-${{ steps.version.outputs.version }}
+          path: '*.tgz'
+
+      - name: Release summary (publish is LOCAL by design)
+        run: |
+          echo "## npm release ${{ steps.version.outputs.version }} ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "CI cannot publish (npm requires IP trust + hardware-2FA fingerprint)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Run on your machine to publish:" >> "$GITHUB_STEP_SUMMARY"
+          echo '\`\`\`sh' >> "$GITHUB_STEP_SUMMARY"
+          echo 'npm publish --ignore-scripts --registry=https://registry.npmjs.org' >> "$GITHUB_STEP_SUMMARY"
+          echo '\`\`\`' >> "$GITHUB_STEP_SUMMARY"

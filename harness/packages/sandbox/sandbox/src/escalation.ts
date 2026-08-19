@@ -175,7 +175,7 @@ export async function approveEscalation<A, C>(request: EscalationRequest, approv
     toolName: approval.toolName,
     callId: approval.callId,
     reason: `escalate sandbox to ${mode}: ${justification}`,
-    ...!approval.signal ? {} : { signal: approval.signal },
+    ...approval.signal ? { signal: approval.signal } : {},
   })
   switch (outcome) {
     // The schema enum already pinned `mode` to the closed target vocabulary;

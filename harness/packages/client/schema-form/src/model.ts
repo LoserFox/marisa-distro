@@ -6,7 +6,7 @@
  * @module @deepseek-ai/dsh-client-schema-form/model
  */
 
-import Schema from 'schemastery'
+import Schema from '@deepseek-ai/schemastery'
 
 /** Live schemastery node; the renderer reads only its structural relations. */
 export type SchemaNode = Schema
@@ -94,7 +94,7 @@ function cloneContainer(container: unknown, key: string): Record<string, unknown
   if (Array.isArray(container)) return [...container as unknown[]]
   if (typeof container === 'object' && container !== null) return { ...container as Record<string, unknown> }
   // A missing intermediate materializes as the container the next key needs.
-  return !/^\d+$/.test(key) ? {} : []
+  return /^\d+$/.test(key) ? [] : {}
 }
 
 /** Clone the container spine down to the leaf's parent, materializing missing intermediates. */

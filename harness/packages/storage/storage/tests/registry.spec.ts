@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import Storage, { BackendRegistry, storageBackendServiceKey } from '../src/index.ts'
 import type { StorageBackend } from '../src/index.ts'
 
-const fakeBackend = (): StorageBackend => { return ({ close: async () => {} }) }
+const fakeBackend = (): StorageBackend => ({ close: async () => {} })
 
 describe('BackendRegistry', () => {
   it('registers, resolves, and disposes names', () => {
@@ -20,7 +20,7 @@ describe('BackendRegistry', () => {
   it('rejects duplicate names', () => {
     const registry = new BackendRegistry()
     registry.register('json', fakeBackend())
-    expect(() => { return registry.register('json', fakeBackend()) }).toThrowMatchingObject({ code: 'duplicate-backend' })
+    expect(() => registry.register('json', fakeBackend())).toThrowMatchingObject({ code: 'duplicate-backend' })
   })
 })
 

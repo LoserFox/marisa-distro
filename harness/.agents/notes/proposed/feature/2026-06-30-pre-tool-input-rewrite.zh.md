@@ -6,7 +6,7 @@ Status: proposed
 
 ## 问题
 
-[拦截 seam Agent Note](../../implemented/feature/2026-06-30-interception-seams.md) 将 `tools/pre-execute` 定义为一道针对执行的允许/拒绝/询问门禁，此时执行的身份标识已受保护、参数已被深度冻结。Claude Code 的 `PreToolUse` 钩子还提供了 `updatedInput`，因此忠实的桥接需要一个显式的重写机制。重写不能是对现有执行对象的可变逃逸口：它必须保持持久化历史、审计记录、展示层与实际执行值之间的一致性。
+[拦截扩展点 Agent Note](../../implemented/feature/2026-06-30-interception-extension-points.md) 将 `tools/pre-execute` 定义为一道针对执行的允许/拒绝/询问门禁，此时执行的身份标识已受保护、参数已被深度冻结。Claude Code 的 `PreToolUse` 钩子还提供了 `updatedInput`，因此忠实的桥接需要一个显式的重写机制。重写不能是对现有执行对象的可变逃逸口：它必须保持持久化历史、审计记录、展示层与实际执行值之间的一致性。
 
 ## 问题本质：执行前参数的三个读取方
 
@@ -49,5 +49,5 @@ Status: proposed
 
 - 重写 `assistant/message` 中的工具调用块是否会破坏某些提供方在回放时的预期？还是单独的修正更安全？
 - 原始参数是否应保留在 `tool/call` 事件（审计）上？如果是，放在什么字段？
-- 重写决策是移到日志提交之前，还是成为一个专门的更早 seam？现有的 pre-tool 允许/拒绝钩子如何避免运行两次？
+- 重写决策是移到日志提交之前，还是成为一个专门的更早扩展点？现有的 pre-tool 允许/拒绝钩子如何避免运行两次？
 - 这与未来的权限 `ask` 流程（用户批准一个被重写的调用）如何交互？

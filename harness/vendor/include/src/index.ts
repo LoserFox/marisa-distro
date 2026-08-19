@@ -1,7 +1,8 @@
-import { EntryTree, isJsExpr, type EntryOptions } from '@cordisjs/plugin-loader'
-import { Context, Service } from 'cordis'
+import { EntryGroup, EntryTree, isJsExpr, type EntryOptions } from '@deepseek-ai/cordis-plugin-loader'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { extname } from 'node:path'
 import { access, constants, readFile, rename, writeFile } from 'node:fs/promises'
+import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import * as yaml from 'js-yaml'
 
@@ -30,6 +31,14 @@ const writable: Record<string, string> = {
 }
 
 const supported = new Set(Object.keys(writable))
+
+const WRITE_RETRY_LIMIT = 10
+const WRITE_RETRY_DELAY_MS = 50
+
+function retryableWriteError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | null)?.code
+  return code === 'EACCES' || code === 'EBUSY' || code === 'EPERM'
+}
 
 /**
  * Apply patch lists to an entry list — THE patch semantics of this include,
@@ -165,12 +174,21 @@ export namespace Include {
 export class Include extends EntryTree {
   static inject = ['loader']
 
+  // Tree-carrier marker (the Group plugin declares the same): this config is
+  // entry and patch lists, so the Loader's `internal/config` interpolation
+  // keeps it literal — a `!!js` expression inside a nested row's config
+  // belongs to that row's fiber, resolving lazily in the row's own context.
+  // Include's own fields (`path`, `enableLogs`) therefore stay literal too.
+  static readonly [EntryGroup.key] = true
+
   public filename: string
   private type?: string
   private readonly: boolean
   private content?: string
   private data?: EntryOptions[]
   private writeTask?: NodeJS.Timeout | undefined
+  private pendingWrite?: EntryOptions[]
+  private writeQueue: Promise<void> = Promise.resolve()
   private applyQueue: Promise<unknown> = Promise.resolve()
 
   constructor(ctx: Context, public config: Include.Config) {
@@ -272,6 +290,7 @@ export class Include extends EntryTree {
 
   async stop() {
     await this.root.stop()
+    await this.flushWrite()
   }
 
   /**
@@ -311,15 +330,41 @@ export class Include extends EntryTree {
       this.content = JSON.stringify(config, null, 2)
     }
     await writeFile(this.filename + '.tmp', this.content!)
-    await rename(this.filename + '.tmp', this.filename)
+    for (let retry = 0; ; retry++) {
+      try {
+        await rename(this.filename + '.tmp', this.filename)
+        return
+      } catch (error) {
+        if (!retryableWriteError(error) || retry >= WRITE_RETRY_LIMIT) throw error
+        await delay((retry + 1) * WRITE_RETRY_DELAY_MS)
+      }
+    }
   }
 
   private writeFile(config: EntryOptions[]) {
     clearTimeout(this.writeTask)
+    this.pendingWrite = config
     this.writeTask = setTimeout(() => {
-      this.writeTask = undefined
-      this._writeFile(config)
+      void this.flushWrite()
     }, 0)
+  }
+
+  private flushWrite(): Promise<void> {
+    clearTimeout(this.writeTask)
+    this.writeTask = undefined
+    const config = this.pendingWrite
+    this.pendingWrite = undefined
+    if (config === undefined) return this.writeQueue
+    const run = this.writeQueue.then(
+      () => this._writeFile(config),
+      () => this._writeFile(config),
+    )
+    this.writeQueue = run
+    void run.catch((error) => {
+      this.ctx.root.logger?.('loader').warn('failed to write config file %C', this.filename)
+      this.ctx.root.logger?.('loader').warn(error)
+    })
+    return run
   }
 
   /** Schedule a write of the current root entry data. */

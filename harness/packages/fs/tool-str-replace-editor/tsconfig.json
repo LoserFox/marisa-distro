@@ -11,6 +11,6 @@
     { "path": "../fs" },
     { "path": "../../sandbox/sandbox" },
     { "path": "../../sandbox/sandbox-policy" },
-    { "path": "../../support/invariants" }
+    { "path": "../../runtime-diagnostics/invariants" }
   ]
 }

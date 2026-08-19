@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { credentialRef } from '../src/index.ts'
 import type { CredentialRef } from '../src/index.ts'
 import { MemoryCredentials } from './memory.ts'
@@ -53,7 +53,7 @@ describe('the credentials seam through the memory provider', () => {
 
   it('rejects an empty set and keeps an absent unset silent', async () => {
     const ctx = await boot()
-    const events: Array<CredentialRef> = []
+    const events: CredentialRef[] = []
     ctx.on('credentials/updated', ref => void events.push(ref))
 
     await expect(ctx.credentials.set(REF, '')).rejects.toThrow(/empty value/)

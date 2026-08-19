@@ -8,16 +8,17 @@
 
 import { spawn } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
-import { chmod, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, copyFile, cp, lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve, sep } from 'node:path'
 import { parseArgs } from 'node:util'
+import { resolveLinuxNodePtyAddon } from './build-exe-for-python-sdk-native-pty.ts'
 
 const root = resolve(import.meta.dirname, '..')
 
 /** The closure manifest whose dependencies define the executable. */
 const DEPLOY_ROOT_PACKAGE = 'dsh-jsonrpc-agent-pkg'
-/** The app entry inside the deployed closure. */
-const ENTRY_BIN = 'node_modules/@deepseek-ai/dsh-jsonrpc-demo/lib/bin.js'
+/** The closed-runtime app entry inside the deployed closure. */
+const ENTRY_BIN = 'node_modules/@deepseek-ai/dsh-sdk-jsonrpc-demo/lib/packaged-bin.js'
 const OUTPUT_BASENAME = 'dsh-jsonrpc-agent-pkg'
 /** Default Node major; SEA mode requires at least Node 22. */
 const DEFAULT_NODE_RANGE = 'node24'
@@ -28,6 +29,8 @@ const OUT_DIR = 'dist-exe'
 const PYTHON_RUNTIME_DIR = 'python/sdk-runtime/src/deepseek_harness_runtime/runtime'
 /** The deployed closure doubles as the node-mode carrier. */
 const PYTHON_NODE_SUBDIR = 'node'
+/** Legacy deploy may hoist peer-specialized workspace packages back here. */
+const DEPLOY_SOURCE_NODE_MODULES = 'python/sdk-runtime/node_modules'
 /** Documentation excluded from the generated runtime directory. */
 const DEPLOY_ONLY_DOCS = ['README.md', 'README.zh.md', 'README.i18n.yaml']
 
@@ -256,11 +259,101 @@ class SingleExeBuild {
       '--config.link-workspace-packages=true',
       this.staging,
     ])
+    await this.restoreLegacyHoists()
+    await this.materializeStagedLinks()
     if (this.cli.dryRun) {
       for (const name of DEPLOY_ONLY_DOCS) console.log(`build-exe-for-python-sdk: [dry-run] rm -f ${join(this.staging, name)}`)
     } else {
       await Promise.all(DEPLOY_ONLY_DOCS.map(name => rm(join(this.staging, name), { force: true })))
     }
+  }
+
+  /**
+   * Restore direct packages that pnpm's legacy hoister places beside the deploy
+   * source instead of in the target. The runtime manifest supplies every peer,
+   * so package-local node_modules trees are omitted to preserve one flat Cordis
+   * instance and a symlink-free packaged payload.
+   */
+  private async restoreLegacyHoists(): Promise<void> {
+    if (this.cli.dryRun) {
+      console.log('build-exe-for-python-sdk: [dry-run] restore direct dependencies omitted by legacy deploy')
+      return
+    }
+    const manifestPath = join(this.staging, 'package.json')
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+      dependencies?: Record<string, string>
+    }
+    const sourceNodeModules = resolve(root, DEPLOY_SOURCE_NODE_MODULES)
+    const restored: string[] = []
+    for (const dependency of Object.keys(manifest.dependencies ?? {}).sort()) {
+      const destination = join(this.staging, 'node_modules', dependency)
+      if (existsSync(destination)) continue
+      const source = join(sourceNodeModules, dependency)
+      if (!existsSync(source)) {
+        throw new Error(
+          `build-exe-for-python-sdk: deployed dependency ${dependency} is absent from both ${destination} and ${source}.`,
+        )
+      }
+      await mkdir(dirname(destination), { recursive: true })
+      const nestedNodeModules = join(source, 'node_modules')
+      await cp(source, destination, {
+        recursive: true,
+        dereference: true,
+        filter: path => path !== nestedNodeModules && !path.startsWith(nestedNodeModules + sep),
+      })
+      restored.push(dependency)
+    }
+    const stillMissing = Object.keys(manifest.dependencies ?? {})
+      .filter(dependency => !existsSync(join(this.staging, 'node_modules', dependency)))
+    if (stillMissing.length > 0) {
+      throw new Error(`build-exe-for-python-sdk: staged dependencies remain missing: ${stillMissing.join(', ')}.`)
+    }
+    if (restored.length > 0) {
+      console.log(`build-exe-for-python-sdk: restored legacy deploy hoists: ${restored.join(', ')}`)
+    }
+  }
+
+  /** Replace deploy-time package links with files and reject any remaining link. */
+  private async materializeStagedLinks(): Promise<void> {
+    if (this.cli.dryRun) {
+      console.log('build-exe-for-python-sdk: [dry-run] materialize staged package links')
+      return
+    }
+    const nodeModules = join(this.staging, 'node_modules')
+    let remaining = await this.findSymlink(nodeModules)
+    while (remaining !== undefined) {
+      const segments = remaining.slice(nodeModules.length + 1).split(sep)
+      const binIndex = segments.lastIndexOf('.bin')
+      if (binIndex >= 0) {
+        await rm(join(nodeModules, ...segments.slice(0, binIndex + 1)), { recursive: true, force: true })
+        remaining = await this.findSymlink(nodeModules)
+        continue
+      }
+      const destination = remaining
+      const source = await realpath(destination)
+      const nestedNodeModules = join(source, 'node_modules')
+      await rm(destination, { recursive: true, force: true })
+      await cp(source, destination, {
+        recursive: true,
+        dereference: true,
+        filter: path => path !== nestedNodeModules && !path.startsWith(nestedNodeModules + sep),
+      })
+      remaining = await this.findSymlink(nodeModules)
+    }
+  }
+
+  /** Return the first symbolic link below a directory, if one exists. */
+  private async findSymlink(directory: string): Promise<string | undefined> {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name)
+      const metadata = await lstat(path)
+      if (metadata.isSymbolicLink()) return path
+      if (metadata.isDirectory()) {
+        const nested = await this.findSymlink(path)
+        if (nested !== undefined) return nested
+      }
+    }
+    return undefined
   }
 
   /** Add the executable entry and pkg assets to the staged manifest. */
@@ -317,8 +410,8 @@ class SingleExeBuild {
   }
 
   /**
-   * Put the target node-pty addon in the staged closure. Linux npm installs
-   * build it from source, but legacy deploy omits that side-effect directory.
+   * Put the target node-pty addon in the staged closure. The release workflow
+   * provides a manylinux build; ordinary installs use node-pty's target prebuild.
    * @param target - the pkg target whose native addon is being staged.
    */
   private async prepareNativePty(target: Target): Promise<void> {
@@ -326,8 +419,16 @@ class SingleExeBuild {
     if (this.cli.dryRun) console.log(`build-exe-for-python-sdk: [dry-run] rm -rf ${stagedBuild}`)
     else await rm(stagedBuild, { recursive: true, force: true })
     if (target.platform !== 'linux') return
-    const source = join(root, 'packages', 'pty', 'pty-local', 'node_modules', 'node-pty', 'build', 'Release', 'pty.node')
+    const packageDirectory = join(
+      root,
+      'packages',
+      'subprocess',
+      'subprocess-local',
+      'node_modules',
+      'node-pty',
+    )
     const destination = join(stagedBuild, 'Release', 'pty.node')
+    const source = resolveLinuxNodePtyAddon(packageDirectory, target.arch)
     if (this.cli.dryRun) {
       console.log(`build-exe-for-python-sdk: [dry-run] cp ${source} ${destination}`)
       return

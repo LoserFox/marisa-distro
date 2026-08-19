@@ -12,9 +12,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
-import Include from '@cordisjs/plugin-include'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
+import Include from '@deepseek-ai/cordis-plugin-include'
 import HttpServer from '../src/index.ts'
 
 let root: string | undefined
@@ -96,7 +96,7 @@ describe('real Loader composition', () => {
       .map(entry => entry.options.name)
     expect(unloaded).toEqual([])
 
-    const server = loaded.httpServer
+    const server = loaded.webServer
     expect(server).toBeInstanceOf(HttpServer)
     const port = server.port
     expect(port).toBeGreaterThan(0)
@@ -202,7 +202,7 @@ describe('real Loader composition', () => {
 
   it('fails the fiber when the port is already taken (fail-loud at activation)', { timeout: 60_000 }, async () => {
     const first = await loadComposition()
-    const takenPort = first.httpServer.port
+    const takenPort = first.webServer.port
     const firstRoot = root
     root = undefined // keep the first composition's files until the end
 
@@ -219,7 +219,7 @@ describe('real Loader composition', () => {
     } finally {
       await second?.fiber.dispose()
       context = first
-      if (root !== undefined) { await rm(root, { recursive: true, force: true }) }
+      if (root !== undefined) await rm(root, { recursive: true, force: true })
       root = firstRoot
     }
   })

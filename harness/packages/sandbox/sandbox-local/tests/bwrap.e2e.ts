@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
 import { LocalSandboxProvider } from '@deepseek-ai/dsh-sandbox-local'
 import { bwrapProfileArgs } from '../src/profiles.ts'
@@ -28,7 +28,7 @@ afterEach(async () => {
   await ctx?.fiber.dispose()
   ctx = undefined
   await Promise.all(tempDirs.splice(0).map(dir => rm(dir, { recursive: true, force: true })))
-  for (const file of tempFiles.splice(0)) { rmSync(file, { force: true }) }
+  for (const file of tempFiles.splice(0)) rmSync(file, { force: true })
 })
 
 async function tempDir(base: string): Promise<string> {

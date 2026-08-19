@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { codingHarness, finalText, SYSTEM_PROMPT, waitForIdle } from './harness.ts'
 import { SessionId } from '@deepseek-ai/dsh-session'
 
@@ -59,14 +59,14 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('compaction: a long session compa
     const events = [...agent.session.events]
 
     // A compaction ran: the start…end bracket landed in the real log.
-    const starts = events.filter(e => e.type === 'compact/start')
-    const ends = events.filter(e => e.type === 'compact/end')
+    const starts = events.filter(e => e.type === 'compaction/start')
+    const ends = events.filter(e => e.type === 'compaction/end')
     expect(starts.length).toBeGreaterThan(0)
     expect(ends.length).toBe(starts.length) // every start was released
 
-    // It succeeded at least once: a compact/summary provenance event and a
+    // It succeeded at least once: a `compaction/summary` event describing the summary and a
     // replace-op user/message (the surface mutation) both landed.
-    const summaries = events.filter(e => e.type === 'compact/summary')
+    const summaries = events.filter(e => e.type === 'compaction/summary')
     expect(summaries.length).toBeGreaterThan(0)
     const replaceNode = events.find((e) => {
       const se = e as unknown as { type: string; surfaceOp?: unknown }

@@ -29,17 +29,17 @@ Auto-compaction always anchors at the surface head, so the shadowed region is th
 - **Keep the summarizer system prompt but reuse the rest** — rejected: the system slot is the very first token region a provider caches on, so a distinct summarizer system prompt invalidates the whole prefix regardless of what follows. Only moving the directive off the front recovers the cache.
 - **Send only the shadowed region without the `system`/`tools` head** — rejected: a differently-headed sequence still diverges from the cached request at the first token, so it caches no better while losing the framing the summary needs.
 - **Omit `tools` from the summarization request** (the model never calls one) — rejected: tool schemas are part of the cached token sequence; omitting them misaligns every following token and defeats reuse.
-- **A dedicated `assistant/chunk`-emitting summarization sub-session for snapshot replay** — rejected: the durable `compact/summary` event records the successful local call's position and complete output, while its explicit call marker prevents replay from treating template or remote output as a local stream.
+- **A dedicated `assistant/chunk`-emitting summarization sub-session for snapshot replay** — rejected: the durable `compaction/summary` event records the successful local call's position and complete output, while its explicit call marker prevents replay from treating template or remote output as a local stream.
 
 ## Consequences
 
-- **`dsh-compact-basic`** owns `SummarizationInput`; the protected `summarize(input, agent, signal?)` hook signature changed (acceptable pre-release), and `region.ts` gained `buildSummarizationInput` folding `deriveEventMessage` over the shadowed seqs behind the header prefix.
-- **Dead render surface removed.** The old flattening path (`renderTranscript` / `renderContentBlocks` and its spec in `dsh-compact`) had no remaining consumer and was deleted with its export.
-- **README model experience** for `dsh-compact-basic` now documents the auxiliary request as the replayed prefix plus a trailing compaction-instruction message, and its KV-cache effect as reuse of the warm conversation prefix.
+- **`dsh-compaction-basic`** owns `SummarizationInput`; the protected `summarize(input, agent, signal?)` hook signature changed (acceptable pre-release), and `region.ts` gained `buildSummarizationInput` folding `deriveEventMessage` over the shadowed seqs behind the header prefix.
+- **Dead render surface removed.** The old flattening path (`renderTranscript` / `renderContentBlocks` and its spec in `dsh-compaction`) had no remaining consumer and was deleted with its export.
+- **README model experience** for `dsh-compaction-basic` now documents the auxiliary request as the replayed prefix plus a trailing compaction-instruction message, and its KV-cache effect as reuse of the warm conversation prefix.
 - **The framed checkpoint output is unchanged**, so the landed `user/message` and every conversation-request snapshot are unaffected; only the auxiliary request's shape changed.
 
 ## Testing
 
-- **Unit:** `compact-basic.spec.ts` asserts the auxiliary call forwards `system`/`tools`/leading messages and appends the compaction instruction as the final message, and that `compactRegion` replays the latest routed header prefix. Existing content assertions read the summarizer input through the replayed messages rather than a transcript string.
+- **Unit:** `compaction-basic.spec.ts` asserts the auxiliary call forwards `system`/`tools`/leading messages and appends the compaction instruction as the final message, and that `compactRegion` replays the latest routed header prefix. Existing content assertions read the summarizer input through the replayed messages rather than a transcript string.
 - **Loop:** `compact-loop-repro.spec.ts` classifies the summarization request by the compaction instruction in its trailing user message, and the overflow-recovery tests continue to pin conversation-vs-summary request counts across the real loop.
-- **Snapshot:** keyless replay reconstructs one canonical successful stream from a marked `compact/summary`; the [compaction-seam note](../feature/2026-06-18-compaction-capability-seam.md) owns the durable marker contract.
+- **Snapshot:** keyless replay reconstructs one canonical successful stream from a marked `compaction/summary`; the [compaction-seam note](../feature/2026-06-18-compaction-capability-seam.md) owns the durable marker contract.

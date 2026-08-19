@@ -1,8 +1,8 @@
 /** Live/persisted logical-corpus resolution for session-query. */
 
-import type { Context, Fiber } from 'cordis'
+import type { Context, Fiber } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
-import SessionPersistence, { SessionPersistenceCorruptionError } from '@deepseek-ai/dsh-session-persistence'
+import type SessionPersistence from '@deepseek-ai/dsh-session-persistence'
 import type { SessionRecord } from './types.ts'
 import { SessionQueryError } from './config.ts'
 import { assertSessionHeadersCompatible } from './sources.ts'
@@ -274,7 +274,7 @@ async function inspectPersisted(
     return await persistence.inspect(sessionId, signal)
   } catch (error: unknown) {
     if (signal?.aborted) signal.throwIfAborted()
-    if (error instanceof SessionPersistenceCorruptionError) {
+    if (error instanceof Error && error.name === 'SessionPersistenceCorruptionError') {
       throw new SessionQueryError(
         `stored session "${sessionId}" is corrupt: ${errorMessage(error)}`,
         'SESSION_QUERY_CORRUPT_SESSION',

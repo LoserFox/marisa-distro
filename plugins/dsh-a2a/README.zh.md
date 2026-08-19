@@ -1,6 +1,11 @@
-# @dpskh/a2a —— DeepSeek Harness 的 Agent2Agent 实时 mesh
+<center>
+<h1>@dpskh/a2a —— DeepSeek Harness 的 Agent2Agent 实时 mesh</h1>
 
 [English](README.md) | 中文
+
+[![dshfind](https://dshfind.com/api/card/dpskh/dsh-a2a?lang=zh)](https://dshfind.com/zh/plugins/dpskh/dsh-a2a?ref=badge)
+
+</center>
 
 一个包、一个入口插件。挂载 `@dpskh/a2a` 0.3 即获得**实时 A2A mesh**：hub 主机（`ctx.a2aHub`：基于 storage 域的项目注册表与不可变消息历史，可选监听 hub 服务器，同时承载实时 WebSocket）、mesh 客户端（`ctx.a2aMesh`：每个已连接 agent 一个 WebSocket presence，串行注入）、`a2a_peers` / `a2a_message` / `a2a_history` 工具族与 `/a2a` 命令面。Presence 即存活的 socket；消息是唯一的持久记录——运行于可信私有网络上的实时聊天。
 

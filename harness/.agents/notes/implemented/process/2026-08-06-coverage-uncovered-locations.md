@@ -33,7 +33,7 @@ CJS is a forced shape, and a justified exception to the ESM-everywhere disciplin
 
 ## Verification
 
-Local matrix: with a deliberately induced failure, all three record kinds appear and their locations match the planted gaps; a mixed run emits records only for the failing files (files at 100% within the same run stay silent); an all-green run produces zero output and exit code 0. CI evidence: after temporarily planting one unreachable statement/branch/function in `clampTimeout`, the coverage lane — under the isolated condition of all tests passing (632 files / 10326 cases) with only the threshold failing — printed the 4 records above the ERROR lines (evidence links in the PR #1716 description); the demonstration commit was removed from the branch before merge.
+Local matrix: with a deliberately induced failure, all three record kinds appear and their locations match the planted gaps; a mixed run emits records only for the failing files (files at 100% within the same run stay silent); an all-green run produces zero output and exit code 0. CI evidence: after temporarily planting one unreachable statement/branch/function in `clampTimeout`, the coverage lane — under the isolated condition of all tests passing (632 files / 10326 cases) with only the threshold failing — printed the 4 records above the ERROR lines; the planted failure is not in the committed tree.
 
 ## Consequences
 

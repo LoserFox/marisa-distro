@@ -81,7 +81,7 @@ function invoke(root: string, args: string[]): string {
 
 function jsonReport(root: string, base: string, head?: string): Report {
   const args = ['--base', base]
-  if (head !== undefined) { args.push('--head', head) }
+  if (head !== undefined) args.push('--head', head)
   return JSON.parse(invoke(root, args)) as Report
 }
 
@@ -97,14 +97,14 @@ function repositoryState(root: string): Record<string, string> {
 }
 
 describe('change-scope', () => {
-  it('uses an explicit base on a fresh branch without a same-name remote and after its first push', () => {
+  it('uses an explicit base on a fresh branch without a same-name remote and after its first push', { timeout: 20_000 }, () => {
     const { root } = fixture()
     git(root, ['switch', '-c', 'feature'])
     git(root, ['branch', '--set-upstream-to=origin/master'])
     const headSha = commit(root, 'feature.txt', 'feature\n')
 
     const fresh = jsonReport(root, 'origin/master')
-    expect(fresh.repositoryRoot).toBe(realpathSync(root))
+    expect(realpathSync.native(fresh.repositoryRoot)).toBe(realpathSync.native(root))
     expect(fresh.resolved).toEqual({
       baseSha: git(root, ['rev-parse', 'origin/master']),
       headSha,
@@ -122,7 +122,7 @@ describe('change-scope', () => {
     const { root } = fixture('worktree ')
     const report = jsonReport(root, 'HEAD')
 
-    expect(report.repositoryRoot).toBe(realpathSync(root))
+    expect(realpathSync.native(report.repositoryRoot)).toBe(realpathSync.native(root))
     expect(report.paths).toEqual({ committed: [], staged: [], unstaged: [], untracked: [] })
   })
 

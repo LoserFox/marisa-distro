@@ -1,10 +1,10 @@
 /** Host BFF policy for resolving Remote Agent and Session identities. */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, AgentOptions, AgentSetup } from '@deepseek-ai/dsh-agent'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-persistence'
-import { TypeRTLookupFailure } from '@deepseek-ai/dsh-type-meta'
+import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-typert-registry'
 
 /** Caller-facing failures preserved by the Gateway's RPC adapter. */
@@ -22,8 +22,20 @@ export type ApiRemoteAgentResult =
 export interface ApiRemoteAgentOptions {
   /** Read the per-Agent defaults when a cold identity must resume. */
   readonly agentOptions?: () => AgentOptions
-  /** Host-specific Agent-scope composition completed before publication. */
-  readonly setup?: AgentSetup
+  /**
+   * Build the Host-specific Agent-scope composition completed before
+   * publication. Keyed by the resumed session itself because what a Host
+   * installs may depend on what that session recorded: an agent preset fixes
+   * the tools its history was produced under, so rebuilding it under another
+   * composition would replay tool calls the agent can no longer make. The
+   * events come along because a session's own record of such a choice may be
+   * an event rather than a header field.
+   * @param session - the resumed session's persisted header and event log.
+   * @returns the Agent-scope setup to run before publication.
+   */
+  readonly setup?: (
+    session: { meta: SessionHeader; events: readonly SessionEvent[] },
+  ) => AgentSetup | Promise<AgentSetup>
 }
 
 /** Cold identity absent from the durable session store. */
@@ -99,12 +111,12 @@ export async function inspectApiRemoteSession(
 }
 
 /**
- * Create the Host's shared Agent resolver and configure Agent/Session TypeRT lookups.
+ * Create the Host's shared Agent resolver and configure Agent/Session Typert lookups.
  * Live Agents are reused, ordinary cold sessions resume once per identity, and
  * subagent-owned identities retain the legacy `agent-busy` fence.
  * @param ctx - owning Host Context.
  * @param options - defaults and Agent-scope setup used only for cold resume.
- * @returns resolver shared by legacy API Proxy methods and TypeRT lookups.
+ * @returns resolver shared by legacy API Proxy methods and Typert lookups.
  */
 export function createApiRemoteAgentResolver(
   ctx: Context,
@@ -136,6 +148,11 @@ export function createApiRemoteAgentResolver(
           if (hasApiRemoteSubagentOwner(ctx, { header: inspected.meta }, undefined)) {
             throw new ApiRemoteSubagentSessionOwnership(sessionId)
           }
+          // Built from the inspected session before the published re-checks
+          // below, so those stay adjacent to `resume` and a Host setup that
+          // awaits (composing a preset, say) does not widen the collision
+          // window.
+          const setup = options.setup === undefined ? undefined : await options.setup(inspected)
           const publishedSession = ctx.sessions.get(sessionId)
           const publishedAgent = ctx.agents.get(sessionId)
           if (publishedSession !== undefined
@@ -144,8 +161,8 @@ export function createApiRemoteAgentResolver(
           }
           const handle = await ctx.agents.resume({
             resumeSessionId: sessionId,
-            ...options.agentOptions !== undefined ? { agentOptions: options.agentOptions() } : {},
-            ...options.setup === undefined ? {} : { setup: options.setup },
+            ...options.agentOptions === undefined ? {} : { agentOptions: options.agentOptions() },
+            ...setup === undefined ? {} : { setup },
           })
           return handle.agent
         } finally {
@@ -182,7 +199,7 @@ export function createApiRemoteAgentResolver(
   ctx.inject(['typert'], (typeCtx) => {
     const resolveAgent = async (sessionId: SessionId): Promise<Agent> => {
       const found = await agentFor(sessionId)
-      if ('error' in found) throw new TypeRTLookupFailure(found.error)
+      if ('error' in found) throw new TypertLookupFailure(found.error)
       return found.agent
     }
     typeCtx.typert.lookups.configure('agent', resolveAgent)

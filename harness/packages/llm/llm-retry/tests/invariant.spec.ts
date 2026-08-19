@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
 import { createUserMessage, ProviderRequestId } from '@deepseek-ai/dsh-llm'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import * as RetryInvariant from '@deepseek-ai/dsh-llm-retry/invariant'
+import { RetryId } from '@deepseek-ai/dsh-llm-retry'
 import { providerForOpenStep } from '../src/history.ts'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(RetryInvariant)
   return ctx
 }
@@ -38,6 +39,7 @@ function appendRetryTurn(session: Session, turn: number) {
 
 const failure = { message: 'provider busy', code: 'RATE_LIMIT', status: 429 }
 const normal = {
+  retryId: RetryId('normal-retry-chain'),
   provider: 'mock',
   mode: 'normal' as const,
   policyKey: 'normal-policy',
@@ -47,6 +49,7 @@ const normal = {
   failure,
 }
 const always = {
+  retryId: RetryId('always-retry-chain'),
   provider: 'mock',
   mode: 'always' as const,
   policyKey: 'always-policy',
@@ -97,7 +100,7 @@ describe('llm-retry invariants', () => {
       })
     }).not.toThrow()
 
-    const invalidFailures: ReadonlyArray<[string, unknown, RegExp]> = [
+    const invalidFailures: readonly [string, unknown, RegExp][] = [
       ['null', null, /failure must be an object/],
       ['message-type', { message: 1, code: 'RATE_LIMIT' }, /failure\.message/],
       ['message-empty', { message: '', code: 'RATE_LIMIT' }, /failure\.message/],
@@ -130,6 +133,7 @@ describe('llm-retry invariants', () => {
   })
 
   it.each([
+    ['empty-retry-id', { ...normal, retryId: RetryId('') }, /retryId must be a non-empty string/],
     ['retry-zero', { ...normal, retry: 0 }, /positive safe integer/],
     ['retry-fraction', { ...normal, retry: 1.5 }, /positive safe integer/],
     ['max-zero', { ...normal, maxRetries: 0 }, /positive safe maxRetries/],
@@ -212,8 +216,63 @@ describe('llm-retry invariants', () => {
     reset.append('step/end', { turn: 1, step: 1 })
     reset.append('step/start', { turn: 1, step: 2 })
     expect(() => {
-      reset.append('llm/retry', { turn: 1, step: 2, ...normal })
+      reset.append('llm/retry', {
+        turn: 1,
+        step: 2,
+        ...normal,
+        retryId: RetryId('reset-step-2-retry-chain'),
+      })
     }).not.toThrow()
+  })
+
+  it('keeps one retry identity per provider-policy chain', async () => {
+    const ctx = await setup()
+    const changed = openStep(ctx, 'retry-invariant-changed-chain-id')
+    changed.append('llm/retry', { turn: 1, step: 1, ...normal })
+    expect(() => changed.append('llm/retry', {
+      turn: 1,
+      step: 1,
+      ...normal,
+      retry: 2,
+      retryId: RetryId('changed-retry-chain'),
+    })).toThrow(/must preserve retryId/)
+
+    const reused = openStep(ctx, 'retry-invariant-reused-chain-id')
+    reused.append('llm/retry', { turn: 1, step: 1, ...normal })
+    expect(() => reused.append('llm/retry', {
+      turn: 1,
+      step: 1,
+      ...always,
+      retryId: normal.retryId,
+    })).toThrow(/already owned by another chain/)
+  })
+
+  it('validates retry-started correlation and uniqueness', async () => {
+    const ctx = await setup()
+    const empty = openStep(ctx, 'retry-started-empty-id')
+    expect(() => empty.append('llm/retry-started', {
+      retryId: RetryId(''), turn: 1, step: 1, retry: 1,
+    })).toThrow(/retryId must be a non-empty string/)
+
+    const missing = openStep(ctx, 'retry-started-missing-schedule')
+    expect(() => missing.append('llm/retry-started', {
+      retryId: RetryId('missing-retry-chain'), turn: 1, step: 1, retry: 1,
+    })).toThrow(/pairs no prior scheduled attempt/)
+
+    const mismatch = openStep(ctx, 'retry-started-location-mismatch')
+    mismatch.append('llm/retry', { turn: 1, step: 1, ...normal })
+    expect(() => mismatch.append('llm/retry-started', {
+      retryId: normal.retryId, turn: 2, step: 1, retry: 1,
+    })).toThrow(/turn\/step must match/)
+
+    const repeated = openStep(ctx, 'retry-started-repeated')
+    repeated.append('llm/retry', { turn: 1, step: 1, ...normal })
+    repeated.append('llm/retry-started', {
+      retryId: normal.retryId, turn: 1, step: 1, retry: 1,
+    })
+    expect(() => repeated.append('llm/retry-started', {
+      retryId: normal.retryId, turn: 1, step: 1, retry: 1,
+    })).toThrow(/repeats one scheduled attempt/)
   })
 
   it('starts a fresh retry chain after incomplete predecessor boundaries', async () => {
@@ -240,7 +299,7 @@ describe('llm-retry invariants', () => {
     })
     appendRetryTurn(missingStart, 2)
 
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     await expect(ctx.plugin(RetryInvariant)).resolves.toBeDefined()
   })
 
@@ -258,7 +317,19 @@ describe('llm-retry invariants', () => {
     const session = ctx.sessions.create(SessionId('retry-invariant-late'))
     session.append('step/start', { turn: 1, step: 1 })
     session.append('llm/retry', { turn: 1, step: 1, ...normal })
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     await expect(ctx.plugin(RetryInvariant)).rejects.toThrow(/inside an open turn/)
+  })
+
+  it('accepts a scheduled and started attempt on late registration', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    const session = openStep(ctx, 'retry-invariant-late-started')
+    session.append('llm/retry', { turn: 1, step: 1, ...normal })
+    session.append('llm/retry-started', {
+      retryId: normal.retryId, turn: 1, step: 1, retry: 1,
+    })
+    await ctx.plugin(InvariantRegistry)
+    await expect(ctx.plugin(RetryInvariant)).resolves.toBeDefined()
   })
 })

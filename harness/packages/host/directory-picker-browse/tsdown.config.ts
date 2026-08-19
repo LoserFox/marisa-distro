@@ -1,3 +1,15 @@
-import { clientBundle } from '../../client/tsdown.client.ts'
+import { defineConfig } from 'tsdown'
 
-export default clientBundle('@deepseek-ai/dsh-host-directory-picker-browse', ['lib/types/index.js', 'lib/types/invariant.js'])
+/** Node-only backend: listing and creation primitives over the host filesystem. */
+export default defineConfig([
+  {
+    entry: ['lib/types/index.js', 'lib/types/invariant.js'],
+    outDir: 'lib',
+    format: ['esm'],
+    platform: 'node',
+    target: 'es2024',
+    fixedExtension: false,
+    dts: false,
+    clean: false,
+  },
+])

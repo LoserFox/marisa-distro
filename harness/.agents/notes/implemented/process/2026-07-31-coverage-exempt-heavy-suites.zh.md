@@ -6,7 +6,7 @@ Status: implemented
 
 ## Problem
 
-CI 覆盖率 lane（`check:ci:coverage`）的墙钟被少数几个重型测试文件钉死：本地 6-worker 全量剖析中，555 个测试文件聚合 1595 秒，其中 `packages/typert/generator/tests/type-model.spec.ts` 一个文件占 885 秒，前 10 个文件占聚合时长的 84%。这类套件的共同点是每个用例都做全工作区编译器分析或真实子进程 fixture，v8 插桩把这类代码的运行时间放大数倍。
+CI 覆盖率 lane（`check:ci:coverage`）的墙钟被少数几个重型测试文件钉死：本地 6-worker 全量剖析中，555 个测试文件聚合 1595 秒，其中 `packages/typert/generator/tests/type-model.spec.ts` 一个文件占 885 秒，前 10 个文件占聚合时长的 84%。这类套件的共同点是每个用例都做全工作区编译器分析或真实子进程 fixture（测试前置数据），v8 插桩把这类代码的运行时间放大数倍。
 
 关键的浪费在于：这些套件缴纳的插桩税对 per-file 100% 阈值**没有任何贡献**——它们进程内执行的被度量代码，要么本来就不在阈值口径内，要么已由其他套件独立满覆盖。继续在插桩下运行它们，纯粹是用 lane 时长换零信息。
 
@@ -17,7 +17,7 @@ CI 覆盖率 lane（`check:ci:coverage`）的墙钟被少数几个重型测试�
 - **插桩 gate**（`test:coverage`）：设 `DSH_COVERAGE_EXEMPT_HEAVY=1`，`vitest.config.ts` 据此从两个 project 的 exclude 中剔除豁免套件，其余全部文件照旧插桩并承担全部阈值证明。经 gate 自带 env 注入（既有 `Gate.env` 机制），不进 workflow 全局环境，因此并排的无插桩 gate 和本地直跑 `vitest run` 都看不到该变量、行为不变。
 - **无插桩 gate**（`test:coverage-exempt-heavy`）：用配对的 positional filter 恰好运行豁免套件，保证正确性信号不缩水。
 
-`scripts/coverage-exempt.ts` 是唯一名单点，集中持有成员资格契约与 filter/exclude 配对，防止两侧漂移。
+`scripts/coverage-exempt.ts` 是唯一名单点，集中持有成员资格约定与 filter/exclude 配对，防止两侧漂移。
 
 ### 豁免名单与逐项对账
 
@@ -29,18 +29,18 @@ CI 覆盖率 lane（`check:ci:coverage`）的墙钟被少数几个重型测试�
 | 其中 tools-catalog.spec 额外 import | `typert-registry`、`tool-cordis` 的 src | 两包各自的测试独立满覆盖（focused coverage 实测无阈值错误） |
 | `scripts/install-lefthook.spec.ts`、`scripts/oxlint-contract.spec.ts`、`scripts/change-scope.spec.ts` | 无——被测对象是 `scripts/` 源码（从不在 coverage.include），执行方式是 spawn 子进程 | 无需接 |
 
-### 成员资格契约
+### 成员资格约定
 
-新增豁免必须同时满足：套件进程内执行的每个被度量文件都已由其他套件满覆盖（或在阈值排除名单内）；filter 与 exclude 选中完全相同的文件集。契约文本随名单同文件维护。
+新增豁免必须同时满足：套件进程内执行的每个被度量文件都已由其他套件满覆盖（或在阈值排除名单内）；filter 与 exclude 选中完全相同的文件集。约定文本随名单同文件维护。
 
 ### 门禁自动守卫名单正确性
 
 per-file 100% 阈值本身就是豁免名单的守卫，名单错误无法静默通过：
 
 - 若未来某个豁免套件实际独家覆盖着某个被度量文件，插桩 gate 当场红（该文件跌破 100%）；
-- 反向同理：出现"只有豁免套件才覆盖"的新代码，同样立刻红。
+- 反向同理：出现「只有豁免套件才覆盖」的新代码，同样立刻红。
 
-因此覆盖率结果的不变性不依赖人工维护名单，符合"misconfiguration fails loud"约定。唯一失去的是豁免套件自身的执行不再产出覆盖数据——由上表可知这些数据全部冗余，最终报告在阈值意义上逐文件相同。
+因此覆盖率结果的不变性不依赖人工维护名单，符合「misconfiguration fails loud」约定。唯一失去的是豁免套件自身的执行不再产出覆盖数据——由上表可知这些数据全部冗余，最终报告在阈值意义上逐文件相同。
 
 ## Alternatives considered
 

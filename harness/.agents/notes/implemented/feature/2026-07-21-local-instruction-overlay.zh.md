@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-被 git 忽略的个人指导文件（`AGENTS.local.md` / `CLAUDE.local.md`）是 Claude Code 的一项约定，用于存放刻意不提交、每位开发者各自的覆盖内容。[workspace-context 插件](2026-06-24-workspace-context.md)每个目录只加载一个候选，因此只有把某个 `.local.` 名字加进 `instructionFileCandidates` 才能读到它；而由于一个目录只有一个胜出者，这样做只会让它*遮蔽*已提交的基础文件，而不是补充它。这与这些名字所暗示的「基础文件加个人覆盖层」的叠加模型正好相反，而且它默认是关闭的。
+被 git 忽略的个人指导文件（`AGENTS.local.md` / `CLAUDE.local.md`）是 Claude Code 的一项约定，用于存放刻意不提交、每位开发者各自的覆盖内容。[agent-instructions 插件](2026-06-24-workspace-context.md)每个目录只加载一个候选，因此只有把某个 `.local.` 名字加进 `instructionFileCandidates` 才能读到它；而由于一个目录只有一个胜出者，这样做只会让它*遮蔽*已提交的基础文件，而不是补充它。这与这些名字所暗示的「基础文件加个人覆盖层」的叠加模型正好相反，而且它默认是关闭的。
 
 ## 决策
 

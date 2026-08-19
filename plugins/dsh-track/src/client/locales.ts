@@ -13,6 +13,7 @@ export const zh = {
   'strip.captures.one': '{n} 条捕获',
   'strip.empty': '暂无捕获',
   'strip.title': '打开 Track 面板',
+  'view.graph': '会话结构图',
 } satisfies Record<string, string>
 
 /** The track namespace key union. */
@@ -27,6 +28,7 @@ export const en = {
   'strip.captures.one': '{n} capture',
   'strip.empty': 'No captures',
   'strip.title': 'Open the Track panel',
+  'view.graph': 'Session graph',
 } satisfies Record<TrackKey, string>
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {

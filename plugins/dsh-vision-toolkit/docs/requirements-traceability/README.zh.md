@@ -24,9 +24,9 @@
 | P1-1 产物交付 | **已交付** | [`src/artifacts.ts`](../../src/artifacts.ts) 中的产物描述创建、[`src/paths.ts`](../../src/paths.ts) 中受围栏保护的原子路径、[`src/artifact-access.ts`](../../src/artifact-access.ts) 中的签名能力交付 | [`tests/artifacts.spec.ts`](../../tests/artifacts.spec.ts)、[`tests/artifact-access.spec.ts`](../../tests/artifact-access.spec.ts)、会生成产物的运行时/Profile 测试 |
 | P1-2 扩展工具 | **已交付** | [`src/tools.ts`](../../src/tools.ts) 和 [`src/runtime.ts`](../../src/runtime.ts) 中的 `vision_pixel_diff`、`vision_long_screenshot_ocr`、`vision_extract_foreground`、`vision_dominant_colors`、`vision_html_screenshot` | [`tests/upstream.spec.ts`](../../tests/upstream.spec.ts) 和 [`tests/runtime.spec.ts`](../../tests/runtime.spec.ts) 中的 P1 解析器/运行时用例；真实 Profile pixel-diff 和长截图 OCR 调用 |
 | P1-3 专用 Web 展示 | **已交付** | [`src/client/index.tsx`](../../src/client/index.tsx) 中的浏览器插件与专用卡片；[`src/artifact-access.ts`](../../src/artifact-access.ts) 中仅供展示的能力元数据 | [`tests/client.spec.ts`](../../tests/client.spec.ts)、[`tests/artifact-access.spec.ts`](../../tests/artifact-access.spec.ts) 中的安全预览测试、Web 视觉/Console QA |
-| P1-4 健康检查 | **已交付** | [`src/runtime.ts`](../../src/runtime.ts) 中的健康检查/版本运行时契约、[`src/web.ts`](../../src/web.ts) 中的同源 Web 操作，以及 [`src/client/index.tsx`](../../src/client/index.tsx) 中的 Settings 界面；这些管理诊断能力有意不进入模型工具注册表 | [`tests/runtime.spec.ts`](../../tests/runtime.spec.ts) 中的健康检查用例、[`tests/web.spec.ts`](../../tests/web.spec.ts) 中的显式连接行为，以及 [`tests/tools.spec.ts`](../../tests/tools.spec.ts) 中的模型工具缺席断言 |
+| P1-4 健康检查 | **已交付** | [`src/runtime.ts`](../../src/runtime.ts) 中的健康检查/版本运行时契约、[`src/web.ts`](../../src/web.ts) 中的同源 Web 操作，以及 [`src/client/index.tsx`](../../src/client/index.tsx) 中的 Settings 界面；Settings 明确区分携带凭据的轻量 `GET /models` 探测与使用自带诊断图片的显式真实多模态请求，这些管理诊断能力有意不进入模型工具注册表 | [`tests/runtime.spec.ts`](../../tests/runtime.spec.ts) 中的健康检查及真实模型成功/失败用例、[`tests/web.spec.ts`](../../tests/web.spec.ts) 与 [`tests/client.spec.ts`](../../tests/client.spec.ts) 中的显式 API/模型测试行为，以及 [`tests/tools.spec.ts`](../../tests/tools.spec.ts) 中的模型工具缺席断言 |
 | P1-5 Settings | **已交付** | [`src/config.ts`](../../src/config.ts) 中的 namespace/配置、[`src/runtime-manager.ts`](../../src/runtime-manager.ts) 中的 prepare-before-swap manager、[`src/web.ts`](../../src/web.ts) 中的同源私有路由、[`src/client/index.tsx`](../../src/client/index.tsx) 中的 Settings 分区 | [`tests/runtime-manager.spec.ts`](../../tests/runtime-manager.spec.ts)、[`tests/web.spec.ts`](../../tests/web.spec.ts)、[`tests/client.spec.ts`](../../tests/client.spec.ts)、干净 Web Profile 保存/重启 QA |
-| P1-6 安装与升级体验 | **已交付** | [`src/index.ts`](../../src/index.ts) 中的 Bundle 生命周期、[`src/runtime-install.ts`](../../src/runtime-install.ts) 中的内容寻址 managed 运行时、[`src/runtime-manager.ts`](../../src/runtime-manager.ts) 中的 generation manager | 运行时中断/并发测试、软件包布局测试、干净 Profile 生命周期、Settings 持久化和失败候选保留检查 |
+| P1-6 安装与升级体验 | **已交付** | [`src/index.ts`](../../src/index.ts) 中的 Bundle 生命周期、[`src/runtime-install.ts`](../../src/runtime-install.ts) 中的内容寻址 managed 运行时、[`src/runtime-manager.ts`](../../src/runtime-manager.ts) 中的 generation manager，以及 [`src/plugin-update.ts`](../../src/plugin-update.ts) 中按 registry/Profile 安全约束执行的 Settings 更新器和 DSH Web 重启交接 | 运行时中断/并发测试、[`tests/plugin-update.spec.ts`](../../tests/plugin-update.spec.ts) 中的 frozen-lockfile 回滚与 Runtime 就绪检查、软件包布局测试、干净 Profile 生命周期、Settings 持久化和失败候选保留检查 |
 
 ## 横切需求
 
@@ -36,7 +36,7 @@
 | 可移植性 | 运行时和浏览器调用使用 argv 向量与 Node 文件系统/进程 API，不拼接 POSIX Shell。Managed 准备同时提供 `uv` 和 `venv`/pip 路径；Python 与 Chrome 探测包含平台候选。软件包测试拒绝机器本地依赖声明，已提交 fixture/Profile 流程无需真实 Key。 |
 | 性能与取消 | [`src/runtime.ts`](../../src/runtime.ts) 应用一个硬截止时间、传递 `AbortSignal`、限制每个会话的并发数、在远程 I/O 前拒绝解码后过大的图片、在一次 glance 操作中对重复输入去重，并为每个活动会话保留一条按内容/配置键控的最近成功相同 glance 缓存。[`src/index.ts`](../../src/index.ts) 会在注销工具前中止插件拥有的调用。超时、调用方/插件取消、缓存命中/未命中、信号量和独立会话行为均有自动化覆盖。 |
 | 可观察性 | [`src/runtime.ts`](../../src/runtime.ts) 记录有界的工具名、结果、总耗时/上游耗时、图片数量/字节/像素、缓存命中、模型和错误类别，同时排除 base64、Credential、鉴权头和无界上游输出。 |
-| 模型上下文经济性 | Profile 级运行时只发布一个很小的引导工具，[`src/exposure.ts`](../../src/exposure.ts) 仅为加载 `vision-tools` 的 Agent 挂载 10 个执行 schema，并在成功后隐藏引导工具。其他 Agent 不受影响。健康检查、连接测试和版本诊断只存在于 Web Settings 边界，永远不会成为模型工具。单元测试覆盖 Agent 隔离与恢复；每条真实 Profile 工具流程都会断言初始和激活后的 schema 集合。 |
+| 模型上下文经济性 | Profile 级运行时只发布一个很小的引导工具，[`src/exposure.ts`](../../src/exposure.ts) 仅为加载 `vision-skills` 的 Agent 挂载 10 个执行 schema，并在成功后隐藏引导工具。其他 Agent 不受影响。健康检查、连接测试和版本诊断只存在于 Web Settings 边界，永远不会成为模型工具。单元测试覆盖 Agent 隔离与恢复；每条真实 Profile 工具流程都会断言初始和激活后的 schema 集合。 |
 | 可维护性 | 每个工具都调用同一个 [`VisionToolkitRuntime`](../../src/runtime.ts)；DSH 专用适配保留在 [`src/tools.ts`](../../src/tools.ts)、[`src/exposure.ts`](../../src/exposure.ts)、[`src/index.ts`](../../src/index.ts)、[`src/web.ts`](../../src/web.ts) 和 [`src/client/index.tsx`](../../src/client/index.tsx)，固定上游继续作为算法唯一来源。运行时就绪、skill/引导工具发布和 Agent 级 schema 属于同一个生命周期 generation。 |
 | HTML 截图隔离 | 固定截图 guard 使用一次性 Chrome Profile、`--use-mock-keychain` 和 `--incognito`，每次调用后删除 Profile，并保持网络禁用。[`tests/html-screenshot-guard.spec.ts`](../../tests/html-screenshot-guard.spec.ts) 捕获实际 argv 与清理行为。 |
 | UI 还原验收 | [`scripts/ui-restoration-example.ts`](../../scripts/ui-restoration-example.ts) 通过真实运行时执行参考页面 → HTML 渲染 → 像素差异。[`examples/ui-restoration/README.md`](../../examples/ui-restoration/README.md) 负责可复现流程与已提交证据；[`tests/ui-restoration-example.spec.ts`](../../tests/ui-restoration-example.spec.ts) 强制执行该契约。 |
@@ -46,7 +46,7 @@
 | 场景 | 预期行为 | 证据 |
 |---|---|---|
 | 图片缺失/无效、格式、区域或路径错误 | 在执行上游前以输入、容量或路径安全错误拒绝 | [`tests/paths.spec.ts`](../../tests/paths.spec.ts)、[`tests/runtime.spec.ts`](../../tests/runtime.spec.ts) |
-| Credential 缺失 | 本地工具保持可用；远程工具和显式连接测试返回脱敏且可执行下一步的配置/服务结果 | [`tests/runtime.spec.ts`](../../tests/runtime.spec.ts)、[`tests/web.spec.ts`](../../tests/web.spec.ts) |
+| Credential 缺失 | 本地工具保持可用；远程工具以及显式 API 连接/真实模型测试返回脱敏且可执行下一步的配置/服务结果 | [`tests/runtime.spec.ts`](../../tests/runtime.spec.ts)、[`tests/web.spec.ts`](../../tests/web.spec.ts) |
 | 401/403、429、超时、畸形输出或取消 | 返回稳定且可执行下一步的类别，保留有界诊断信息，并停止请求/子进程 | [`tests/errors.spec.ts`](../../tests/errors.spec.ts)、[`tests/runtime.spec.ts`](../../tests/runtime.spec.ts)、[`tests/upstream.spec.ts`](../../tests/upstream.spec.ts) |
 | 初始加载时运行时不可用 | 不注册 skill、激活引导工具或 Agent 级工具；保留 Web Settings 以供修复 | [`src/index.ts`](../../src/index.ts)、[`tests/tools.spec.ts`](../../tests/tools.spec.ts) 与 [`tests/web.spec.ts`](../../tests/web.spec.ts) 中的生命周期测试 |
 | 实时更新时运行时候选失败 | 保留当前服务 generation 和已存储的可用配置 | [`tests/runtime-manager.spec.ts`](../../tests/runtime-manager.spec.ts)、[`tests/web.spec.ts`](../../tests/web.spec.ts) |
@@ -58,7 +58,7 @@
 | 范围 | 状态 | 决策 |
 |---|---|---|
 | P2 稳定 `ctx.visionToolkit` 服务与能力发现 | **按设计推迟** | 产品需求要求至少一个独立插件消费方出现后再稳定该 API。`VisionToolkitRuntime` 保持包内部使用，使 P0/P1 可以继续演进，而不会制造虚假的兼容性承诺。 |
-| P2 提供方生态 | **按设计推迟** | 本包支持固定上游和一个已配置的 OpenAI 兼容视觉端点；不会预先构建无人使用的提供方注册表。 |
+| P2 提供方生态 | **按设计推迟** | 本包支持固定上游，并通过 OpenAI Chat Completions 或 Anthropic Messages 使用一个已配置端点；不会预先构建无人使用的提供方注册表。 |
 | P3 探索性输入与自动化 | **范围外** | 上传/拖拽、摄像头/视频/音频/文档输入、交互式标注、自动点击、远程集群、模型路由/投票和跨 Session 缓存不属于本版本契约。 |
 
 ## 可复现验证

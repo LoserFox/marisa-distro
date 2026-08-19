@@ -309,14 +309,14 @@ class ScopedEventGenerator {
   }
 }
 
-/** Return whether an Events interface is inside declare module 'cordis'. */
+/** Return whether an Events interface is inside declare module '@deepseek-ai/cordis'. */
 function isCordisModuleInterface(node: ts.InterfaceDeclaration): boolean {
   const block = node.parent
   const declaration = block.parent
   return ts.isModuleBlock(block)
     && ts.isModuleDeclaration(declaration)
     && ts.isStringLiteral(declaration.name)
-    && declaration.name.text === 'cordis'
+    && declaration.name.text === '@deepseek-ai/cordis'
 }
 
 /** Return whether a parameter is the explicit TypeScript this receiver. */

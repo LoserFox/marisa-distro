@@ -7,7 +7,7 @@
  * the narrowest safe granularity — code-fence-only splice, changed
  * Markdown units, heading sections, whole document — and `--apply` writes
  * the computed counterpart for pairs whose change is code-fence-only.
- * The briefing contract lives in `scripts/translation-brief.ts`; the
+ * The briefing rules live in `scripts/translation-brief.ts`; the
  * consuming workflow is `.agents/skills/dsh-translate-docs/SKILL.md`.
  */
 
@@ -53,7 +53,7 @@ function parseMeta(content: string): Map<string, string> | undefined {
   for (const line of content.split('\n')) {
     if (line === '' || line.startsWith('#')) continue
     const match = /^([^:#]+\.md): ([0-9a-f]{40})$/.exec(line)
-    if (!match?.[1] || !match[2]) { return undefined }
+    if (!match?.[1] || !match[2]) return undefined
     out.set(match[1], match[2])
   }
   return out

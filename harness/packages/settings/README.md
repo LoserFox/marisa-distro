@@ -7,4 +7,6 @@ This family resolves user-editable configuration through registered namespaces a
 | Package | Role | ctx key |
 |---|---|---|
 | [`settings/`](settings/README.md) | Defines namespace registration, layered resolution, and commits | `ctx.settings` |
-| [`settings-local/`](settings-local/README.md) | Stores settings in a local file and observes external edits | registers on `ctx.settings` |
+| [`settings-file/`](settings-file/README.md) | Stores settings in a local file and observes external edits | registers on `ctx.settings` |
+
+The subsystem reference — namespaces, owner scopes, resolution order, hot commits — is [docs/subsystems/settings.md](../../docs/subsystems/settings.md).

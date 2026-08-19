@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
 import { createUserMessage, CallId  } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
-import SubagentService from '@deepseek-ai/dsh-subagent'
-import { STRUCTURED_OUTPUT_TOOL } from '@deepseek-ai/dsh-subagent-inprocess'
-import * as spawn from '@deepseek-ai/dsh-subagent-spawn'
-import WorkerWorkflowEngine from '@deepseek-ai/dsh-workflow-workerthread'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
+import { STRUCTURED_OUTPUT_TOOL } from '@deepseek-ai/dsh-subagent-in-process-driver'
+import * as spawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
+import WorkerThreadWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import { MockAdapter, maxTokensResponse, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import * as toolRalph from '../src/index.ts'
 
@@ -21,9 +21,9 @@ async function mountRalph(script: MockScript, config: toolRalph.Config) {
   const adapter = new MockAdapter(script)
   await mountAgentLoopTestDependencies(ctx)
   await ctx.plugin(AgentLoop, { agents: [] })
-  await ctx.plugin(SubagentService)
+  await ctx.plugin(SubagentRuntime)
   await ctx.plugin(spawn, { providerName: 'spawn' })
-  await ctx.plugin(WorkerWorkflowEngine, {})
+  await ctx.plugin(WorkerThreadWorkflowEngine, {})
   await ctx.plugin(toolRalph, config)
   ctx.llm.registerAdapter(['mock'], adapter)
   const parentHandle = await ctx.agents.create({
@@ -58,9 +58,9 @@ describe('dsh-tool-ralph over the real spawn and worker-thread stack', () => {
     ])
     await mountAgentLoopTestDependencies(ctx)
     await ctx.plugin(AgentLoop, { agents: [] })
-    await ctx.plugin(SubagentService)
+    await ctx.plugin(SubagentRuntime)
     await ctx.plugin(spawn, { providerName: 'spawn' })
-    await ctx.plugin(WorkerWorkflowEngine, {})
+    await ctx.plugin(WorkerThreadWorkflowEngine, {})
     await ctx.plugin(toolRalph, { maxRounds: 2 })
     ctx.llm.registerAdapter(['mock'], adapter)
 
@@ -238,7 +238,7 @@ describe('dsh-tool-ralph over the real spawn and worker-thread stack', () => {
   it('cancels the real worker and fresh child to quiescence', { timeout: 20_000 }, async () => {
     const { ctx, parent, parentHandle } = await mountRalph(['hang'], { maxRounds: 2 })
     const children: Agent[] = []
-    const outcomes: Array<string> = []
+    const outcomes: string[] = []
     let resolveChildStarted!: (child: Agent) => void
     const childStarted = new Promise<Agent>((resolve) => { resolveChildStarted = resolve })
     ctx.on('workflow/agent-start', (_run, child) => {

@@ -50,7 +50,7 @@
 素材全量契约：角色必须提供全部 15 状态 sheet（verify-assets 门禁强制，缺一即拒）；运行时 sheet 加载失败 → 占位 + 警告。
 
 ### 演进路径
-- **P1 角色清单化**：✅ 已完成（manifest 角色索引 + .dsh-plugin/client/character.mjs + 门禁多角色，见 [character-manifest](../decisions/implemented/feature/2026-08-09-character-manifest.md)）。
+- **P1 角色清单化**：✅ 已完成（manifest 角色索引 + lib/client/character.mjs + 门禁多角色，见 [character-manifest](../decisions/implemented/feature/2026-08-09-character-manifest.md)）。
 - **P2 切换 UX**：✅ 已完成（菜单「换角色」+ localStorage 偏好 + stageSize 接入 --pet-size）。
 - **P4 外部角色包——留档边界（当前不做）**：
   - **是什么**：第三方开发者独立发布「角色皮肤包」插件，用户安装后宠物可换用该角色——像游戏 MOD/皮肤市场。角色从「随 whale-girl 内置」升级为「独立分发单元」。
@@ -76,7 +76,7 @@
 - **JSON 配置**为主形态（`<dshHome>/data/whale-girl/pet.config.json`，按请求读盘 + mtime 缓存，改配置免重启）——已落地为**宿主 settings 配置**（settings.yaml 的 `whale-girl:` section，见 [config-system](../decisions/implemented/feature/2026-08-09-config-system.md)）。
 - **无 Agent 工具面**（2026-08-10 起删除全部 Agent 工具，互动纯 GUI——见 [remove-agent-tools](../decisions/implemented/simplification/2026-08-10-remove-agent-tools.md)）：不向模型开放读写。
 - **不引入脚本 DSL**：规则面用声明式谓词（`{ field, op, value }`，op 白名单枚举）。
-- **第三方插件**：Node half `ctx.provide('pet', service)` 只读服务（账本快照+信号订阅）+
+- **第三方插件**：Node half `ctx.provide('whale-girl.pet', service)` 只读服务（账本快照+信号订阅）+
   client half 文档化 CustomEvent（`whale-girl:say`/`whale-girl:fx`）——生态原生机制，v1 不做「平台」承诺。
 
 ## 三、配置系统（subagent：config）
@@ -90,13 +90,13 @@
 
 ### 关键现实约束
 - 宿主 `contributes` 是**封闭集合（仅 tools/skills）**——配置 schema 由插件运行时注册到
-  `ctx.settings`（schemastery），权威在代码 `.dsh-plugin/src/config.mjs`（零宿主依赖、可单测、铺路未来 manifest 开放）。
+  `ctx.settings`（schemastery），权威在代码 `lib/src/config.mjs`（零宿主依赖、可单测、铺路未来 manifest 开放）。
 - **单一权威持久源**：settings.yaml（体验层）+ localStorage 仅位置。客户端体验 override 仅内存级，防双持久层漂移。
 - **热更新**：settings-local chokidar 热发布 → `scope.watch` → /state 带 `configRevision` → 客户端
   下一轮轮询感知。`applies: 'live'` 免重启。
 - **写入口信任边界**：用户设置 UI / settings 文件 /（可选）菜单面板 POST /config；**不向模型工具开放写**。
 - **门禁**：`verify-settings-schema`（拒绝缺默认值/未 clamp/语义层字段名）+ `verify-config-sync`
-  （消费端单源引用）+ 语义层引用门禁（`.dsh-plugin/src/config.mjs` 不得 import 语义常量）。
+  （消费端单源引用）+ 语义层引用门禁（`lib/src/config.mjs` 不得 import 语义常量）。
 
 ## 四、第一性原理重构路径（subagent：first）
 
@@ -108,14 +108,14 @@
 | 3 | `record*` 散函数 + XP 常量 | 新事件源=新函数+手工接线，无通用事件面 |
 | 4 | 状态名散落六处（manifest/EMOJI/pickState/级联/spec/门禁） | typo 状态名静默渲染 🐣 |
 | 5 | `CELEBRATE_MS == BURST_MS` 靠注释维持 | 改一个忘另一个，窗口漂移 |
-| 6 | 窗口级联在 apply() 闭包（.dsh-plugin/index.mjs） | 项目唯一无单测的语义核心 |
+| 6 | 窗口级联在 apply() 闭包（lib/index.mjs） | 项目唯一无单测的语义核心 |
 
 ### 重构路径
 - **P0（重构不新增特性，AGENTS.md 已授权「可自由重组」）**：
   1. **文法单源化**：/state 从 `{name, until}` 改返回事实集 `{working, bursts[]}`，Node 级联下沉进
      client 声明式状态表；`pickState` 变数据驱动解析器（状态表：`{id, triggers, priority, window, fallback}`）。
      → 消除 #1/#4/#6。
-  2. **配置面**：`.dsh-plugin/src/config.mjs` + settings 注册 + /state 下发（体验层最小集）。
+  2. **配置面**：`lib/src/config.mjs` + settings 注册 + /state 下发（体验层最小集）。
   3. **事件表声明化**：`events → {xp, statsPatch, memoryTemplate, burst?}` 替代 record* 散函数 → 消除 #3。
   4. **契约文档化**：/state facts schema 与 sessions 快照归约为同一「活动事实契约」（两份 producer、一个 consumer）。
 - **P1（特性）**：think/wait 补 sheet（✅ 已完成）；多角色账本（已落地为**多角色共享账本**，见 [multi-character-ledger-shared](../decisions/implemented/feature/2026-08-09-multi-character-ledger-shared.md)）；账本升级追加式事件日志。
@@ -123,7 +123,7 @@
 
 ## 五、优先级建议（落地顺序）
 
-1. **配置系统（体验层最小集）**——价值最高、改动可控（.dsh-plugin/src/config.mjs + settings 注册 + /state 下发），
+1. **配置系统（体验层最小集）**——价值最高、改动可控（lib/src/config.mjs + settings 注册 + /state 下发），
    直接回答「用户自定义」。
 2. **角色清单化 P1**——换角色零改代码，回答「扩展性」；与配置系统正交可并行。
 3. **文法单源化 P0**——结构性重构，是所有后续演进的安全底座；建议在配置与角色之后做
@@ -134,4 +134,4 @@
 
 - 每个演进一个 PR 一种性质 + 决策记录（含 Alternatives considered）。
 - 门禁先行：verify-settings-schema / verify-config-sync / verify-assets 多角色遍历，各配非法样例自证。
-- 验证纪律不变：Node half 改动 web 重启；.dsh-plugin/client/assets 改动重装+刷新；冒烟跑 verify-client-smoke。
+- 验证纪律不变：Node half 改动 web 重启；lib/client/assets 改动重装+刷新；冒烟跑 verify-client-smoke。

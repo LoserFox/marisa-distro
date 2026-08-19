@@ -11,7 +11,7 @@
 // nested run_code sub-dispatch, a legacy generic result) surfaces its
 // model-facing text through ToolRow's Output section instead.
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { IconSearchOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ToolCallViewProps } from '../../contract/slots.ts'
@@ -23,8 +23,13 @@ import { CONVERSATION_NS as NS } from '../../locale.ts'
 /** Full row props: the toolview runtime share plus the standard locale seat. */
 type SearchRowProps = ToolCallViewProps & PropsLocale<'conversation'>
 
+const SEARCH_TITLES: Record<string, string> = {
+  grep: 'Grep',
+  glob: 'Glob',
+}
+
 /**
- * Search row: icon + Search · {summary} in the shared ToolRow chrome, with the
+ * Search row: icon + Grep/Glob · {summary} in the shared ToolRow chrome, with the
  * completed search's card as the row's collapsed-by-default card body (a capped
  * search's recovery footer rides below it, inside ToolRow). Registered under
  * both `grep` and `glob`; the derived model's `kind` decides the card shape. A
@@ -40,7 +45,7 @@ export function SearchRow({ toolName, block, inspect, t }: SearchRowProps) {
       variant={model.variant}
       toolName={toolName}
       icon={<IconSearchOutline16 size={14} />}
-      title={model.title}
+      title={SEARCH_TITLES[toolName] ?? model.title}
       // The result view's replacement title outranks the args-derived summary,
       // matching the terminal card's description precedence.
       summary={search?.title ?? model.summary}
@@ -49,8 +54,8 @@ export function SearchRow({ toolName, block, inspect, t }: SearchRowProps) {
       // sub-dispatch, legacy generic result) has its text nowhere else to go;
       // ToolRow's Output section carries it, and errorSummary its first line.
       // When a card is present ToolRow renders it instead of the output, so
-      // passing model.output unconditionally is safe and keeps the four card
-      // rows symmetric.
+      // model.output passes unconditionally and the four card rows stay
+      // symmetric.
       output={model.output}
       errorSummary={model.errorSummary}
       search={search}

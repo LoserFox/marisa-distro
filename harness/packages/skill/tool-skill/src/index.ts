@@ -5,8 +5,8 @@
  */
 
 import { createHash } from 'node:crypto'
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -26,7 +26,7 @@ export const inject = ['agents', 'tools', 'skills']
 
 const DEFAULT_CATALOG_DESCRIPTION_MAX_LENGTH = 500
 /**
- * Durable provenance for one published session skill catalog. The catalog is a
+ * Durable provider and item records for one published session skill catalog. The catalog is a
  * `catalog`-form context, so it records the entries it published beside the
  * model-facing prose: a consumer presenting the list must not re-parse the
  * `<available_skills>` block, whose framing exists for the model.
@@ -122,13 +122,15 @@ export function apply(ctx: Context, config: Config = {}): void {
           content: { type: 'string', required: true },
         },
       },
-      render: (_args, value) => { return [{ type: 'text', text: renderSkillContent(value) }] },
+      render: (_args, value) => [{ type: 'text', text: renderSkillContent(value) }],
     },
     async execute(args, exec) {
       if (!isSkillName(args.name)) {
         throw new Error(`invalid skill name "${args.name}"`)
       }
-      const lookup = { cwd: exec.agent?.session.header.cwd, signal: exec.signal }
+      // The agent is its own scope key, so the lookup resolves the layered
+      // registry exactly as this agent's composition sees it.
+      const lookup = { cwd: exec.agent?.session.header.cwd, signal: exec.signal, scope: exec.agent }
       const summary = (await ctx.skills.list(lookup)).find(skill => skill.name === args.name)
       if (!summary) {
         throw new Error(`skill "${args.name}" is unknown or no longer available`)
@@ -157,11 +159,6 @@ export function apply(ctx: Context, config: Config = {}): void {
     },
   })
   ctx.tools.register(skillTool)
-  const registeredSkillTool = ctx.tools.get(skillTool.name)
-  /* v8 ignore next 3 -- register() publishes synchronously or throws; this guards future registry drift. */
-  if (registeredSkillTool === undefined) {
-    throw new Error('dsh-tool-skill: registered skill tool is not visible in the global registry')
-  }
 
   // User-explicit skill invocation: a claimed user message whose first line
   // starts with `/<name>` naming a user-invocable skill is a deterministic
@@ -186,7 +183,7 @@ export function apply(ctx: Context, config: Config = {}): void {
     const names = invokedSkillNames(messages)
     if (names.length === 0) return decision
     signal.throwIfAborted()
-    const lookup = { cwd: agent.session.header.cwd, signal }
+    const lookup = { cwd: agent.session.header.cwd, signal, scope: agent }
     const injections: UserMessage[] = []
     for (const name of names) {
       const skill = await ctx.skills.get(name, lookup)
@@ -208,6 +205,11 @@ export function apply(ctx: Context, config: Config = {}): void {
 
   // Register after the tool so reverse teardown removes guidance first. Exact definition
   // identity prevents a scoped shadow merely named `skill` from inheriting this catalog.
+  //
+  // The comparison is against the definition this plugin registered, not against
+  // a lookup of its own name: `register()` files into the CALLING context's
+  // scope, so a plugin mounted inside an agent preset registers for that agent
+  // alone and an unscoped lookup correctly finds nothing.
   ctx.on('agent/pre-step', async (
     { agent, signal },
     next,
@@ -215,9 +217,9 @@ export function apply(ctx: Context, config: Config = {}): void {
     const decision = await next()
     if (decision.kind === 'reject') return decision
     signal.throwIfAborted()
-    const toolVisible = ctx.tools.get(skillTool.name, agent) === registeredSkillTool
+    const toolVisible = ctx.tools.get(skillTool.name, agent) === skillTool
     const snapshot = toolVisible
-      ? await ctx.skills.snapshot({ cwd: agent.session.header.cwd, signal })
+      ? await ctx.skills.snapshot({ cwd: agent.session.header.cwd, signal, scope: agent })
       : { skills: [], complete: true }
     signal.throwIfAborted()
     if (!snapshot.complete) return decision

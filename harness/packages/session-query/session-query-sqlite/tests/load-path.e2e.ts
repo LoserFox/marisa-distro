@@ -6,17 +6,17 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
  */
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
 import SessionStore from '@deepseek-ai/dsh-session'
-import SessionPersistenceSqlite from '@deepseek-ai/dsh-session-persistence-sqlite'
-import SessionQuerySqlite, * as queryModule from '@deepseek-ai/dsh-session-query-sqlite'
+import SqliteSessionPersistence from '@deepseek-ai/dsh-session-persistence-sqlite'
+import SqliteSessionQueryEngine, * as queryModule from '@deepseek-ai/dsh-session-query-sqlite'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const temporaryDirectories: Array<string> = []
+const temporaryDirectories: string[] = []
 
 afterEach(async () => {
   for (const directory of temporaryDirectories.splice(0)) {
@@ -36,11 +36,11 @@ describe('dsh-session-query-sqlite real Loader path', () => {
     const searchPath = await temporaryPath('derived.db')
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    const persistence = await ctx.plugin(SessionPersistenceSqlite, { path: persistencePath })
+    const persistence = await ctx.plugin(SqliteSessionPersistence, { path: persistencePath })
 
     const loader = Object.create(Loader.prototype) as Loader
     const unwrapped = loader.unwrapExports(queryModule) as Parameters<Context['plugin']>[0]
-    expect(unwrapped).toBe(SessionQuerySqlite)
+    expect(unwrapped).toBe(SqliteSessionQueryEngine)
     const query = await ctx.plugin(unwrapped, { path: searchPath })
 
     const id = SessionId('loader-path')

@@ -1,4 +1,4 @@
-# Agent Note: API Remotes 生成契约的有序构建
+# Agent Note: API Remotes 生成约定的有序构建
 
 Status: implemented
 
@@ -6,13 +6,13 @@ Status: implemented
 
 ## 问题
 
-Host 的 `@Remote` 方法需要先由 TypeRT 生成 `/remote` 声明和运行时贡献，Client 的 `api-remotes/src/client/index.ts` 才能通过类型检查并打包这些贡献。若根构建先把 Host 与 Client 两张 Project Reference 图一起交给 tsc，Client 会在生成产物存在之前编译；若增加独立 contracts 预处理，又会让 generator 脱离正常 Host 图重复编译，并允许陈旧产物掩盖错误依赖。
+Host 的 `@Remote` 方法需要先由 Typert 生成 `/remote` 声明和运行时贡献，Client 的 `api-remotes/src/client/index.ts` 才能通过类型检查并打包这些贡献。若根构建先把 Host 与 Client 两张 Project Reference 图一起交给 tsc，Client 会在生成产物存在之前编译；若增加独立 contracts 预处理，又会让 generator 脱离正常 Host 图重复编译，并允许陈旧产物掩盖错误依赖。
 
 该顺序依赖不能改变仓库的普通 package 规则。正常 package 只属于一个 TypeScript face：Host package 登记在 `tsconfig.host.json`，Client package 登记在 `tsconfig.client.json`。一个 Client plugin 同时具有 Node loader 入口与 browser 入口，只是打包产物形态，不是拆分 TypeScript project 的理由。
 
 ## 决策
 
-根构建先完成 Host tsc 和 Host tsdown，由 Host tsdown 运行 TypeRT 并生成 Remote Client 契约；随后完成 Client tsc、Client tsdown 和 Web 构建：
+根构建先完成 Host tsc 和 Host tsdown，由 Host tsdown 运行 Typert 并生成 Remote Client 约定；随后完成 Client tsc、Client tsdown 和 Web 构建：
 
 ~~~text
 tsc -b tsconfig.host.json
@@ -28,7 +28,7 @@ Vite Web build
 
 ## 唯一的 package 特例
 
-`api/remotes` 是唯一同时拥有 Host 与 Client composite project 的 package。Host project 包含 Agent/Session lookup 策略、Host 插件入口和 invariant；Client project 只包含需要等待生成契约的 `src/client/index.ts`：
+`api/remotes` 是唯一同时拥有 Host 与 Client composite project 的 package。Host project 包含 Agent/Session lookup 策略、Host 插件入口和 invariant；Client project 只包含需要等待生成约定的 `src/client/index.ts`：
 
 ~~~text
 packages/api/remotes/
@@ -47,13 +47,13 @@ packages/api/remotes/
 
 两个 project 使用互不重叠的 `files` 和不同的 `.tsbuildinfo`，因此可以共享 `lib/types` 而不重复发射任何源码。若未来需要两侧共用一份实现，应把实现移入中立 package，不能把同一源码同时交给两个 emitting project。
 
-这个例外由生成契约的真实先后关系决定，不是可供普通 package 选择的模板。新增 package 仍只能登记进一个 aggregate；只有修改本决策并证明存在另一条不可消除的生成依赖，才能增加例外。
+这个例外由生成约定的真实先后关系决定，不是可供普通 package 选择的模板。新增 package 仍只能登记进一个 aggregate；只有修改本决策并证明存在另一条不可消除的生成依赖，才能增加例外。
 
-## TypeRT 与 tsdown
+## Typert 与 tsdown
 
-Host tsdown 在普通根配置中启用 `typertPlugin({ mode: 'workspace', faces: ['host'] })`。generator 只以 `tsconfig.host.json` 为 program 种子，生成 `typert.host.*` 以及 Host 契约投影出的 `typert.remote-client.*`；Client tsdown 不启动 TypeRT，也不分析 Client aggregate。
+Host tsdown 在普通根配置中启用 `typertPlugin({ mode: 'workspace', faces: ['host'] })`。generator 只以 `tsconfig.host.json` 为 program 种子，生成 `typert.host.*` 以及 Host 约定投影出的 `typert.remote-client.*`；Client tsdown 不启动 Typert，也不分析 Client aggregate。
 
-TypeScript compiler face 与 TypeRT 运行时产物 face 是两层概念。普通 `dshClient` package 即使只有一个 compiler project，也可以按公开 subpath 同时贡献 Host 与 Client 运行时模型；aggregate 显式引用 `tsconfig.host.json` 或 `tsconfig.client.json` 时，analyzer 才把该 project 限定到对应 face。因此 `api-remotes` 的 Host 分析不会顺带注册其 Client 入口，普通双入口 package 的 Host 模型也不会丢失。
+TypeScript compiler face 与 Typert 运行时产物 face 是两层概念。普通 `dshClient` package 即使只有一个 compiler project，也可以按公开 subpath 同时贡献 Host 与 Client 运行时模型；aggregate 显式引用 `tsconfig.host.json` 或 `tsconfig.client.json` 时，analyzer 才把该 project 限定到对应 face。因此 `api-remotes` 的 Host 分析不会顺带注册其 Client 入口，普通双入口 package 的 Host 模型也不会丢失。
 
 Host 与 Client 两次 tsdown 都接收 `vendor/*`、`packages/*/*` 和 `apps/cli` 这组完整 workspace。根配置不扫描 `lib/types/client/index.js`，不维护 package 分类表，也不使用 tsdown filter；包内配置根据 `DSH_BUILD_FACE` 返回本阶段入口。
 
@@ -69,11 +69,11 @@ Host 与 Client 两次 tsdown 都接收 `vendor/*`、`packages/*/*` 和 `apps/cl
 
 **扫描 Client 编译产物或维护两份 workspace 清单。** 产物扫描会让 package 是否参与构建取决于残留文件，手工清单和 package 名过滤则会随目录调整产生漂移。完整 workspace 加包内 face 选择已经提供确定行为。
 
-**在 Client pass 再运行 TypeRT。** Remote Client 是 Host 契约的投影，没有独立 Client 反射源；第二个 TypeRT program 只会重复工作并增加两侧声明混入同一分析的风险。
+**在 Client pass 再运行 Typert。** Remote Client 是 Host 约定的投影，没有独立 Client 反射源；第二个 Typert program 只会重复工作并增加两侧声明混入同一分析的风险。
 
 ## 后果
 
-干净构建成为顺序正确性的权威验证：没有任何既存 `/remote` 产物时，Host tsc 必须先成功，Host tsdown 必须生成契约，随后 Client tsc、Client tsdown 与 Web build 必须成功。任何阶段都不得把产物写进 `src`。
+干净构建成为顺序正确性的权威验证：没有任何既存 `/remote` 产物时，Host tsc 必须先成功，Host tsdown 必须生成约定，随后 Client tsc、Client tsdown 与 Web build 必须成功。任何阶段都不得把产物写进 `src`。
 
 [TypeScript 构建配置 Note](2026-06-17-ts-build-config.md)确定的 tsc-first 职责保持不变，但其单次全图 tsc 后再打包的命令形态由本文的有序阶段取代。[双 aggregate solution Note](2026-07-22-tsconfig-solution-root-two-aggregates.md)确定的普通 package 单 aggregate 规则保持不变，本文只为 `api/remotes` 建立一个显式例外。
 

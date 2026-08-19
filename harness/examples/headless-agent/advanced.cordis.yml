@@ -1,6 +1,6 @@
 # Add Code Mode and Cordis tools to the headless spawn/workflow stack.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -27,6 +27,8 @@
           compression: !!js "process.env.DSH_SNAPSHOT === undefined ? 'zstd' : 'none'"
       - insert:
           - id: code-runtime
-            name: '@deepseek-ai/dsh-code-runtime-worker'
+            name: '@deepseek-ai/dsh-code-runtime-worker-thread'
+          - id: cordis-host-runner
+            name: '@deepseek-ai/dsh-cordis-host-runner'
           - id: tool-cordis
             name: '@deepseek-ai/dsh-tool-cordis'

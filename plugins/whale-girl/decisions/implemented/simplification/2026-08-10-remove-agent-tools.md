@@ -11,7 +11,7 @@ whale-girl entry 注册了 3 个 Agent 工具（`pet_feed`/`pet_play`/`pet_statu
 - **删除全部 Agent 工具**：entry 移除 3 个 `ctx.tools.register` 块；`inject` 移除 `'tools'`（entry 不再消费 tools 服务）。
 - **交互保留在 client 侧**：菜单投喂/玩耍（`/whale-girl/interact` 路由 + `applyAction`）不变——用户点击仍触发 eat/play/joy；工具删除只移除「Agent 会话里调宠物动作」的通道。
 - **`verify-tool-schemas` 门禁退役**（无工具对象可查）：run.mjs 条目 + 门禁 + 自证移除。
-- `ctx.pet` 服务（开放性窄缝，其他插件 `inject ['pet']` 消费）**保留**——不是工具。
+- `ctx['whale-girl.pet']` 服务（开放性窄缝，其他插件 `inject ['whale-girl.pet']` 消费）**保留**——不是工具。
 
 ## Alternatives considered
 

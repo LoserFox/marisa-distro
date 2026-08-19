@@ -1,4 +1,4 @@
-# Agent Note: Package-owned invariant service seam
+# Agent Note: Package-owned invariant service contract
 
 Status: implemented
 
@@ -49,11 +49,11 @@ Blocklist matches override allowlist matches. Each list entry is a case-sensitiv
 
 The public registration boundary is `ctx.invariants.register(packageName, installer)`. It reserves one active registration per full npm package name even when filters disable installation, and returns the effect disposer. Disposing the companion or service releases the reservation and all contribution state.
 
-An enabled installer runs in a dedicated child Cordis fiber owned by the service. `InvariantInstaller.inject` declares the child fiber's service surface explicitly; the registry carries no product-specific dependency metadata. The service joins a returned installer promise before registration succeeds, so asynchronous startup checks remain transactional. The installer receives a bound `fail(message)` reporter. Calling it throws an `Error` subclass named `InvariantError` with stable code `INVARIANT` and the registering `packageName`; it does not extend a product-package error base.
+An enabled installer runs in a dedicated child Cordis fiber owned by the service. `InvariantInstaller.inject` declares the child fiber's service API explicitly; the registry carries no product-specific dependency metadata. The service joins a returned installer promise before registration succeeds, so asynchronous startup checks remain transactional. The installer receives a bound `fail(message)` reporter. Calling it throws an `Error` subclass named `InvariantError` with stable code `INVARIANT` and the registering `packageName`; it does not extend a product-package error base.
 
 Registration setup is transactional. If an installer fails after registering listeners, the child fiber is disposed completely and the name reservation is released before the failure escapes. Filtered registrations create no child but retain their reservation until disposal. Reloading a companion therefore begins with one clean installer state; stateful contributions rebuild baselines from their owning services.
 
-The former functional-plugin entrypoint and one-argument `InvariantError` constructor are not retained as compatibility surfaces. The repository is pre-release and all call sites move to the service and package-attributed error together.
+The former functional-plugin entry point and one-argument `InvariantError` constructor are not retained as compatibility APIs. The repository is pre-release and all call sites move to the service and package-attributed error together.
 
 ### Initial stateful companions and exhaustive ownership
 
@@ -76,7 +76,7 @@ The generated scoped-event subject resolver lives in `dsh-scope`, beside the con
 
 The example agent spine mounts the service and all four stateful companion subpaths, forwarding `enabled`, `package_allowlist`, and `package_blocklist` to the service. Generated SDK Cordis composition emits the same entries. A subpath entry adds its installable root npm package rather than treating the subpath as a package name. The shipped `dsh` TUI and Web config trees omit the service and companions under the [shipped-config decision](../simplification/2026-08-03-omit-invariants-from-shipped-config.md).
 
-Workspace constraints recognize the separate invariant bundle, and package exports, project references, build configuration, dependency declarations, and the lockfile describe the same publication surface. Generated config catalogs, module graphs, and API documentation derive from those sources.
+Workspace constraints recognize the separate invariant bundle, and package exports, project references, build configuration, dependency declarations, and the lockfile describe the same publication metadata. Generated config catalogs, module graphs, and API documentation derive from those sources.
 
 ## Testing
 
@@ -102,4 +102,4 @@ Every Vitest configuration loads a test host that mounts an explicitly enabled s
 - One selected executable contribution adds one child fiber and its listener/state cost; a selected empty contribution has no listener or trace-state cost, while filtered registrations retain only name ownership.
 - Regex sources are deployment configuration and remain fixed until the service reloads.
 - Ordinary Vitest roots install the owning test package's selected companion; one exhaustive topology pays the full child-fiber cost once for repository-wide registration coverage.
-- Session storage validation, snapshotting, freezing, provenance, and surface acceptance remain always on and are not affected by invariant selection.
+- Session storage validation, snapshotting, freezing, cited source-event validation, and surface acceptance remain always on and are not affected by invariant selection.

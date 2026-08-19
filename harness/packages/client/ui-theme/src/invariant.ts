@@ -4,7 +4,7 @@
  */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-client-ui-theme'
@@ -15,10 +15,10 @@ export const name = 'client-ui-theme-invariant'
 export const inject = ['invariants']
 
 /**
- * No runtime invariant: the theme registry publishes immutable snapshots on
- * its own `theme/change` event synchronously with the setter/registry
- * mutation in the same service — snapshot/event agreement is asserted
- * directly by this package's behavior specs.
+ * No runtime invariant: the settings scope validates and publishes the durable
+ * theme section, while the registry emits `theme/change` synchronously with
+ * its own mutations. Store/registry agreement is covered directly by this
+ * package's Host, scope, and service behavior specs.
  */
 const install: InvariantInstaller = () => {}
 

@@ -1,18 +1,18 @@
-import { Context, Service, type Plugin } from 'cordis'
-import type { Dict } from 'cosmokit'
-import { ModuleLoader, type ModuleJob, type ResolveResult } from '@cordisjs/plugin-loader'
-import type { Include } from '@cordisjs/plugin-include'
+import { Context, Service, type Plugin } from '@deepseek-ai/cordis'
+import type { Dict } from '@deepseek-ai/cosmokit'
+import { ModuleLoader, type ModuleJob, type ResolveResult } from '@deepseek-ai/cordis-plugin-loader'
+import type { Include } from '@deepseek-ai/cordis-plugin-include'
 import { FSWatcher, watch, type ChokidarOptions } from 'chokidar'
 import { dirname, relative, resolve } from 'node:path'
-import { stat } from 'node:fs/promises'
+import { realpath, stat } from 'node:fs/promises'
 import { handleError } from './error.ts'
-import type {} from '@cordisjs/plugin-timer'
+import type {} from '@deepseek-ai/cordis-plugin-timer'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
 import picomatch from 'picomatch'
-import z from 'schemastery'
+import z from '@deepseek-ai/schemastery'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     hmr: Hmr
   }
@@ -61,13 +61,18 @@ interface ConfigRegistration {
   watcher: FSWatcher
 }
 
-async function findWatchRoot(filename: string): Promise<{ root: string; depth: number }> {
+async function findWatchRoot(filename: string): Promise<{ filename: string; root: string; depth: number }> {
   let root = dirname(filename)
   let depth = 0
   while (true) {
     try {
       if (!(await stat(root)).isDirectory()) throw new Error(`config watch parent is not a directory: ${root}`)
-      return { root, depth }
+      const canonicalRoot = await realpath(root)
+      return {
+        filename: resolve(canonicalRoot, relative(root, filename)),
+        root: canonicalRoot,
+        depth,
+      }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
       const parent = dirname(root)
@@ -129,9 +134,11 @@ class Hmr extends Service {
   async registerConfig(filename: string, refresh: () => Promise<void> | void): Promise<() => Promise<void>> {
     if (!this.watcher) throw new Error('HMR is not active')
     filename = resolve(this.baseDir, filename)
-    if (this.configs.has(filename)) throw new Error(`config path already registered: ${filename}`)
+    const target = await findWatchRoot(filename)
+    const watchFilename = target.filename
+    if (this.configs.has(watchFilename)) throw new Error(`config path already registered: ${filename}`)
 
-    const { root, depth } = await findWatchRoot(filename)
+    const { root, depth } = target
     const watcher = watch(root, {
       ...this.config,
       cwd: undefined,
@@ -140,9 +147,10 @@ class Hmr extends Service {
       ignoreInitial: false,
     })
     const registration = { watcher }
-    this.configs.set(filename, registration)
+    this.configs.set(watchFilename, registration)
     const onChange = (path: string) => {
-      if (resolve(path) !== filename) return
+      const observed = resolve(path)
+      if (observed !== filename && observed !== watchFilename) return
       this.refreshConfig(registration, filename, refresh)
     }
     watcher.on('add', onChange)
@@ -167,12 +175,12 @@ class Hmr extends Service {
     try {
       await ready.promise
       return this.ctx.effect(() => async () => {
-        if (this.configs.get(filename) === registration) this.configs.delete(filename)
+        if (this.configs.get(watchFilename) === registration) this.configs.delete(watchFilename)
         await watcher.close()
         await this.configRefreshes.get(registration)?.running
       }, 'hmr.registerConfig()')
     } catch (error) {
-      this.configs.delete(filename)
+      this.configs.delete(watchFilename)
       await watcher.close()
       throw error
     }
@@ -205,10 +213,22 @@ class Hmr extends Service {
     }
 
     const match = picomatch(ignored)
+    const watchBaseDir = await realpath(this.baseDir)
+
+    // Collect externals before opening the watcher so every post-ready change
+    // is observed by listeners that already have their classification state.
+    const mainUrl = pathToFileURL(resolve(process.argv[1])).href
+    const mainJob = this.internal.loadCache.get(mainUrl)
+    if (mainJob) {
+      this.externals = await loadDependencies(mainJob)
+    } else {
+      this.externals = new Set()
+    }
+
     this.watcher = watch(root, {
       ...this.config,
-      cwd: this.baseDir,
-      ignored: path => match(relative(this.baseDir, path)),
+      cwd: watchBaseDir,
+      ignored: path => match(relative(watchBaseDir, path)),
       // The initial scan re-announces files the boot just consumed: an `add`
       // for a config file refreshes an include whose initial apply may still
       // be in flight, and a failing apply then rolls this plugin back while
@@ -219,26 +239,17 @@ class Hmr extends Service {
       ignoreInitial: true,
     })
 
-    // Collect externals: framework modules reachable from the main entry.
-    // Changes to these files require a full process restart, not HMR.
-    const mainUrl = pathToFileURL(resolve(process.argv[1])).href
-    const mainJob = this.internal.loadCache.get(mainUrl)
-    if (mainJob) {
-      this.externals = await loadDependencies(mainJob)
-    } else {
-      this.externals = new Set()
-    }
-
     const partialReload = this.ctx.debounce(() => this.partialReload(), this.config.debounce)
 
     const onChange = (kind: 'add' | 'change' | 'unlink', path: string) => {
       this.ctx.logger.debug('%s detected at %C', kind, path)
-      const filename = resolve(this.baseDir, path)
+      const filename = resolve(watchBaseDir, path)
+      const configuredFilename = resolve(this.baseDir, path)
       // Config reload: the file is a loader config file (e.g. cordis.yml).
       for (const entry of loader.entries()) {
         const include = entry.subtree as Include | undefined
-        if (include?.filename !== filename) continue
-        this.refreshConfig(include, filename, () => include.refresh())
+        if (include?.filename !== filename && include?.filename !== configuredFilename) continue
+        this.refreshConfig(include, include.filename, () => include.refresh())
         return
       }
 
@@ -261,6 +272,26 @@ class Hmr extends Service {
     this.watcher.on('add', path => onChange('add', path))
     this.watcher.on('change', path => onChange('change', path))
     this.watcher.on('unlink', path => onChange('unlink', path))
+
+    const ready = Promise.withResolvers<void>()
+    let readyState: 'pending' | 'resolved' | 'rejected' = root.length === 0 ? 'resolved' : 'pending'
+    if (root.length === 0) {
+      ready.resolve()
+    } else {
+      this.watcher.once('ready', () => {
+        readyState = 'resolved'
+        ready.resolve()
+      })
+    }
+    this.watcher.on('error', (error) => {
+      if (readyState === 'pending') {
+        readyState = 'rejected'
+        ready.reject(error)
+      } else {
+        this.ctx.logger.warn(error)
+      }
+    })
+    await ready.promise
   }
 
   private refreshConfig(key: object, filename: string, refresh: () => Promise<void> | void) {
@@ -471,7 +502,7 @@ class Hmr extends Service {
     const reload = (plugin: any, runtime: Plugin.Runtime) => {
       if (!runtime) return
       for (const oldFiber of runtime.fibers) {
-        const fiber = oldFiber.parent.registry.plugin(plugin, oldFiber.config, this.getOuterStack)
+        const fiber = oldFiber.parent.registry.plugin(plugin, oldFiber._config, this.getOuterStack)
         fiber.entry = oldFiber.entry
         if (fiber.entry) fiber.entry.fiber = fiber
       }

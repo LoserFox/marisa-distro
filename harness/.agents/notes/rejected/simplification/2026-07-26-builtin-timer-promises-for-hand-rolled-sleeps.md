@@ -6,19 +6,19 @@ English | [中文](2026-07-26-builtin-timer-promises-for-hand-rolled-sleeps.zh.m
 
 ## Problem
 
-Three packages hand-roll promise-wrapped timers that the `node:timers/promises` builtin already provides, while other packages (`dsh-llm-mock-server` `pause()`, `dsh-lsp-local`, `dsh-acp-snapshot`) already use the builtin — so the hand-rolled copies are also a consistency gap:
+Three packages hand-roll promise-wrapped timers that the `node:timers/promises` builtin already provides, while other packages (`dsh-llm-mock-server` `pause()`, `dsh-lsp-stdio`, `dsh-acp-snapshot`) already use the builtin — so the hand-rolled copies are also a consistency gap:
 
 - `packages/llm/llm-retry/src/index.ts` `cancellableDelay()` (~14 lines): `new Promise` + `setTimeout` + manual abort-listener add/remove, resolving `true` on elapse and `false` on abort, consumed once for the backoff wait.
-- `packages/workflow/workflow-workerthread/src/host.ts` `sleep()` (~7 lines): promise-wrapped unref'd `setTimeout` used as the dispose-grace bound.
-- `packages/pty/pty-local/src/session.ts` `delay()` (~4 lines): bare promise-wrapped `setTimeout` used in polling/teardown waits.
+- `packages/workflow/workflow-worker-thread/src/host.ts` `sleep()` (~7 lines): promise-wrapped unref'd `setTimeout` used as the dispose-grace bound.
+- `packages/terminal/terminal-bash/src/session.ts` `delay()` (~4 lines): bare promise-wrapped `setTimeout` used in polling/teardown waits.
 
 ## Proposal
 
 Replace all three with `import { setTimeout } from 'node:timers/promises'`:
 
 - llm-retry: `try { await setTimeout(delayMs, undefined, { signal }); /* retry */ } catch { /* abort → fail */ }` — with a signal, the promise rejects only with the abort error, and a pre-aborted signal rejects immediately; behavior is identical, including timer clearing on abort. The empty `catch` names the abort rejection per the repo's empty-catch rule.
-- workflow-workerthread: `setTimeout(ms, undefined, { ref: false })` — exact semantics including not holding the event loop open.
-- pty-local: `import { setTimeout as delay } from 'node:timers/promises'` — identical signature, call sites unchanged.
+- workflow-worker-thread: `setTimeout(ms, undefined, { ref: false })` — exact semantics including not holding the event loop open.
+- terminal-bash: `import { setTimeout as delay } from 'node:timers/promises'` — identical signature, call sites unchanged.
 
 No dedicated tests pin the helpers themselves; the packages' behavior suites keep passing.
 
@@ -30,7 +30,7 @@ No dedicated tests pin the helpers themselves; the packages' behavior suites kee
 ## Acceptance criteria
 
 - None of the three packages defines a promise-wrapped `setTimeout` helper; all import from `node:timers/promises`.
-- The `llm-retry`, `workflow-workerthread`, and `pty-local` test suites pass unchanged (behavioral parity).
+- The `llm-retry`, `workflow-worker-thread`, and `terminal-bash` test suites pass unchanged (behavioral parity).
 
 ## Risks
 

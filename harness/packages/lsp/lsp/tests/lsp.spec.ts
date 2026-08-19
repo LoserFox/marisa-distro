@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import Lsp, {
   finalExtension,
   LspError,
@@ -13,10 +13,10 @@ import Lsp, {
 function makeProvider(
   id: string,
   extensionToLanguage: Record<string, string>,
-  result: LspQueryResult = { kind: 'locations', locations: [], resolvedWorkspaceRoot: '/ws' },
+  result: LspQueryResult = { kind: 'locations', locations: [], resolvedWorkspaceUri: 'file:///ws' },
 ): LspProvider & { seen: LspProviderQuery[]; seenSignals: (AbortSignal | undefined)[] } {
   const seen: LspProviderQuery[] = []
-  const seenSignals: Array<AbortSignal | undefined> = []
+  const seenSignals: (AbortSignal | undefined)[] = []
   return {
     id: LspProviderId(id),
     extensionToLanguage,
@@ -63,7 +63,7 @@ describe('Lsp registration', () => {
     const provider = makeProvider('ts', { '.ts': 'typescript' })
     const dispose = lsp.registerProvider(provider)
 
-    await expect(lsp.query(query('a.ts'))).resolves.toEqual({ kind: 'locations', locations: [], resolvedWorkspaceRoot: '/ws' })
+    await expect(lsp.query(query('a.ts'))).resolves.toEqual({ kind: 'locations', locations: [], resolvedWorkspaceUri: 'file:///ws' })
     expect(provider.seen[0]).toMatchObject({ filePath: 'a.ts', languageId: 'typescript' })
 
     dispose()
@@ -148,7 +148,7 @@ describe('Lsp registration', () => {
     const py = makeProvider('py', { '.py': 'python' })
     lsp.registerProvider(ts)
     lsp.registerProvider(py)
-    await expect(lsp.query(query('a.py'))).resolves.toEqual({ kind: 'locations', locations: [], resolvedWorkspaceRoot: '/ws' })
+    await expect(lsp.query(query('a.py'))).resolves.toEqual({ kind: 'locations', locations: [], resolvedWorkspaceUri: 'file:///ws' })
     await expect(lsp.query(query('a.ts', 'hover'))).resolves.toEqual(hover)
   })
 
@@ -172,7 +172,7 @@ describe('Lsp registration', () => {
     const fiber = await ctx.plugin(Object.assign((inner: Context) => {
       inner.lsp.registerProvider(makeProvider('ts', { '.ts': 'typescript' }))
     }, { inject: ['lsp'] }))
-    await expect(lsp.query(query('a.ts'))).resolves.toEqual({ kind: 'locations', locations: [], resolvedWorkspaceRoot: '/ws' })
+    await expect(lsp.query(query('a.ts'))).resolves.toEqual({ kind: 'locations', locations: [], resolvedWorkspaceUri: 'file:///ws' })
     await fiber.dispose()
     await expect(lsp.query(query('a.ts'))).rejects.toThrow(expect.objectContaining({ code: 'LSP_UNAVAILABLE' }))
   })

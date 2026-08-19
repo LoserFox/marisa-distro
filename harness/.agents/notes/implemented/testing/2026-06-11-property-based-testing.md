@@ -4,7 +4,7 @@ Status: implemented
 
 English | [中文](2026-06-11-property-based-testing.zh.md)
 
-> Merges the original proposal and the decision record for one topic. It found a real BlockAssembler duplicate-`block-end` bug on first run.
+> The property suite found a real BlockAssembler duplicate-`block-end` bug on its first run.
 
 ## Problem
 
@@ -12,7 +12,7 @@ Example-based tests pin the cases we thought of. The harness's core is protocol-
 
 ## Decision
 
-Adopt `fast-check` (a root devDependency) with one `tests/properties.spec.ts` per protocol-shaped package, generators tuned for *realistic-but-adversarial* inputs (not uniform noise) and `numRuns` kept so the suite stays well under ~10s locally. Failures print a reproducible seed. (The original proposal also sketched a nightly CI job running 100× the iterations; that was not shipped — the property suite runs only in the normal `push`/`pull_request` CI, and a scheduled high-iteration job remains possible future work.)
+`fast-check` (a root devDependency) powers one `tests/properties.spec.ts` per protocol-shaped package, with generators tuned for *realistic-but-adversarial* inputs (not uniform noise) and `numRuns` kept so the suite stays well under ~10s locally. Failures print a reproducible seed. (A nightly CI job running 100× the iterations is not shipped — the property suite runs only in the normal `push`/`pull_request` CI; a scheduled high-iteration job remains possible future work.)
 
 - **dsh-llm / BlockAssembler:** arbitrary chunk streams (valid + malformed: duplicate indices, stragglers, missing block-start). Invariants: `blocks()` count ≤ distinct indices seen; re-assembly idempotent (`blocks()` is stable across repeated calls and `message().content` mirrors it); `blocks()` never throws and yields only valid content-block tags; `finish` reflects the last `finish` chunk, defaulting to `{kind:'stop'}` when none arrives.
 - **dsh-session:** arbitrary event logs. Invariants: `deriveMessages` deterministic; replay-from-seed identical; seq strictly monotonic; non-message events never affect derived history; derived content is decoupled from the log.

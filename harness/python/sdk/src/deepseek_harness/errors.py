@@ -9,6 +9,10 @@ class TransportClosedError(HarnessError):
     """Raised when the runtime subprocess exits or closes stdout."""
 
 
+class SdkProtocolError(HarnessError):
+    """Raised when the runtime sends data outside the SDK protocol."""
+
+
 class JsonRpcError(HarnessError):
     """Raised when the runtime returns a JSON-RPC error response."""
 

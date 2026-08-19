@@ -95,7 +95,7 @@ export class IncrementalMarkdownParser {
     // to verify the whole retained prefix, and startsWith compares bytes two
     // orders of magnitude faster than parsing them — the cost this class
     // exists to remove. Passing append/reset deltas instead would push
-    // append bookkeeping across the session-projection seam for a check
+    // append bookkeeping across the session-projection update boundary for a check
     // that stays sub-millisecond at realistic reply sizes.
     if (!text.startsWith(this.prevText)) {
       this.prevText = ''

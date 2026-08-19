@@ -24,7 +24,10 @@
       "path": "../ui-slots"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../core/system-prompt"
     }
   ]
 }

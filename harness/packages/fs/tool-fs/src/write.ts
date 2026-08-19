@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-tool-fs/src/write
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { DiffCallView, DiffResultView, ToolResult } from '@deepseek-ai/dsh-tools'
 import type { FsWriteOutcome } from '@deepseek-ai/dsh-fs'
@@ -14,7 +14,7 @@ import type {} from '@deepseek-ai/dsh-system-prompt'
 import { computeHunkDiffs, diffsFromMeta } from './diff.ts'
 import { remediateFsError } from './error.ts'
 import { sessionResolveOptions } from './session-cwd.ts'
-import type { FsSandboxSurface } from './sandbox.ts'
+import type { FsSandboxController } from './sandbox.ts'
 
 /**
  * Validate value constraints the schema DSL can't express: only a non-blank
@@ -43,7 +43,7 @@ ${verb} file
 }
 
 /**
- * The `write` tool's validated argument shape: the base parameters plus the
+ * The `write` tool's validated arguments: the base parameters plus the
  * two escalation fields, advertised only under a confining `ctx.fs` (absent
  * from the schema otherwise, so the validator rejects them before `execute`).
  */
@@ -57,13 +57,13 @@ interface WriteToolArgs {
 /**
  * Register the `write` tool and its system-prompt guidance.
  * @param ctx - the plugin context; registrations are effects scoped to it, and execution uses its `fs` service.
- * @param sandbox - the shared sandbox-escalation surface (advertisement, mode stamping, denial mapping).
+ * @param sandbox - the shared sandbox-escalation API (advertisement, mode stamping, denial mapping).
  */
-export function applyWriteTool(ctx: Context, sandbox: FsSandboxSurface): void {
+export function applyWriteTool(ctx: Context, sandbox: FsSandboxController): void {
   ctx.systemPrompt.section({
     name: 'tool:write',
     order: 101,
-    text: 'Use the write tool to create files or completely replace file contents. Existing files are overwritten, so read an existing file first (the default fs-policy requires it) and prefer edit for targeted changes.',
+    text: 'Use the write tool to create files or completely replace file contents. Existing files are overwritten, so read an existing file first (the default fs-observation-policy requires it) and prefer edit for targeted changes.',
   })
 
   ctx.tools.register(defineTool({
@@ -96,7 +96,7 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxSurface): void {
         diffs: value.before === null
           ? []
           : computeHunkDiffs(args.file_path, value.before, value.after)
-            .map(({ path, oldText, newText }) => { return ({ path, oldText, newText }) }),
+            .map(({ path, oldText, newText }) => ({ path, oldText, newText })),
       }),
     },
     async execute(args: WriteToolArgs, exec) {
@@ -108,7 +108,7 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxSurface): void {
       const target = await ctx.fs.resolve(input.filePath, sessionResolveOptions(exec, input.filePath, sandboxPolicy?.workspaceRoot))
       // Single-slot decision: the policy plugin produces createIfAbsent/
       // replaceIfVersion; the bare default is undefined (unconditional). No stat.
-      const intent = await ctx.waterfall('fs/write-intent', target, exec, () => { return undefined })
+      const intent = await ctx.waterfall('fs/write-intent', target, exec, () => undefined)
       let outcome: FsWriteOutcome
       try {
         outcome = await ctx.fs.writeText(target, input.content, intent, exec.signal, sandboxPolicy)
@@ -118,8 +118,8 @@ export function applyWriteTool(ctx: Context, sandbox: FsSandboxSurface): void {
         // model-facing remedy; anything else passes through.
         throw remediateFsError(sandbox.mapError(error, sandboxPolicy))
       }
-      // Record the observed version (a no-op when no policy plugin listens).
-      ctx.emit('fs/observed', target, outcome.version, exec)
+      // Record the present observation (a no-op when no policy plugin listens).
+      ctx.emit('fs/observed', target, { kind: 'present', version: outcome.version }, exec)
       return {
         path: target.displayPath,
         operation: outcome.operation,

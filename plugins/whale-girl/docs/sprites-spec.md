@@ -1,6 +1,6 @@
 # Sprite 素材规格（生图契约）
 
-本文是 whale-girl 动画素材的**唯一权威规格**：状态清单、生图契约、运动配方、投放流程。README 只链接本文件；改动本清单必须同时改 [.dsh-plugin/client/logic.mjs](../.dsh-plugin/client/logic.mjs) 的状态选择、[.dsh-plugin/client/index.mjs](../.dsh-plugin/client/index.mjs) 的运动类与 `assets/manifest.json`（素材全量契约：每个角色必须含全部 15 状态，缺一即被门禁拒收）。
+本文是 whale-girl 动画素材的**唯一权威规格**：状态清单、生图契约、运动配方、投放流程。README 只链接本文件；改动本清单必须同时改 [lib/client/logic.mjs](../lib/client/logic.mjs) 的状态选择、[lib/client/index.mjs](../lib/client/index.mjs) 的运动类与 `assets/manifest.json`（素材全量契约：每个角色必须含全部 15 状态，缺一即被门禁拒收）。
 
 ## 机制原则（积累型伙伴）
 
@@ -52,7 +52,7 @@
 
 ## 状态总表（权威，15 状态）
 
-窗口时长不在此重复：burst/瞬发窗口的毫秒值只存 [.dsh-plugin/index.mjs](../.dsh-plugin/index.mjs)；**完整触发条件/优先级/转换语义见 [state-machine.md](state-machine.md)（唯一权威）**，本表触发列只写事件来源。motion 配方与帧播放器默认互斥（`motion` 只配 `frames:1`）；`error` 是唯一多帧+运动叠加的定向例外（见下方规则）。`think`/`wait` 已有 sheet（1 帧 + `float`/`wiggle` 运动配方），表内为实际投放。
+窗口时长不在此重复：burst/瞬发窗口的毫秒值只存 [lib/index.mjs](../lib/index.mjs)；**完整触发条件/优先级/转换语义见 [state-machine.md](state-machine.md)（唯一权威）**，本表触发列只写事件来源。motion 配方与帧播放器默认互斥（`motion` 只配 `frames:1`）；`error` 是唯一多帧+运动叠加的定向例外（见下方规则）。`think`/`wait` 已有 sheet（1 帧 + `float`/`wiggle` 运动配方），表内为实际投放。
 
 | 状态 | 触发 | 帧数 | motion 配方 | 播放行为 | 画面 |
 |---|---|---|---|---|---|
@@ -93,7 +93,7 @@
 
 **朝向统一状态**：walk/eat/drag/joy/play/wake/welcome 素材已统一朝左；其余状态素材本就朝左。**生图时人物一律朝左**——新状态/新角色不遵守会在审计时暴露（帧内左右比偏离 1 即提示）。
 
-优先级（[.dsh-plugin/client/logic.mjs](../.dsh-plugin/client/logic.mjs)）：`drag` > 事件 burst（`welcome`/`celebrate`/`error`/`disappointed` 窗口内）> 瞬发（`eat`/`play`/`wake`）> `wait` > 回合完成 `celebrate`（client 本地窗口）> `working`（随机插曲）> `think` > `joy` > `sleep` > `walk` > `idle`。会话活跃时宠物保持清醒陪伴（覆盖 `sleep`/`walk`），用户互动与事件反馈不抢戏。
+优先级（[lib/client/logic.mjs](../lib/client/logic.mjs)）：`drag` > 事件 burst（`welcome`/`celebrate`/`error`/`disappointed` 窗口内）> 瞬发（`eat`/`play`/`wake`）> `wait` > 回合完成 `celebrate`（client 本地窗口）> `working`（随机插曲）> `think` > `joy` > `sleep` > `walk` > `idle`。会话活跃时宠物保持清醒陪伴（覆盖 `sleep`/`walk`），用户互动与事件反馈不抢戏。
 
 ## 角色契约（第二角色接入清单）
 
@@ -145,7 +145,7 @@
 
 > 规则（verify-assets 门禁强制）：**`motion` 只允许配 `frames: 1`**——多帧状态由帧播放器动画，运动配方与帧播放器互斥（单帧状态才用 CSS 运动补充）。**定向例外：仅 `error`（2 帧「正常→惊吓」+ `shake`）**——一次播完僵住后由 CSS 颤抖维持 burst 窗口内的持续表现（见决策记录动画编排修订）。**角色 id 只允许 `[a-z0-9-]`**（URL 路径安全，防注入）。
 
-**角色 meta 可选字段**（[.dsh-plugin/client/character.mjs](../.dsh-plugin/client/character.mjs) 解析）：`stageSize`（舞台尺寸 px，默认 110；未配置时经 `--pet-size` 生效）。
+**角色 meta 可选字段**（[lib/client/character.mjs](../lib/client/character.mjs) 解析）：`stageSize`（舞台尺寸 px，默认 110；未配置时经 `--pet-size` 生效）。
 
 ## 资历与称号（积累型）
 
@@ -156,4 +156,4 @@ XP/等级/称号/回忆/情绪的完整契约见 [docs/growth-system.md](growth-
 1. 生图产物（3×3 网格，纯色背景）放 `assets/raw/`（gitignored，不入库）。
 2. `python3 scripts/slice-sheet.py assets/raw/<图>.png --sheet 3x3 --states <行状态名> --frames <每行帧数>` → 帧 sheet 写入 `assets/`。
 3. `assets/manifest.json` 加/改条目（`verify-assets` 门禁保证引用与 PNG 尺寸契约，缺文件即红）。
-4. 实况验证：按 [README「安装」](../README.md#安装) 方式重装（`dsh plugin --profile web add` git 源）→ **刷新页面即可**（assets/ manifest 改动无需重启 web——assets 路由按请求读盘）；改 Node half（.dsh-plugin/index.mjs/src）才需重启 web 且日志须无 `plugin tree failed to load`；改 client 后跑 `node scripts/verify-client-smoke.mjs <web-url>`。
+4. 实况验证：按 [README「安装」](../README.md#安装) 方式重装（`dsh plugin --profile web add` git 源）→ **刷新页面即可**（assets/ manifest 改动无需重启 web——assets 路由按请求读盘）；改 Node half（lib/index.mjs/src）才需重启 web 且日志须无 `plugin tree failed to load`；改 client 后跑 `node scripts/verify-client-smoke.mjs <web-url>`。

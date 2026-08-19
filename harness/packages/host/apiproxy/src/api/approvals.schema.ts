@@ -10,7 +10,7 @@ import type { ApprovalResponsePayload } from './approvals.ts'
 import type { Wire } from './rpc.schema.ts'
 import { sessionIdSchema } from './sessions.schema.ts'
 
-/** ApprovalRequestId: one brand cast after shape validation (the only cast point in this domain). */
+/** ApprovalRequestId: one brand cast after schema validation (the only cast point in this domain). */
 export const approvalRequestIdSchema = z.string().min(1) as unknown as z.ZodType<ApprovalRequestId>
 
 /** Approval answer payload (the result.value slot of a client-response). */

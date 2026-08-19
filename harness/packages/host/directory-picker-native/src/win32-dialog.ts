@@ -60,7 +60,7 @@ function assertNever(value: never): never {
 /**
  * Open the modern Win32 folder picker off the event loop.
  * @param signal - caller lifetime; abort closes the dialog and rejects.
- * @param internals - worker/window seams for deterministic tests.
+ * @param internals - Worker/window hooks for deterministic tests.
  * @returns the selected path, or null when the user cancels.
  */
 export async function pickWin32Directory(
@@ -92,7 +92,7 @@ export async function pickWin32Directory(
       // runs so a child that never reports cannot dangle the pick. A
       // rejected close attempt (EnumThreadWindows/PostMessageW refusing) is
       // discarded: the interval retries it and kill is the backstop.
-      if (dialogThreadId !== undefined) void closeWindows(dialogThreadId).catch(() => { return undefined })
+      if (dialogThreadId !== undefined) void closeWindows(dialogThreadId).catch(() => undefined)
     }
 
     // Sole caller: the once-registered abort listener, so no re-entry guard.

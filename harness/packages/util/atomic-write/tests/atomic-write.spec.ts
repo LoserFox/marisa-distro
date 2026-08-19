@@ -2,7 +2,7 @@ import { lstat, mkdir, mkdtemp, readFile, readdir, stat, symlink, writeFile } fr
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { writeFileAtomic } from '../src/index.ts'
+import { withFileLock, writeFileAtomic } from '../src/index.ts'
 
 async function scratch(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'dsh-atomic-write-'))
@@ -14,7 +14,7 @@ describe('writeFileAtomic', () => {
     const target = join(dir, 'nested', 'deep', 'doc.yaml')
     await writeFileAtomic(target, 'a: 1\n', { mode: 0o600 })
     expect(await readFile(target, 'utf8')).toBe('a: 1\n')
-    expect((await stat(target)).mode & 0o777).toBe(0o600)
+    if (process.platform !== 'win32') expect((await stat(target)).mode & 0o777).toBe(0o600)
   })
 
   it('replaces existing content and narrows a wider-permission file to the stated mode', async () => {
@@ -23,7 +23,7 @@ describe('writeFileAtomic', () => {
     await writeFile(target, 'old', { mode: 0o644 })
     await writeFileAtomic(target, 'new', { mode: 0o600 })
     expect(await readFile(target, 'utf8')).toBe('new')
-    expect((await stat(target)).mode & 0o777).toBe(0o600)
+    if (process.platform !== 'win32') expect((await stat(target)).mode & 0o777).toBe(0o600)
   })
 
   it('replaces a symlinked target itself without writing through to the referent', async () => {
@@ -44,5 +44,19 @@ describe('writeFileAtomic', () => {
     await mkdir(target)
     await expect(writeFileAtomic(target, 'content', { mode: 0o600 })).rejects.toThrow()
     expect((await readdir(dir)).filter(entry => entry.includes('.tmp'))).toEqual([])
+  })
+})
+
+describe('withFileLock', () => {
+  it('rejects an invalid parent hierarchy before running the operation', async () => {
+    const dir = await scratch()
+    const parent = join(dir, 'not-a-directory')
+    await writeFile(parent, 'occupied')
+    let called = false
+
+    await expect(withFileLock(join(parent, 'document'), async () => {
+      called = true
+    })).rejects.toThrow(/ENOENT|ENOTDIR|not a directory/i)
+    expect(called).toBe(false)
   })
 })

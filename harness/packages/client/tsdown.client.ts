@@ -25,12 +25,20 @@ const CSS_VIRTUAL_PREFIX = '\0dsh-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
 
 /**
- * Wire/type layers a client bundle may inline: browser-safe contract surfaces
+ * Wire/type layers a client bundle may inline: browser-safe contracts
  * with no runtime identity to share (no Symbol/instanceof/singleton state).
  * Everything else under @deepseek-ai/* is either a module-table entry
  * (external) or a leak the purity gate rejects.
  */
 export const INLINE_SAFE = /^@deepseek-ai\/dsh-(host-apiproxy|session|llm|tools|brand)(\/|$)/
+
+/**
+ * Vendored framework libraries: rescoped into @deepseek-ai, so the gate below
+ * would read them as plugin packages. They carry no cross-plugin runtime
+ * identity to share — the framework itself is a platform module (external),
+ * while these are ordinary libraries a browser bundle inlines.
+ */
+const VENDORED_LIBRARY = /^@deepseek-ai\/(cosmokit|schemastery)(\/|$)/
 
 /** Generated descriptor/codec contribution with no shared runtime identity. */
 const GENERATED_REMOTE = /^@deepseek-ai\/dsh-[a-z0-9]+(?:-[a-z0-9]+)*\/remote$/
@@ -58,7 +66,7 @@ export const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, RUNTIME
 
 const REPOSITORY_ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
-/** Rebase a physical lib-relative source onto the browser's repository-shaped URL tree. */
+/** Rebase a physical lib-relative source onto a browser URL that mirrors the repository directories. */
 function browserSourcePath(source: string, sourcemapPath: string): string {
   if (!source.startsWith('.')) return source
   const physicalSource = resolvePath(dirname(sourcemapPath), source)
@@ -71,7 +79,7 @@ function browserSourcePath(source: string, sourcemapPath: string): string {
  * plus the browser client bundle. Client packages emit both halves during the
  * Client pass by default; packages needed for Host reflection may opt into the
  * earlier Host pass. A package-level tsdown.config.ts REPLACES the root
- * workspace shape, so the lib half must be restated here — dropping it leaves
+ * workspace layout, so the lib half must be restated here — dropping it leaves
  * the package without lib/index.js and the host Loader cannot import its node
  * half.
  * @param id - plugin id (package name), stamped into the __ModuleLoader__.load
@@ -196,7 +204,7 @@ function clientConfig(id: string, entry: string): UserConfig {
     // every non-shared dep). A require() the table cannot answer is a
     // guaranteed runtime throw, so the rule is the table list itself: no
     // opinion for table entries (external above wins), bundle everything else.
-    noExternal: (id: string) => { return (CLIENT_EXTERNALS.includes(id) ? undefined : true) },
+    noExternal: (id: string) => (CLIENT_EXTERNALS.includes(id) ? undefined : true),
     plugins: [{
       // Bundle purity gate (build-time mirror of the module-edge rules):
       // platform seed entries stay external, inline-safe wire layers inline,
@@ -208,6 +216,7 @@ function clientConfig(id: string, entry: string): UserConfig {
       resolveId(source: string) {
         if (!source.startsWith('@deepseek-ai/')) return null
         if (CLIENT_EXTERNALS.includes(source)) return null // platform module: external wins
+        if (VENDORED_LIBRARY.test(source)) return null // vendored library: inline, no shared identity
         if (INLINE_SAFE.test(source) || GENERATED_REMOTE.test(source)) return null // wire contribution: inline is the point
         throw new Error(
           `client bundle purity: "${source}" is not a platform module (CLIENT_EXTERNALS), an inline-safe wire layer, or a generated /remote contribution — `
@@ -253,8 +262,8 @@ function clientConfig(id: string, entry: string): UserConfig {
     outputOptions: {
       entryFileNames: 'client.js',
       // The map is served from /plugins/<scoped-package>/client.js.map. The
-      // browser resolves its local sources back into the repository-shaped
-      // /packages/<group>/<package>/src tree; sourcesContent keeps them usable
+      // browser resolves its local sources back into URLs that mirror the
+      // /packages/<group>/<package>/src directories; sourcesContent keeps them usable
       // without exposing that tree as an HTTP route.
       sourcemapPathTransform: browserSourcePath,
       banner: `window.__ModuleLoader__.load({ id: ${JSON.stringify(id)}, factory: (require) => {`,

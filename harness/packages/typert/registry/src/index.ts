@@ -1,7 +1,7 @@
-/** Host entry for the shared TypeRT runtime registry. */
+/** Host entry for the shared Typert runtime registry. */
 
 import type { z } from 'zod'
-import type { TypeRTDisposer } from '@deepseek-ai/dsh-type-meta'
+import type { TypertDisposer } from '@deepseek-ai/dsh-typert-protocol'
 import type {
   TypertContribution,
   TypertFace,
@@ -14,9 +14,9 @@ import type {
 export { default, TypertRegistry, typertEndpoint, typertKey, typertPackageKey } from './service.ts'
 export type * from './types.ts'
 
-declare module '@deepseek-ai/dsh-type-meta' {
-  interface TypeRTService {
-    register(contribution: TypertContribution): TypeRTDisposer
+declare module '@deepseek-ai/dsh-typert-protocol' {
+  interface TypertRegistryContract {
+    register(contribution: TypertContribution): TypertDisposer
     get(key: string): TypertSchemaRecord | undefined
     resolve(key: string): TypertSchemaRecord
     list(filter?: TypertSchemaFilter): TypertSchemaRecord[]

@@ -7,9 +7,10 @@
 **贡献角色 = 产出 15 张素材 sheet + 1 段 manifest 条目，零代码改动。** 知识面最小化：
 
 - **必读（仅 1 份文档 + 1 张参考图）**：[sprites-spec.md](sprites-spec.md)（§状态总表：15 状态的帧数/画面/播放行为/朝向；§素材管线：切图工具与参数；§角色契约：5 项硬性要求）+ `originals/鲸鱼娘.png`（画风参考）。本文件 §二动作槽位（manifest 字段）与 §四动手步骤（具体命令）。
-- **必不读**：`.dsh-plugin/client/`、`.dsh-plugin/index.mjs`、`.dsh-plugin/src/` 及一切触发/优先级/播放器/热区实现——行为文法全角色共通（见下 §心智模型），素材自动跟随，无需理解代码。
+- **必不读**：`lib/client/`、`lib/index.mjs`、`lib/src/` 及一切触发/优先级/播放器/热区实现——行为文法全角色共通（见下 §心智模型），素材自动跟随，无需理解代码。
 - **本机前置**：`python3` + `Pillow` + `numpy`（切图工具 [slice-sheet.py](../scripts/slice-sheet.py) 的依赖）。
 - **验收**：`node scripts/gates/verify-assets.mjs`——门禁即契约的机器化，**通过即合格**，无需运行 DSH、无需看渲染效果（表现细节由素材决定）。
+- **改图约束**：已发布角色的 sheet 改图**必须改文件名或角色 id**——素材路由按 `immutable` 缓存，同名替换会滞留旧图。
 - **产出物**：`assets/characters/<id>/`（15 张 sheet）+ `assets/manifest.json` 条目；提交/共享这两样即可，不碰任何代码文件。
 
 ## 心智模型：三层契约
@@ -102,7 +103,7 @@
 4. **改 XP/称号**（成长语义，见 growth-system.md 边界）
 
 ### ⚠️ 新动作（平台级）需要什么（4 步）
-1. `.dsh-plugin/client/logic.mjs` STATE_NAMES 加状态名 + STATE_TABLE 加行（含 when/resolve）
+1. `lib/client/logic.mjs` STATE_NAMES 加状态名 + STATE_TABLE 加行（含 when/resolve）
 2. `assets/manifest.json` 每个角色 states 加条目（**必填 sheet**）
 3. `docs/sprites-spec.md` 状态总表同步（门禁强制 spec↔STATE_NAMES↔STATE_TABLE）
 4. 决策记录（行为文法变更）

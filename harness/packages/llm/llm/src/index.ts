@@ -1,12 +1,12 @@
 /**
  * LLM service: adapter registry with a waterfall-interceptable streaming call
- * surface. Exports the `LlmService` default, the abstract `LlmAdapter` for
+ * API. Exports the `LlmRuntime` default, the abstract `LlmAdapter` for
  * provider backends, and `BlockAssembler` for chunk assembly.
  *
  * @module @deepseek-ai/dsh-llm
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import type {
   GenerateOptions,
   LlmConfigurableProvider,
@@ -17,6 +17,7 @@ import type {
   LlmModelInfo,
   LlmResolvedModelInfo,
   LlmProviderInfo,
+  ModelModality,
   StreamChunk,
 } from './types.ts'
 import { freezeMessage, type Message } from './message.ts'
@@ -35,21 +36,22 @@ export * from './never.ts'
 export * from './error.ts'
 export * from './api-key.ts'
 export * from './types.ts'
+export * from './content.ts'
 export * from './message.ts'
 export * from './retry-policy.ts'
 export { BlockAssembler } from './assembler.ts'
 export { callConfigEquals, deepFreeze, isAgentLoopRequest, markAgentLoopRequest } from './call-config.ts'
 export type { LlmCallConfig, LlmCallConfigAdapterDefaults } from './call-config.ts'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    llm: LlmService
+    llm: LlmRuntime
   }
 
   interface Events {
     /**
      * Waterfall around every streaming model call (retry, replay, routing).
-     * Bound to the {@link LlmService}; call `next()` to reach the resolved
+     * Bound to the {@link LlmRuntime}; call `next()` to reach the resolved
      * adapter's stream, or yield your own chunks to short-circuit.
      * @param options - the full request. A LOOP-built request carries the
      *   process-local {@link markAgentLoopRequest} identity and arrives deep-frozen
@@ -59,18 +61,8 @@ declare module 'cordis' {
      *   the immutable creation contract.
      * @mode waterfall
      */
-    'llm/stream'(this: LlmService, options: GenerateOptions, next: () => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>
+    'llm/stream'(this: LlmRuntime, options: GenerateOptions, next: () => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>
 
-    /**
-     * The provider topology changed: an adapter registered or unregistered
-     * routes, or the configurable-provider directory gained or lost entries.
-     * This is a payload-free registry notification fired at each commit point
-     * (including registration disposal); consumers re-read `listProviders()`,
-     * `listModels()`, or `listConfigurableProviders()` for the new state.
-     * Observer failures are contained and cannot veto the registry mutation.
-     * @mode emit
-     */
-    'llm/adapters-updated'(): void
   }
 }
 
@@ -182,8 +174,8 @@ export interface PreparedLlmCall {
 /**
  * Provider-wire adapter for the harness message and stream vocabulary. Register implementations
  * with `ctx.llm.registerAdapter(providers, adapter)`. Every provider HTTP request must include
- * `attributionHeaders()`; prove that at the wire or library header-hook boundary. The direct-fetch
- * DeepSeek and library-backed pi-ai adapters intentionally exercise this contract through different internals.
+ * `attributionHeaders()`; prove the headers are added in the wire request or library header hook. The direct-fetch
+ * DeepSeek and library-backed pi-ai adapters meet this contract through different internals.
  */
 export abstract class LlmAdapter {
   /**
@@ -241,7 +233,7 @@ export abstract class LlmAdapter {
 }
 
 /**
- * What {@link LlmService.registerAdapter} returns: the disposer, plus an
+ * What {@link LlmRuntime.registerAdapter} returns: the disposer, plus an
  * atomic route replacement for the same adapter instance.
  */
 export interface AdapterRegistrationHandle {
@@ -287,9 +279,9 @@ export interface DirectoryRegistrationHandle {
 
 /**
  * The abstract `llm` service: an adapter registry plus a streaming model-call
- * surface, interceptable via the `llm/stream` waterfall.
+ * API, interceptable via the `llm/stream` waterfall.
  */
-export class LlmService extends Service {
+export class LlmRuntime extends Service {
   private adapters = new Map<string, AdapterRegistration>()
   private directory = new Map<string, LlmConfigurableProvider>()
   private discoveries = new Map<
@@ -350,7 +342,7 @@ export class LlmService extends Service {
     // The disposer has run: `owned` being empty cannot say so on its own,
     // because `replace([])` legally leaves a live registration holding none.
     let released = false
-    const dispose = this.ctx.effect(function* (this: LlmService) {
+    const dispose = this.ctx.effect(function* (this: LlmRuntime) {
       if (providers.length === 0) throw new LlmError('an adapter must register at least one provider', 'INVALID_ADAPTER')
       this.commitRoutes(owned, this.prepareRoutes(providers, adapter, owned))
       yield () => {
@@ -425,7 +417,7 @@ export class LlmService extends Service {
    * @returns detached provider metadata in registration order.
    */
   listProviders(): LlmProviderInfo[] {
-    return [...this.adapters.values()].map(({ provider }) => { return ({ ...provider }) })
+    return [...this.adapters.values()].map(({ provider }) => ({ ...provider }))
   }
 
   /**
@@ -468,7 +460,7 @@ export class LlmService extends Service {
       this.emitAdaptersUpdated()
     }
 
-    const dispose = this.ctx.effect(function* (this: LlmService) {
+    const dispose = this.ctx.effect(function* (this: LlmRuntime) {
       if (entries.length === 0) {
         throw new LlmError('a configurable-provider registration must declare at least one provider', 'INVALID_DIRECTORY')
       }
@@ -513,7 +505,7 @@ export class LlmService extends Service {
     settingsNs: string,
     discover: (request: LlmModelDiscoveryRequest) => Promise<readonly LlmDiscoveredModel[]>,
   ): () => void {
-    const dispose = this.ctx.effect(function* (this: LlmService) {
+    const dispose = this.ctx.effect(function* (this: LlmRuntime) {
       if (settingsNs.length === 0) {
         throw new LlmError('model discovery needs a non-empty settings namespace', 'INVALID_DISCOVERY')
       }
@@ -575,6 +567,11 @@ export class LlmService extends Service {
     return this.registration(provider).retryPolicy
   }
 
+  /** Detach typed adapter-owned modality metadata. */
+  private detachedModalities(modalities: readonly ModelModality[] | undefined): ModelModality[] | undefined {
+    return modalities === undefined ? undefined : [...modalities]
+  }
+
   /**
    * Discover models advertised by one registered provider. Catalog membership
    * is advisory and never changes routing or request validation.
@@ -599,11 +596,13 @@ export class LlmService extends Service {
         throw new LlmError(`adapter returned invalid or duplicate model metadata for provider "${provider}"`, 'INVALID_CATALOG')
       }
       seen.add(model.id)
+      const inputModalities = this.detachedModalities(model.inputModalities)
       return {
         provider: model.provider,
         id: model.id,
         name: model.name,
         ...model.description === undefined ? {} : { description: model.description },
+        ...inputModalities === undefined ? {} : { inputModalities },
       }
     })
   }
@@ -653,6 +652,9 @@ export class LlmService extends Service {
         'INVALID_MODEL_CONTEXT',
       )
     }
+    // Capability metadata rides through: an explicit modality omission is
+    // negative capability downstream preflights act on (image admission).
+    const inputModalities = this.detachedModalities(resolved.inputModalities)
     const defaultMaxTokens = resolved.defaultMaxTokens
     if (defaultMaxTokens !== undefined
       && (!Number.isSafeInteger(defaultMaxTokens) || defaultMaxTokens <= 0)) {
@@ -666,6 +668,7 @@ export class LlmService extends Service {
       id: model,
       name: resolved.name,
       ...resolved.description === undefined ? {} : { description: resolved.description },
+      ...inputModalities === undefined ? {} : { inputModalities },
       ...context === undefined ? {} : { context: { contextWindow: context.contextWindow } },
       ...defaultMaxTokens === undefined ? {} : { defaultMaxTokens },
     }
@@ -941,4 +944,4 @@ interface AdapterRegistration {
   readonly retryPolicy: ResolvedRetryPolicy
 }
 
-export default LlmService
+export default LlmRuntime

@@ -12,13 +12,15 @@ import type {
   FaceModel,
   MemberModel,
   ParameterModel,
+  ServiceModel,
   SignatureModel,
   SourceDeclarationModel,
   SourceLocation,
+  TypertFace,
   TypeNodeId,
 } from './model.ts'
 
-type Mode = 'emit' | 'waterfall' | 'parallel' | 'serial'
+type Mode = 'emit' | 'bail' | 'waterfall' | 'parallel' | 'serial'
 
 /** The fenced-block info string for generated signature blocks (skipped by
  * doc-typecheck, since a bare signature fragment is not standalone-compilable). */
@@ -72,6 +74,8 @@ export interface EventEntry {
 
 /** One public service method and the source contract attached to it. */
 export interface ServiceMethodEntry {
+  /** Compiler member category; policy-supplied methods may omit it. */
+  kind?: 'method' | 'property'
   /** Public method signature (body stripped). */
   signature: string
   /** Original method JSDoc, dedented from its containing class. */
@@ -82,7 +86,7 @@ export interface ServiceMethodEntry {
 export interface ServiceEntry {
   /** The `ctx.<key>` name, e.g. `llm`. */
   key: string
-  /** The service class/interface name, e.g. `LlmService`. */
+  /** The service class/interface name, e.g. `LlmRuntime`. */
   type: string
   /** Whether the service class is abstract (a seam interface). */
   abstract: boolean
@@ -112,6 +116,10 @@ export interface CordisCatalogPolicy {
   readonly foundationTypeNames: ReadonlySet<string>
   /** Repository types deliberately documented outside the linked data catalog. */
   readonly typeLinkExemptions: Readonly<Record<string, string>>
+  /** Framework Services included in the model-facing runtime catalog but not the harness documentation partition. */
+  readonly runtimeServices?: readonly ServiceEntry[]
+  /** Harness Services omitted from the model-facing runtime catalog because dynamic Plugins must not call them. */
+  readonly runtimeServiceExclusions?: ReadonlySet<string>
   /** Manually curated framework events inherited by every plugin. */
   readonly inheritedEvents: readonly InheritedEntry[]
   /** Manually curated framework context members inherited by every plugin. */
@@ -129,7 +137,7 @@ export class CordisCatalogProjector {
   private readonly renderer: TypeGraphRenderer
 
   /**
-   * @param face - analyzed host face containing package business semantics.
+   * @param face - analyzed Host or Client face containing package business semantics.
    * @param sourceDeclarations - exported declarations available to the runtime type closure.
    * @param policy - caller-owned type classifications and inherited Cordis data.
    */
@@ -138,12 +146,11 @@ export class CordisCatalogProjector {
     private readonly sourceDeclarations: readonly SourceDeclarationModel[],
     private readonly policy: CordisCatalogPolicy,
   ) {
-    if (face.face !== 'host') throw new Error(`cordis catalog requires the host face, received ${face.face}`)
     this.renderer = new TypeGraphRenderer(face.graph)
   }
 
   /**
-   * Validate and project the host model's Cordis surface.
+   * Validate and project the host model's Cordis API.
    * @returns every validated service and event projected from the host model.
    */
   project(): CordisCatalogModel {
@@ -159,10 +166,13 @@ export class CordisCatalogProjector {
    * @returns the model-facing TypeScript catalog source.
    */
   renderRuntimeApi(model: CordisCatalogModel): string {
+    const services = [...model.services, ...(this.policy.runtimeServices ?? [])]
+      .filter(service => !this.policy.runtimeServiceExclusions?.has(service.key))
+      .sort((left, right) => left.key.localeCompare(right.key))
     return renderRuntimeApi(
-      model.services,
+      services,
       model.events,
-      this.runtimeTypes(model.services),
+      this.runtimeTypes(services, model.events),
       this.policy.inheritedServices,
     )
   }
@@ -173,6 +183,8 @@ export class CordisCatalogProjector {
     const typeLinkViolations: string[] = []
     for (const packageModel of this.face.packages) {
       for (const event of packageModel.events) {
+        const parsed = parseJsDoc(event.jsDoc ?? '')
+        if (parsed.deprecated) continue
         const source = pointer(event.location)
         const where = `event '${event.name}' (${source})`
         const node = this.renderer.node(event.signature)
@@ -180,11 +192,12 @@ export class CordisCatalogProjector {
           violations.push(`${where} is not represented by a callable type.`)
           continue
         }
-        checkTypeLinks(where, signatureTypeNames(this.renderer, node.signature), this.policy, typeLinkViolations)
-        const parsed = parseJsDoc(event.jsDoc ?? '')
+        if (this.face.face === 'host') {
+          checkTypeLinks(where, signatureTypeNames(this.renderer, node.signature), this.policy, typeLinkViolations)
+        }
         const mode = event.mode
         if (!isMode(mode)) {
-          violations.push(`${where} is missing an @mode tag. Add '@mode emit|waterfall|parallel|serial' to its JSDoc (see AGENTS.md).`)
+          violations.push(`${where} is missing an @mode tag. Add '@mode emit|bail|waterfall|parallel|serial' to its JSDoc (see AGENTS.md).`)
         }
         const last = node.signature.parameters.at(-1)
         const hasNext = last?.name === 'next'
@@ -223,59 +236,106 @@ export class CordisCatalogProjector {
     return entries
   }
 
+  /**
+   * The services this projection describes, one per `ctx.<key>`: those whose
+   * Context merge sits one level under a package's `src` and whose declaration
+   * belongs to that same package.
+   *
+   * Interfaces qualify beside classes, because an interface-typed key
+   * (`lsp: LspService`) has its Service Definition — and, by repository
+   * convention, its member documentation — on the interface; requiring a class
+   * would drop a real injectable service from every catalog. The declaration may
+   * live in any file of the package (`types.ts` is the usual home), while a
+   * declaration from ANOTHER package is not this package's surface to document.
+   *
+   * One key can have both kinds of candidate across packages: `ctx.typert` is
+   * typed by a merge-extensible interface in `type-meta` and implemented by a
+   * class in `registry`. The CLASS wins — it carries the documentation and is the
+   * object a caller meets — and picking before validating is what keeps a
+   * discarded candidate's missing JSDoc from failing the gate.
+   */
+  private renderableServices(): ServiceModel[] {
+    const chosen = new Map<string, ServiceModel>()
+    for (const packageModel of this.face.packages) {
+      for (const service of packageModel.services) {
+        const declaration = this.renderer.declaration(service.symbol)
+        const owner = /^packages\/[^/]+\/[^/]+\/src\//.exec(service.location.file)?.[0]
+        if ((declaration.kind !== 'class' && declaration.kind !== 'interface')
+          || owner === undefined
+          || (this.face.face === 'host'
+            ? !/^packages\/[^/]+\/[^/]+\/src\/[^/]+\.ts$/.test(service.location.file)
+            : !/^packages\/[^/]+\/[^/]+\/src\/client\/.+\.tsx?$/.test(service.location.file))
+          || !declaration.location.file.startsWith(owner)) continue
+        const current = chosen.get(service.key)
+        if (current !== undefined && this.renderer.declaration(current.symbol).kind === 'class') continue
+        chosen.set(service.key, service)
+      }
+    }
+    return [...chosen.values()]
+  }
+
   private collectServices(): ServiceEntry[] {
     const entries: ServiceEntry[] = []
     const violations: string[] = []
     const typeLinkViolations: string[] = []
-    for (const packageModel of this.face.packages) {
-      for (const service of packageModel.services) {
-        const declaration = this.renderer.declaration(service.symbol)
-        if (declaration.kind !== 'class'
-          || !/^packages\/[^/]+\/[^/]+\/src\/[^/]+\.ts$/.test(service.location.file)
-          || declaration.location.file !== service.location.file) continue
-        const doc = parseJsDoc(declaration.jsDoc ?? '').doc
-        const source = pointer(declaration.location)
-        if (doc === '') {
-          violations.push(`service ctx.${service.key} (${source}): class ${declaration.name} has no JSDoc.`)
-        }
-        const methods: ServiceMethodEntry[] = []
-        for (const memberId of service.members) {
-          const member = this.renderer.member(memberId)
-          if (member.kind !== 'method' || member.name.startsWith('[')) continue
-          const where = `service method ctx.${service.key}.${member.name} (${pointer(member.location)})`
-          checkTypeLinks(where, signatureTypeNames(this.renderer, member.signature), this.policy, typeLinkViolations)
-          methods.push({ signature: member.text, jsDoc: member.jsDoc ?? '' })
-          if (member.jsDoc === undefined) {
-            violations.push(`${where} has no JSDoc.`)
-            continue
-          }
-          const parsed = parseJsDoc(member.jsDoc)
-          if (parsed.doc === '') violations.push(`${where} has no description prose above its block tags.`)
-          checkParams(where, 'service', member.signature.parameters, parsed.params,
-            parameter => parameter.receiver, violations)
-          checkReturns(where, member.signature, parsed.returns, this.renderer, violations)
-        }
-        entries.push({
-          key: service.key,
-          type: declaration.name,
-          abstract: declaration.abstract,
-          doc,
-          methods,
-          source,
-        })
+    for (const service of this.renderableServices()) {
+      const declaration = this.renderer.declaration(service.symbol)
+      const parsedDeclaration = parseJsDoc(declaration.jsDoc ?? '')
+      if (parsedDeclaration.deprecated) continue
+      const doc = parsedDeclaration.doc
+      const source = pointer(declaration.location)
+      if (doc === '') {
+        violations.push(`service ctx.${service.key} (${source}): ${declaration.kind} ${declaration.name} has no JSDoc.`)
       }
+      const methods: ServiceMethodEntry[] = []
+      for (const memberId of service.members) {
+        const member = this.renderer.member(memberId)
+        if (member.name.startsWith('[')) continue
+        const parsed = parseJsDoc(member.jsDoc ?? '')
+        if (parsed.deprecated) continue
+        if (member.kind === 'property') {
+          if (member.jsDoc === undefined) continue
+          methods.push({ kind: 'property', signature: member.text, jsDoc: member.jsDoc })
+          continue
+        }
+        if (member.kind !== 'method') continue
+        const where = `service method ctx.${service.key}.${member.name} (${pointer(member.location)})`
+        if (this.face.face === 'host') {
+          checkTypeLinks(where, signatureTypeNames(this.renderer, member.signature), this.policy, typeLinkViolations)
+        }
+        methods.push({ kind: 'method', signature: member.text, jsDoc: member.jsDoc ?? '' })
+        if (member.jsDoc === undefined) {
+          violations.push(`${where} has no JSDoc.`)
+          continue
+        }
+        if (parsed.doc === '') violations.push(`${where} has no description prose above its block tags.`)
+        checkParams(where, 'service', member.signature.parameters, parsed.params,
+          parameter => parameter.receiver, violations)
+        checkReturns(where, member.signature, parsed.returns, this.renderer, violations)
+      }
+      entries.push({
+        key: service.key,
+        type: declaration.name,
+        abstract: declaration.abstract,
+        doc,
+        methods,
+        source,
+      })
     }
     reportViolations('gen-cordis-catalog', violations)
     reportTypeLinkViolations('gen-cordis-catalog', typeLinkViolations)
     return entries.sort((left, right) => left.key.localeCompare(right.key))
   }
 
-  private runtimeTypes(services: readonly ServiceEntry[]): { name: string; declaration: string }[] {
+  private runtimeTypes(
+    services: readonly ServiceEntry[],
+    events: readonly EventEntry[],
+  ): { name: string; declaration: string }[] {
     const declarations = new Map<string, string>()
     const ambiguous = new Set<string>()
     for (const declaration of this.sourceDeclarations) {
-      if (declaration.face !== 'host' || declaration.kind === 'enum'
-        || !/^packages\/[^/]+\/[^/]+\/src\/[^/]+\.ts$/.test(declaration.location.file)) continue
+      if (declaration.face !== this.face.face || declaration.kind === 'enum'
+        || !/^packages\/[^/]+\/[^/]+\/src\/.+\.tsx?$/.test(declaration.location.file)) continue
       if (declarations.has(declaration.name)) {
         ambiguous.add(declaration.name)
         continue
@@ -288,7 +348,10 @@ export class CordisCatalogProjector {
       )
     }
     for (const name of ambiguous) declarations.delete(name)
-    return referencedTypes(services.flatMap(service => service.methods.map(method => method.signature)), declarations)
+    return referencedTypes([
+      ...services.flatMap(service => service.methods.map(method => method.signature)),
+      ...events.map(event => event.signature),
+    ], declarations)
   }
 }
 
@@ -296,33 +359,34 @@ export class CordisCatalogProjector {
  * Analyze the host project once and return both the model and its projection.
  * @param scanRoot - workspace root containing `tsconfig.host.json`.
  * @param policy - caller-owned type classifications and inherited Cordis data.
+ * @param targetFace - Host or Client Typert face to project.
  * @returns the configured projector and its validated catalog model.
  */
-export function projectCordisCatalog(scanRoot: string, policy: CordisCatalogPolicy): {
+export function projectCordisCatalog(scanRoot: string, policy: CordisCatalogPolicy, targetFace: TypertFace = 'host'): {
   readonly projector: CordisCatalogProjector
   readonly model: CordisCatalogModel
 } {
   const caches = new WorkspaceCaches()
   const discovery = new WorkspaceAnalyzer({
     root: scanRoot,
-    faces: ['host'],
+    faces: [targetFace],
     checkDiagnostics: false,
     caches,
   }).discoverPackages()
-  const packages = discovery.filter(candidate => candidate.faces.includes('host'))
+  const packages = discovery.filter(candidate => candidate.faces.includes(targetFace))
     .map(candidate => candidate.package)
   const workspace = new WorkspaceAnalyzer({
     root: scanRoot,
-    faces: ['host'],
+    faces: [targetFace],
     packages,
     checkDiagnostics: false,
     caches,
   }).analyzeInBatches()
-  const face = workspace.faces.find(candidate => candidate.face === 'host')
-  if (face === undefined) throw new Error('gen-cordis-catalog: Typert produced no host face')
+  const face = workspace.faces.find(candidate => candidate.face === targetFace)
+  if (face === undefined) throw new Error(`gen-cordis-catalog: Typert produced no ${targetFace} face`)
   const sourceDeclarations = new WorkspaceAnalyzer({
     root: scanRoot,
-    faces: ['host'],
+    faces: [targetFace],
     checkDiagnostics: false,
     caches,
   }).indexSourceDeclarations()
@@ -354,6 +418,8 @@ interface ParsedJsDoc {
   readonly doc: string
   readonly params: ReadonlyMap<string, string>
   readonly returns: string | null
+  readonly throws: readonly string[]
+  readonly deprecated: boolean
 }
 
 function parseJsDoc(raw: string): ParsedJsDoc {
@@ -410,8 +476,15 @@ function parseJsDoc(raw: string): ParsedJsDoc {
 
   const params = new Map<string, string>()
   let returns: string | null = null
+  const throws: string[] = []
+  let deprecated = false
   let sink: ((text: string) => void) | undefined
   for (const line of lines) {
+    if (/^@deprecated(?:\s|$)/.test(line)) {
+      deprecated = true
+      sink = undefined
+      continue
+    }
     const param = /^@param\s+(\[?[\w$]+\]?)\s*(?:[-—–]\s*)?(.*)$/.exec(line)
     if (param !== null) {
       const name = (param[1] ?? '').replace(/^\[|\]$/g, '')
@@ -433,6 +506,17 @@ function parseJsDoc(raw: string): ParsedJsDoc {
       }
       continue
     }
+    const throwsTag = /^@throws?(?:\s+[-—–]?\s*(.*))?$/.exec(line)
+    if (throwsTag !== null) {
+      let value = throwsTag[1] ?? ''
+      throws.push(value)
+      const index = throws.length - 1
+      sink = (text) => {
+        value = value === '' ? text : `${value} ${text}`
+        throws[index] = value
+      }
+      continue
+    }
     if (line.startsWith('@') || line.trim() === '') sink = undefined
     else sink?.(line.trim())
   }
@@ -440,12 +524,14 @@ function parseJsDoc(raw: string): ParsedJsDoc {
     doc: blocks.join('\n\n').replace(/\{@link\s+([^}]+)\}/g, '$1').trim(),
     params,
     returns,
+    throws,
+    deprecated,
   }
 }
 
 function checkParams(
   where: string,
-  surface: string,
+  apiKind: string,
   parameters: readonly ParameterModel[],
   tags: ReadonlyMap<string, string>,
   isExempt: (parameter: ParameterModel) => boolean,
@@ -453,7 +539,7 @@ function checkParams(
 ): void {
   for (const parameter of parameters) {
     if (parameter.binding !== 'identifier') {
-      violations.push(`${where}: parameter '${parameter.name}' is a binding pattern; the ${surface} surface needs simple identifier parameters so @param can name them.`)
+      violations.push(`${where}: parameter '${parameter.name}' is a binding pattern; the ${apiKind} API needs simple identifier parameters so @param can name them.`)
       continue
     }
     if (isExempt(parameter)) continue
@@ -494,7 +580,7 @@ function pointer(location: SourceLocation): string {
 }
 
 function isMode(mode: string | undefined): mode is Mode {
-  return mode === 'emit' || mode === 'waterfall' || mode === 'parallel' || mode === 'serial'
+  return mode === 'emit' || mode === 'bail' || mode === 'waterfall' || mode === 'parallel' || mode === 'serial'
 }
 
 function signatureTypeNames(renderer: TypeGraphRenderer, signature: SignatureModel): string[] {
@@ -534,6 +620,19 @@ function quote(value: string): string {
   return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'").replaceAll('\n', '\\n')}'`
 }
 
+/** Render a compact TypeScript string-array literal. */
+function quoteList(values: readonly string[]): string {
+  return `[${values.map(quote).join(', ')}]`
+}
+
+/** Render structured parameter documentation as a compact TypeScript literal. */
+function renderParameters(parameters: ReadonlyMap<string, string>): string {
+  const values = [...parameters].map(([name, description]) => (
+    `{ name: ${quote(name)}, description: ${quote(description)} }`
+  ))
+  return `[${values.join(', ')}]`
+}
+
 /** Resolve and sort the word-bounded transitive type closure referenced by seed text. */
 function referencedTypes(
   seeds: readonly string[],
@@ -542,7 +641,7 @@ function referencedTypes(
   const included = new Map<string, string>()
   let frontier = [...seeds]
   while (frontier.length > 0) {
-    const next: Array<string> = []
+    const next: string[] = []
     for (const [name, declaration] of declarations) {
       if (included.has(name)) continue
       const pattern = new RegExp(`\\b${name}\\b`)
@@ -578,33 +677,50 @@ function renderRuntimeApi(
     ' * `pnpm run verify-cordis-api` in doc-sync).',
     ' *',
     ' * The machine-readable cordis API catalog `cordis_inspect` serves to the',
-    ' * model: harness services (summary + public method signatures/JSDoc),',
-    ' * harness events (mode + signature/JSDoc), and the inherited `ctx` surface. Produced by',
+    ' * model: harness services (summary + structured public method contracts),',
+    ' * harness events (mode + structured listener contracts), and the inherited `ctx` API. Produced by',
     ' * the same AST walk as docs/cordis-catalog, so this data and the rendered',
     ' * docs cannot diverge.',
     ' *',
     ' * @module @deepseek-ai/dsh-tool-cordis/api-catalog',
     ' */',
     '',
-    '/** One public service method and its source-owned contract. */',
+    '/* jscpd:ignore-start */',
+    '/** One named parameter in a Service method or Event listener. */',
+    'export interface ApiParameter {',
+    '  /** Parameter name from the exact signature. */',
+    '  name: string',
+    '  /** Source-owned parameter contract. */',
+    '  description: string',
+    '}',
+    '',
+    '/** One public service member and its source-owned contract. */',
     'export interface ServiceApiMethod {',
     '  /** Public method signature with its body stripped. */',
     '  signature: string',
-    '  /** Original method JSDoc, with only container indentation removed. */',
-    '  jsDoc: string',
+    '  /** Method purpose and behavior. */',
+    '  description: string',
+    '  /** Named parameters in signature order. */',
+    '  parameters: readonly ApiParameter[]',
+    '  /** Non-void result contract when documented. */',
+    '  returns?: string',
+    '  /** Documented failure conditions. */',
+    '  throws?: readonly string[]',
     '}',
     '',
-    '/** One harness `ctx.<key>` service: its one-line summary and public methods. */',
+    '/** One harness `ctx.<key>` service and its public methods. */',
     'export interface ServiceApiEntry {',
     '  /** The `ctx.<key>` name, e.g. `tools`. */',
     '  key: string',
     '  /** First sentence of the service class JSDoc. */',
     '  summary: string',
+    '  /** Complete service description. */',
+    '  description: string',
     '  /** Public methods, bodies stripped, in source order. */',
     '  methods: readonly ServiceApiMethod[]',
     '}',
     '',
-    '/** One harness event: its dispatch mode, exact signature, and one-line summary. */',
+    '/** One harness event: its dispatch mode, exact signature, and listener contract. */',
     'export interface EventApiEntry {',
     '  /** The scoped event name, e.g. `agent/status`. */',
     '  name: string',
@@ -612,10 +728,12 @@ function renderRuntimeApi(
     '  mode: string',
     '  /** The exact listener signature, whitespace-normalized. */',
     '  signature: string',
-    '  /** Original event JSDoc, with only container indentation removed. */',
-    '  jsDoc: string',
     '  /** First sentence of the event JSDoc. */',
     '  summary: string',
+    '  /** Complete event description. */',
+    '  description: string',
+    '  /** Named listener parameters in signature order. */',
+    '  parameters: readonly ApiParameter[]',
     '}',
     '',
     '/** One inherited (cordis core + loader/hmr/timer) `ctx` member group with its summary. */',
@@ -626,9 +744,9 @@ function renderRuntimeApi(
     '  summary: string',
     '}',
     '',
-    '/** One named type shape the service signatures reference. */',
+    '/** One named type declaration referenced by a Service or Event signature. */',
     'export interface TypeApiEntry {',
-    '  /** The exported type/interface name, e.g. `BashRunResult`. */',
+    '  /** The exported type/interface name, e.g. `ShellRunResult`. */',
     '  name: string',
     '  /** The full declaration text, comments stripped. */',
     '  declaration: string',
@@ -641,14 +759,19 @@ function renderRuntimeApi(
     lines.push('  {')
     lines.push(`    key: ${quote(service.key)},`)
     lines.push(`    summary: ${quote(firstSentence(service.doc))},`)
+    lines.push(`    description: ${quote(service.doc)},`)
     if (service.methods.length === 0) {
       lines.push('    methods: [],')
     } else {
       lines.push('    methods: [')
       for (const method of service.methods) {
+        const contract = parseJsDoc(method.jsDoc)
         lines.push('      {')
         lines.push(`        signature: ${quote(method.signature)},`)
-        lines.push(`        jsDoc: ${quote(method.jsDoc)},`)
+        lines.push(`        description: ${quote(contract.doc)},`)
+        lines.push(`        parameters: ${renderParameters(contract.params)},`)
+        if (contract.returns !== null) lines.push(`        returns: ${quote(contract.returns)},`)
+        if (contract.throws.length > 0) lines.push(`        throws: ${quoteList(contract.throws)},`)
         lines.push('      },')
       }
       lines.push('    ],')
@@ -662,18 +785,20 @@ function renderRuntimeApi(
     'export const EVENT_API: readonly EventApiEntry[] = [',
   )
   for (const event of [...events].sort((left, right) => left.name.localeCompare(right.name))) {
+    const contract = parseJsDoc(event.jsDoc)
     lines.push('  {')
     lines.push(`    name: ${quote(event.name)},`)
     lines.push(`    mode: ${quote(event.mode)},`)
     lines.push(`    signature: ${quote(event.signature)},`)
-    lines.push(`    jsDoc: ${quote(event.jsDoc)},`)
     lines.push(`    summary: ${quote(firstSentence(event.doc))},`)
+    lines.push(`    description: ${quote(event.doc)},`)
+    lines.push(`    parameters: ${renderParameters(contract.params)},`)
     lines.push('  },')
   }
   lines.push(
     ']',
     '',
-    '/** Shapes of every exported type the SERVICE_API signatures reference (transitively), sorted by name. */',
+    '/** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */',
     'export const TYPE_API: readonly TypeApiEntry[] = [',
   )
   for (const type of types) {
@@ -685,50 +810,172 @@ function renderRuntimeApi(
   lines.push(
     ']',
     '',
-    '/** The inherited `ctx` surface (cordis core + loader/hmr/timer), in curated order. */',
+    '/** The inherited `ctx` API (cordis core + loader/hmr/timer), in curated order. */',
     'export const INHERITED_CTX_API: readonly InheritedApiEntry[] = [',
   )
   for (const inherited of inheritedServices) {
     lines.push(`  { name: ${quote(inherited.name)}, summary: ${quote(inherited.summary)} },`)
   }
-  lines.push(']', '')
+  lines.push(
+    ']',
+    '',
+    'function referencedTypeClosure(seeds: readonly string[]): TypeApiEntry[] {',
+    '  const included = new Set<string>()',
+    '  let frontier = [...seeds]',
+    '  while (frontier.length > 0) {',
+    '    const next: string[] = []',
+    '    for (const entry of TYPE_API) {',
+    '      if (included.has(entry.name)) continue',
+    '      const pattern = new RegExp(`\\b${entry.name}\\b`)',
+    '      if (!frontier.some(text => pattern.test(text))) continue',
+    '      included.add(entry.name)',
+    '      next.push(entry.declaration)',
+    '    }',
+    '    frontier = next',
+    '  }',
+    '  return TYPE_API.filter(entry => included.has(entry.name))',
+    '}',
+    '',
+    'function contextProperty(key: string): string {',
+    '  return /^[A-Za-z_$][\\w$]*$/.test(key) ? `ctx.${key}` : `ctx[${JSON.stringify(key)}]`',
+    '}',
+    '',
+    '/**',
+    ' * Project the Service Catalog as a compact directory or one exact coding contract.',
+    ' * @param key - exact Service key; omit it to list all Services and method signatures.',
+    ' * @param services - platform-specific visible Service entries.',
+    ' * @returns compact navigation data or one detailed Service with its referenced type closure.',
+    ' */',
+    'export function queryServiceApi(key?: string, services: readonly ServiceApiEntry[] = SERVICE_API): object {',
+    '  if (key === undefined) {',
+    '    return {',
+    "      mode: 'catalog',",
+    '      services: services.map(service => ({',
+    '        key: service.key,',
+    '        description: service.summary,',
+    '        methods: service.methods.map(method => ({ signature: method.signature })),',
+    '      })),',
+    '    }',
+    '  }',
+    '  const service = services.find(candidate => candidate.key === key)',
+    '  if (service === undefined) throw new Error(`no catalogued Service named "${key}"`)',
+    '  return {',
+    "    mode: 'service',",
+    '    service: {',
+    '      key: service.key,',
+    '      description: service.description,',
+    '      access: {',
+    '        optional: { expression: `ctx.get(${JSON.stringify(service.key)})`, requiresUndefinedCheck: true },',
+    '        hardDependency: { inject: [service.key], expression: contextProperty(service.key) },',
+    '      },',
+    '      methods: service.methods,',
+    '    },',
+    '    referencedTypes: referencedTypeClosure(service.methods.map(method => method.signature)),',
+    '  }',
+    '}',
+    '',
+    '/**',
+    ' * Project the Event Catalog as a compact directory or one exact listener contract.',
+    ' * @param name - exact Event name; omit it to list all Events and listener signatures.',
+    ' * @param events - platform-specific visible Event entries.',
+    ' * @returns compact navigation data or one detailed Event with its referenced type closure.',
+    ' */',
+    'export function queryEventApi(name?: string, events: readonly EventApiEntry[] = EVENT_API): object {',
+    '  if (name === undefined) {',
+    '    return {',
+    "      mode: 'catalog',",
+    '      events: events.map(event => ({',
+    '        name: event.name,',
+    '        description: event.summary,',
+    '        mode: event.mode,',
+    '        signature: event.signature,',
+    '      })),',
+    '    }',
+    '  }',
+    '  const event = events.find(candidate => candidate.name === name)',
+    '  if (event === undefined) throw new Error(`no catalogued Event named "${name}"`)',
+    '  return {',
+    "    mode: 'event',",
+    '    event: {',
+    '      name: event.name,',
+    '      description: event.description,',
+    '      mode: event.mode,',
+    '      signature: event.signature,',
+    '      parameters: event.parameters,',
+    '    },',
+    '    referencedTypes: referencedTypeClosure([event.signature]),',
+    '  }',
+    '}',
+    '/* jscpd:ignore-end */',
+    '',
+  )
   return lines.join('\n')
 }
-/** Render the cross-link "Types:" line for a signature, or '' if none apply. */
-function typeLinks(signature: string, linkedTypePages: Readonly<Record<string, string>>): string {
+/** Opening region delimiter; injected content lives between the pair and the page owns everything outside. */
+export const REGION_BEGIN = '<!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->'
+/** Closing region delimiter matching {@link REGION_BEGIN}. */
+export const REGION_END = '<!-- END GENERATED cordis-surface -->'
+
+/**
+ * Render the cross-link "Types:" line for a signature relative to one
+ * subsystems page, or '' if none apply. A type whose primary page IS the
+ * rendering page would link as a fragmentless self-link readers already sit
+ * on, so it is dropped instead.
+ */
+function typeLinks(signature: string, onPage: string, linkedTypePages: Readonly<Record<string, string>>): string {
   const seen = new Set<string>()
   for (const name of Object.keys(linkedTypePages)) {
     if (new RegExp(`\\b${name}\\b`).test(signature)) seen.add(name)
   }
-  if (seen.size === 0) return ''
-  const links = [...seen].sort().map(n => `[${n}](../core-data-structures/${linkedTypePages[n]})`)
+  const links = [...seen].sort()
+    .filter(name => linkedTypePages[name] !== onPage)
+    .map(name => `[${name}](${linkedTypePages[name]})`)
+  if (links.length === 0) return ''
   return `Types: ${links.join(' · ')}`
 }
 
-/** Render one harness event entry. */
-function renderEvent(e: EventEntry, linkedTypePages: Readonly<Record<string, string>>): string[] {
-  const out = [`### \`${e.name}\` — ${e.mode}`, '']
+/**
+ * GitHub's heading-slug algorithm (lowercase; drop everything but letters,
+ * numbers, spaces, hyphens; spaces become hyphens). Region headings carry
+ * backticks and em-dashes, which VitePress slugifies differently, so each
+ * generated heading is preceded by an explicit `<a id>` carrying this slug —
+ * the historical flat-catalog anchor — making `#ctx<key>--<class>` fragments
+ * resolve identically on GitHub and the published site.
+ */
+function githubSlug(heading: string): string {
+  return heading.toLowerCase().replace(/[^\p{L}\p{N} -]/gu, '').replaceAll(' ', '-')
+}
+
+/** The explicit-anchor line emitted before one generated heading. */
+function anchorFor(headingText: string): string[] {
+  return [`<a id="${githubSlug(headingText)}"></a>`, '']
+}
+
+/** Render one harness event entry onto its owning page, nested under its scope heading. */
+function renderEvent(e: EventEntry, onPage: string, linkedTypePages: Readonly<Record<string, string>>): string[] {
+  const out = [...anchorFor(`${e.name} — ${e.mode}`), `#### \`${e.name}\` — ${e.mode}`, '']
   if (e.doc) out.push(e.doc, '')
   out.push('```' + FENCE, e.jsDoc, e.signature, '```', '')
-  const links = typeLinks(e.signature, linkedTypePages)
+  const links = typeLinks(e.signature, onPage, linkedTypePages)
   if (links) out.push(links, '')
   out.push(`Source: [\`${e.source}\`](../../${e.source.split(':')[0]})`, '')
   return out
 }
 
-/** Render one harness service entry. */
-function renderService(s: ServiceEntry, linkedTypePages: Readonly<Record<string, string>>): string[] {
+/** Render one harness service entry onto its owning page. */
+function renderService(s: ServiceEntry, onPage: string, linkedTypePages: Readonly<Record<string, string>>): string[] {
   const kind = s.abstract ? ' (abstract seam)' : ''
-  const out = [`## \`ctx.${s.key}\` — \`${s.type}\`${kind}`, '']
+  const out = [...anchorFor(`ctx.${s.key} — ${s.type}${kind}`), `### \`ctx.${s.key}\` — \`${s.type}\`${kind}`, '']
   if (s.doc) out.push(s.doc, '')
-  if (s.methods.length) {
-    const declarations = s.methods.flatMap((method, index) => [
+  const methods = s.methods.filter(member => member.kind !== 'property')
+  if (methods.length) {
+    const declarations = methods.flatMap((method, index) => [
       ...(index > 0 ? [''] : []),
       method.jsDoc,
       method.signature,
     ])
     out.push('```' + FENCE, ...declarations, '```', '')
-    const links = typeLinks(s.methods.map(method => method.signature).join('\n'), linkedTypePages)
+    const links = typeLinks(methods.map(method => method.signature).join('\n'), onPage, linkedTypePages)
     if (links) out.push(links, '')
   }
   out.push(`Source: [\`${s.source}\`](../../${s.source.split(':')[0]})`, '')
@@ -746,72 +993,66 @@ const BANNER = [
 const GATE_NOTICE = 'This file is GENERATED from source (`scripts/gen-cordis-catalog.ts`) and verified fresh by `pnpm run verify-cordis-catalog` (part of `doc-sync`) — do not edit it by hand. Signature blocks use a `ts cordis-catalog` fence and include the original source JSDoc immediately before each event or service method. doc-typecheck skips these bare declaration fragments; type names in a signature link to the page that documents them.'
 
 /**
- * Render the events catalog deterministically.
- * @param events - validated event entries to render.
- * @param policy - type links and inherited events supplied by the caller.
- * @returns the complete generated Markdown document.
+ * Render one page's generated Cordis API region: the services mapped to
+ * the page, then the event scopes mapped to it, markers included. Pure and
+ * deterministic given sorted inputs; identical bytes land in both pair sides.
+ * @param page - the owning `docs/subsystems/` page basename, e.g. `core.md`.
+ * @param services - validated services mapped to this page.
+ * @param events - validated events whose scopes map to this page.
+ * @param policy - type links supplied by the caller.
+ * @returns the complete marker-delimited region text.
  */
-export function renderEvents(events: EventEntry[], policy: CordisCatalogPolicy): string {
+export function renderPageRegion(page: string, services: ServiceEntry[], events: EventEntry[], policy: CordisCatalogPolicy): string {
   const lines: string[] = [
-    ...BANNER,
-    '# Cordis Events Catalog',
+    REGION_BEGIN,
     '',
-    'Every cordis event a plugin can listen to: exact signature, dispatch mode, and original declaration JSDoc. This is one axis of the **wiring** reference a plugin author works against — the callable `ctx.<key>` surface is the sibling [services catalog](services.md), and [core-data-structures/](../core-data-structures/core.md) catalogs the *data structures* these signatures move around.',
+    '<a id="cordis-surface"></a>',
     '',
-    GATE_NOTICE,
+    '## Cordis API',
     '',
-    'The **harness tier** below (the `@deepseek-ai/dsh-*` packages) is the vocabulary this repo owns, grouped by scope. The **inherited tier** at the end is the cordis-core + loader/hmr/timer event surface a plugin also sees — pinned vendor source, summarized tersely. The event-dispatch methods themselves are generated in the [Cordis core Events API](core/events.md).',
-    '',
-    'Dispatch modes: **emit** (fire-and-forget), **waterfall** (each listener gets `next()` and may transform or veto — see [waterfall semantics](../cordis-primer.md#cordis-waterfall-semantics)), **parallel** (awaited fan-out; all listeners run), **serial** (awaited in registration order until one returns a bail value — anything other than `null`, `false`, or `undefined`).',
+    'Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — this section is byte-identical in both language sides of the page. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).',
     '',
   ]
+  for (const s of services) lines.push(...renderService(s, page, policy.linkedTypePages))
   const scopes = [...new Set(events.map(e => e.scope))].sort()
   for (const scope of scopes) {
-    lines.push(`## \`${scope}/*\``, '')
+    lines.push(...anchorFor(`${scope}/* events`), `### \`${scope}/*\` events`, '')
     for (const e of events.filter(x => x.scope === scope).sort((a, b) => a.name.localeCompare(b.name))) {
-      lines.push(...renderEvent(e, policy.linkedTypePages))
+      lines.push(...renderEvent(e, page, policy.linkedTypePages))
     }
   }
-  lines.push(
-    '## Inherited events (cordis core + loader/hmr/timer)',
-    '',
-    'The framework events every plugin also sees, beyond the harness vocabulary above. This is pinned vendor source ([vendoring policy](../../vendor/README.md)); it is summarized here so the page is a complete picture of the event bus, without elevating framework internals to the harness tier\'s prominence.',
-    '',
-  )
-  for (const e of policy.inheritedEvents) {
-    lines.push(`- \`${e.name}\` — ${e.summary} ([\`${e.source}\`](../../${e.source.split(':')[0]}))`)
-  }
-  lines.push('')
+  while (lines.at(-1) === '') lines.pop()
+  lines.push(REGION_END)
   return lines.join('\n')
 }
 
 /**
- * Render the services catalog deterministically.
- * @param services - validated service entries to render.
- * @param policy - type links and inherited services supplied by the caller.
+ * Render the inherited (pinned vendor) tier as its own generated page.
+ * @param policy - inherited events and services supplied by the caller.
  * @returns the complete generated Markdown document.
  */
-export function renderServices(services: ServiceEntry[], policy: CordisCatalogPolicy): string {
+export function renderInheritedPage(policy: CordisCatalogPolicy): string {
   const lines: string[] = [
     ...BANNER,
-    '# Cordis Services Catalog',
+    '# Inherited Cordis API',
     '',
-    'Every `ctx.<key>` service a plugin can call: the exact public interface with original method JSDoc, plus the class JSDoc. This is one axis of the **wiring** reference a plugin author works against — the events a plugin listens to are the sibling [events catalog](events.md), and [core-data-structures/](../core-data-structures/core.md) catalogs the *data structures* these signatures move around. An abstract seam (e.g. `ctx.bash`) is implemented by a separate package; the interface is what consumers code against.',
+    'The framework `ctx` members and events every plugin sees beyond the harness tier — pinned vendor source ([vendoring policy](../../vendor/README.md)), summarized tersely so the harness pages stay focused on repository-owned vocabulary. Detailed Context, Fiber, Registry, and Service APIs are generated in [context.md](context.md), [fiber.md](fiber.md), [registry.md](registry.md), and [service.md](service.md); the event-dispatch methods in [events.md](events.md).',
     '',
     GATE_NOTICE,
     '',
-    'The **harness tier** below (the `@deepseek-ai/dsh-*` packages) is the vocabulary this repo owns. The **inherited tier** at the end is the cordis-core + loader/hmr/timer `ctx` surface a plugin also sees — pinned vendor source, summarized tersely. Detailed Context, Fiber, Registry, and Service APIs are generated in the [Cordis core API](core/context.md).',
-    '',
-  ]
-  for (const s of services) lines.push(...renderService(s, policy.linkedTypePages))
-  lines.push(
     '## Inherited `ctx` members (cordis core + loader/hmr/timer)',
     '',
-    'The framework `ctx` surface every plugin also sees, beyond the harness services above. This is pinned vendor source ([vendoring policy](../../vendor/README.md)); it is summarized here so the page is a complete picture of what `ctx` offers, without elevating framework internals to the harness tier\'s prominence.',
-    '',
-  )
+  ]
   for (const s of policy.inheritedServices) {
     lines.push(`- \`${s.name}\` — ${s.summary} ([\`${s.source}\`](../../${s.source.split(':')[0]}))`)
+  }
+  lines.push(
+    '',
+    '## Inherited events (cordis core + loader/hmr/timer)',
+    '',
+  )
+  for (const e of policy.inheritedEvents) {
+    lines.push(`- \`${e.name}\` — ${e.summary} ([\`${e.source}\`](../../${e.source.split(':')[0]}))`)
   }
   lines.push('')
   return lines.join('\n')

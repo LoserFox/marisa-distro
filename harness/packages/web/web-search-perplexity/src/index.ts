@@ -7,9 +7,9 @@
  * @module @deepseek-ai/dsh-web-search-perplexity
  */
 
-import type { Context } from 'cordis'
-import { environmentOf } from '@deepseek-ai/dsh-environment'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
+import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-web'
 import { PerplexitySearchProvider, PERPLEXITY_DEFAULT_BASE_URL, PERPLEXITY_DEFAULT_MAX_TOKENS, PERPLEXITY_DEFAULT_MODEL } from './provider.ts'
 
@@ -55,7 +55,7 @@ export function apply(ctx: Context, config: Config): void {
   ctx.web.registerSearchProvider(new PerplexitySearchProvider({
     // Every environment layer may name this key: the product trusts the
     // project it is launched in, and the managed store is not involved here.
-    apiKey: config.apiKey ?? environmentOf(ctx).get('PERPLEXITY_API_KEY')?.value ?? '',
+    apiKey: config.apiKey ?? launchEnvironmentOf(ctx).get('PERPLEXITY_API_KEY')?.value ?? '',
     baseURL: config.baseURL ?? PERPLEXITY_DEFAULT_BASE_URL,
     model: config.model ?? PERPLEXITY_DEFAULT_MODEL,
     maxTokens: config.maxTokens ?? PERPLEXITY_DEFAULT_MAX_TOKENS,

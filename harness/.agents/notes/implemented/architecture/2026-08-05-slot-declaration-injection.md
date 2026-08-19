@@ -12,7 +12,7 @@ Slot-level hot replacement also requires two independent owners. Removing the de
 
 ## Decision
 
-`SlotsService.inject(name, callback)` makes the declared slot itself the dependency. The full `SlotMap` key is statically checked; there is no namespace builder, synthetic Cordis service, or slot-specific `Context`. The callback runs immediately when the declaration exists, otherwise waits, and returns either one synchronous disposer or a synchronous iterable of disposers. Iterable effects install transactionally: a later setup failure disposes every earlier yielded effect in reverse order.
+`SlotRegistry.inject(name, callback)` makes the declared slot itself the dependency. The full `SlotMap` key is statically checked; there is no namespace builder, synthetic Cordis service, or slot-specific `Context`. The callback runs immediately when the declaration exists, otherwise waits, and returns either one synchronous disposer or a synchronous iterable of disposers. Iterable effects install transactionally: a later setup failure disposes every earlier yielded effect in reverse order.
 
 The ledger records a declaration epoch distinct from the slot's ordinary entry version. An epoch changes whenever a child declaration is created or collapsed. Injection remembers the active epoch, disposes its callback effect when that epoch ends, and reruns the callback for a replacement declaration even when the final observed state is continuously declared. Ordinary contribution changes do not restart injection.
 
@@ -28,7 +28,7 @@ Disposing an injection is idempotent. It unsubscribes before releasing the activ
 
 ## Alternatives considered
 
-**Use `ConversationService` or another service as an ordering barrier.** Service presence does not identify the declaration or follow its reload lifetime, and it creates a false package dependency for presentation-only contributors.
+**Use `ConversationController` or another service as an ordering barrier.** Service presence does not identify the declaration or follow its reload lifetime, and it creates a false package dependency for presentation-only contributors.
 
 **Bridge each declaration into a `slot:<name>` Cordis service.** This pollutes the service namespace, turns a misspelled dynamic key into a silent service wait, and disguises ledger state as a business capability. Native slot injection provides the same wait without changing Cordis topology.
 

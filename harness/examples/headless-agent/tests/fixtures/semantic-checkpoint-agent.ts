@@ -3,7 +3,7 @@
  * @module semantic-checkpoint-agent
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 
 /** Fixture plugin name. */
@@ -21,5 +21,5 @@ export async function apply(ctx: Context): Promise<void> {
     resumeSessionId: 'semantic-checkpoint-unknown-outcome' as SessionId,
     agentOptions: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
   })
-  ctx.effect(() => { return () => handle.dispose() }, 'semantic-checkpoint-agent.handle')
+  ctx.effect(() => () => handle.dispose(), 'semantic-checkpoint-agent.handle')
 }

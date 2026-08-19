@@ -51,7 +51,7 @@ describe('buildWindow', () => {
   })
 
   it('caps output bytes and reports truncatedByBytes', async () => {
-    const big = Array.from({ length: 2000 }, () => { return 'y'.repeat(100) }).join('\n')
+    const big = Array.from({ length: 2000 }, () => 'y'.repeat(100)).join('\n')
     const result = await buildWindow(whole(big), READ_ALL, 'f')
     expect(result.truncatedByBytes).toBe(true)
   })
@@ -104,7 +104,7 @@ describe('buildWindow', () => {
     })
 
     it('caps output bytes mid-stream', async () => {
-      const big = Array.from({ length: 2000 }, () => { return 'y'.repeat(100) }).join('\n')
+      const big = Array.from({ length: 2000 }, () => 'y'.repeat(100)).join('\n')
       const result = await buildWindow(chunked(big, 512), READ_ALL, 'f')
       expect(result.totalLines).toBe(2000)
       expect(result.truncatedByBytes).toBe(true)

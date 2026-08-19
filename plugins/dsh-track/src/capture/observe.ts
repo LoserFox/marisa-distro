@@ -56,7 +56,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { makeId } from '../store.ts'
 import type { TrackStore } from '../store.ts'
-import { isShortAck, type UserPromptRef } from './context.ts'
+import { isShortAck, titleifyCapture, type UserPromptRef } from './context.ts'
 
 /** Signal mask — which structured signals auto-capture. Default: all on. */
 export interface CaptureSignalsConfig {
@@ -191,7 +191,7 @@ export function createAutoCapture(ctx: Context, deps: {
     } catch { /* seeding is best-effort */ }
   }
 
-  const capture = (sessionId: string | undefined, content: string, tags: string[], prompt?: UserPromptRef, opts: { dedupeBySession?: boolean } = {}): void => {
+  const capture = (sessionId: string | undefined, content: string, tags: string[], prompt?: UserPromptRef, opts: { dedupeBySession?: boolean; dedupeRequirementBySession?: boolean } = {}): void => {
     // createCapture runs the dedup gate: the durable per-session marker
     // (one todo-capture per session, survives restarts) + the content-hash
     // fallback (an identical open capture never lands twice). The in-memory
@@ -208,7 +208,7 @@ export function createAutoCapture(ctx: Context, deps: {
       tags,
       context: prompt?.text,
       createdAt: new Date().toISOString(),
-    }, { dedupeBySession: opts.dedupeBySession ?? true }).catch(() => { /* capture is best-effort; never break the stream */ })
+    }, { dedupeBySession: opts.dedupeBySession ?? true, dedupeRequirementBySession: opts.dedupeRequirementBySession }).catch(() => { /* capture is best-effort; never break the stream */ })
   }
 
   const onEvent = (session: unknown, event: { type: string; data?: unknown }): void => {
@@ -236,15 +236,20 @@ export function createAutoCapture(ctx: Context, deps: {
         // session header (`origin: 'subagent'`) — see isSubagentChild.
         if (signals.delegate && isSubagentChild(session) && !delegateSeen.has(sessionId)) {
           delegateSeen.add(sessionId)
-          if (text) capture(sessionId, text.slice(0, reqMax), [tag, 'delegate'], undefined, { dedupeBySession: false })
+          if (text) capture(sessionId, titleifyCapture(text, reqMax), [tag, 'delegate'], undefined, { dedupeBySession: false })
         } else if (signals.requirement && !isSubagentChild(session)
           && !requirementSeen.has(sessionId) && text.length >= reqMin) {
           // G2: requirement-level user request — the first long, non-ack user
           // message per session (length-bounded so terse asks never flood the
-          // wall). The discussion-style requirement ("任务转派与历史状态清理
-          // 机制讨论") that no todo/goal would carry now lands here.
+          // wall). Content is TITLE-IFIED (one-line, capped) for wall
+          // consistency; the raw message rides as `context` + the message id
+          // powers the panel's jump-back. The durable per-session marker
+          // prevents re-capture after a web restart (2026-08-14: the in-memory
+          // gate died with the process and long messages re-landed).
           requirementSeen.add(sessionId)
-          capture(sessionId, text.slice(0, reqMax), [tag, 'requirement'], undefined, { dedupeBySession: false })
+          capture(sessionId, titleifyCapture(text, reqMax), [tag, 'requirement'],
+            { text: text.slice(0, 500), id: data?.id },
+            { dedupeBySession: false, dedupeRequirementBySession: true })
         }
       }
       return
@@ -268,7 +273,7 @@ export function createAutoCapture(ctx: Context, deps: {
         const objective = (data.goal.objective ?? '').trim()
         if (objective) {
           const prompt = lastUserRequest.get(sessionId)
-          capture(sessionId, objective, [tag, 'goal'], prompt, { dedupeBySession: false })
+          capture(sessionId, titleifyCapture(objective), [tag, 'goal'], prompt, { dedupeBySession: false })
         }
       }
       return
@@ -295,7 +300,7 @@ export function createAutoCapture(ctx: Context, deps: {
     const first = todos[0]?.content?.trim()
     if (first) {
       const prompt = lastUserRequest.get(sessionId)
-      capture(sessionId, first, [tag, 'todo'], prompt)
+      capture(sessionId, titleifyCapture(first), [tag, 'todo'], prompt)
     }
   }
 

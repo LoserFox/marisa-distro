@@ -26,7 +26,7 @@ Chat history prepend follows reader intent through stable rendered node/call ide
 
 **Keep StatsLine inside ChatView below the message column.** Rejected: outside the sticky composer it would scroll away while the input stayed pinned.
 
-**Model every browser scroll input source.** Rejected for this narrow fix: the reproduced desktop path uses wheel/trackpad input. Pointer/touch scrolling, native-scrollbar dragging, keyboard scrolling, focus navigation, and nested overflow ownership were left outside the provenance model instead of adding a general input state machine. The [reader-scroll-attribution note](2026-08-06-reader-scroll-attribution-observed-top-ledger.md) later closed this deferral by generalizing attribution through the observed-top ledger, still without an input state machine.
+**Model every browser scroll input source.** Rejected for this narrow fix: the reproduced desktop path uses wheel/trackpad input. Pointer/touch scrolling, native-scrollbar dragging, keyboard scrolling, focus navigation, and nested overflow ownership were left outside the input-source model instead of adding a general input state machine. The [reader-scroll-attribution note](2026-08-06-reader-scroll-attribution-observed-top-ledger.md) later closed this deferral by generalizing attribution through the observed-top ledger, still without an input state machine.
 
 ## Consequences
 

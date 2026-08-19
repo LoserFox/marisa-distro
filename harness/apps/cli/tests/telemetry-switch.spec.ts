@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { resolveTelemetryPatch } from '../src/profile-boot.ts'
 
 describe('resolveTelemetryPatch', () => {
-  it('keeps telemetry enabled when the switch is unset or empty', () => {
+  it('preserves the configured telemetry mode when the hard-disable switch is unset or empty', () => {
     expect(resolveTelemetryPatch(undefined, true)).toBeUndefined()
     expect(resolveTelemetryPatch('', true)).toBeUndefined()
   })
 
   it('disables on ANY non-empty value, including falsy-looking ones', () => {
     for (const value of ['1', '0', 'false', 'no']) {
-      expect(resolveTelemetryPatch(value, true)).toEqual({ id: 'telemetry-otel', disabled: true })
+      expect(resolveTelemetryPatch(value, true)).toEqual({ id: 'session-telemetry-otel', disabled: true })
     }
   })
 

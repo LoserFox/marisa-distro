@@ -6,15 +6,15 @@
 
 import { createHash, randomUUID } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { Context, Service, type Fiber } from 'cordis'
-import z from 'schemastery'
+import { Context, Service, type Fiber } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type SessionPersistence from '@deepseek-ai/dsh-session-persistence'
 import type {
   SessionPersistenceRevision,
   SessionPersistenceSnapshot,
 } from '@deepseek-ai/dsh-session-persistence'
-import SessionQueryService, {
+import SessionQueryEngine, {
   SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY,
   SESSION_QUERY_READ_WINDOW_MAX,
   SessionQueryError,
@@ -65,7 +65,7 @@ export {
 /** Boot-context slot for a launcher-owned absolute path to this process's derived query index. */
 export const SESSION_QUERY_SQLITE_PATH_KEY = 'launcherSessionQueryPath'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     /** Launcher-owned absolute path to this process's disposable derived query index. */
     launcherSessionQueryPath?: string
@@ -82,8 +82,8 @@ export const SESSION_QUERY_SQLITE_SNIPPET_CHARS = 240
 // One transient source change gets a retry; repeated churn fails rather than monopolizing the queue.
 const STABLE_OBSERVATION_ATTEMPTS = 2
 
-/** SQLite module/handle opening phase. */
-export type OpenAt = 'startup' | 'first-search'
+/** SQLite module/handle opening phase; `never` disables full-text search entirely. */
+export type OpenAt = 'startup' | 'first-search' | 'never'
 
 /** Combined session-query configuration backed by SQLite full-text search. */
 export interface Config extends SessionQueryConfig {
@@ -93,7 +93,13 @@ export interface Config extends SessionQueryConfig {
    * POSIX filesystems; existing modes are preserved.
    */
   path: string
-  /** Open the SQLite module and handle at service activation or the first search. Defaults to `startup`. */
+  /**
+   * Open the SQLite module and handle at service activation or the first
+   * search, or `never` to disable full-text search: the inherited exact
+   * reads, filters, and traces stay available, while `searchSessions` and
+   * `searchEvents` fail with `SESSION_QUERY_SEARCH_DISABLED` and SQLite is
+   * never imported or opened. Defaults to `startup`.
+   */
   openAt?: OpenAt
   /** SQLite journal mode. Defaults to `wal`. */
   journalMode?: JournalMode
@@ -162,6 +168,7 @@ interface SessionHeaderRow {
   parent_session: string | null
   seed_length: number | null
   delegation_depth: number | null
+  agent_preset: string | null
 }
 
 interface SearchRow extends SessionHeaderRow {
@@ -186,12 +193,12 @@ interface CursorPayload {
 }
 
 /** Concrete SQLite owner of the combined `ctx.sessionQuery` service. */
-export class SessionQuerySqlite extends SessionQueryService {
+export class SqliteSessionQueryEngine extends SessionQueryEngine {
   static override inject = ['sessions']
 
   static Config: z<Config> = z.object({
     path: z.string().required(),
-    openAt: z.union(['startup', 'first-search'] as const).default('startup'),
+    openAt: z.union(['startup', 'first-search', 'never'] as const).default('startup'),
     journalMode: z.union(['wal', 'delete', 'truncate', 'persist'] as const).default('wal'),
     defaultLimit: z.number().step(1).min(1).max(SQLITE_MAX_PAGE_LIMIT).default(SESSION_QUERY_SQLITE_DEFAULT_LIMIT),
     maxLimit: z.number().step(1).min(1).max(SQLITE_MAX_PAGE_LIMIT).default(SESSION_QUERY_SQLITE_MAX_LIMIT),
@@ -250,6 +257,7 @@ export class SessionQuerySqlite extends SessionQueryService {
     request: SessionSearchRequest,
     exec?: SessionSearchExecContext,
   ): Promise<SessionSearchPage<SessionSearchHit>> {
+    this._assertSearchEnabled()
     const normalized = normalizeSessionRequest(request, this.config)
     const signal = exec?.signal
     return this._serialized(signal, async () => {
@@ -277,6 +285,7 @@ export class SessionQuerySqlite extends SessionQueryService {
     request: SessionEventSearchRequest,
     exec?: SessionSearchExecContext,
   ): Promise<SessionEventSearchPage> {
+    this._assertSearchEnabled()
     const normalized = normalizeEventRequest(request, this.config)
     const signal = exec?.signal
     return this._serialized(signal, async () => {
@@ -307,6 +316,19 @@ export class SessionQuerySqlite extends SessionQueryService {
   close(): Promise<void> {
     this._closePromise ??= this._close()
     return this._closePromise
+  }
+
+  /**
+   * Refuse full-text calls under `openAt: 'never'` before any request
+   * normalization or SQLite work, so a disabled deployment never imports
+   * node:sqlite, opens the index, or observes sources.
+   */
+  private _assertSearchEnabled(): void {
+    if (this.config.openAt !== 'never') return
+    throw new SessionQueryError(
+      'session search is disabled: this deployment configures the session-query index with openAt "never"',
+      'SESSION_QUERY_SEARCH_DISABLED',
+    )
   }
 
   private async _close(): Promise<void> {
@@ -552,16 +574,10 @@ export class SessionQuerySqlite extends SessionQueryService {
     const db = this._requireDb()
     db.prepare(`
       INSERT INTO persisted_sessions
-        (id, version, created_at, cwd, parent_session, seed_length, delegation_depth, revision, generation)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, version, created_at, cwd, parent_session, seed_length, delegation_depth, agent_preset, revision, generation)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      entry.header.id,
-      entry.header.version,
-      entry.header.createdAt,
-      entry.header.cwd ?? null,
-      entry.header.parentSession ?? null,
-      entry.header.seedLength ?? null,
-      entry.header.delegationDepth ?? null,
+      ...headerBindings(entry.header),
       revision,
       generation,
     )
@@ -588,16 +604,10 @@ export class SessionQuerySqlite extends SessionQueryService {
     const db = this._requireDb()
     db.prepare(`
       INSERT INTO temp.live_sessions
-        (id, version, created_at, cwd, parent_session, seed_length, delegation_depth, fingerprint, persisted, generation)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, version, created_at, cwd, parent_session, seed_length, delegation_depth, agent_preset, fingerprint, persisted, generation)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      entry.header.id,
-      entry.header.version,
-      entry.header.createdAt,
-      entry.header.cwd ?? null,
-      entry.header.parentSession ?? null,
-      entry.header.seedLength ?? null,
-      entry.header.delegationDepth ?? null,
+      ...headerBindings(entry.header),
       entry.fingerprint,
       persisted ? 1 : 0,
       generation,
@@ -692,7 +702,7 @@ export class SessionQuerySqlite extends SessionQueryService {
     const db = this._requireDb()
     const live = db.prepare(
       `SELECT
-        id AS session_id, version, created_at, cwd, parent_session, seed_length, delegation_depth, generation
+        id AS session_id, version, created_at, cwd, parent_session, seed_length, delegation_depth, agent_preset, generation
       FROM temp.live_sessions
       WHERE id = ?`,
     ).get(sessionId) as (SessionHeaderRow & { generation: number }) | undefined
@@ -702,7 +712,7 @@ export class SessionQuerySqlite extends SessionQueryService {
     if (persistenceBinding.service !== undefined) {
       const persisted = db.prepare(
         `SELECT
-          id AS session_id, version, created_at, cwd, parent_session, seed_length, delegation_depth, generation
+          id AS session_id, version, created_at, cwd, parent_session, seed_length, delegation_depth, agent_preset, generation
         FROM persisted_sessions
         WHERE id = ?`,
       ).get(sessionId) as (SessionHeaderRow & { generation: number }) | undefined
@@ -750,6 +760,25 @@ export class SessionQuerySqlite extends SessionQueryService {
   }
 }
 
+/**
+ * The header columns both session upserts bind, in the order their INSERT
+ * lists them. The two statements differ only in what they append after these.
+ * @param header - the session header being written.
+ * @returns one bound value per header column.
+ */
+function headerBindings(header: SessionHeader): (string | number | null)[] {
+  return [
+    header.id,
+    header.version,
+    header.createdAt,
+    header.cwd ?? null,
+    header.parentSession ?? null,
+    header.seedLength ?? null,
+    header.delegationDepth ?? null,
+    header.agentPreset ?? null,
+  ]
+}
+
 function selectedDocumentsSql(): { sql: string } {
   return {
     sql: `WITH candidates AS (
@@ -761,6 +790,7 @@ function selectedDocumentsSql(): { sql: string } {
         ps.parent_session AS parent_session,
         ps.seed_length AS seed_length,
         ps.delegation_depth AS delegation_depth,
+        ps.agent_preset AS agent_preset,
         0 AS live,
         1 AS persisted,
         CAST(pd.seq AS INTEGER) AS seq,
@@ -783,6 +813,7 @@ function selectedDocumentsSql(): { sql: string } {
         ls.parent_session AS parent_session,
         ls.seed_length AS seed_length,
         ls.delegation_depth AS delegation_depth,
+        ls.agent_preset AS agent_preset,
         1 AS live,
         CASE WHEN ? = 1 THEN ls.persisted ELSE 0 END AS persisted,
         CAST(ld.seq AS INTEGER) AS seq,
@@ -891,6 +922,7 @@ function sameHeader(a: SessionHeader, b: SessionHeader): boolean {
     && a.parentSession === b.parentSession
     && a.seedLength === b.seedLength
     && (a.delegationDepth ?? 0) === (b.delegationDepth ?? 0)
+    && a.agentPreset === b.agentPreset
 }
 
 function rowHeader(row: SessionHeaderRow): SessionHeader {
@@ -902,6 +934,7 @@ function rowHeader(row: SessionHeaderRow): SessionHeader {
     ...row.parent_session === null ? {} : { parentSession: row.parent_session as SessionId },
     ...row.seed_length === null ? {} : { seedLength: row.seed_length },
     ...row.delegation_depth === null ? {} : { delegationDepth: row.delegation_depth },
+    ...row.agent_preset === null ? {} : { agentPreset: row.agent_preset },
   }
 }
 
@@ -979,7 +1012,7 @@ function resolveConfig(config: Config): ResolvedConfig {
   if (typeof resolved.path !== 'string' || resolved.path.trim().length === 0) {
     throw invalidConfig('path must not be blank')
   }
-  const openPhases: readonly string[] = ['startup', 'first-search']
+  const openPhases: readonly string[] = ['startup', 'first-search', 'never']
   if (!openPhases.includes(resolved.openAt)) throw invalidConfig('openAt is not supported')
   assertPageLimit('defaultLimit', resolved.defaultLimit)
   assertPageLimit('maxLimit', resolved.maxLimit)
@@ -1067,4 +1100,4 @@ function isRuntimeArray(value: unknown): boolean {
   return Array.isArray(value)
 }
 
-export default SessionQuerySqlite
+export default SqliteSessionQueryEngine

@@ -1,16 +1,14 @@
 /**
- * Settings shell slot contract — the canonical home of every settings slot
- * type. The shell is a pure composition face with zero copy of its own: it
- * occupies the sidebar-owned `sidebar.settings` hole and declares the slots
- * below; ALL text (trigger label, panel title, header actions, close aria,
- * section content) arrives from registrants. A feature owns its settings surface — adding a
- * setting never means editing the shell; copy that belongs to no single
- * feature (chrome, the General section) is owned by ui-settings-general.
+ * Settings slot contract — the canonical home of every settings slot type,
+ * owned by the settings domain base rather than by the shell that renders
+ * them (ui-settings-general, which occupies `sidebar.settings`). The shell has
+ * zero copy of its own: ALL text (trigger label, panel title, header actions,
+ * close aria, section content) arrives from registrants. A feature owns its
+ * own settings pages — adding a setting never means editing the shell; copy
+ * that belongs to no single feature (chrome, the General section) is owned by
+ * ui-settings-general too.
  */
-import type { HostObservable, InjectFace, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-// Type-only: pulls ui-sidebar's SlotMap merge (the 'sidebar.settings' entry)
-// into every program that sees this contract.
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -54,19 +52,52 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'settings.section': { kind: 'list'; scope: 'root'; owner: SettingsSectionOwnerProps }
     /**
+     * One page inside the Plugins settings section. The section owner renders
+     * localized entry labels as tabs and mounts each contribution inside its
+     * corresponding tab panel. Options: `id` (tab key), `order` (tab order),
+     * and `label` (registrant-localized tab text). Declared at runtime by the
+     * feature that owns the Plugins section; the type lives here so inventory
+     * and configuration plugins collaborate without depending on one another.
+     */
+    'settings.plugins.tab': { kind: 'list'; scope: 'root'; owner: SettingsPluginsTabOwnerProps }
+    /**
      * Root-scoped onboarding steps contributed by settings features. The
      * shell mounts one ordered step at a time; the active registrant either
      * completes itself or keeps ownership until the user completes its sole
-     * path. Registrants own readiness, copy, dialog behavior, AND the
-     * takeover chrome: a step wraps its visible content in the
-     * OnboardingSurface primitive (mask, opaque stage, `#root` inert) and
-     * renders null while its private facts are still loading — the shell
-     * paints no chrome of its own, so a mounted-but-deciding step shows and
-     * blocks nothing (the reload white-flash fix; a bare unwrapped step
-     * would render without mask or stage).
+     * path. Registrants own readiness, copy, dialog behavior, AND visible
+     * chrome: a step wraps its visible content in its modal surface (including
+     * `#root` inert ownership) and renders null while private facts are still
+     * loading. The shell paints no chrome of its own, so a mounted-but-deciding
+     * step shows and blocks nothing.
      */
     'settings.onboarding': { kind: 'list'; scope: 'root'; owner: SettingsOnboardingOwnerProps }
+    /**
+     * One preference row inside the General section — the additive seat for a
+     * single setting that needs no page of its own (a whole page is
+     * `settings.section`), contributed by the feature plugin that owns the
+     * preference (locale → Language, ui-theme → Appearance, ui-conversation →
+     * Composer Enter). Options: `id` (row key), `order` (row position). The
+     * section column only stacks rows, so a row draws its own internals,
+     * including its label: nothing projects a `label` here and the owner passes
+     * no props at all — copy, current value, and the write path are all yours,
+     * through your own inject face and `host.call`. Declared at runtime by
+     * ui-settings-general's General entry; the type lives here with every other
+     * settings slot type, because this package is the settings domain's base
+     * layer and every registrant already depends on it for `ctx.settingsScope`.
+     */
+    'settings.general.item': { kind: 'list'; scope: 'root'; owner: SettingsGeneralItemOwnerProps }
   }
+}
+/** Owner share of a General preference row (the section supplies nothing). */
+export interface SettingsGeneralItemOwnerProps {
+  /** Marker field: item owner props are intentionally empty. */
+  children?: never
+}
+
+/** Owner share of a Plugins tab (the section supplies nothing). */
+export interface SettingsPluginsTabOwnerProps {
+  /** Marker field: tab owner props are intentionally empty. */
+  children?: never
 }
 
 /** Owner share of the trigger content seat: the sidebar column state. */
@@ -83,12 +114,14 @@ export interface SettingsHeaderOwnerProps {
 
 /**
  * Owner share of a settings section entry. The shell owns modal visibility
- * and navigation; sections receive nothing but the render site (their data
- * arrives through their own inject faces and stores).
+ * and navigation; a section's data arrives through its own inject faces and
+ * stores. `close` is the one shell affordance a section receives, for flows
+ * that leave settings altogether (starting a session from a section) — the
+ * onboarding coordinator's `openSection`/`complete` precedent, inverted.
  */
 export interface SettingsSectionOwnerProps {
-  /** Marker field: section owner props are intentionally empty for now. */
-  children?: never
+  /** Close the settings panel (the shell owns the open state). */
+  close: () => void
 }
 
 /** Owner share of the currently active settings-backed onboarding step. */
@@ -100,48 +133,3 @@ export interface SettingsOnboardingOwnerProps {
   /** Open the settings panel directly on one registered section. */
   openSection: (id: string) => void
 }
-
-/** One nav row projected from a settings.section registration's options. */
-export interface SettingsSectionRow {
-  id: string
-  order: number
-  label: string
-}
-
-/** One ordered onboarding step projected from a slot registration. */
-export interface SettingsOnboardingStep {
-  id: string
-  order: number
-}
-
-/**
- * Registrant-private injected share of the settings shell (assembled in
- * apply): the ledger's nav-row projection as a hooks-compartment source —
- * the shell reads no locale state and subscribes through the bound hook.
- */
-export type SettingsRootInjected = {
-  hooks: {
-    /** settings.section ledger projected into ordered nav rows. */
-    sections: HostObservable<readonly SettingsSectionRow[]>
-    /** settings.onboarding ledger projected into coordinator order. */
-    onboardingSteps: HostObservable<readonly SettingsOnboardingStep[]>
-  }
-}
-
-/**
- * Full component props of the settings shell root: the sidebar owner share
- * (wide/rail state) plus the declared render shares and the injected face
- * (hooks compartment bound to useSections). No store is registered — modal
- * open state and active section id are component-local viewing state.
- */
-export type SettingsRootComponentProps =
-  PropsRuntime<'sidebar.settings'>
-  & PropsRenderSlots<
-    | 'settings.trigger'
-    | 'settings.header'
-    | 'settings.action'
-    | 'settings.close'
-    | 'settings.section'
-    | 'settings.onboarding'
-  >
-  & InjectFace<SettingsRootInjected>

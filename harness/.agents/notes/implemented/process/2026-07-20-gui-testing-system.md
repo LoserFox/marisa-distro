@@ -14,7 +14,7 @@ The GUI stack spans multiple application shapes, and within one shape multiple r
 
 ## Decision
 
-Cut along the architecture's natural test seams into three tiers, bottom-up:
+Cut along the architecture's natural test hooks into three tiers, bottom-up:
 
 | Tier | Under test | Key technique | File location |
 |---|---|---|---|

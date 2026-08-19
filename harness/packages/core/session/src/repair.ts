@@ -1,32 +1,13 @@
 /**
  * Crash-recovery repair for an interrupted session log. It preserves a fully
  * written final turn and supplies the missing tool, step, and turn boundaries
- * needed to resume with a provider-valid transcript, plus the activity-time
- * read that must skip the end-seed boundary — which this module does
- * not write (`Session`'s constructor does) but whose synthetic closers can
- * inherit that boundary's timestamp, the one real coupling between the two.
+ * needed to resume with a provider-valid transcript.
  * @module @deepseek-ai/dsh-session/repair
  */
 
 import { MessageId, freezeMessage, type CallId } from '@deepseek-ai/dsh-llm'
 import type { ToolResultMessage } from '@deepseek-ai/dsh-llm'
 import type { SessionEvent } from './types.ts'
-
-/**
- * The `time` of the log's last event representing actual work, skipping the
- * `session/end-seed` boundary — picking a session up is not activity, so
- * activity ordering must exclude it.
- *
- * Excluded by type, so a pickup time still leaks when a boundary is the last
- * event of an open turn: {@link interruptedTurnClosers} copies it onto the
- * synthetic `turn/end`, which this counts as work. Reachable only by seeding an
- * unbalanced log directly — `load()` balances first.
- * @param events - the log to scan, in seq order.
- * @returns the latest non-boundary event's `time`, or undefined when there is none.
- */
-export function lastActivityTime(events: readonly SessionEvent[]): number | undefined {
-  return events.findLast(event => event.type !== 'session/end-seed')?.time
-}
 
 /** Recovery code for an assistant tool request that never reached a recorded call start. */
 export const TOOL_NOT_STARTED = 'TOOL_NOT_STARTED'
@@ -47,7 +28,7 @@ export function interruptedTurnClosers(events: readonly SessionEvent[]): Session
   let openTurn: number | null = null
   let openStep: number | null = null
   // Reset at each turn boundary so earlier calls cannot leak into tail repair.
-  // Assistant blocks register calls; later tool/call events add provenance seqs.
+  // Assistant blocks register calls; later `tool/call` events add their seqs to `sourceEventSeqs`.
   const pendingCalls = new Map<CallId, { step: number; callSeq?: number }>()
   for (const event of events) {
     switch (event.type) {
@@ -76,7 +57,7 @@ export function interruptedTurnClosers(events: readonly SessionEvent[]): Session
         }
         break
       case 'tool/call':
-        // Add the tool/call seq used as provenance on a synthetic result.
+        // Cite the `tool/call` seq from the synthetic result.
         {
           const entry = pendingCalls.get(event.data.callId)
           if (entry) {
@@ -138,7 +119,7 @@ export function interruptedTurnClosers(events: readonly SessionEvent[]): Session
           : { name: 'ToolNotStartedError', code: TOOL_NOT_STARTED },
       },
       surfaceOp: 'append',
-      ...!started ? {} : { sourceEventSeqs: [callSeq] },
+      ...started ? { sourceEventSeqs: [callSeq] } : {},
     })
   }
 

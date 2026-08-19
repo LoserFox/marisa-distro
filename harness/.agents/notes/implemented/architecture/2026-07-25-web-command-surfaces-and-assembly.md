@@ -1,10 +1,10 @@
-# Agent Note: Web command business surfaces and assembly (ui-command / ui-skill / ui-subagent)
+# Agent Note: Web command business surfaces and assembly (ui-commands / ui-skill / ui-subagent)
 
 Status: implemented
 
 English | [中文](2026-07-25-web-command-surfaces-and-assembly.zh.md)
 
-> Scope: the command directory cache and three-kind dispatch (ui-command), the popup selection flow, the two skill / subagent reference sources, and fixture command routing plus assembly acceptance (the slash-flow snapshot). The carrying wire lives in the [session scope note](2026-07-25-web-client-session-scope-and-provide-channel.md); triggers, the menu, and the input machine live in the [input machine note](2026-07-25-web-input-machine-and-slash-pipeline.md).
+> Scope: the command directory cache and three-kind dispatch (ui-commands), the popup selection flow, the two skill / subagent reference sources, and fixture command routing plus assembly acceptance (the slash-flow snapshot). The carrying wire lives in the [session scope note](2026-07-25-web-client-session-scope-and-provide-channel.md); triggers, the menu, and the input machine live in the [input machine note](2026-07-25-web-input-machine-and-slash-pipeline.md).
 
 ## Problem
 
@@ -17,9 +17,9 @@ The pipeline was ready but command knowledge had no landing spot: host-side `ctx
 
 ## Decision
 
-### ui-command: a `CommandService` + a session-keyed `CommandDirectory` + a per-session `PopupSelectController`
+### ui-commands: a `CommandUiRuntime` + a session-keyed `CommandDirectory` + a per-session `PopupSelectController`
 
-- The `ClientSessionContext { sessionId }` projection is self-held in the ui-slash contract (types.ts): sessions are always agent-backed, so session identity is the entire projection of command capability; the wire addresses by `{sessionId}` (both `command.list` and `command.execute`; the host resolves the Agent from the session header).
+- The `ClientSessionContext { sessionId }` projection is self-held in the ui-input-trigger contract (types.ts): sessions are always agent-backed, so session identity is the entire projection of command capability; the wire addresses by `{sessionId}` (both `command.list` and `command.execute`; the host resolves the Agent from the session header).
 - The directory is compartmented by `SessionId`, with per-key single-flight + an epoch guard (an old pull never overwrites newer state); `commands/changed` soft-invalidates every key (the old snapshot keeps serving while the repull runs in the background), `connection/reset` hard-invalidates every key and rewarms, Enter strong-waits on the current key, and a failure keeps the draft with no downgrade. Prewarming hangs on the source's `warm` hook — once over the full roster at scope birth, which covers the entire session lifecycle (session capability is constant from birth).
 - `register(contribution)` registers client commands (a descriptor + `available(projection)` + a popupSelect spec); candidate synthesis = the host directory + contribution availability filtering, then the query/position pass, and a host/contribution name clash fails loud.
 - The three command kinds derive from the registration surfaces; developers never declare positions: a host descriptor with `input` = **leadingInput** (backfill `/name ␣` + claim, keep typing arguments, leading position only); a client-registered popupSelect spec = **popupSelect** (the official select-box shell, business ships zero components); neither = **execute** (run on selection, zero UI).
@@ -28,7 +28,7 @@ The pipeline was ready but command knowledge had no landing spot: host-side `ctx
 
 ### Reference sources (seeing only projections plus their own apply closures, on the root ctx)
 
-- **ui-skill**: `skill.list({sessionId})` addresses by session (the host resolves the project root from the session header); the directory cache is single-flight keyed by sessionId, prewarmed at birth by the `warm` hook and fully cleared by `connection/reset`. A pick produces a text outcome (the literal `/name ` text, Decision 21); `lexicon` supplies the roster from CatalogFetch's settled snapshot (`undefined` while not warm), and `subscribeLexicon` notifies per-session listeners on settle and on invalidation. No match hook (references never enter command adjudication). Skill references ride ordinary prompts as literal text (outside the command plane; tool-skill unchanged, with the session-prefix directory providing the cooperative association).
+- **ui-skill**: `skill.list({sessionId})` addresses by session (the host resolves the project root from the session header); the directory cache is single-flight keyed by sessionId, prewarmed at birth by the `warm` hook and fully cleared by `connection/reset`. A pick produces a text outcome (the literal `/name ` text, the plain-text-reference decision); `lexicon` supplies the roster from CatalogFetch's settled snapshot (`undefined` while not warm), and `subscribeLexicon` notifies per-session listeners on settle and on invalidation. No match hook (references never enter command adjudication). Skill references ride ordinary prompts as literal text (outside the command plane; tool-skill unchanged, with the session-prefix directory providing the cooperative association).
 - **ui-subagent**: candidates are zero-RPC (the sessions.list snapshot filtered by parentId/running); a pick produces a text outcome (the literal `@name ` text); `lexicon` derives from the same snapshot and `subscribeLexicon` forwards the list store's change feed (the model-side representation awaits its business workstream).
 
 ### Fixture command routing and assembly
@@ -49,14 +49,14 @@ The pipeline was ready but command knowledge had no landing spot: host-side `ctx
 | A `skill.invoke` RPC | The host has no such operation; skill references are plain text riding prompts |
 | A new ContentBlock reference type | Full-chain cost (adapters/UI/compaction); text-as-truth plus structured occurrence records suffices |
 | Client packages self-reporting command directories | The host is the single source of truth; the client only reads descriptors, with `commands-changed` pushing invalidation |
-| The `requires: 'none' \| 'agent'` discriminant axis (an agentless directory + dual-addressed queries) | With sessions always agent-backed, the amphibious command has no owner; the whole axis reverts to master's shape, to be reopened on real demand |
+| The `requires: 'none' \| 'agent'` discriminant axis (an agentless directory + dual-addressed queries) | With sessions always agent-backed, the amphibious command has no owner; the whole axis is dropped, to be reopened on real demand |
 | Dedicated commandresult / commandpanel slots | Results go through notices; the popup shell is a skeleton-internal overlay; rich result cards sit in the ledger |
 | An agent-type directory as the `@` source | No type registry exists; the live-session snapshot already covers it |
 | A PickAction/EnterCommand class family (class-inheritance pick products) | Cross-package runtime values break client bundle purity; pure data interfaces plus closure methods are equivalent |
 
 ## Consequences
 
-- Shipping a business command = a host registration plus one client `command.register` (popupSelect) or zero registration (execute/leadingInput derive automatically), with zero skeleton changes; the cost is that the three-kind semantics concentrate in ui-command, and a hypothetical fourth kind means changing it.
+- Shipping a business command = a host registration plus one client `command.register` (popupSelect) or zero registration (execute/leadingInput derive automatically), with zero skeleton changes; the cost is that the three-kind semantics concentrate in ui-commands, and a hypothetical fourth kind means changing it.
 - The resident directory cache plus push invalidation buys zero-latency menus and reliable enter adjudication; the cost is three invalidation paths (the change frame, reconnect, the epoch guard) that all need tests pinning them.
 - sessionId addressing puts the host's per-agent effective directory (global + scoped shadows) straight on the wire, with the client presenting it as-is.
-- Known gaps: the popupSelect shell has no shipped business consumer yet (model selection and its kin return with #600's host `selectModel` in live-mutation shape, serving as the onboarding template then); the queue's second cut (per-item Inbox operations), rich result cards, and roster configurability sit in the ledger awaiting their triggers.
+- Known gaps: the popupSelect shell has no shipped business consumer yet (model selection and its kin arrive with the host `selectModel` work in live-mutation shape, serving as the onboarding template then); the queue's second cut (per-item Inbox operations), rich result cards, and roster configurability sit in the ledger awaiting their triggers.

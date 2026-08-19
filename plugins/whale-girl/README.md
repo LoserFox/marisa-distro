@@ -43,6 +43,24 @@ dsh plugin --profile web add "github:vlln/whale-girl#main"   # 推荐：git 源�
 
 完整状态机（优先级/转换语义/触发源）见 [docs/state-machine.md](docs/state-machine.md)。
 
+## 桌面伴侣（可选）
+
+`desktop/` 是**独立桌面伴侣应用**（Node 引擎 + Tauri 渲染壳，零运行时依赖），把鲸鱼娘渲染到操作系统桌面常驻。**不随 `dsh plugin` 安装**——想要桌宠的用户自行启用：
+
+```sh
+# 前置：Node ≥18；桌面渲染壳需 Rust 工具链（cargo）
+cd desktop
+npm install                          # 引擎零依赖（无第三方包）
+cd src-tauri && cargo build --release  # 首次编译约 5-15 分钟；产物 target/release/whale-girl-desktop（约 12MB）
+./target/release/whale-girl-desktop   # 启动透明置顶桌宠（默认连本机 DSH 3080）
+# WHALE_GIRL_BASE_URL=http://IP:PORT 指向非本机 DSH
+# 无窗模式：cd desktop && npm run start:headless  # presence 心跳 + 状态轮询 + SSE
+```
+
+- 消费 whale-girl 既有公开端点（`/state`、`/events`、`/presence`、`/interact`、`/config`、`/assets`），**不改动插件本体**；运行期间网页端宠物自动隐藏（presence 契约），退出或崩溃（TTL 45s 过期）后恢复。
+- 渲染壳：Tauri v2（推荐，体积 ~12MB）；Electron 遗留壳保留（`npm i -D electron` 后可用）。
+- 设计与契约见 `desktop/DESIGN.md`、`desktop/BUILD-RUN.md`。
+
 ## 状态预览
 
 | 状态 | 触发 | 预览 |
@@ -69,6 +87,7 @@ dsh plugin --profile web add "github:vlln/whale-girl#main"   # 推荐：git 源�
 
 ```yaml
 whale-girl:
+  enabled: true      # 网页端渲染开关（与桌面伴侣并存时设 false 关闭网页端宠物，避免双宠物）
   size: 110          # 宠物尺寸 px（64–160）
   opacity: 1         # 常态透明度（0.2–1）
   walk:
@@ -76,17 +95,17 @@ whale-girl:
   sleepAfterMs: 60000
 ```
 
-完整配置项清单与语义层（XP/称号）封闭说明见 `.dsh-plugin/src/config.mjs`。**语义层不可配**（改 XP/称号阈值会破坏积累账本一致性）。
+完整配置项清单与语义层（XP/称号）封闭说明见 `lib/src/config.mjs`。**语义层不可配**（改 XP/称号阈值会破坏积累账本一致性）。
 
 ## 角色
 
-菜单「🎭 换角色」循环切换角色（或设置 localStorage `whale-girl:character`）。每个角色提供**全部 15 状态**素材（素材全量契约，见 [docs/sprites-spec.md](docs/sprites-spec.md)）；贡献新角色指南见 [docs/adding-a-character.md](docs/adding-a-character.md)。
+菜单「🎭 换角色」循环切换角色（或设置 localStorage `whale-girl:character`）；**manifest 仅 1 个角色时按钮置灰**（悬停提示「暂无其他角色」）。每个角色提供**全部 15 状态**素材（素材全量契约，见 [docs/sprites-spec.md](docs/sprites-spec.md)）；贡献新角色指南见 [docs/adding-a-character.md](docs/adding-a-character.md)。
 
 ## 作为参考实现
 
-whale-girl 是官方 repository-plugin 格式的**完整范本**（不绑定具体基线版本，随官方机制演进）——开发新插件可对照：
+whale-girl 是官方 **bundle 插件格式**的完整范本（`dsh.bundle` + `cordis.patch.yml` + `lib/` 布局，随官方机制演进）——开发新插件可对照：
 
-- **结构**：`.dsh-plugin/`（入口/纯逻辑/client/素材）与 docs/decisions/scripts 分离，见根 [AGENTS.md](AGENTS.md)
+- **结构**：`lib/`（入口/纯逻辑/client/素材）与 docs/decisions/scripts 分离，见根 [AGENTS.md](AGENTS.md)
 - **规范**：门禁（`scripts/gates/run.mjs`）+ 决策记录 + 素材全量契约；开发引导见 plugin-registry 的 [plugin-registry-create skill](https://github.com/vlln/plugin-registry/tree/main/skills/plugin-registry-create) 与 [cookbook](https://github.com/vlln/plugin-registry/blob/main/docs/cookbook/creating-a-repository-plugin.md)，踩过的坑见 [gotchas](https://github.com/vlln/plugin-registry/blob/main/skills/plugin-registry-create/references/gotchas.md)
 
 ## 贡献

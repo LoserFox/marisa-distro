@@ -2,7 +2,7 @@
  * The session standard-props provide channel: provider roster, bundle
  * materialization (fail-loud on undeclared/missing/duplicate members), the
  * static no-session projection, and the atomic current-session projection
- * observable. One implementation — SessionsService drives it from wire
+ * observable. One implementation — SessionRuntime drives it from wire
  * truth, the test runtime's sessions double drives it from fixtures — so
  * the materialization rules and the projection semantics cannot drift
  * between production and the test bench.
@@ -71,7 +71,7 @@ export class SessionProvideChannel {
 
   /**
    * Register a per-session standard-props provider (see
-   * SessionsService.provide for the product contract). Live bundles rebuild
+   * SessionRuntime.provide for the product contract). Live bundles rebuild
    * immediately; misdeclared providers fail loud here, at the registration
    * edge, and the registration rolls back — the channel never stays on a
    * roster it cannot materialize.

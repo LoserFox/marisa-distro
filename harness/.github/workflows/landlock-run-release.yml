@@ -147,6 +147,12 @@ jobs:
       contents: read
       id-token: write
     steps:
+      # The publish script is the only repository file this job needs, and it
+      # imports nothing outside Node's builtins, so there is no install step.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -167,10 +173,8 @@ jobs:
           fi
 
       - name: Publish tarballs
-        run: |
-          version="${GITHUB_REF#refs/tags/landlock-run-v}"
-          tag_args=()
-          case "$version" in *-*) tag_args=(--tag next);; esac
-          while IFS= read -r tarball; do
-            npm publish "dist/npm/${tarball}" --access public "${tag_args[@]}"
-          done < dist/npm/publish-order.txt
+        # Publication is decided per package against the registry, so re-running
+        # this job over the same artifact skips what already landed instead of
+        # failing on it. A bare `npm publish` loop could not be retried: the
+        # registry answers a repeat of an existing version permanently.
+        run: node ./scripts/publish-release.mjs dist/npm

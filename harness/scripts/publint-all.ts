@@ -64,7 +64,7 @@ function publicationFiles(target: PackageTarget): PackFile[] {
   const paths = new Set<string>()
   addPath(resolve(target.directory, 'package.json'), paths)
   const declared = Array.isArray(target.manifest.files)
-    ? target.manifest.files.filter((value): value is string => { return typeof value === 'string' })
+    ? target.manifest.files.filter((value): value is string => typeof value === 'string')
     : []
   for (const pattern of [
     ...declared,

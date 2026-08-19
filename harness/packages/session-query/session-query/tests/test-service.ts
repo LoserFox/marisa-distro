@@ -1,4 +1,4 @@
-import SessionQueryService from '@deepseek-ai/dsh-session-query'
+import SessionQueryEngine from '@deepseek-ai/dsh-session-query'
 import type {
   SessionEventSearchPage,
   SessionEventSearchRequest,
@@ -9,7 +9,7 @@ import type {
 } from '@deepseek-ai/dsh-session-query'
 
 /** Test-only concrete query service for backend-independent behavior. */
-export class TestSessionQueryService extends SessionQueryService {
+export class TestSessionQueryEngine extends SessionQueryEngine {
   override searchSessions(
     _request: SessionSearchRequest,
     _exec?: SessionSearchExecContext,

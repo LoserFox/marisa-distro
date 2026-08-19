@@ -32,7 +32,7 @@ Control words are ASCII-case-insensitive after outer whitespace trimming. They a
 
 Status output omits branded ids and compare-and-set revisions because those are model/plugin coordination details rather than human controls. It includes activation because that fact changes whether work will continue, and a blocked goal includes its durable policy code and human-readable explanation. Command hints are derived from the exact state: an armed active goal offers pause, a disarmed active or paused/blocked goal offers resume, and a completed goal offers replacement or clear.
 
-Expected `GoalError` failures become one stable, branded-id-free `CommandResult.error`, so domain diagnostics do not leak compare-and-set internals into the human surface and invalid operations never enter model history. The current status supplies the actionable state-specific recovery. Other exceptions remain adapter-visible command failures; treating programmer faults as ordinary domain errors would hide defects. The command handler performs only synchronous domain mutations, so request cancellation is decided by the command registry before the mutation begins and there is no escaped asynchronous side effect to unwind.
+Expected `GoalError` failures become one stable, branded-id-free `CommandResult.error`, so domain diagnostics do not leak compare-and-set internals into the UI and invalid operations never enter model history. The current status supplies the actionable state-specific recovery. Other exceptions remain adapter-visible command failures; treating programmer faults as ordinary domain errors would hide defects. The command handler performs only synchronous domain mutations, so request cancellation is decided by the command registry before the mutation begins and there is no escaped asynchronous side effect to unwind.
 
 Generic slash input, status text, and errors are not persisted. Successful goal mutations append the domain-owned `goal/change` event and do not queue model context. The command introduces no second audit record that could disagree with the domain event.
 
@@ -50,7 +50,7 @@ The producer suite uses the real command registry, goal service, agent registry,
 
 - **Let the model handle `/goal` as ordinary text** — rejected because status and direct lifecycle actions would cost a model turn, could be reinterpreted, and would not provide deterministic command discovery.
 - **Implement separate handlers in each UI** — rejected because grammar, error behavior, and goal-state formatting would drift and optional deployments could not add or remove the capability as one effect.
-- **Add modal editing and replacement confirmation to `ctx.commands`** — rejected because the existing cross-surface contract is unstructured input plus direct output; a general interaction protocol needs more than this one producer.
+- **Add modal editing and replacement confirmation to `ctx.commands`** — rejected because the existing cross-UI contract is unstructured input plus direct output; a general interaction protocol needs more than this one producer.
 - **Silently replace an unfinished goal** — rejected because it combines clear and create without atomicity or explicit destructive intent.
 - **Expose goal id and revision in human status** — rejected because human actions always target the exact current view inside one synchronous handler; those fields add implementation noise without preventing another race.
 - **Enable goals unconditionally in the UI-less spine** — rejected because one-shot SDK/CLI settlement is a physical-turn API, not a goal-operation API.
@@ -65,8 +65,8 @@ The producer suite uses the real command registry, goal service, agent registry,
 
 ## Known limitations and deferred work
 
-- The portable command contract has no modal editor or confirmation interaction; inline edit and explicit clear are intentional until a general cross-surface interaction primitive exists.
+- The portable command contract has no modal editor or confirmation interaction; inline edit and explicit clear are intentional until a general cross-UI interaction primitive exists.
 - `/goal` does not accept a per-command round cap. Deployment config owns the default, and the authorized model tool can edit a cap after direct human instruction.
 - TUI renders portable plain text rather than a continuously updated goal status widget. Reconnectable command output and adapter-specific status indicators are deferred.
-- The ACP automation server, headless CLI, and JSON-RPC front doors do not consume the command registry.
+- The ACP automation server, headless CLI, and JSON-RPC entry points do not consume the command registry.
 - The command observes and mutates state but does not certify completion or blockers. Evaluator-backed certification remains deferred to a separate policy layer with an explicit authority and isolation contract.

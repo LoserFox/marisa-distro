@@ -115,6 +115,15 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+.denseList .item {
+  min-height: 34px;
+  padding-block: 5px;
+}
+
+.denseList .label {
+  padding-block: 4px;
+}
+
 .list.compactList,
 .submenu.compactList {
   min-width: 164px;

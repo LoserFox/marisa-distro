@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { PromptAssembly } from '@deepseek-ai/dsh-system-prompt'
 import * as SystemPromptInvariant from '@deepseek-ai/dsh-system-prompt/invariant'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(SystemPromptInvariant)
   return ctx
 }
@@ -21,7 +21,7 @@ const valid = (): PromptAssembly => ({
 async function assemble(ctx: Context, result: PromptAssembly): Promise<PromptAssembly> {
   return ctx.waterfall(
     ctx as never, 'system-prompt/assemble', valid(), {},
-    () => { return Promise.resolve(result) },
+    () => Promise.resolve(result),
   )
 }
 

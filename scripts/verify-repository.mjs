@@ -14,7 +14,7 @@ for (const required of ['harness', 'plugins', 'desktop', 'docs']) {
 assert.ok(!existsSync(join(root, 'harness', '.git')), 'harness must be owned by the root repository, not a nested Git repository')
 assert.ok(existsSync(join(root, 'harness', 'package.json')), 'harness/package.json is missing')
 assert.match(manifest.harness.baseline, /^[0-9a-f]{7,40}$/, 'harness baseline must be a commit id')
-assert.equal(manifest.harness.mode, 'fork', 'harness is a maintained fork')
+assert.equal(manifest.harness.mode, 'mirror', 'harness must track the pinned upstream rc baseline')
 
 const pluginDirectories = readdirSync(join(root, 'plugins'), { withFileTypes: true })
   .filter(entry => entry.isDirectory() && entry.name !== 'node_modules')
@@ -77,8 +77,8 @@ for (const plugin of profileManifest.plugins) {
 }
 
 const releaseWorkflow = readFileSync(join(root, '.github', 'workflows', 'release.yml'), 'utf8')
-assert.match(releaseWorkflow, /windows:\s*[\s\S]*?timeout-minutes:\s*60\b/, 'Windows release jobs must have a bounded runtime')
-assert.match(releaseWorkflow, /version:\s*['"]11\.7\.0['"]/, 'release builds must use the pnpm version that generated the lockfile')
+assert.match(releaseWorkflow, /windows:\s*[\s\S]*?timeout-minutes:\s*90\b/, 'Windows release jobs must have a bounded runtime')
+assert.match(releaseWorkflow, /version:\s*['"]11\.9\.0['"]/, 'release builds must use the pnpm version that generated the lockfile')
 assert.match(
   releaseWorkflow,
   /if \(-not \(Get-Command python3\.exe -ErrorAction SilentlyContinue\)\)/,
@@ -99,16 +99,11 @@ assert.match(
 assert.match(rootWorkspace, /^  cordis: 4\.0\.0-rc\.7$/m, 'root peer resolution must use the vendored cordis version')
 
 const hostTypecheck = readFileSync(join(root, 'harness', 'tsconfig.host.json'), 'utf8')
-assert.doesNotMatch(hostTypecheck, /"examples\/\*\//, 'release host typechecking must not include example fixtures')
-assert.doesNotMatch(hostTypecheck, /"website\/\.vitepress\//, 'release host typechecking must not require VitePress')
-assert.match(hostTypecheck, /"website\/docs\.ts"/, 'the host build must retain the website runtime docs module')
+assert.match(hostTypecheck, /"examples\/\*\/src\/\*\*\/\*\.ts"/, 'rc7 harness host typechecking must retain upstream examples')
+assert.match(hostTypecheck, /"website\/\.vitepress\/\*\*\/\*\.ts"/, 'rc7 harness host typechecking must retain upstream website sources')
 
 const webPackage = JSON.parse(readFileSync(join(root, 'harness', 'apps', 'web', 'package.json'), 'utf8'))
-assert.match(
-  webPackage.scripts.build,
-  /vite build --configLoader runner/,
-  'the Windows-compatible web build must not let esbuild scan outside the workspace while loading Vite config',
-)
+assert.equal(webPackage.scripts.build, 'vite build', 'harness web build must remain upstream rc7')
 
 const windowsReleaseScript = readFileSync(join(root, 'scripts', 'build-release-windows.ps1'), 'utf8')
 assert.match(windowsReleaseScript, /npm_config_fetch_retries = '5'/, 'Windows release installs must retry transient registry failures')

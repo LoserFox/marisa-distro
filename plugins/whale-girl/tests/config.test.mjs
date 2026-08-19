@@ -3,12 +3,13 @@
 // 通过 NODE_PATH 或安装目录保证可解析（见 AGENTS.md 验证纪律）。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULTS, buildSchema, validateConfig, NAMESPACE } from '../.dsh-plugin/src/config.mjs'
+import { DEFAULTS, buildSchema, validateConfig, NAMESPACE } from '../lib/src/config.mjs'
 
 test('NAMESPACE 与 DEFAULTS 完整性', () => {
   assert.equal(NAMESPACE, 'whale-girl')
   assert.equal(typeof DEFAULTS.size, 'number')
   assert.equal(DEFAULTS.size, 110)
+  assert.equal(DEFAULTS.enabled, true)
   assert.equal(DEFAULTS.walk.enabled, true)
   assert.equal(DEFAULTS.walk.maxWaitMs, 40000)
 })

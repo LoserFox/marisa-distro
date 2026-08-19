@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write docs/core-data-structures/token-meter.md
-token-meter.md: 05784e294485a11acf0e4c8972e4083b1786c943
-token-meter.zh.md: 0474d86188a111014e6d72e9962121c08a228d73

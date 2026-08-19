@@ -33,6 +33,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+# pnpm resolution of the ~275-project workspace exceeds the default V8 heap
+# (~4GB) during --no-frozen-lockfile installs (measured 2026-08-19); cap is a
+# limit, not a reservation, so spawned prepare scripts are unaffected.
+$env:NODE_OPTIONS = '--max-old-space-size=8192'
 
 $Repo = $PSScriptRoot
 $RootBin = Join-Path $Repo 'node_modules\.bin'
@@ -199,7 +203,9 @@ try {
     if (-not (Test-Path -LiteralPath $builtCli -PathType Leaf)) {
       throw "built harness CLI missing after step 3: $builtCli"
     }
-    $binArgs = @('apps/cli/lib/bin.js', 'web', '--profile', 'marisa', '--patch', $patchPath)
+    # rc7 CLI syntax: --profile is a launcher flag (dsh --profile marisa);
+    # the `web` subcommand does not accept it (rc7 sync, 2026-08-18).
+    $binArgs = @('apps/cli/lib/bin.js', '--profile', 'marisa', '--patch', $patchPath)
     Write-Host "spawning: node $($binArgs -join ' ')"
     $webProc = Start-Process -FilePath 'node' -ArgumentList $binArgs `
       -WorkingDirectory (Join-Path $Repo 'harness') `

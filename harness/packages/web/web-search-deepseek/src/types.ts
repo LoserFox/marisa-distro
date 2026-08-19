@@ -14,13 +14,13 @@ export interface WebSearchResultItem {
   page_age?: string | null
 }
 
-/** A `web_search_tool_result` content block: the citeable result surface. */
+/** A `web_search_tool_result` content block: the citeable result shape. */
 export interface WebSearchToolResultBlock {
   type: 'web_search_tool_result'
   content?: WebSearchResultItem[]
 }
 
-/** One citation location inside a `text` block (the snippet surface). */
+/** One citation location inside a `text` block (the snippet source). */
 export interface CitationLocation {
   type?: string
   url?: string | null

@@ -146,7 +146,7 @@ describe('the unified author schema DSL', () => {
     expectTypeOf<InferValue<{ type: 'boolean'; enum: readonly [true] }>>().toEqualTypeOf<true>()
     expectTypeOf<InferValue<{ type: 'null' }>>().toEqualTypeOf<null>()
     expectTypeOf<InferValue<{ type: 'array'; items: { type: 'string' } }>>().toEqualTypeOf<string[]>()
-    expectTypeOf<InferValue<{ type: 'array' }>>().toEqualTypeOf<Array<JsonValue>>()
+    expectTypeOf<InferValue<{ type: 'array' }>>().toEqualTypeOf<JsonValue[]>()
     expectTypeOf<InferValue<{ type: 'json' }>>().toEqualTypeOf<JsonValue>()
     expectTypeOf<InferValue<{ oneOf: readonly [{ type: 'string' }, { type: 'null' }] }>>()
       .toEqualTypeOf<string | null>()

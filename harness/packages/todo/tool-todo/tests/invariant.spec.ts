@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { type Session, type SessionEvent } from '@deepseek-ai/dsh-session'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
 import * as TodoInvariant from '@deepseek-ai/dsh-tool-todo/invariant'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(InvariantService, { enabled: true })
+  await ctx.plugin(InvariantRegistry, { enabled: true })
   await ctx.plugin(TodoInvariant)
   return ctx
 }
@@ -28,12 +28,12 @@ describe('todo snapshot invariants', () => {
     ] as const
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(ToolTodo, { allowParallelInProgress: false })
     ctx.sessions.create().append('todo/write', { todos: [...todos] })
-    await ctx.plugin(InvariantService, { enabled: true })
+    await ctx.plugin(InvariantRegistry, { enabled: true })
 
-    await expect(ctx.plugin(TodoInvariant).then(() => { return undefined })).resolves.toBeUndefined()
+    await expect(ctx.plugin(TodoInvariant).then(() => undefined)).resolves.toBeUndefined()
     expect(() => { ctx.emit('session/event', {} as Session, event(todos)) }).not.toThrow()
   })
 
@@ -71,7 +71,7 @@ describe('todo snapshot invariants', () => {
         { content: 'duplicate', status: 'completed' },
       ],
     })
-    await ctx.plugin(InvariantService, { enabled: true })
+    await ctx.plugin(InvariantRegistry, { enabled: true })
 
     await expect(ctx.plugin(TodoInvariant).then(() => undefined)).rejects.toThrow(/repeats content "duplicate"/)
   })

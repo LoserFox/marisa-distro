@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context, type Fiber } from 'cordis'
+import { Context, type Fiber } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, CallId, HarnessError , createMessage } from '@deepseek-ai/dsh-llm'
 import { MAX_TIMER_DELAY_MS, TimeoutReason } from '@deepseek-ai/dsh-timeout'
-import * as TimeoutPolicy from '@deepseek-ai/dsh-timeout-policy'
+import * as TimeoutPolicy from '@deepseek-ai/dsh-tool-call-timeout-policy'
 import SessionStore, {
   SESSION_FORMAT_VERSION,
   SessionId,
@@ -11,7 +11,7 @@ import SessionStore, {
   type SessionHeader,
   type SessionId as SessionIdValue,
 } from '@deepseek-ai/dsh-session'
-import SessionQueryService, {
+import SessionQueryEngine, {
   SessionQueryError,
   SessionSearchCursor,
   type SessionEventSearchHit,
@@ -25,7 +25,7 @@ import SessionQueryService, {
   type SessionTitleObservationResult,
 } from '@deepseek-ai/dsh-session-query'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { type ToolExecutionResult } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { type ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import * as ToolSessionQuery from '@deepseek-ai/dsh-tool-session-query'
 
 const activeContexts: Context[] = []
@@ -111,7 +111,7 @@ function eventHit(sessionId: SessionIdValue, seq: number, text = 'needle excerpt
   }
 }
 
-class FakeQuery extends SessionQueryService {
+class FakeQuery extends SessionQueryEngine {
   static sessionSearch: (
     request: SessionSearchRequest,
     exec?: SessionSearchExecContext,
@@ -204,7 +204,7 @@ async function mount(
   activeContexts.push(ctx)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   if (enforceTimeout) await ctx.plugin(TimeoutPolicy)
   await ctx.plugin(FakeQuery)
   const fiber = await ctx.plugin(ToolSessionQuery, config)
@@ -1978,6 +1978,7 @@ describe('trace and exact read rendering', () => {
     )
     const result = await mounted.call('session_event_trace', { session_id: session.id, seq: 0 })
     expect(text(result)).toContain('Replacement chain: 1')
+    expect(text(result)).toContain('Events cited directly as sources: none')
     expect(text(result)).toContain('Direct derived events: 1')
     expect(text(result)).toContain(new Date(session.events[0]?.time ?? 0).toISOString())
   })

@@ -4,8 +4,8 @@
  * @module @deepseek-ai/dsh-tools
  */
 
-import { Context, Service } from 'cordis'
-import z from 'schemastery'
+import { Context, Service } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { AnonymousEntries, NamedEntries, ScopedLayers, scopeOf, scopeTarget } from '@deepseek-ai/dsh-scope'
 import type { ScopeKey, ScopeLayer, Scoped } from '@deepseek-ai/dsh-scope'
 import type { CallId, ContentBlock, ToolSchema } from '@deepseek-ai/dsh-llm'
@@ -39,10 +39,24 @@ import { renderToolsSdkPy } from './py-types.ts'
  * the flavor table is checked against too, so any of the three left out is a
  * typecheck failure. What no check reaches is the prose that names the values
  * instead of deriving them: the seam's `dsh-code-runtime` README pair, its
- * `CodeRuntime.language` JSDoc, and `docs/core-data-structures/code-runtime.md`
+ * `CodeRuntime.language` JSDoc, and `docs/subsystems/code-runtime.md`
  * with its zh pair, plus this package's own README pair and the
  * {@link Config.mode} JSDoc.
  */
+/**
+ * Prompt order of the `code` collapse statement: after the persona and before
+ * the 100-199 per-tool guidance band, so the model reads which tools it may
+ * call before it reads what each one is for.
+ */
+const COLLAPSE_SECTION_ORDER = 99
+
+/**
+ * The model-facing statement of the `code` collapse. Names the consequence
+ * (the call fails) and the route (inside the program), because a rule the
+ * model can only discover by being denied is one it corrects too late.
+ */
+const CODE_ONLY_INSTRUCTION = `\`${RUN_CODE_NAME}\` is the only tool you can call directly — a tool call naming any other tool fails. Reach every tool the SDK declares below from inside the program.`
+
 const SDK_RENDERERS: Record<string, (schemas: ToolSdkSchema[]) => string> = {
   typescript: renderToolsSdk,
   python: renderToolsSdkPy,
@@ -85,6 +99,7 @@ export {
 } from './json-schema.ts'
 
 export type { JsonValue } from '@deepseek-ai/dsh-session'
+export type { CodeDispatchEventData, CodeDispatchStartEventData } from './types.ts'
 
 export { CodeRunFailedError, RUN_CODE_NAME } from './code-mode.ts'
 export { jsonSchemaToTs, renderToolsSdk } from './ts-types.ts'
@@ -93,7 +108,7 @@ export { defineContentToolFixture, type ContentToolFixtureOptions } from './test
 
 // The render-intent vocabulary a tool declares via `presentCall`/`presentResult`
 // lives in its own UI-facing module; re-export it so `@deepseek-ai/dsh-tools`
-// stays the single public surface for tool producers and UI adapters.
+// stays the single public API for tool producers and UI adapters.
 export type {
   ToolCallKind,
   FileLocation,
@@ -119,9 +134,9 @@ export type {
   WebSource,
 } from './presentation.ts'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    tools: ToolRegistry
+    tools: ToolRuntime
   }
 
   interface Events {
@@ -134,7 +149,7 @@ declare module 'cordis' {
      * @param exec - the pending call (name, parsed arguments, caller agent).
      * @mode waterfall
      */
-    'tools/pre-execute'(this: Scoped<ToolRegistry>, exec: ToolExecution, next: () => Promise<PreToolDecision>): Promise<PreToolDecision>
+    'tools/pre-execute'(this: Scoped<ToolRuntime>, exec: ToolExecution, next: () => Promise<PreToolDecision>): Promise<PreToolDecision>
     /**
      * Around-dispatch waterfall for timeout, retry, or metrics. `next()` returns
      * a normalized result; wrappers may change only `exec.signal`, while call
@@ -145,10 +160,10 @@ declare module 'cordis' {
      * @param exec - the allowed call about to dispatch (name, parsed arguments, caller agent, signal).
      * @mode waterfall
      */
-    'tools/execute'(this: Scoped<ToolRegistry>, exec: ToolDispatchExecution, next: () => Promise<ToolExecutionResult>): Promise<ToolExecutionResult>
+    'tools/execute'(this: Scoped<ToolRuntime>, exec: ToolDispatchExecution, next: () => Promise<ToolExecutionResult>): Promise<ToolExecutionResult>
     /**
      * Accept, replace, enrich, or block a normalized dispatch result. `next()`
-     * accepts it unchanged; thrown tools still reach this seam as errors. Async
+     * accepts it unchanged; thrown tools still reach this waterfall as errors. Async
      * listeners must observe `exec.signal`; after they settle, caller
      * cancellation replaces only a successful accepted outcome with the code
      * selected by whether the tool body was invoked.
@@ -157,20 +172,21 @@ declare module 'cordis' {
      * @param result - the dispatch outcome a listener may accept, replace, or block.
      * @mode waterfall
      */
-    'tools/post-execute'(this: Scoped<ToolRegistry>, exec: ToolExecution, result: Readonly<ToolExecutionResult>, next: () => Promise<PostToolDecision>): Promise<PostToolDecision>
+    'tools/post-execute'(this: Scoped<ToolRuntime>, exec: ToolExecution, result: Readonly<ToolExecutionResult>, next: () => Promise<PostToolDecision>): Promise<PostToolDecision>
     /**
-     * Shape the DURABLE LOG COPY of one `run_code` sub-dispatch outcome before
-     * the bridge appends its `tool/code-dispatch` event. `next()` keeps the
+     * Allow a listener to replace content in the DURABLE LOG COPY of one
+     * `run_code` sub-dispatch outcome before the bridge appends its
+     * `tool/code-dispatch` event. `next()` keeps the
      * content unchanged; a listener may return replacement blocks (e.g. the
      * spill policy's preview + locator for an oversized text result). Only the
      * logged copy is affected — the program already received the complete
      * value, and the model sees neither. A throwing listener is contained:
-     * the bridge falls back to logging the unshaped content.
+     * the bridge falls back to logging the original settled content.
      * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent's dispatches.
      * @param dispatch - the parent execution, sub-call identity, and the settled content to log.
      * @mode waterfall
      */
-    'tools/code-dispatch-log'(this: Scoped<ToolRegistry>, dispatch: CodeDispatchLog, next: () => Promise<ContentBlock[]>): Promise<ContentBlock[]>
+    'tools/code-dispatch-log'(this: Scoped<ToolRuntime>, dispatch: CodeDispatchLog, next: () => Promise<ContentBlock[]>): Promise<ContentBlock[]>
     /**
      * Observe the frozen, lossless-JSON final outcome. Listener failures are contained.
      * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): keyed by `exec.agent`.
@@ -178,7 +194,7 @@ declare module 'cordis' {
      * @param result - a deep-frozen snapshot of the final returned result.
      * @mode emit
      */
-    'tools/result'(this: Scoped<ToolRegistry>, exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): undefined
+    'tools/result'(this: Scoped<ToolRuntime>, exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): undefined
     /**
      * A tool was registered or unregistered, or a scoped restriction changed
      * (the available tool set changed — possibly for one scope only). An
@@ -198,7 +214,7 @@ export interface ToolOutputDefinition {
   readonly schema: JsonSchemaNode
   /** Pure projection from validated arguments and value to Native/model content. */
   render(args: unknown, value: JsonValue): ContentBlock[]
-  /** Pure replayable presentation projection, computed only for surface calls. */
+  /** Pure replayable presentation projection, computed only for top-level calls. */
   presentationMeta?(args: unknown, value: JsonValue): JsonValue
 }
 
@@ -231,7 +247,7 @@ export interface ToolDefinition extends ToolSchema {
   finalizeContent?(exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): ContentBlock[] | undefined
   /**
    * Cooperative tool-call timeout budget in milliseconds. Omit for no deadline.
-   * Enforced by `@deepseek-ai/dsh-timeout-policy` (a `tools/execute` wrapper); it
+   * Enforced by `@deepseek-ai/dsh-tool-call-timeout-policy` (a `tools/execute` wrapper); it
    * is NEVER sent to the model — `schemas()` whitelists only name/description/
    * parameters. Declaring it asserts this tool forwards `exec.signal` to a
    * cooperative implementation that can reach quiescence when the signal aborts.
@@ -291,12 +307,17 @@ declare const toolExecutionTokenBrand: unique symbol
 export type ToolExecutionToken = symbol & { readonly [toolExecutionTokenBrand]: true }
 
 /**
- * Caller-supplied description of one tool call. {@link ToolRegistry.execute}
+ * Caller-supplied description of one tool call. {@link ToolRuntime.execute}
  * adds the registry-owned token to form a pipeline {@link ToolExecution};
  * callers do not choose that token.
  */
 export interface ToolExecutionInput {
   readonly callId: CallId
+  /**
+   * Root model-requested call owning this execution tree. Callers omit it for
+   * a root execution; nested dispatchers propagate the enclosing value.
+   */
+  readonly rootCallId?: CallId
   readonly name: string
   /** Losslessly JSON-serializable parsed arguments (tools validate their own schema). */
   readonly arguments: unknown
@@ -306,6 +327,10 @@ export interface ToolExecutionInput {
    * Opaque token of the enclosing transport execution, when one exists. Code
    * Mode sets this on SDK sub-dispatches so commit-style observers can wait for
    * the outer `run_code` outcome without receiving its live mutable execution.
+   * The token also marks the call as a transport sub-dispatch rather than a
+   * model-direct call: under `mode: 'code'`, only calls WITH a parent may
+   * execute a native tool name — a model-direct call (no parent) is denied as
+   * `UNKNOWN_TOOL` before the policy pipeline. See {@link ToolRuntime.execute}.
    */
   readonly parent?: ToolExecutionToken
   /** Required caller-owned cancellation for this invocation. */
@@ -352,6 +377,8 @@ export interface CodeDispatchLog {
  * observers run.
  */
 export interface ToolExecution extends ToolExecutionInput {
+  /** Root model-requested call, resolved for every root and nested execution. */
+  readonly rootCallId: CallId
   /** Registry-assigned identity shared with nested calls only as their opaque `parent` token. */
   readonly token: ToolExecutionToken
 }
@@ -408,7 +435,7 @@ export type ScheduledToolPreparation =
 
 /**
  * Scheduler-only dispatch result. A `post-result` still receives post-execute;
- * a `final-result` already matches {@link ToolRegistry.execute} failure semantics.
+ * a `final-result` already matches {@link ToolRuntime.execute} failure semantics.
  * @internal
  */
 export type ScheduledToolDispatch =
@@ -417,11 +444,11 @@ export type ScheduledToolDispatch =
 
 /**
  * Symbol-keyed scheduler view that keeps pre/post policy ordered while
- * overlapping dispatch. Ordinary callers use {@link ToolRegistry.execute};
- * this is not a plugin seam.
+ * overlapping dispatch. Ordinary callers use {@link ToolRuntime.execute};
+ * this is not a plugin extension point.
  * @internal
  */
-export interface ToolRegistryScheduler {
+export interface ToolRuntimeScheduler {
   /** Materialize input, run the ordered pre-execute/guard gate, and decide what stage follows. */
   prepare(exec: ToolExecutionInput): Promise<ScheduledToolPreparation>
   /** Run only the around-dispatch/body stage. */
@@ -436,7 +463,7 @@ export interface ToolRegistryScheduler {
  * Scheduler entry point omitted from the generated named service API.
  * @internal
  */
-export const TOOL_REGISTRY_SCHEDULER: unique symbol = Symbol('@deepseek-ai/dsh-tools.scheduler')
+export const TOOL_RUNTIME_SCHEDULER: unique symbol = Symbol('@deepseek-ai/dsh-tools.scheduler')
 
 /** Canonical error code for cancellation after a tool body was invoked. */
 export const TOOL_ABORTED = 'ABORTED'
@@ -465,8 +492,19 @@ export interface ToolFailure {
  * distinguish it from a tool body's own error.
  */
 export class ToolNotFoundError extends HarnessError {
-  constructor(toolName: string) {
-    super(`unknown tool "${toolName}"`, 'UNKNOWN_TOOL')
+  /**
+   * @param toolName - the name the caller asked for.
+   * @param reachableFrom - how the model reaches this tool instead, when the
+   *   name IS visible and only the presentation denies calling it directly.
+   *   Omitted for a name that is registered nowhere.
+   */
+  constructor(toolName: string, reachableFrom?: string) {
+    super(
+      reachableFrom === undefined
+        ? `unknown tool "${toolName}"`
+        : `unknown tool "${toolName}": ${reachableFrom}`,
+      'UNKNOWN_TOOL',
+    )
     this.name = 'ToolNotFoundError'
   }
 }
@@ -616,10 +654,13 @@ export type ToolPresentationMode = 'native' | 'code' | 'both'
 export interface Config {
   /**
    * Model presentation. `native` (default) sends every visible schema; `code`
-   * sends only `run_code` plus a generated SDK prompt; `both` sends both forms.
-   * Code modes require a `ctx.codeRuntime` whose `language` has a registered
-   * SDK renderer (TypeScript or Python) and fail prompt assembly when it is
-   * absent or has no renderer. Under `code`, native names in `toolOrder` are invalid.
+   * sends only `run_code` plus a generated SDK prompt and collapses the
+   * executor to the same surface (a model-direct call may only name
+   * `run_code`; `run_code` SDK sub-dispatches keep every visible tool); `both`
+   * sends both forms. Code modes require a `ctx.codeRuntime` whose `language`
+   * has a registered SDK renderer (TypeScript or Python) and fail prompt
+   * assembly when it is absent or has no renderer. Under `code`, native names
+   * in `toolOrder` are invalid.
    */
   mode?: ToolPresentationMode
   /**
@@ -674,6 +715,12 @@ class ToolLayer implements ScopeLayer {
   readonly tools: NamedEntries<ToolDefinition>
   readonly restrictions = new AnonymousEntries<CompiledToolRestriction>()
   readonly guards = new AnonymousEntries<ToolGuard>()
+  /**
+   * Presentation this scope's agent declared for itself, shadowing the
+   * deployment default. One cell rather than an entry table: two answers to
+   * "which form does the model see" is a contradiction, not a merge.
+   */
+  mode: ToolPresentationMode | undefined
 
   constructor(scope: ScopeKey | undefined) {
     this.tools = new NamedEntries(name => new Error(scope === undefined
@@ -684,6 +731,7 @@ class ToolLayer implements ScopeLayer {
   /** Whether every contribution table in this aggregate layer is empty. */
   isEmpty(): boolean {
     return this.tools.isEmpty() && this.restrictions.isEmpty() && this.guards.isEmpty()
+      && this.mode === undefined
   }
 
   /** Whether every compiled restriction in this layer admits a global tool name. */
@@ -736,7 +784,7 @@ function resolveMaxParallelSubCalls(value: number | undefined): number {
  * Tool registry and execution pipeline. Scoped registrations shadow globals;
  * one visibility resolver feeds presentation, lookup, and dispatch.
  */
-export class ToolRegistry extends Service {
+export class ToolRuntime extends Service {
   static inject = ['systemPrompt']
 
   static Config: z<Config> = z.object({
@@ -745,11 +793,11 @@ export class ToolRegistry extends Service {
   })
 
   /** Internal staged view consumed by `dsh-agent-loop`'s parallel scheduler. */
-  readonly [TOOL_REGISTRY_SCHEDULER]: ToolRegistryScheduler = {
+  readonly [TOOL_RUNTIME_SCHEDULER]: ToolRuntimeScheduler = {
     prepare: exec => this.prepareScheduledExecution(exec),
     dispatch: exec => this.dispatchScheduledExecution(exec),
     finalize: (exec, result) => this.finalizeScheduledExecution(exec, result),
-    finish: (exec, result) => { return this.finishScheduledExecution(exec, result) },
+    finish: (exec, result) => this.finishScheduledExecution(exec, result),
   }
 
   /** Context deferred by a running tool body, keyed by its scheduler-owned execution. */
@@ -764,51 +812,165 @@ export class ToolRegistry extends Service {
     scope => new ToolLayer(scope),
     () => { this.ctx.emit('tools/change') },
   )
-  private readonly mode: ToolPresentationMode
-  /** Reserved presentation transport, kept outside the filterable registration layers. */
-  private readonly codeTransport: ToolDefinition | undefined
+  /** Presentation for scopes that declare none; {@link presentAs} shadows it per scope. */
+  private readonly defaultMode: ToolPresentationMode
+  private readonly maxParallelSubCalls: number
+  /**
+   * Reserved presentation transport, kept outside the filterable registration
+   * layers. Built on first need rather than at construction: which agents run
+   * a code mode is no longer known when the service is constructed, and the
+   * transport is stateless beyond its closures over `this`.
+   */
+  private codeTransport: ToolDefinition | undefined
 
   constructor(ctx: Context, config: Config = {}) {
     super(ctx, 'tools')
     // The schema already defaulted an omitted mode; the ?? narrows the
     // optional-input type for direct (non-Loader) construction in tests.
-    this.mode = config.mode ?? 'native'
-    // `run_code` is presentation infrastructure, not an end capability. It
-    // therefore does not enter the global layer: per-agent restrictions must
-    // not remove it, and a scoped registration must not shadow it. The
-    // visibility resolver appends this reserved definition after resolving
-    // the filterable global/scoped capability layers.
-    this.codeTransport = this.mode === 'native'
-      ? undefined
-      : createRunCodeTool(this, {
-        requireRuntime: () => this.requireCodeRuntime(),
-        peekRuntime: () => this.ctx.get('codeRuntime'),
-        maxParallel: resolveMaxParallelSubCalls(config.maxParallelSubCalls),
-        shapeDispatchLog: dispatch => this.shapeDispatchLog(dispatch),
-      })
+    this.defaultMode = config.mode ?? 'native'
+    this.maxParallelSubCalls = resolveMaxParallelSubCalls(config.maxParallelSubCalls)
     ctx.systemPrompt.tools(context => this.wireSchemas(context.scope))
-    if (this.mode !== 'native') {
-      ctx.systemPrompt.section({
-        name: 'tools:sdk',
-        order: SDK_SECTION_ORDER,
-        // Regenerate from the calling scope's visible tools in stable order,
-        // picking the renderer that matches the loaded runtime's language.
-        // `requireCodeRuntime` already validated the language is in the table,
-        // so the guard below is defense-in-depth against a caller that bypassed
-        // it (impossible under normal composition).
-        text: (context) => {
-          const runtime = this.requireCodeRuntime()
-          // Own-property read: a language like `toString`/`constructor` would
-          // otherwise resolve an inherited Object.prototype member as a renderer.
-          const render = SDK_RENDERERS[runtime.language]
-          /* v8 ignore next 3 -- requireCodeRuntime rejects an unknown language before this ever runs. */
-          if (!Object.hasOwn(SDK_RENDERERS, runtime.language) || render === undefined) {
-            throw new Error(`dsh-tools: no SDK renderer registered for runtime language ${JSON.stringify(runtime.language)} (known: ${Object.keys(SDK_RENDERERS).map(name => JSON.stringify(name)).join(', ')})`)
-          }
-          return render(this.sdkSchemas(context.scope))
-        },
-      })
+    if (this.defaultMode !== 'native') {
+      ctx.systemPrompt.section(this.collapseSection())
+      ctx.systemPrompt.section(this.sdkSection())
     }
+  }
+
+  /**
+   * The prompt statement of the `code` executor collapse, registered wherever
+   * {@link sdkSection} is and rendering empty outside an effective `code`.
+   *
+   * Every tool contributes its own guidance section naming its tool, none of
+   * them qualify how that tool is reached, and they all render before the SDK
+   * (orders 100-199 against {@link SDK_SECTION_ORDER}). Without this the model
+   * reads a catalog of tools it is told to use and no statement that only
+   * `run_code` may be called, so it emits a native call, receives
+   * `UNKNOWN_TOOL` for a tool the prompt just declared, and concludes the
+   * deployment is inconsistent. {@link COLLAPSE_SECTION_ORDER} places the rule
+   * before that guidance rather than after it.
+   *
+   * `both` renders empty: native calls do execute there, so the rule is false.
+   * @returns the section registration.
+   */
+  private collapseSection(): { name: string; order: number; text: (context: { scope?: ScopeKey }) => string } {
+    return {
+      name: 'tools:code-only',
+      order: COLLAPSE_SECTION_ORDER,
+      // The SAME predicate the executor denies by, so the prompt cannot state
+      // a rule the registry does not enforce (see `collapses`).
+      text: context => this.modeFor(context.scope) === 'code' ? CODE_ONLY_INSTRUCTION : '',
+    }
+  }
+
+  /**
+   * The generated-SDK prompt section, registered globally by a code-mode
+   * deployment and per scope by {@link presentAs}.
+   *
+   * The body regenerates from the CALLING scope, and renders empty for an
+   * agent presenting natively — an agent that opted out under a code-mode
+   * deployment still sees the global registration, and an empty section is
+   * dropped from the rendered prompt.
+   * @returns the section registration.
+   */
+  private sdkSection(): { name: string; order: number; text: (context: { scope?: ScopeKey }) => string } {
+    return {
+      name: 'tools:sdk',
+      order: SDK_SECTION_ORDER,
+      // Regenerate from the calling scope's visible tools in stable order.
+      text: (context) => {
+        const mode = this.modeFor(context.scope)
+        if (mode === 'native') return ''
+        const runtime = this.requireCodeRuntime(mode)
+        // Own-property read: a language like `toString`/`constructor` would
+        // otherwise resolve an inherited Object.prototype member as a renderer.
+        const render = SDK_RENDERERS[runtime.language]
+        /* v8 ignore next -- requireCodeRuntime rejects an unknown language before this runs. */
+        if (render === undefined) throw new Error(`dsh-tools: no SDK renderer for ${runtime.language}`)
+        return render(this.sdkSchemas(context.scope))
+      },
+    }
+  }
+
+  /**
+   * The presentation one scope's agent sees: its own declaration, else the
+   * deployment default.
+   * @param scope - the calling agent, or undefined for the global view.
+   * @returns the resolved presentation mode.
+   */
+  private modeFor(scope?: ScopeKey): ToolPresentationMode {
+    // Nearest scope wins along the chain: a preset's standing declaration
+    // covers every agent parented under it, and an agent's own (were one ever
+    // declared) would override its preset's. The mode decides what the model
+    // SEES, which is exactly the class of fact the chain inherits.
+    const layers = this.layers.chainLayers(scope)
+    for (let index = layers.length - 1; index >= 0; index -= 1) {
+      const mode = layers[index]?.mode
+      if (mode !== undefined) return mode
+    }
+    return this.defaultMode
+  }
+
+  /**
+   * The reserved `run_code` transport, built on first need.
+   *
+   * It never enters the global layer: per-agent restrictions must not remove
+   * it, and a scoped registration must not shadow it. The visibility resolver
+   * appends it after resolving the filterable global/scoped capability layers,
+   * and only for scopes whose mode actually presents it.
+   * @returns the shared transport definition.
+   */
+  private requireCodeTransport(): ToolDefinition {
+    this.codeTransport ??= createRunCodeTool(this, {
+      requireRuntime: () => this.requireCodeRuntime(this.defaultMode),
+      // The language-aware description/parameters getters read the runtime
+      // without demanding one, so a native-default process can still project
+      // the transport for an agent that chose code.
+      peekRuntime: () => this.ctx.get('codeRuntime'),
+      maxParallel: this.maxParallelSubCalls,
+      shapeDispatchLog: dispatch => this.shapeDispatchLog(dispatch),
+    })
+    return this.codeTransport
+  }
+
+  /**
+   * Present the calling scope's tools in `mode` instead of the deployment
+   * default. Nearest scope on the chain wins, so a preset's standing
+   * declaration covers every agent joined under it.
+   *
+   * Scoped only, and one declaration per scope: this is how an agent preset
+   * composes Code Mode agents beside native ones in the same process, and a
+   * process-global override would be the `mode` config field instead.
+   * @param mode - the presentation the covered agents' models see.
+   * @returns the exact disposer that restores the deployment default.
+   */
+  presentAs(mode: ToolPresentationMode): () => void {
+    const ctx = this.ctx
+    if (scopeOf(ctx) === undefined) {
+      throw new Error('tools.presentAs() requires a scoped context (agent.ctx): a context-global presentation is the `mode` config field on the tools row')
+    }
+    const dispose = ctx.effect(function* (this: ToolRuntime) {
+      yield this.layers.effect(
+        ctx,
+        (layer) => {
+          if (layer.mode !== undefined) {
+            throw new Error(`tools.presentAs("${mode}") conflicts with "${layer.mode}" already declared for this scope; one composition selects one presentation`)
+          }
+          layer.mode = mode
+          return () => { layer.mode = undefined }
+        },
+        { label: 'tools.presentAs()' },
+      )
+      // The SDK and collapse sections are per scope for the same reason the
+      // mode is. Under a deployment that already defaults to a code mode this
+      // shadows the global registration with an identical body, which costs
+      // nothing and keeps one rule instead of a case analysis.
+      if (mode !== 'native') {
+        yield ctx.systemPrompt.section(this.collapseSection())
+        yield ctx.systemPrompt.section(this.sdkSection())
+      }
+    }.bind(this), 'tools.presentAs()')
+    // oxlint-disable-next-line typescript/no-misused-promises -- synchronous composite teardown; direct return preserves disposer identity
+    return dispose
   }
 
   /**
@@ -817,7 +979,8 @@ export class ToolRegistry extends Service {
    */
   private wireSchemas(scope?: ScopeKey): ToolProviderResult {
     const view = this.view(scope)
-    if (this.mode === 'native') {
+    const mode = this.modeFor(scope)
+    if (mode === 'native') {
       const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
       return { schemas, knownNames: [...view.knownNames] }
     }
@@ -826,9 +989,9 @@ export class ToolRegistry extends Service {
     // flavor-table guard would otherwise surface first. This keeps the
     // renderer-table rejection the canonical assembly-time error for a
     // language with no SDK renderer.
-    this.requireCodeRuntime()
+    this.requireCodeRuntime(mode)
     const schemas = [...view.visible.values()].map(definition => this.schemaOf(definition, false))
-    if (this.mode === 'code') {
+    if (mode === 'code') {
       return {
         schemas: schemas.filter(schema => schema.name === RUN_CODE_NAME),
         knownNames: [RUN_CODE_NAME],
@@ -849,14 +1012,14 @@ export class ToolRegistry extends Service {
    * bound to a request. Harmless while one published backend exists — both
    * reads return the same flavor — but a reload that swapped in a second
    * language between them would hand a program written against one SDK to the
-   * other. Binding it belongs to the PR that publishes that backend, which is
-   * also the first point it can be tested; recorded in the
+   * other. Binding it is deferred until a second backend ships (the first
+   * point it is testable); rationale in the
    * [language-dispatch note](../../../../.agents/notes/implemented/feature/2026-07-31-code-mode-language-dispatch.md).
    */
-  private requireCodeRuntime(): CodeRuntime {
+  private requireCodeRuntime(mode: ToolPresentationMode): CodeRuntime {
     const runtime = this.ctx.get('codeRuntime')
     if (!runtime) {
-      throw new Error(`dsh-tools: mode "${this.mode}" requires a code runtime — load a ctx.codeRuntime implementation (e.g. @deepseek-ai/dsh-code-runtime-worker) or set tools mode to "native"`)
+      throw new Error(`dsh-tools: mode "${mode}" requires a code runtime — load a ctx.codeRuntime implementation (e.g. @deepseek-ai/dsh-code-runtime-worker-thread) or set tools mode to "native"`)
     }
     if (!Object.hasOwn(SDK_RENDERERS, runtime.language)) {
       const known = Object.keys(SDK_RENDERERS).map(name => JSON.stringify(name)).join(', ')
@@ -885,7 +1048,10 @@ export class ToolRegistry extends Service {
       && (!Number.isFinite(timeoutMs) || timeoutMs <= 0)) {
       throw new TypeError(`tool "${name}" timeoutMs must be a positive finite number`)
     }
-    if (this.codeTransport !== undefined && name === RUN_CODE_NAME) {
+    // Reserved unconditionally: any agent may select a code mode for itself,
+    // so a name free to take under the deployment default would become a
+    // collision the moment a preset mounted.
+    if (name === RUN_CODE_NAME) {
       throw new Error(`tool name "${RUN_CODE_NAME}" is reserved for the Code Mode presentation transport and cannot be registered or shadowed`)
     }
     return this.layers.effect(
@@ -899,7 +1065,7 @@ export class ToolRegistry extends Service {
    * Restrict global tools for the calling agent scope. Empty filters, unknown
    * names, scope-local names, and reserved transport names fail. Restrictions
    * intersect; scoped registrations remain visible.
-   * @param filter - global-surface mask: `allow` (keep only) and/or `deny` (remove).
+   * @param filter - global-tool mask: `allow` (keep only) and/or `deny` (remove).
    * @returns the exact disposer that lifts this restriction.
    */
   restrict(filter: ToolRestriction): () => void {
@@ -916,8 +1082,7 @@ export class ToolRegistry extends Service {
       ...allow !== undefined ? { allow: new Set(allow) } : {},
       ...deny !== undefined ? { deny: new Set(deny) } : {},
     }
-    if (this.codeTransport !== undefined
-      && [...allow ?? [], ...deny ?? []].includes(RUN_CODE_NAME)) {
+    if ([...allow ?? [], ...deny ?? []].includes(RUN_CODE_NAME)) {
       throw new Error(`tools.restrict() cannot name reserved Code Mode presentation transport "${RUN_CODE_NAME}"; restrict end-capability tools instead`)
     }
     const known = this.view(scope).restrictableNames
@@ -950,42 +1115,79 @@ export class ToolRegistry extends Service {
     )
   }
 
-  /** First monotonic denial from the global then matching scoped guard layers. */
+  /** First monotonic denial from the global then the scope chain's guard layers, farthest first. */
   private guardReason(exec: ToolExecution): string | undefined {
     const globalReason = this.layers.global.guardReason(exec)
     if (globalReason !== undefined) return globalReason
-    return exec.agent === undefined ? undefined : this.layers.peek(exec.agent)?.guardReason(exec)
+    if (exec.agent === undefined) return undefined
+    for (const layer of this.layers.chainLayers(exec.agent)) {
+      const reason = layer.guardReason(exec)
+      if (reason !== undefined) return reason
+    }
+    return undefined
   }
 
   /**
    * Resolve every registry fact one scope needs in one layer traversal. The
-   * visible map applies global restrictions, scoped shadowing, and the reserved
-   * presentation transport; the other sets retain the pre-restriction facts
-   * needed by restriction and prompt-order validation.
+   * visible map applies restrictions to the INHERITED surface, then the
+   * scope's own registrations and the reserved presentation transport; the
+   * other sets retain the pre-restriction facts needed by restriction and
+   * prompt-order validation.
+   *
+   * A restriction filters what a scope inherits — the global layer and every
+   * ancestor layer on its chain — and never what its OWN layer registers.
+   * That exemption is what a per-child capability filter has to keep intact:
+   * the delegation runtime registers a child's reporting and structured-output
+   * tools into the child's own layer, and a filter naming the capabilities the
+   * child may use must not strip the machinery it answers through.
+   *
+   * Reading the exempt set as "the global layer" instead of "not mine" held
+   * only while every model-facing tool sat in the host composition. Once
+   * presets moved them onto the agent plane they became an ANCESTOR
+   * contribution, so a child's filter silently stopped constraining anything
+   * it was given.
    * @param scope - the viewing scope (the agent), or undefined for the global view.
    * @returns the complete derived view for that scope.
    */
   private view(scope?: ScopeKey): ToolView {
-    const layer = this.layers.peek(scope)
+    // Scope-chain layers, farthest ancestor first, the exact scope last.
+    const layers = this.layers.chainLayers(scope)
+    // Chain-blind on purpose: this is the ONE layer whose registrations the
+    // scope owns rather than inherits, and it is absent until the scope
+    // contributes something.
+    const own = this.layers.peek(scope)
+    // Inherited surface, nearest ancestor last: a nearer scope's same-name
+    // entry shadows a farther one, and the global layer is the farthest.
+    const inherited = new Map<string, ToolDefinition>(this.layers.global.tools.entries())
+    for (const layer of layers) {
+      if (layer === own) continue
+      for (const [name, definition] of layer.tools.entries()) inherited.set(name, definition)
+    }
     const visible = new Map<string, ToolDefinition>()
     const knownNames = new Set<string>()
     const restrictableNames = new Set<string>()
-    for (const [name, definition] of this.layers.global.tools.entries()) {
+    for (const [name, definition] of inherited) {
       knownNames.add(name)
       restrictableNames.add(name)
-      if (layer?.admits(name) ?? true) visible.set(name, definition)
+      // Restrictions intersect across the whole chain: any scope on it may
+      // mask an inherited name for everything nested inside it.
+      if (layers.every(layer => layer.admits(name))) visible.set(name, definition)
     }
-    // Scoped layer second: same-name entries REPLACE (shadow) the global ones,
-    // and scope-local registrations are never part of the global filter above.
-    for (const [name, definition] of layer?.tools.entries() ?? []) {
-      knownNames.add(name)
-      visible.set(name, definition)
+    // The scope's own registrations last, shadowing an inherited name and
+    // outside the filter above.
+    if (own !== undefined) {
+      for (const [name, definition] of own.tools.entries()) {
+        knownNames.add(name)
+        visible.set(name, definition)
+      }
     }
     // Presentation infrastructure is resolved last and outside capability
     // filtering. Registration rejects this reserved name, so the insertion is
-    // an invariant assertion as well as protection against future layer changes.
-    if (this.codeTransport !== undefined) {
-      visible.set(RUN_CODE_NAME, this.codeTransport)
+    // an invariant assertion as well as protection against future layer
+    // changes. Per scope: a native agent must not find `run_code` in its
+    // dispatch table because some other agent in the process presents it.
+    if (this.modeFor(scope) !== 'native') {
+      visible.set(RUN_CODE_NAME, this.requireCodeTransport())
     }
     return { visible, knownNames, restrictableNames }
   }
@@ -1001,6 +1203,26 @@ export class ToolRegistry extends Service {
    */
   get(name: string, scope?: ScopeKey): ToolDefinition | undefined {
     return this.view(scope).visible.get(name)
+  }
+
+  /**
+   * Resolve the definition that MAY EXECUTE for a call, applying the mode
+   * collapse at the operation boundary that owns it. The registry view
+   * (`get`) is presentation-agnostic; here a MODEL-DIRECT call under `code`
+   * may only name the reserved `run_code` transport, while a nested
+   * sub-dispatch (a `parent` token set — the `run_code` SDK calling a tool
+   * it bound) may call any visible tool. Denial surfaces as `UNKNOWN_TOOL`
+   * through the executor, matching an absent definition.
+   * @param name - the tool name as registered.
+   * @param scope - the viewing scope (the agent); omitted = the global view.
+   * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
+   * @returns the definition that may run, or undefined when the call must be rejected.
+   */
+  private resolveExecution(name: string, scope: ScopeKey | undefined, nested: boolean): ToolDefinition | undefined {
+    const tool = this.get(name, scope)
+    if (tool === undefined) return undefined
+    if (this.collapses(name, scope, nested)) return undefined
+    return tool
   }
 
   /**
@@ -1052,7 +1274,7 @@ export class ToolRegistry extends Service {
    * @returns the fail-closed scheduling mode.
    */
   executionMode(exec: ToolExecutionInput): ToolExecutionMode {
-    const tool = this.get(exec.name, exec.agent)
+    const tool = this.resolveExecution(exec.name, exec.agent, exec.parent !== undefined)
     if (!tool?.isConcurrencySafe) return { kind: 'exclusive' }
     try {
       const concurrencySafe: unknown = tool.isConcurrencySafe(exec.arguments)
@@ -1065,11 +1287,11 @@ export class ToolRegistry extends Service {
   /**
    * Run the `tools/code-dispatch-log` waterfall over one settled sub-dispatch
    * and return the content the bridge should log on `tool/code-dispatch`.
-   * Contained: a throwing listener falls back to the unshaped content — log
-   * shaping must never fail the dispatch or lose the settle event. Private:
+   * Contained: when a listener throws, the method logs the original settled
+   * content; that failure must not fail the dispatch or omit the settle event. Private:
    * the ONE consumer is the `run_code` bridge this registry constructs, which
    * receives it as a capability parameter (the `requireRuntime` idiom) — the
-   * waterfall, not this invoker, is the public extension seam.
+   * waterfall, not this invoker, is the public extension point.
    */
   private async shapeDispatchLog(dispatch: CodeDispatchLog): Promise<ContentBlock[]> {
     try {
@@ -1078,9 +1300,29 @@ export class ToolRegistry extends Service {
         () => Promise.resolve(dispatch.content),
       )
     } catch (error: unknown) {
-      this.ctx.logger.warn(`tools: code-dispatch-log listener failed for ${dispatch.name}: ${errorMessage(error)}; logging the unshaped content`)
+      this.ctx.logger.warn(`tools: code-dispatch-log listener failed for ${dispatch.name}: ${errorMessage(error)}; logging the original settled content`)
       return dispatch.content
     }
+  }
+
+  /**
+   * Whether the `code` mode collapse denies a model-direct call: only the
+   * reserved `run_code` transport may be named. Nested sub-dispatches (a
+   * `parent` token set) bypass the collapse. One home for the
+   * security-relevant predicate, shared by {@link resolveExecution} and
+   * {@link createExecution} so the two can never drift apart.
+   *
+   * Resolved through {@link modeFor}, NOT `defaultMode`: an agent given `code`
+   * by an agent preset under a native deployment is the composition
+   * `dsh-agent-tool-presentation` exists for, and reading the deployment default would
+   * leave exactly that agent uncollapsed — announcing one surface while
+   * executing another, which is the bypass this collapse closes.
+   * @param name - the tool name as registered.
+   * @param scope - the viewing scope whose effective presentation mode applies.
+   * @param nested - whether the call is a transport sub-dispatch, not a model-direct call.
+   */
+  private collapses(name: string, scope: ScopeKey | undefined, nested: boolean): boolean {
+    return !nested && this.modeFor(scope) === 'code' && name !== RUN_CODE_NAME
   }
 
   /**
@@ -1123,16 +1365,25 @@ export class ToolRegistry extends Service {
     const deferredContexts: UserMessage[] = []
     const token = createExecutionToken()
     const callId = exec.callId
+    const rootCallId = exec.rootCallId ?? callId
     const name = exec.name
     const agent = exec.agent
     const parent = exec.parent
     const signal = exec.signal
-    const definition = this.get(name, agent)
-    const finalizeContent = definition?.finalizeContent?.bind(definition)
+    // Distinguish a mode-collapsed call (visible in the scope, denied only by
+    // the `code` collapse) from a genuinely unknown tool. A collapsed call is
+    // deterministically denied, so it terminates BEFORE the extensible policy
+    // pipeline: pre-execute listeners, approval `ask`, and guards must never
+    // observe — or worse, approve — a call that can only fail. An unknown tool
+    // keeps the historical dispatch-stage `UNKNOWN_TOOL` path so policy
+    // listeners still see every name that reaches the registry.
+    const visible = this.get(name, agent)
+    const collapsed = visible !== undefined && this.collapses(name, agent, parent !== undefined)
     const concludingExecutions = this.concludingExecutions
     const base = {
       token,
       callId,
+      rootCallId,
       name,
       signal,
       ...agent !== undefined ? { agent } : {},
@@ -1144,6 +1395,19 @@ export class ToolRegistry extends Service {
         concludingExecutions.add(this as unknown as ToolExecution)
       },
     }
+    // Capture the finalizer BEFORE argument materialization: the
+    // `finalizeContent` contract snapshots the callback when the call starts,
+    // and an arguments getter can replace or clear the registered callback
+    // during `snapshotJsonValue`. The collapse only decides whether the
+    // CAPTURED callback is retained: the pre-dispatch abort path keeps it
+    // (the cancellation contract routes aborted results through it — a getter
+    // that aborts mid-materialization before an invalid-args failure lands in
+    // the same retained path), while the `UNKNOWN_TOOL` denial and the
+    // invalid-args failure of a NON-ABORTED collapsed call drop it (the call
+    // could never execute).
+    const capturedFinalizer = visible?.finalizeContent?.bind(visible)
+    const finalizerFor = (): ToolDefinition['finalizeContent'] | undefined =>
+      collapsed && !signal.aborted ? undefined : capturedFinalizer
     try {
       const detached = snapshotJsonValue(exec.arguments)
       if (detached === undefined) {
@@ -1151,15 +1415,37 @@ export class ToolRegistry extends Service {
       }
       const execution: MutableToolRunContext = { ...base, arguments: deepFreeze(detached) }
       this.deferredContexts.set(execution, deferredContexts)
-      this.contentFinalizers.set(execution, finalizeContent)
+      this.contentFinalizers.set(execution, finalizerFor())
       this.cancellationStates.set(execution, {
         callerSignal: signal,
         bodyInvoked: false,
       })
+      if (collapsed) {
+        // The collapse denies the call before the policy pipeline, but a
+        // pre-dispatch abort still keeps the established cancellation
+        // contract: `prepare`'s caller-cancellation check is skipped for
+        // final-results, so honor the abort here instead of surfacing
+        // `UNKNOWN_TOOL` on an already-cancelled call.
+        if (signal.aborted) {
+          return { kind: 'final-result', exec: execution, result: toolAbortedBeforeDispatchResult() }
+        }
+        // The name IS visible here, so the denial carries the route the model
+        // must take instead. Without it the model reads a bare `unknown tool`
+        // for a tool the prompt just declared and concludes the deployment is
+        // broken rather than correcting itself.
+        return {
+          kind: 'final-result',
+          exec: execution,
+          result: toolErrorResult(new ToolNotFoundError(
+            name,
+            `only \`${RUN_CODE_NAME}\` is callable directly — call \`${name}\` from inside a \`${RUN_CODE_NAME}\` program instead`,
+          )),
+        }
+      }
       return { kind: 'ready', exec: execution }
     } catch (error: unknown) {
       const execution: MutableToolRunContext = { ...base, arguments: undefined }
-      this.contentFinalizers.set(execution, finalizeContent)
+      this.contentFinalizers.set(execution, finalizerFor())
       return { kind: 'final-result', exec: execution, result: toolErrorResult(error) }
     }
   }
@@ -1257,7 +1543,7 @@ export class ToolRegistry extends Service {
     }
     exec.signal = signal
     try {
-      const tool = this.get(exec.name, exec.agent)
+      const tool = this.resolveExecution(exec.name, exec.agent, exec.parent !== undefined)
       if (!tool) throw new ToolNotFoundError(exec.name)
       state.bodyInvoked = true
       const returned = await tool.execute(exec.arguments, exec)
@@ -1479,7 +1765,7 @@ export class ToolRegistry extends Service {
       if (result.isError) {
         throw new TypeError('tools/post-execute cannot replace the value of a failed result')
       }
-      const tool = this.get(exec.name, exec.agent)
+      const tool = this.resolveExecution(exec.name, exec.agent, exec.parent !== undefined)
       if (tool === undefined) throw new ToolNotFoundError(exec.name)
       const replaced = this.createSuccessResult(exec, tool, decision.value)
       return this.markCanonical(exec, {
@@ -1548,7 +1834,7 @@ export class ToolRegistry extends Service {
         ...result.additionalContexts !== undefined ? { additionalContexts: result.additionalContexts } : {},
       })
     }
-    const tool = this.get(exec.name, exec.agent)
+    const tool = this.resolveExecution(exec.name, exec.agent, exec.parent !== undefined)
     if (tool === undefined) throw new ToolNotFoundError(exec.name)
     const normalized = this.createSuccessResult(exec, tool, result.value)
     return this.markCanonical(exec, {
@@ -1657,4 +1943,4 @@ function toolAbortedBeforeDispatchResult(prior?: ToolExecutionResult): ToolExecu
   }
 }
 
-export default ToolRegistry
+export default ToolRuntime

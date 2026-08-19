@@ -6,10 +6,16 @@
  * @module dsh-vision-toolkit/runtime-install
  */
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, stat, utimes, writeFile, } from 'node:fs/promises';
+import { access, chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, stat, utimes, writeFile, } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
+import { x as extractTar } from 'tar';
+import { EnvHttpProxyAgent } from 'undici';
+import { request as undiciRequest } from 'undici';
 import { VisionToolkitError } from "./errors.js";
 import { UPSTREAM_COMMIT, UPSTREAM_REPOSITORY, UPSTREAM_VERSION } from "./version.js";
 const PACKAGE_ROOT = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
@@ -31,7 +37,7 @@ export function displayCommand(command) {
 function sha256(bytes) {
     return createHash('sha256').update(bytes).digest('hex');
 }
-function isolatedPythonEnv(home) {
+export function isolatedPythonEnvironment(home) {
     return {
         HOME: home,
         USERPROFILE: home,
@@ -40,7 +46,9 @@ function isolatedPythonEnv(home) {
         PYTHONPATH: undefined,
         VIRTUAL_ENV: undefined,
         PYTHONDONTWRITEBYTECODE: '1',
+        PYTHONIOENCODING: 'utf-8',
         PYTHONNOUSERSITE: '1',
+        PYTHONUTF8: '1',
     };
 }
 async function runCollected(ctx, argv, cwd, options = {}) {
@@ -159,7 +167,7 @@ async function pythonMetadata(ctx, command, cwd) {
     let result;
     try {
         result = await runCollected(ctx, [command.program, ...command.prefix, '-c', script], cwd, {
-            env: isolatedPythonEnv(cwd),
+            env: isolatedPythonEnvironment(cwd),
         });
     }
     catch {
@@ -178,7 +186,271 @@ async function pythonMetadata(ctx, command, cwd) {
         return undefined;
     }
 }
-async function resolveBootstrapPython(ctx, configured, cwd) {
+const PYTHON_BOOTSTRAP_MANIFEST_PATH = join(PACKAGE_ROOT, 'assets', 'python-bootstrap.json');
+const PYTHON_DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000;
+const PYTHON_DOWNLOAD_ATTEMPTS = 3;
+async function readPythonBootstrapManifest() {
+    let parsed;
+    try {
+        parsed = JSON.parse(await readFile(PYTHON_BOOTSTRAP_MANIFEST_PATH, 'utf8'));
+    }
+    catch (error) {
+        throw new VisionToolkitError('runtime', `python bootstrap manifest is unreadable: ${PYTHON_BOOTSTRAP_MANIFEST_PATH}`, { cause: error });
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+        throw new VisionToolkitError('runtime', 'python bootstrap manifest is not an object');
+    }
+    const manifest = parsed;
+    if (manifest.schemaVersion !== 1
+        || typeof manifest.pythonVersion !== 'string'
+        || !/^3\.\d+\.\d+$/u.test(manifest.pythonVersion)
+        || typeof manifest.buildTag !== 'string'
+        || !/^\d{8}$/u.test(manifest.buildTag)
+        || typeof manifest.artifacts !== 'object'
+        || manifest.artifacts === null) {
+        throw new VisionToolkitError('runtime', 'python bootstrap manifest is invalid');
+    }
+    for (const [target, artifact] of Object.entries(manifest.artifacts)) {
+        if (typeof artifact !== 'object'
+            || artifact === null
+            || typeof artifact.url !== 'string'
+            || !artifact.url.startsWith('https://github.com/astral-sh/python-build-standalone/releases/download/')
+            || typeof artifact.sha256 !== 'string'
+            || !/^[a-f0-9]{64}$/u.test(artifact.sha256)
+            || !Number.isInteger(artifact.size)
+            || artifact.size <= 0) {
+            throw new VisionToolkitError('runtime', `python bootstrap manifest has an invalid artifact: ${target}`);
+        }
+    }
+    return manifest;
+}
+/** Map Node platform/arch to the pinned artifact name, including musl Linux. */
+export function pythonBootstrapTarget(platform, arch, musl) {
+    return platform === 'linux' && musl ? `${platform}-${arch}-musl` : `${platform}-${arch}`;
+}
+async function runningMusl() {
+    if (process.platform !== 'linux')
+        return false;
+    try {
+        await access(join('/', 'etc', 'alpine-release'));
+        return true;
+    }
+    catch {
+        // Fall through to the loader-name probe.
+    }
+    const loader = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+    try {
+        await access(join('/', 'lib', `ld-musl-${loader}.so.1`));
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+const DOWNLOAD_HOSTS = new Set([
+    'github.com',
+    'objects.githubusercontent.com',
+    'release-assets.githubusercontent.com',
+]);
+async function defaultDownloadRequest(url, signal) {
+    const dispatcher = new EnvHttpProxyAgent();
+    let current = url;
+    try {
+        for (let redirects = 0;; redirects++) {
+            const host = new URL(current).hostname;
+            if (!DOWNLOAD_HOSTS.has(host))
+                throw new Error(`download redirected outside GitHub: ${host}`);
+            const response = await undiciRequest(current, {
+                dispatcher,
+                signal,
+                headers: { 'user-agent': 'dsh-vision-toolkit' },
+            });
+            if (response.statusCode >= 300 && response.statusCode < 400) {
+                const location = response.headers.location;
+                await response.body.dump().catch(() => { });
+                if (typeof location !== 'string' || location.length === 0 || redirects >= 5) {
+                    throw new Error('download redirected too many times or without a Location header');
+                }
+                current = new URL(location, current).toString();
+                continue;
+            }
+            return {
+                statusCode: response.statusCode,
+                headers: response.headers,
+                body: response.body,
+                close: () => dispatcher.close().catch(() => { }),
+            };
+        }
+    }
+    catch (error) {
+        await dispatcher.close().catch(() => { });
+        throw error;
+    }
+}
+async function downloadBundledPythonOnce(artifact, destination, requestImpl = defaultDownloadRequest) {
+    const signal = AbortSignal.timeout(PYTHON_DOWNLOAD_TIMEOUT_MS);
+    let response;
+    try {
+        response = await requestImpl(artifact.url, signal);
+    }
+    catch (error) {
+        throw new Error(`download request failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    try {
+        if (response.statusCode !== 200)
+            throw new Error(`download returned HTTP ${response.statusCode}`);
+        const hash = createHash('sha256');
+        let bytes = 0;
+        const hasher = new Transform({
+            transform(chunk, _encoding, callback) {
+                hash.update(chunk);
+                bytes += chunk.length;
+                callback(null, chunk);
+            },
+        });
+        await pipeline(response.body, hasher, createWriteStream(destination));
+        if (bytes !== artifact.size)
+            throw new Error(`size mismatch: expected ${artifact.size}, received ${bytes}`);
+        if (hash.digest('hex') !== artifact.sha256)
+            throw new Error('sha256 mismatch');
+    }
+    finally {
+        await response.close();
+    }
+}
+async function downloadBundledPython(artifact, destination, requestImpl) {
+    let lastError;
+    for (let attempt = 0; attempt < PYTHON_DOWNLOAD_ATTEMPTS; attempt++) {
+        try {
+            await downloadBundledPythonOnce(artifact, destination, requestImpl);
+            return;
+        }
+        catch (error) {
+            lastError = error;
+            if (attempt + 1 < PYTHON_DOWNLOAD_ATTEMPTS) {
+                await new Promise(resolveWait => setTimeout(resolveWait, 500 * 2 ** attempt));
+            }
+        }
+    }
+    throw lastError;
+}
+/**
+ * Cross-process directory lock with a stale-lock timeout and heartbeat,
+ * matching the managed-runtime lock semantics.
+ */
+async function withDirectoryLock(lockPath, fn) {
+    const owner = randomUUID();
+    let acquired = false;
+    await mkdir(dirname(lockPath), { recursive: true });
+    try {
+        await mkdir(lockPath, { recursive: false });
+        acquired = true;
+        await writeFile(join(lockPath, 'owner'), `${owner}\n`, { flag: 'wx' });
+    }
+    catch (error) {
+        if (acquired) {
+            await rm(lockPath, { recursive: true, force: true }).catch(() => { });
+            throw error;
+        }
+        if (error.code !== 'EEXIST')
+            throw error;
+        const started = Date.now();
+        while (Date.now() - started < PREPARE_TIMEOUT_MS) {
+            try {
+                const info = await stat(lockPath);
+                if (Date.now() - info.mtimeMs > LOCK_STALE_MS) {
+                    await rm(lockPath, { recursive: true, force: true });
+                    return withDirectoryLock(lockPath, fn);
+                }
+            }
+            catch {
+                return withDirectoryLock(lockPath, fn);
+            }
+            await new Promise(resolveWait => setTimeout(resolveWait, 250));
+        }
+        throw new VisionToolkitError('runtime', 'timed out waiting for another process to prepare the bundled Python');
+    }
+    const heartbeat = setInterval(() => {
+        const now = new Date();
+        void utimes(lockPath, now, now).catch(() => { });
+    }, LOCK_HEARTBEAT_MS);
+    heartbeat.unref();
+    try {
+        return await fn();
+    }
+    finally {
+        clearInterval(heartbeat);
+        try {
+            if ((await readFile(join(lockPath, 'owner'), 'utf8')).trim() === owner) {
+                await rm(lockPath, { recursive: true, force: true });
+            }
+        }
+        catch {
+            // The lock was already removed or replaced.
+        }
+    }
+}
+export async function acquireBundledPython(ctx, stateRoot, cwd, manifestOverride, requestImpl) {
+    const manifest = manifestOverride ?? await readPythonBootstrapManifest();
+    const target = pythonBootstrapTarget(process.platform, process.arch, await runningMusl());
+    const artifact = manifest.artifacts[target];
+    if (artifact === undefined) {
+        throw new VisionToolkitError('runtime', `no bundled Python ${manifest.pythonVersion} artifact for ${target}; install Python 3.11+ or configure runtime.python`);
+    }
+    const root = join(stateRoot, 'python-bootstrap', `${manifest.pythonVersion}-${target}`);
+    const interpreter = process.platform === 'win32' ? join(root, 'python.exe') : join(root, 'bin', 'python3');
+    const command = { program: interpreter, prefix: [], display: interpreter };
+    const cached = await pythonMetadata(ctx, command, cwd);
+    if (cached !== undefined)
+        return { command, version: cached.version };
+    await withDirectoryLock(`${root}.lock`, async () => {
+        const ready = await pythonMetadata(ctx, command, cwd);
+        if (ready !== undefined)
+            return;
+        const parent = dirname(root);
+        await mkdir(parent, { recursive: true });
+        await rm(root, { recursive: true, force: true });
+        const work = await mkdtemp(join(parent, '.python-bootstrap-'));
+        try {
+            const archive = join(work, 'python.tar.gz');
+            const extractDir = join(work, 'extract');
+            await mkdir(extractDir, { recursive: true });
+            try {
+                await downloadBundledPython(artifact, archive, requestImpl ?? defaultDownloadRequest);
+            }
+            catch (error) {
+                throw new VisionToolkitError('runtime', `bundled Python ${manifest.pythonVersion} could not be downloaded for ${target} (${error instanceof Error ? error.message : String(error)}); install Python 3.11+ or configure runtime.python`, { cause: error });
+            }
+            try {
+                await extractTar({ file: archive, cwd: extractDir, strip: 1 });
+            }
+            catch (error) {
+                throw new VisionToolkitError('runtime', `bundled Python ${manifest.pythonVersion} could not be extracted for ${target}`, { cause: error });
+            }
+            const extractedInterpreter = process.platform === 'win32'
+                ? join(extractDir, 'python.exe')
+                : join(extractDir, 'bin', 'python3');
+            try {
+                await access(extractedInterpreter);
+            }
+            catch (error) {
+                throw new VisionToolkitError('runtime', `bundled Python ${manifest.pythonVersion} for ${target} is missing its interpreter`, { cause: error });
+            }
+            if (process.platform !== 'win32')
+                await chmod(extractedInterpreter, 0o755);
+            await rename(extractDir, root);
+        }
+        finally {
+            await rm(work, { recursive: true, force: true });
+        }
+    });
+    const metadata = await pythonMetadata(ctx, command, cwd);
+    if (metadata === undefined) {
+        throw new VisionToolkitError('runtime', 'bundled Python did not start after extraction');
+    }
+    return { command, version: metadata.version };
+}
+export async function resolveBootstrapPython(ctx, configured, cwd, manifestOverride, requestImpl) {
     const candidates = configured === undefined
         ? process.platform === 'win32'
             ? [
@@ -197,9 +469,25 @@ async function resolveBootstrapPython(ctx, configured, cwd) {
             return { command, ...metadata };
         }
     }
-    throw new VisionToolkitError('runtime', configured === undefined
-        ? 'vision-toolkit requires Python 3.11 or newer; tried python3, python, and the Windows py launcher'
-        : `vision-toolkit requires Python 3.11 or newer: ${configured}`);
+    if (configured !== undefined) {
+        throw new VisionToolkitError('runtime', `vision-toolkit requires Python 3.11 or newer: ${configured}`);
+    }
+    try {
+        const stateRoot = visionToolkitStateRoot();
+        await mkdir(stateRoot, { recursive: true });
+        const bundled = await acquireBundledPython(ctx, stateRoot, cwd, manifestOverride, requestImpl);
+        return {
+            command: bundled.command,
+            version: bundled.version,
+            major: Number.parseInt(bundled.version.split('.')[0] ?? '', 10),
+            minor: Number.parseInt(bundled.version.split('.')[1] ?? '', 10),
+        };
+    }
+    catch (error) {
+        if (error instanceof VisionToolkitError)
+            throw error;
+        throw new VisionToolkitError('runtime', 'vision-toolkit requires Python 3.11 or newer; tried python3, python, and the Windows py launcher, and automatic bundled-Python preparation failed', { cause: error });
+    }
 }
 /** Persistent per-DSH-home cache root shared by runtime and Web support files. */
 export function visionToolkitStateRoot() {
@@ -217,6 +505,58 @@ function expandHome(path) {
 function venvPython(root) {
     return process.platform === 'win32' ? join(root, 'Scripts', 'python.exe') : join(root, 'bin', 'python');
 }
+/**
+ * Rewrite a staged venv's `pyvenv.cfg` `home`/`executable` to point at a given
+ * base directory (the app execution alias directory for the Microsoft Store
+ * Python). Pure helper so the transformation is testable cross-platform.
+ */
+export function rewriteVenvConfig(cfg, homeDir) {
+    return cfg
+        .replace(/^home = .*$/m, `home = ${homeDir}`)
+        .replace(/^executable = .*$/m, `executable = ${homeDir}\\python.exe`);
+}
+/**
+ * Build the Microsoft Store probe environment while preserving Python-variable
+ * tombstones; only the user-directory variables must fall back to the host.
+ */
+export function storePythonProbeEnvironment(installEnv) {
+    return Object.fromEntries(Object.entries(installEnv).filter(([key]) => key !== 'HOME' && key !== 'USERPROFILE' && key !== 'LOCALAPPDATA'));
+}
+/**
+ * Windows-only workaround for the Microsoft Store Python. `python -m venv`
+ * records `home = C:\Program Files\WindowsApps\...` in the new venv, but the
+ * venv launcher (venvlauncher.exe) cannot CreateProcess that `python.exe`
+ * directly — the AppModel package execution restriction denies it (error 5) —
+ * so the venv's pip bootstrap exits 101. Rewrite the staged venv's pyvenv.cfg
+ * to the app execution alias directory, whose `python.exe` is launchable
+ * through Store activation.
+ */
+async function rewriteStorePythonVenvHome(ctx, bootstrap, staging, installEnv, cwd) {
+    if (process.platform !== 'win32')
+        return;
+    // The HOME/USERPROFILE/LOCALAPPDATA overrides make the Store alias resolve to
+    // the real Program Files\WindowsApps path; without them sys.executable points
+    // back at the alias directory that venvlauncher can launch.
+    const probeEnv = storePythonProbeEnvironment(installEnv);
+    const probe = await runCollected(ctx, [bootstrap.command.program, ...bootstrap.command.prefix, '-c', 'import os,sys; print(os.path.dirname(sys.executable))'], cwd, { env: probeEnv });
+    if (probe.exitCode !== 0 || probe.timedOut)
+        return;
+    const aliasDir = probe.stdout.trim().split(/\r?\n/)[0];
+    if (aliasDir === undefined || aliasDir.length === 0)
+        return;
+    const cfgPath = join(staging, 'pyvenv.cfg');
+    let cfg;
+    try {
+        cfg = await readFile(cfgPath, 'utf8');
+    }
+    catch {
+        return;
+    }
+    // Only touch the known-broken layout; other interpreters are left untouched.
+    if (!/^home = .*Program Files\\WindowsApps.*$/m.test(cfg))
+        return;
+    await writeFile(cfgPath, rewriteVenvConfig(cfg, aliasDir));
+}
 async function dependencyVersions(ctx, python, cwd) {
     const script = [
         'import json',
@@ -229,7 +569,7 @@ async function dependencyVersions(ctx, python, cwd) {
     let result;
     try {
         result = await runCollected(ctx, [python.program, ...python.prefix, '-c', script], cwd, {
-            env: isolatedPythonEnv(cwd),
+            env: isolatedPythonEnvironment(cwd),
         });
     }
     catch (error) {
@@ -395,7 +735,7 @@ async function prepareManaged(ctx, config, manifest) {
     }
     const staging = await mkdtemp(join(parent, '.prepare-'));
     const installEnv = {
-        ...isolatedPythonEnv(cleanHome),
+        ...isolatedPythonEnvironment(cleanHome),
         UV_CACHE_DIR: join(stateRoot, 'uv-cache'),
     };
     const heartbeat = setInterval(() => {
@@ -410,7 +750,9 @@ async function prepareManaged(ctx, config, manifest) {
             try {
                 const uv = await runCollected(ctx, ['uv', '--version'], stateRoot, { env: installEnv });
                 if (uv.exitCode === 0 && !uv.timedOut) {
-                    const create = await runCollected(ctx, ['uv', 'venv', '--python', bootstrap.command.program, staging], stateRoot, { timeoutMs: PREPARE_TIMEOUT_MS, env: installEnv });
+                    const executableEnv = Object.fromEntries(Object.entries(installEnv).filter((entry) => entry[1] !== undefined));
+                    const interpreter = await ctx.subprocess.resolveExecutable(bootstrap.command.program, executableEnv);
+                    const create = await runCollected(ctx, ['uv', 'venv', '--python', interpreter, staging], stateRoot, { timeoutMs: PREPARE_TIMEOUT_MS, env: installEnv });
                     if (create.exitCode !== 0 || create.timedOut) {
                         throw new VisionToolkitError('runtime', `uv failed to create the managed runtime: ${create.stderr.trim()}`);
                     }
@@ -428,9 +770,17 @@ async function prepareManaged(ctx, config, manifest) {
             }
         }
         if (!created) {
-            const create = await runCollected(ctx, [bootstrap.command.program, ...bootstrap.command.prefix, '-m', 'venv', staging], stateRoot, { timeoutMs: PREPARE_TIMEOUT_MS, env: installEnv });
+            const create = await runCollected(ctx, [bootstrap.command.program, ...bootstrap.command.prefix, '-m', 'venv', '--without-pip', staging], stateRoot, { timeoutMs: PREPARE_TIMEOUT_MS, env: installEnv });
             if (create.exitCode !== 0 || create.timedOut) {
                 throw new VisionToolkitError('runtime', `Python failed to create the managed runtime: ${create.stderr.trim()}`);
+            }
+            // `python -m venv` normally bootstraps pip internally; with the Microsoft
+            // Store Python that step exits 101 (see rewriteStorePythonVenvHome), so pip
+            // is installed explicitly after the venv configuration is repaired.
+            await rewriteStorePythonVenvHome(ctx, bootstrap, staging, installEnv, stateRoot);
+            const pipBootstrap = await runCollected(ctx, [venvPython(staging), '-m', 'ensurepip', '--upgrade', '--default-pip'], stateRoot, { timeoutMs: PREPARE_TIMEOUT_MS, env: installEnv });
+            if (pipBootstrap.exitCode !== 0 || pipBootstrap.timedOut) {
+                throw new VisionToolkitError('runtime', `Python failed to bootstrap pip in the managed runtime: ${pipBootstrap.stderr.trim()}`);
             }
             const install = await runCollected(ctx, [venvPython(staging), '-m', 'pip', 'install', '--disable-pip-version-check', '--no-input', '-r', REQUIREMENTS_PATH], stateRoot, { timeoutMs: PREPARE_TIMEOUT_MS, env: installEnv });
             if (install.exitCode !== 0 || install.timedOut) {

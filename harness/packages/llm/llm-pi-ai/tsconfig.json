@@ -9,7 +9,7 @@
   ],
   "references": [
     {
-      "path": "../../util/environment"
+      "path": "../../util/launch-environment"
     },
     {
       "path": "../../../vendor/cosmokit"
@@ -24,13 +24,16 @@
       "path": "../../llm/llm"
     },
     {
+      "path": "../../attachment/attachment"
+    },
+    {
       "path": "../../credentials/credentials"
     },
     {
       "path": "../../settings/settings"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
       "path": "../../util/timeout"

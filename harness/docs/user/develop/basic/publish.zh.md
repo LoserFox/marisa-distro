@@ -2,7 +2,9 @@
 
 [English](publish.md) | 中文
 
-前几篇教程通过 `--patch` overlay 加载本地插件。本教程把它打包成可安装的**组合包**（bundle），用 `dsh plugin add` 安装进一个 **profile**，并解释决定组合后配置的层顺序。请先完成[插件配置](./config.md)。
+前几篇教程通过 `--patch` overlay 加载本地插件。本教程把它打包成可安装的**组合包**（bundle），用 `dsh plugin add` 安装进一个 **profile**，并解释决定组合后配置的层顺序。本文假设 `dsh` CLI 已安装。请先完成[插件配置](./config.md)。
+
+如果改用全新的源码 checkout，请先按照[从源码运行章节](../../../../README.md#run-from-source)完成准备，将本教程的 `hello-plugin` 目录放在仓库根目录，并从该目录把下文的 `dsh ...` 命令改为 `pnpm dsh ...`。构建与启动器行为见[源码执行](../../../../apps/cli/reference/README.md#source-execution)。
 
 ## 两个概念，两种 manifest
 
@@ -15,12 +17,20 @@
 
 ### 组合包 manifest
 
+创建包目录：
+
+```sh
+mkdir -p hello-plugin
+```
+
 ```
 hello-plugin/
 ├── package.json       # declares dsh.bundle
 ├── cordis.patch.yml   # the layer applied when a profile lists this bundle
 └── index.js           # plugin modules the patch rows reference
 ```
+
+创建 `hello-plugin/package.json`：
 
 ```json
 {
@@ -33,7 +43,17 @@ hello-plugin/
 }
 ```
 
-patch 文件的形状与你一直在写的 `--patch` overlay 相同——一个 patch 条目的 YAML 数组——只是插件行按包名而不是相对源码路径引用这个包，这样 Node 的模块解析才能找到已安装的代码：
+创建 `hello-plugin/index.js`，写入插件入口：
+
+```js
+export const name = 'hello-plugin'
+
+export function apply() {
+  console.log('[hello-plugin] plugin loaded!')
+}
+```
+
+创建 `hello-plugin/cordis.patch.yml`。这个 patch 与一直在写的 `--patch` overlay 一样，是一个 patch 条目的 YAML 数组；区别是插件行按包名而不是相对源码路径引用这个包，这样 Node 的模块解析才能找到已安装的代码：
 
 ```yaml
 - insert:
@@ -41,7 +61,7 @@ patch 文件的形状与你一直在写的 `--patch` overlay 相同——一个 
       name: dsh-hello-plugin
 ```
 
-没有 `dsh.bundle` 声明的包仍然可以安装，但只作为普通依赖：`dsh plugin` 会打印警告，且不激活任何层。这正是"供插件包 import 的库"应有的形状，区别于"供用户启用的插件"。
+没有 `dsh.bundle` 声明的包仍然可以安装，但只作为普通依赖：`dsh plugin` 会打印警告，且不激活任何层。如果一个库供插件包 import，而不是供用户启用，就使用这种包格式。
 
 ### profile manifest
 
@@ -54,11 +74,10 @@ profile manifest 从不需要手写：`dsh plugin` 负责创建和维护它。�
 
 ## 安装进 profile
 
-`dsh plugin --profile <name> <args...>` 在 profile 目录内转发给 pnpm，因此所有 pnpm 子命令都可用。从 checkout 安装你的包：
+`dsh plugin --profile <name> <args...>` 在 profile 目录内转发给 pnpm，因此所有 pnpm 子命令都可用。在包含 `hello-plugin` 的目录中安装该包的 checkout：
 
 ```sh
-cd hello-plugin
-dsh plugin --profile demo add .
+dsh plugin --profile demo add ./hello-plugin
 ```
 
 首次使用会初始化 profile（`@deepseek-ai/dsh-base` 作为它的第一个组合包），pnpm 链接该 checkout，而 `dsh` 因为这个包声明了 `dsh.bundle`，把它追加进 `dsh.profile.bundles`：
@@ -98,7 +117,8 @@ dsh --profile demo
 2. profile 自己的 `cordis.patch.yml`。
 3. home 级的 `$DSH_HOME/cordis.patch.yml`——各 profile 共享的机器本地偏好。
 4. 每个 `--patch <path>` overlay，按 argv 顺序。
-5. 启动器 flag patch（例如 `dsh web --port`）。
+
+应用参数不是另一层 patch。表层组合包可以通过下文所述的普通应用自有服务解析它们。
 
 后应用的层按行胜出，且 patch 会替换目标行的整个 `config` 值，而不是深度合并各键。这给组合包作者带来两个推论：
 
@@ -106,6 +126,29 @@ dsh --profile demo
 - 用户可以在自己 profile 的 `cordis.patch.yml` 中覆盖你的行，无需改动你的包，所以优先给出用户大概率会保留的配置默认值，其余交给 schema 承担。
 
 内置组合包名称始终从 dsh 安装目录本身解析；pnpm 只管理树外的包，所以你的组合包可以放心依赖 `@deepseek-ai/dsh-base` 存在且与安装保持一致。
+
+## 让表层组合包持有自己的命令行
+
+定义了可运行应用的组合包挂载一个普通提供方插件：
+
+```yaml
+- id: hello-startup
+  name: 'dsh-hello-plugin/startup'
+```
+
+该插件导出 `inject = ['cmdlineArgs']`，使用自己的 commander program 调用 [`@deepseek-ai/dsh-cmdline`](../../../../packages/boot/cmdline/README.md) 中的 `parseCmdline`，再在 program 自己的 action 中把应用自有服务提供出去。启动器把自身 flag 之后的同一份不可变参数交给每个插件，因此添加应用专属 flag 无需修改启动器，多个插件也可以解析该快照。Loader 行不需要启动器标记或特殊类型。
+
+受这些参数配置的行会注入提供方服务，并在自己的 `!!js` 选项中读取它，同时把部署取值写在旁边作为回退：
+
+```yaml
+- id: my-app
+  name: '@example/my-app'
+  inject: [myAppStartup]
+  config:
+    port: !!js ctx.myAppStartup.port ?? 8080
+```
+
+遇到 `--help` 时，提供方不会发布该服务，所以这些行不会激活。Loader 只挂载一次组合，等待每一行的普通注入，再基于其已注入的上下文求值该行的 `!!js` 配置。
 
 ## 从 GitHub 安装：构建脚本这道坎
 
@@ -137,4 +180,4 @@ dsh plugin --profile demo add github:you/hello-plugin
 ## 下一步
 
 - [插件与生命周期](../framework/) — 插件的完整生命周期
-- [CLI 行为参考](../../../../apps/cli/reference/README.md) — 确切的层优先级、flag 与 profile 机制
+- [CLI（命令行界面）行为参考](../../../../apps/cli/reference/README.md) — 确切的层优先级、flag 与 profile 机制

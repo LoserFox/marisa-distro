@@ -11,8 +11,8 @@
 /**
  * The plan projection's wire value. `active` is the logged state in force
  * (the last `plan/mode`, inactive before the first); `pending` is true while
- * a logged `/plan` selection (`command/run`) awaits its request-boundary
- * `plan/mode` commit and targets a state other than `active`. Capability
+ * a logged `/plan` selection (`command/run`) targets a state other than
+ * `active` and no later `plan/mode` event has recorded that state. Capability
  * absence (plan-mode not composed) is the key's absence, never a value.
  */
 export interface PlanProjection {

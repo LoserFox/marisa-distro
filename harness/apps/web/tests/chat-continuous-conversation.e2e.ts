@@ -18,7 +18,7 @@ import {
   webSnapshotMode,
   type WebScaffold,
 } from './scaffold.ts'
-import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
+import { connectFreshWorkspace, conversationContextKey, newEnglishPage, saveFailureShot } from './support.ts'
 
 const MODE = webSnapshotMode()
 const TURN_COUNT = 12
@@ -160,6 +160,14 @@ function toolResultText(event: Extract<SessionEvent, { type: 'tool/result' }>): 
     .join('')
 }
 
+function messageKey(event: SessionEvent<'user/message'>): string {
+  return conversationContextKey('input-message', String(event.data.id))
+}
+
+function assistantKey(event: SessionEvent<'assistant/message'>): string {
+  return conversationContextKey('assistant-step', `${event.data.turn}:${event.data.step}`)
+}
+
 describe('web e2e: continuous conversation grown through the composer', () => {
   let browser: Browser
   let page: Page
@@ -222,6 +230,11 @@ describe('web e2e: continuous conversation grown through the composer', () => {
       const settled = scaffold.whenTurnSettled(60_000)
       await page.getByRole('button', { name: 'Send message', exact: true }).click()
       await page.getByText(spec.userMarker, { exact: false }).last().waitFor({ timeout: 15_000 })
+      await expect.poll(() => sessionEvents.slice(eventStart).some(event => (
+        event.type === 'user/message'
+        && event.data.source.kind === 'user'
+        && userText(event).includes(spec.userMarker)
+      )), { timeout: 15_000 }).toBe(true)
       const echoedUser = sessionEvents.slice(eventStart).find(
         (event): event is SessionEvent<'user/message'> => (
           event.type === 'user/message'
@@ -230,7 +243,7 @@ describe('web e2e: continuous conversation grown through the composer', () => {
         ),
       )
       if (echoedUser === undefined) throw new Error(`turn ${String(spec.index)} has no user echo event`)
-      const userRow = page.locator(`[data-chat-anchor-key="node:${String(echoedUser.seq)}"]`)
+      const userRow = page.locator(`[data-chat-anchor-key="${messageKey(echoedUser)}"]`)
       await expect.poll(() => userRow.count(), { timeout: 10_000 }).toBe(1)
       expect(await userRow.getAttribute('data-chat-flow-kind')).toBe('user')
       expect(await userRow.textContent()).toContain(spec.userMarker)
@@ -274,9 +287,9 @@ describe('web e2e: continuous conversation grown through the composer', () => {
       expect(turnEnds[0]?.data).toEqual({ turn: spec.index, reason: { kind: 'completed' } })
       expect(chunks).toHaveLength(spec.deltas.length + (spec.callId === undefined ? 4 : 9))
 
-      const assistantRow = page.locator(`[data-chat-anchor-key="node:${String(finalAssistants[0]!.seq)}"]`)
+      const assistantRow = page.locator(`[data-chat-anchor-key="${assistantKey(finalAssistants[0]!)}"]`)
       await expect.poll(() => assistantRow.count(), { timeout: 10_000 }).toBe(1)
-      expect(await assistantRow.getAttribute('data-chat-flow-kind')).toBe('assistant')
+      expect(await assistantRow.getAttribute('data-chat-flow-kind')).toBe('assistant-step')
       expect(await assistantRow.textContent()).toContain(spec.doneMarker)
 
       const calls = turnEvents.filter((event): event is SessionEvent<'tool/call'> => event.type === 'tool/call')

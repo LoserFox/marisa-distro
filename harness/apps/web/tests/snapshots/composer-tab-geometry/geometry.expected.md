@@ -5,9 +5,9 @@
 - Chat: scrollbar-gutter stable, overflow hidden/auto
 - Chat scroller scrolls: true
 - Chat reserved band: 8px
-- Trajectory: scrollbar-gutter stable, overflow hidden/auto
+- Trajectory: scrollbar-gutter auto, overflow hidden/auto
 - Trajectory scroller scrolls: false
-- Trajectory reserved band: 8px
+- Trajectory reserved band: 0px
 - input card left edge moves between tabs: 0px
 - input card right edge moves between tabs: 0px
 - input card width changes between tabs: 0px
@@ -17,19 +17,19 @@
 - Chat: scrollbar-gutter stable, overflow hidden/auto
 - Chat scroller scrolls: true
 - Chat reserved band: 8px
-- Trajectory: scrollbar-gutter stable, overflow hidden/auto
+- Trajectory: scrollbar-gutter auto, overflow hidden/auto
 - Trajectory scroller scrolls: false
-- Trajectory reserved band: 8px
+- Trajectory reserved band: 0px
 - input card left edge moves between tabs: 0px
 - input card right edge moves between tabs: 0px
 - input card width changes between tabs: 0px
 
-## Wide viewport, reservation removed in the page (control)
+## Wide viewport, seat compensation removed in the page (control)
 
-- Chat: scrollbar-gutter auto, overflow hidden/auto
+- Chat: scrollbar-gutter stable, overflow hidden/auto
 - Chat scroller scrolls: true
 - Chat reserved band: 8px
-- Trajectory: scrollbar-gutter auto, overflow hidden/hidden
+- Trajectory: scrollbar-gutter auto, overflow hidden/auto
 - Trajectory scroller scrolls: false
 - Trajectory reserved band: 0px
 - input card left edge moves between tabs: 4px

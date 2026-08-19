@@ -34,7 +34,8 @@ The app does not install commands, user interaction, session navigation, configu
 | `workspaceContext` | required | Workspace-instruction byte budget/config, or `false`. |
 | `skills` | owner defaults | Skill registry, local provider, and model-facing skill tool. |
 | `toolBash` | owner defaults | Model-facing bash tool config. |
-| `toolTasks` | owner defaults | Generic background-task control config, or `false`. |
+| `jobs` | `{ maxConcurrentJobsPerOwner: 10 }` | Process-local per-owner active-task admission. |
+| `toolJobs` | owner defaults | Generic background-job control config, or `false`. |
 | `goals` | owner defaults | Persisted same-session goal domain and model tools, or `false`. |
 
 The shipped [`examples/acp-agent/cordis.yml`](../../../examples/acp-agent/cordis.yml) adds the DeepSeek adapter, sandboxed bash and filesystem providers, one-shot approval policy, compaction, subagents, workflows, hooks, and model-facing tools. The app supplies the derived session-query index, while the model-facing query consumer remains an explicit leaf opt-in. Snapshot overlays replace only nondeterministic providers or policy values.
@@ -55,4 +56,4 @@ Append-only per session; the app adds no request-prefix content itself.
 
 - **JSONL persistence is fixed** — a different backend requires another composition.
 - **Sibling plugins can corrupt stdout** — the app cannot prevent another entry from writing non-protocol bytes.
-- **Fresh automation sessions only** — resume and human interaction belong to other front doors.
+- **Fresh automation sessions only** — resume and human interaction belong to other entry points.

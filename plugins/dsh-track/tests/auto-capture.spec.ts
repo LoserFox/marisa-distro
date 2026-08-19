@@ -471,6 +471,46 @@ describe('createAutoCapture', () => {
     dispose()
   })
 
+  it('G2 requirement captures are title-ified, keep raw context + jump-back id, durable-dedup', () => {
+    const ctx = new Context()
+    const store = makeStore()
+    const dispose = createAutoCapture(ctx, { store })
+
+    ctx.emit('session/event', { id: 's-req' }, {
+      type: 'user/message',
+      data: {
+        id: 'msg-42',
+        content: [{ type: 'text', text: '1 pr merge 吧，tag 发布 npm，npm 要在 readme里提现吧？\n做npm tag的github pipeline？并且加 npm badge？' }],
+        source: { kind: 'user' },
+      },
+    })
+    expect(store.createCapture).toHaveBeenCalledTimes(1)
+    const [cap, opts] = store.createCapture.mock.calls[0] as [Record<string, unknown>, { dedupeRequirementBySession?: boolean }]
+    expect(cap.content).toBe('pr merge 吧，tag 发布 npm，npm 要在 readme里提现吧？ 做npm tag的github pipeline？并且加 npm badge？')
+    expect(String(cap.content)).not.toContain('\n') // one line
+    expect(String(cap.content)).not.toMatch(/^\d+ /) // leading list marker stripped
+    expect(cap.context).toContain('1 pr merge 吧') // raw message preserved
+    expect(cap.sourceMessageId).toBe('msg-42') // jump-back target
+    expect(opts?.dedupeRequirementBySession).toBe(true) // durable marker requested
+    dispose()
+  })
+
+  it('todo and goal captures are title-ified too (consistent one-liners)', () => {
+    const ctx = new Context()
+    const store = makeStore()
+    const dispose = createAutoCapture(ctx, { store })
+    emitTool(ctx, 's-t', 'todo_write', { todos: [{ content: '\n\n  3.  调研 StreamChunk 结构\n  确认 usage/token 字段  ' }] })
+    ctx.emit('session/event', { id: 's-g' }, {
+      type: 'goal/change',
+      data: { operation: 'create', goal: { id: 'g1', objective: '4. 做自动维护机制，\n让管线持续运行' } },
+    })
+    const todo = store.captures.find((c) => c.tags.includes('todo'))!
+    const goal = store.captures.find((c) => c.tags.includes('goal'))!
+    expect(String(todo.content)).toBe('调研 StreamChunk 结构 确认 usage/token 字段')
+    expect(String(goal.content)).toBe('做自动维护机制， 让管线持续运行')
+    dispose()
+  })
+
   it('does NOT capture terse user messages as requirements (below minChars)', () => {
     const ctx = new Context()
     const store = makeStore()

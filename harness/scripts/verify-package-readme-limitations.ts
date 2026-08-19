@@ -78,7 +78,7 @@ for (const pkg of scannedPackages) {
   const body = lines.slice(headingAt + 1)
   const headingLines = new Set(headings.map(entry => entry.index))
   const end = body.findIndex(line => headingLines.has(line.index))
-  const section = end !== -1 ? body.slice(0, end) : body
+  const section = end === -1 ? body : body.slice(0, end)
   if (!section.some(line => /^- /.test(line.raw))) {
     failures.push(`${readme}:${heading.index}: the \`${CANONICAL}\` section has no top-level \`- \` bullet — state the limitations, or whitelist the package if there are genuinely none`)
   }

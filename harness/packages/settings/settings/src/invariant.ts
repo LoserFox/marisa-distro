@@ -3,7 +3,7 @@
  * @module @deepseek-ai/dsh-settings/invariant
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import { deepEqualJson } from './index.ts'
 
@@ -30,7 +30,9 @@ const install: InvariantInstaller = (ctx: Context, fail: InvariantFailure) => {
     if (current === undefined) {
       fail(`settings/updated for "${ns}" emitted while the namespace is unregistered`)
     }
-    if (!deepEqualJson(current, next)) fail(`settings/updated for "${ns}" does not match the authoritative resolved value`)
+    if (!deepEqualJson(current, next)) {
+      fail(`settings/updated for "${ns}" does not match the authoritative resolved value`)
+    }
     if (deepEqualJson(next, prev)) {
       fail(`settings/updated for "${ns}" emitted without a resolved-value change`)
     }

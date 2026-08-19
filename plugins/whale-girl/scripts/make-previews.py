@@ -12,8 +12,8 @@ import sys
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MANIFEST = os.path.join(ROOT, '.dsh-plugin', 'assets', 'manifest.json')
-CHAR_DIR = os.path.join(ROOT, '.dsh-plugin', 'assets', 'characters', 'whale-girl')
+MANIFEST = os.path.join(ROOT, 'lib', 'assets', 'manifest.json')
+CHAR_DIR = os.path.join(ROOT, 'lib', 'assets', 'characters', 'whale-girl')
 OUT_DIR = os.path.join(ROOT, 'docs', 'preview')
 
 # 每状态输出帧数上限（控制 gif 体积）；once 保持末帧的帧数。

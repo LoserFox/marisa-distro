@@ -1,6 +1,5 @@
-/* Chat flow: one 16px rhythm everywhere — between blocks (prose <-> tool
-   runs) via the column gap and between consecutive tool rows via the group
-   gap. Input padding cap rides the skeleton. Under
+/* Chat flow: one 16px rhythm everywhere through the column gap. Input
+   padding cap rides the skeleton. Under
    `[data-conversation-scroll]` the column host owns overflow and this view
    is ordinary flow (see ConversationRoot active-phase rules). */
 
@@ -51,10 +50,11 @@
   min-width: 0;
 }
 
-.toolGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* A keyed renderer may intentionally decline its row after dispatch (the
+   completed-turn tail does this when it owns neither actions nor extensions).
+   An empty flex item must not consume the column gap. */
+.flowItem:empty {
+  display: none;
 }
 
 .callRow {

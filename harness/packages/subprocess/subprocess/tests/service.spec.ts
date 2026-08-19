@@ -1,14 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import { scrubbedParentEnv, SubprocessService } from '@deepseek-ai/dsh-subprocess'
-import type { SubprocessHandle, SubprocessOutputRead, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import { PassThrough } from 'node:stream'
+import { Context } from '@deepseek-ai/cordis'
+import { scrubbedParentEnv, SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
+import type {
+  SubprocessHandle,
+  SubprocessOutputRead,
+  SubprocessSpawnSpec,
+  SubprocessTerminalHandle,
+  SubprocessTerminalSpawnSpec,
+} from '@deepseek-ai/dsh-subprocess'
 
 /**
  * Minimal concrete service: a hand-built handle. The seam is spawn-only —
  * defaulting, shell semantics, and deadlines belong to callers — so this stub
  * is all an implementation owes the abstract class.
  */
-class StubSubprocessService extends SubprocessService {
+class StubSubprocessRuntime extends SubprocessRuntime {
+  async resolveExecutable(command: string): Promise<string> {
+    return `/bin/${command}`
+  }
+
   spawn(spec: SubprocessSpawnSpec): SubprocessHandle {
     const read: SubprocessOutputRead = { text: '', nextOffset: 0, lossy: false }
     const collected = spec.stdio.stdout !== 'pipe' && spec.stdio.stdout !== 'inherit'
@@ -25,12 +36,24 @@ class StubSubprocessService extends SubprocessService {
       waitForExit: () => Promise.resolve(true),
     }
   }
+
+  async spawnTerminal(spec: SubprocessTerminalSpawnSpec): Promise<SubprocessTerminalHandle> {
+    return {
+      pid: spec.argv.length,
+      output: new PassThrough(),
+      done: Promise.resolve({ exitCode: 0, signal: null }),
+      write: async () => {},
+      inspectForeground: async () => ({ processGroupId: 1, inputWaiting: true }),
+      signalForeground: async () => 1,
+      terminate: async () => {},
+    }
+  }
 }
 
-describe('SubprocessService seam', () => {
+describe('SubprocessRuntime seam', () => {
   it('a concrete subclass registers as ctx.subprocess and serves the abstract API', async () => {
     const ctx = new Context()
-    await ctx.plugin(StubSubprocessService)
+    await ctx.plugin(StubSubprocessRuntime)
     const handle = ctx.subprocess.spawn({
       argv: ['true'],
       cwd: '/stub',
@@ -47,8 +70,8 @@ describe('SubprocessService seam', () => {
 
   it('loading a second implementation throws (one subprocess service per context — cordis standard)', async () => {
     const ctx = new Context()
-    await ctx.plugin(StubSubprocessService)
-    class SecondService extends StubSubprocessService {}
+    await ctx.plugin(StubSubprocessRuntime)
+    class SecondService extends StubSubprocessRuntime {}
     await expect(ctx.plugin(SecondService)).rejects.toThrow(/service "subprocess" has been registered/)
   })
 

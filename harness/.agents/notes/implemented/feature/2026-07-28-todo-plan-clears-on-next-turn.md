@@ -18,7 +18,7 @@ The standing plan is the latest `todo/write` that is not followed by a later `tu
 
 ### TUI live path
 
-The TUI `renderEvent` switch still clears its local plan panel on `turn/start` and replaces it on `todo/write` (TUI is not yet a projection carrier). The rebuild path resets the panel before replaying the log so cold resume converges on the same rule.
+The former TUI's `renderEvent` switch cleared its local plan panel on `turn/start` and replaced it on `todo/write`, with its rebuild path resetting the panel before replay so cold resume converged on the same rule; that package has since been removed ([remove TUI package](../simplification/2026-08-04-remove-tui-package.md)).
 
 ## Alternatives considered
 

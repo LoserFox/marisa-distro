@@ -28,8 +28,8 @@
 - id: fs-sandbox
   name: '@deepseek-ai/dsh-fs-sandbox'
 
-- id: fs-policy
-  name: '@deepseek-ai/dsh-fs-policy'
+- id: fs-observation-policy
+  name: '@deepseek-ai/dsh-fs-observation-policy'
 
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
@@ -45,14 +45,14 @@
     skills:
       enabled: false
     toolBash: false
-    toolTasks: false
+    toolJobs: false
     goals: false
 
 - id: subagent
   name: '@deepseek-ai/dsh-subagent'
 
-- id: subagent-spawn
-  name: '@deepseek-ai/dsh-subagent-spawn'
+- id: subagent-spawn-in-process
+  name: '@deepseek-ai/dsh-subagent-spawn-in-process'
   config:
     providerName: spawn
 

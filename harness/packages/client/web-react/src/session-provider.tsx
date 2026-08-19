@@ -20,7 +20,7 @@ export const HostContext = createContext<SlotRendererHost | null>(null)
 /**
  * Read the installed renderer host; throws outside the rendered root tree
  * (framework components must not render detached from the renderer).
- * @returns the host surface.
+ * @returns the host API.
  */
 export function useHost(): SlotRendererHost {
   const host = useContext(HostContext)
@@ -33,7 +33,7 @@ const BindingContext = createContext<SessionMaybeProvideInfo | null>(null)
 /** Read the current-session-optional bundle supplied at the root. */
 export function useSessionMaybeProvideInfo(): SessionMaybeProvideInfo {
   const info = useContext(BindingContext)
-  if (!info) { throw new SlotAssemblyError('session-aware slot rendered outside the root binding provider') }
+  if (!info) throw new SlotAssemblyError('session-aware slot rendered outside the root binding provider')
   return info
 }
 
@@ -84,7 +84,7 @@ function useAbsentSnapshot<S>(_selector: (snapshot: never) => S, _equal?: (a: S,
 }
 
 /**
- * The useProjection framework seat (session-projection RFC), one bound
+ * The useProjection framework seat (docs/subsystems/session-projection.md), one bound
  * function per provide bundle (cached by info identity — components may hold
  * it across renders). Key-addressed: the key resolves a per-session value
  * face off the projection store; the bound selector hook comes from the same
@@ -132,7 +132,7 @@ export function SessionMaybeProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** SessionProvider surface: render-prop body plus the no-session branch. */
+/** SessionProvider API: render-prop body plus the no-session branch. */
 export interface SessionProviderProps {
   /** No-session body (also covers a current id whose session cannot be resolved). */
   empty?: (() => ReactNode) | undefined

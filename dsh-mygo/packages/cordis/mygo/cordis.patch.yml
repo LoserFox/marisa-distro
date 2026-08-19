@@ -1,0 +1,8 @@
+# dsh-mygo bundle patch：受管插件管理器行（dsh.bundle 原生形态）。
+# profile 名由服务在运行时从 loader baseUrl（profile 目录）推导，本层无需
+# 静态 profile 值；storage/sqlite 行由 dsh-base / dsh-web-app 等基础 bundle
+# 提供，本层不重复声明。
+
+- insert:
+    - id: dsh-mygo
+      name: '@r05en1cu/dsh-mygo'

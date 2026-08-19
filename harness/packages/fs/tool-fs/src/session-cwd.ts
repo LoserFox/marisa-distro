@@ -4,7 +4,7 @@
  * `read`/`write`/`edit` act on ITS workspace, not the server's launch dir — mirroring how
  * `dsh-tool-bash` defaults a bash `workdir` to the session cwd.
  * Non-agent calls return `undefined`, leaving the fallback in the provider rather than reading
- * `process.cwd()` at the tool seam.
+ * `process.cwd()` at the tool boundary.
  * @module @deepseek-ai/dsh-tool-fs/session-cwd
  */
 

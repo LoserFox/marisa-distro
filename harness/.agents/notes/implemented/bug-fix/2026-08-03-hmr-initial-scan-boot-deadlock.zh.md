@@ -20,7 +20,7 @@
 - `include/src/index.ts` 将每次子树变更——首次 apply、refresh、`internal/update` 补丁重应用——汇入每个 Include 一条的 promise 队列。group 的事务化 `update` 不可重入，因此序列化是正确性要求，而不是吞吐取舍。`refresh()` 也在队列内读取文件，使其内容变更判断与前一任务提交后的状态比较。
 - `hmr/src/index.ts` 给主 watcher 传入 `ignoreInitial: true`。初始扫描只会重新宣告启动刚刚消费过的文件；抑制它同时消除了启动期 refresh 和对已加载模块的多余 `add` 事件。`registerConfig()` 保留自己 `ignoreInitial: false` 的 watcher，因为注册时已存在的个人配置必须恰好应用一次。
 
-两者齐备后，失败的启动走上预期路径：唯一一次 apply 失败，回滚释放整棵树（执行 TUI 自身的 shutdown、恢复终端），`loader.create` reject，`boot()` 重新抛出带标签的诊断并以 1 退出。
+两者齐备后，失败的启动走上预期路径：唯一一次 apply 失败，回滚并 dispose（资源释放）整棵树（执行 TUI 自身的 shutdown、恢复终端），`loader.create` reject，`boot()` 重新抛出带标签的诊断并以 1 退出。
 
 ## 曾考虑的替代方案
 
@@ -38,4 +38,4 @@
 
 ## 测试
 
-`apps/cli/tests/tui-keyless-smoke.e2e.ts` 中 `dsh` 无效 provider 的 PTY 用例钉住了端到端契约：以 1 退出、带标签的 `dsh: plugin tree failed to load:` 诊断指明 `$.providers`、以及证明整棵树已被释放的 bracketed-paste 复位序列。此修复之前，同一用例观察到的是无诊断的 exit 13。重载行为仍由 `packages/ui/app-boot/tests/config-reload.spec.ts` 与 `packages/ui/app-boot/tests/hmr-config.spec.ts` 覆盖。
+`apps/cli/tests/tui-keyless-smoke.e2e.ts` 中 `dsh` 无效 provider 的 PTY 用例钉住了端到端约定：以 1 退出、带标签的 `dsh: plugin tree failed to load:` 诊断指明 `$.providers`、以及证明整棵树已被释放的 bracketed-paste 复位序列。此修复之前，同一用例观察到的是无诊断的 exit 13。重载行为仍由 `packages/boot/app-boot/tests/config-reload.spec.ts` 与 `packages/boot/app-boot/tests/hmr-config.spec.ts` 覆盖。

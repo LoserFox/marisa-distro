@@ -59,7 +59,9 @@ export interface Workspace {
 
   /**
    * Prepend a session to this workspace's candidate account. An already
-   * accounted id resolves without writing. A new id's live or persisted
+   * accounted id resolves without writing, aside from the durable
+   * filtered-candidate prune every accepted mutation performs. A new id's
+   * live or persisted
    * header cwd must resolve to an existing directory equal to {@link path};
    * unknown ids, missing or invalid cwd values, and mismatches reject without
    * writing.
@@ -73,7 +75,9 @@ export interface Workspace {
    * with an anchor the session lands before it, without one it appends to the
    * end. Only the moved id changes position. A session or anchor absent from
    * the account rejects without writing; a move to the current position
-   * resolves without writing (decided on the domain write chain).
+   * resolves without writing, aside from the durable filtered-candidate
+   * prune every accepted mutation performs; decided on the domain write
+   * chain.
    * @param sessionId - The accounted session to move.
    * @param beforeSessionId - Accounted anchor to insert before; omitted appends.
    * @returns resolution after durability.
@@ -82,8 +86,9 @@ export interface Workspace {
 
   /**
    * Remove a session from this workspace's account. Idempotent: an id not on
-   * the account resolves without writing (decided on the domain write chain,
-   * like attach). Never touches the session's own stored log.
+   * the account resolves without writing, aside from the durable
+   * filtered-candidate prune every accepted mutation performs; decided on
+   * the domain write chain like attach. Never touches the session's own stored log.
    * @param sessionId - The session to remove.
    * @returns resolution after durability.
    */

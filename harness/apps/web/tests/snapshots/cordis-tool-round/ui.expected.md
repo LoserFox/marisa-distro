@@ -1,54 +1,92 @@
 - banner:
   - navigation "Session hierarchy":
     - button "Use only Cordis tools. First" [disabled]
+  - img
+  - text: Standard mode
+  - button "Session log":
+    - text: Session log
+    - img
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
-- text: "Use only Cordis tools. First call cordis_inspect with what \"temporary\". Then call cordis_mount with this exact code: \"return { name: \\\"snapshot-noop\\\", apply(ctx) {} }\". Read its returned id and call cordis_unmount with that exact id. After all three calls succeed, reply exactly CORDIS_UI_DONE and stop. {{clock}}"
+- text: "Use only Cordis tools. First call cordis_inspect_self with no arguments. Then call cordis_define with plugin kind \"new\", idPrefix \"snap\", name \"snapshot noop\", purpose \"does nothing, for the snapshot\", code.host exactly \"return { name: \\\"snapshot-noop\\\", apply(ctx) {} }\" and code.client exactly \"return { inject: [\\\"slots\\\"], apply(ctx) { ctx.slots.register({ name: \\\"shell.overlay\\\", id: \\\"snapshot-probe\\\" }, () => React.createElement(\\\"div\\\", { \\\"data-snapshot-probe\\\": \\\"loaded\\\" })) } }\". Read its returned pluginId and packageId, then call cordis_run with those exact IDs and mode \"run\". After the run request returns, reply exactly CORDIS_UI_READY and stop. {{clock}}"
 - button "Copy":
   - img
 - button "Context injection @deepseek-ai/dsh-system-prompt":
   - img
   - img
   - text: Context injection @deepseek-ai/dsh-system-prompt
-- button "Think The user wants me to:":
+- button "Think I will inspect the current Session's dynamic Cordis Plugins before defining the snapshot Package.":
   - img
   - img
-  - text: "Think The user wants me to:"
-- button "Inspect temporary":
+  - text: Think I will inspect the current Session's dynamic Cordis Plugins before defining the snapshot Package.
+- 'button "Tool call cordis_inspect_self · {}"':
   - img
   - img
-  - text: Inspect temporary
-- 'button "Think Good, no temporary plugins running. Now step 2: call cordis_mount with the exact code."':
+  - text: "Tool call cordis_inspect_self · {}"
+- button "Think No dynamic Plugins are present, so I will define the requested Host and Client Package.":
   - img
   - img
-  - text: "Think Good, no temporary plugins running. Now step 2: call cordis_mount with the exact code."
-- 'button "Mount temporary Plugin return { name: \"snapshot-noop\", apply(ctx) {} }" [expanded]':
+  - text: Think No dynamic Plugins are present, so I will define the requested Host and Client Package.
+- button "Register Cordis Plugin snapshot noop does nothing, for the snapshot Ready" [expanded]:
   - img
-  - text: "Mount temporary Plugin return { name: \"snapshot-noop\", apply(ctx) {} }"
-- text: typescript
-- button "Copy"
-- code: "return { name: \"snapshot-noop\", apply(ctx) {} }"
-- text: OUT Temporary Plugin dyn-1 is running (plugin "snapshot-noop"; available until unmounted or DSH restarts).
+  - text: Register Cordis Plugin snapshot noop does nothing, for the snapshot Ready
+- tablist "Plugin source":
+  - tab "Client"
+  - tab "Host" [selected]
+- tabpanel "Host":
+  - text: javascript
+  - button "Copy"
+  - code: "return { name: \"snapshot-noop\", apply(ctx) {} }"
+- text: Result Defined snap-1/pkg-1 (snapshot noop); it is not running yet. Use cordis_run to activate this Package. Run controls live in the Cordis panel above Settings
 - button "Inspect"
-- 'button "Think The id is \"dyn-1\". Now step 3: call cordis_unmount with that id."':
+- button "Think The Host returned snap-1/pkg-1, so I will request its first activation.":
   - img
   - img
-  - text: "Think The id is \"dyn-1\". Now step 3: call cordis_unmount with that id."
-- button "Unmount temporary Plugin dyn-1":
+  - text: Think The Host returned snap-1/pkg-1, so I will request its first activation.
+- img
+- text: Run Cordis Plugin snap-1 · pkg-1 Ready
+- button "Inspect"
+- text: snap-1/pkg-1 is awaiting user approval (run-1).
+- button "Think The activation request has been submitted, so I will return the requested readiness marker.":
   - img
   - img
-  - text: Unmount temporary Plugin dyn-1
-- button "Think All three calls succeeded. I should now reply exactly \"CORDIS_UI_DONE\" and stop.":
-  - img
-  - img
-  - text: Think All three calls succeeded. I should now reply exactly "CORDIS_UI_DONE" and stop.
-- paragraph: CORDIS_UI_DONE
+  - text: Think The activation request has been submitted, so I will return the requested readiness marker.
+- paragraph: CORDIS_UI_READY
 - button "Copy":
+  - img
+- button "Good response":
+  - img
+- button "Bad response":
   - img
 - button "Branch into a new conversation":
   - img
-- text: {{clock}} Ran for {{duration}} TTFT {{duration}} {{throughput}} tok/s
+- text: {{clock}} Ran for {{duration}}
+- button "Context injection cordis-host-runner":
+  - img
+  - img
+  - text: Context injection cordis-host-runner
+- img
+- text: Stop Cordis Plugin snap-1
+- button "Inspect"
+- text: Dynamic Plugin snap-1 is stopped; its definition and versions remain.
+- paragraph: CORDIS_UI_DONE
+- button "Copy":
+  - img
+- button "Good response":
+  - img
+- button "Bad response":
+  - img
+- button "Branch into a new conversation":
+  - img
+- text: {{clock}} Ran for {{duration}} Use only Cordis tools. Call cordis_stop with pluginId "snap-1". After it succeeds, reply exactly CORDIS_UI_DONE and stop. {{clock}}
+- button "Copy":
+  - img
+- status:
+  - text: "This turn failedllm-replay: script exhausted — session requested model call #7 but its script has only 6; re-record the scenario"
+  - code: UNKNOWN
+- button "Back to bottom":
+  - img
 - textbox "Message the agent"
 - button "Commands":
   - img
@@ -56,6 +94,6 @@
 - button "Select model, current DeepSeek-V4-Flash":
   - text: DeepSeek-V4-Flash
   - img
-- button "13% of context used"
+- button "0% of context used"
 - button "Send message" [disabled]
-- text: 1 turns · 4 steps LLM {{duration}} · Tool call {{duration}} TTFT avg {{duration}} · {{throughput}} tok/s Cache hit 77% Input 66.5K tok · Output 312 tok
+- text: 3 turns · 7 steps LLM {{duration}} · Tool call {{duration}} Cache hit 77% Input 66.5K tok · Output 318 tok

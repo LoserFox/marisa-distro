@@ -16,7 +16,7 @@
       "path": "../../../vendor/schemastery"
     },
     {
-      "path": "../../util/retention"
+      "path": "../../util/output-retention"
     },
     {
       "path": "../../llm/llm"
@@ -31,7 +31,7 @@
       "path": "../../core/system-prompt"
     },
     {
-      "path": "../../bash/bash"
+      "path": "../../shell/shell"
     },
     {
       "path": "../../spill/spill"
@@ -40,7 +40,7 @@
       "path": "../../util/timeout"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -4,7 +4,7 @@
  *
  * Reads profiles/marisa/plugins.json (28 vendored plugins) and writes:
  *   1. bundles/marisa-bundle/package.json — the fork's aggregation bundle:
- *      the 20 vendored git plugins + pwsh lane + tool-cordis + skill-manager
+ *      the 21 vendored git plugins + pwsh lane + tool-cordis + skill-manager
  *      as file: deps, with the composition patch (cordis.patch.yml, checked
  *      in beside it) owned by the bundle. Patch rows resolve through the
  *      profile's node_modules, where the bundle's deps are hoisted.
@@ -23,11 +23,11 @@
  *     source tree (e.g. a sync PR changed the package identity).
  *   - Extra file: deps required by patch rows that reference non-plugin
  *     packages:
- *       @deepseek-ai/dsh-tool-cordis -> harness/packages/cordis/tool-cordis
- *       cordis                           -> harness/vendor/cordis
+ *       @deepseek-ai/dsh-tool-cordis -> harness/packages/extensions/tool-cordis
+ *       @deepseek-ai/cordis          -> harness/vendor/cordis
  *       dsh-skill-manager            -> <REPO>/dsh-skill-manager
- *       @deepseek-ai/dsh-pwsh-local  -> harness/packages/bash/pwsh-local
- *       @deepseek-ai/dsh-tool-pwsh   -> harness/packages/bash/tool-pwsh
+ *       @deepseek-ai/dsh-pwsh-local  -> harness/packages/shell/pwsh-local
+ *       @deepseek-ai/dsh-tool-pwsh   -> harness/packages/shell/tool-pwsh
  *
  * Upstream deviations (documented, deliberate):
  *   - MyGO is consumed from its published rc.6 `next` line instead of the
@@ -66,8 +66,8 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 // ── manifest ─────────────────────────────────────────────────────────────
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
-if (gitPlugins.length !== 20) throw new Error(`expected 20 git plugins, got ${gitPlugins.length}`);
-if (npmPlugins.length !== 8) throw new Error(`expected 8 npm plugins, got ${npmPlugins.length}`);
+if (gitPlugins.length !== 21) throw new Error(`expected 21 git plugins, got ${gitPlugins.length}`);
+if (npmPlugins.length !== 7) throw new Error(`expected 7 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
 const bundleDeps = {};
@@ -87,13 +87,13 @@ for (const p of gitPlugins) {
 const EXTRA_DIRS = {
   // tool-cordis imports this peer at runtime. Keep it as a direct bundle
   // dependency: production bundle pruning does not preserve undeclared peers.
-  cordis: path.join(REPO, 'harness', 'vendor', 'cordis'),
-  '@deepseek-ai/dsh-tool-cordis': path.join(REPO, 'harness', 'packages', 'cordis', 'tool-cordis'),
+  '@deepseek-ai/cordis': path.join(REPO, 'harness', 'vendor', 'cordis'),
+  '@deepseek-ai/dsh-tool-cordis': path.join(REPO, 'harness', 'packages', 'extensions', 'tool-cordis'),
   'dsh-skill-manager': path.join(REPO, 'dsh-skill-manager'),
-  // Windows pwsh lane (cordis.patch.yml disables the bash stack and inserts
-  // these two) — without deps the rows never resolve and tasks cannot run.
-  '@deepseek-ai/dsh-pwsh-local': path.join(REPO, 'harness', 'packages', 'bash', 'pwsh-local'),
-  '@deepseek-ai/dsh-tool-pwsh': path.join(REPO, 'harness', 'packages', 'bash', 'tool-pwsh'),
+  // Windows pwsh lane: rc7 base ships pwsh-sandbox natively on win32
+  // (ctx.shell via ACL runner); the bundle only re-enables the tool-pwsh row,
+  // whose package must resolve from the profile node_modules.
+  '@deepseek-ai/dsh-tool-pwsh': path.join(REPO, 'harness', 'packages', 'shell', 'tool-pwsh'),
 };
 for (const [name, dir] of Object.entries(EXTRA_DIRS)) {
   if (!existsSync(path.join(dir, 'package.json'))) throw new Error(`extra patch-row package missing: ${dir}`);
@@ -109,7 +109,7 @@ const bundlePkg = {
   // MyGO's strict bundle preflight (`require.resolve(bundleName)`).
   main: './package.json',
   description:
-    '魔理沙 fork 聚合 bundle — 20 vendored git plugins + Windows pwsh lane + tool-cordis + skill-manager（组合行见 cordis.patch.yml）',
+    '魔理沙 fork 聚合 bundle — 21 vendored git plugins + Windows pwsh lane + tool-cordis + skill-manager（组合行见 cordis.patch.yml）',
   dependencies: bundleDeps,
   dsh: {
     bundle: { patch: './cordis.patch.yml' },
@@ -126,18 +126,32 @@ for (const p of npmPlugins) {
   profileDeps[p.name] = `file:${profileRef(dir)}`;
 }
 
-const MYGO_VERSION = '0.2.0-rc.6';
-// Hub is mounted explicitly. It is also a CLI/Panel dependency, but a
-// transitive dependency does not apply its dsh.bundle patch by itself.
+// MyGO is vendored source (dsh-mygo/, omdsh-dev/dsh-mygo@next + keyed fix
+// 2026-08-18); the profile consumes the built lib via file: like every other
+// vendored package. Hub is mounted explicitly (a transitive dependency does
+// not apply its dsh.bundle patch by itself).
+const MYGO_DIRS = {
+  '@r05en1cu/dsh-mygo': path.join(REPO, 'dsh-mygo', 'packages', 'cordis', 'mygo'),
+  '@r05en1cu/dsh-mygo-loader-hub': path.join(REPO, 'dsh-mygo', 'packages', 'loaders', 'mygo-loader-hub'),
+  '@r05en1cu/dsh-mygo-cli': path.join(REPO, 'dsh-mygo', 'packages', 'cordis', 'mygo-cli'),
+  '@r05en1cu/dsh-mygo-ext-panel': path.join(REPO, 'dsh-mygo', 'packages', 'extensions', 'mygo-panel'),
+  // the four mounted packages resolve these from the profile node_modules,
+  // so the full vendored set is installed (bundles stay the four above).
+  '@r05en1cu/dsh-mygo-api': path.join(REPO, 'dsh-mygo', 'packages', 'core', 'mygo-api'),
+  '@r05en1cu/dsh-mygo-ext-fabric': path.join(REPO, 'dsh-mygo', 'packages', 'extensions', 'mygo-fabric'),
+  '@r05en1cu/dsh-mygo-loader-profile': path.join(REPO, 'dsh-mygo', 'packages', 'loaders', 'mygo-loader-profile'),
+};
+for (const [name, dir] of Object.entries(MYGO_DIRS)) {
+  if (!existsSync(path.join(dir, 'package.json'))) throw new Error(`vendored mygo package missing: ${dir}`);
+  profileDeps[name] = `file:${profileRef(dir)}`;
+}
+// Mounted bundles stay the four product packages; the rest are deps only.
 const MYGO_PACKAGES = [
   '@r05en1cu/dsh-mygo',
   '@r05en1cu/dsh-mygo-loader-hub',
   '@r05en1cu/dsh-mygo-cli',
   '@r05en1cu/dsh-mygo-ext-panel',
 ];
-for (const name of MYGO_PACKAGES) {
-  profileDeps[name] = MYGO_VERSION;
-}
 
 // dsh-llm-fallbacks targets the rc6 conversationEvents/remote event APIs.
 // The 0808 client snapshot has neither contract; mounting its client bundle
@@ -201,9 +215,9 @@ const minimumReleaseAgeExclude = [
   '@deepseek-ai/dsh-storage@0.1.0-rc.6',
   '@deepseek-ai/dsh-system-prompt@0.1.0-rc.6',
   '@deepseek-ai/dsh-tools@0.1.0-rc.6',
-  ...MYGO_PACKAGES.map((name) => `${name}@${MYGO_VERSION}`),
-  '@r05en1cu/dsh-mygo-api@0.2.0-rc.6',
-  '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.6',
+  ...MYGO_PACKAGES.map((name) => `${name}@0.2.0-rc.7`),
+  '@r05en1cu/dsh-mygo-api@0.2.0-rc.7',
+  '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.7',
 ];
 const workspaceYaml = `# marisa v2 profile workspace — joins the marisa-distro harness workspaces.
 packages:
@@ -212,6 +226,13 @@ packages:
   - '${profileRef(path.join(REPO, 'harness', 'packages', '*', '*'))}'
   - '${profileRef(path.join(REPO, 'harness', 'vendor', '*'))}'
   - '${profileRef(path.join(REPO, 'harness', 'apps', '*'))}'
+  - '${profileRef(path.join(REPO, 'dsh-mygo', 'packages', '*', '*'))}'
+  # vendored plugins/bundles join the profile workspace: their @deepseek-ai
+  # deps carry rc6-era ranges that would otherwise resolve to old registry
+  # builds (dsh-client-runtime@0.0.1-rc.1 -> dsh-compact 404).
+  - '${profileRef(path.join(REPO, 'plugins', '*'))}'
+  - '${profileRef(path.join(REPO, 'bundles', '*'))}'
+  - '${profileRef(path.join(REPO, 'dsh-skill-manager'))}'
 ${landlockGlobs.map((g) => `  - '${profileRef(path.join(REPO, g))}'`).join('\n')}
 
 nodeLinker: hoisted
@@ -229,10 +250,14 @@ allowBuilds:
 
 overrides:
   '@dsh-external/dsh-code-map>schemastery': 'npm:@deepseek-ai/schemastery@3.18.1'
-  # Some third-party plugin declares bare 'cordis: >=4.0.0 <5.0.0-0', which no
-  # version satisfies (npm has no stable cordis 4; vendored copy is rc.7).
-  # pnpm >= 11.22 resolves peers strictly and fails; force the workspace version.
+  # Some third-party plugin declares bare 'cordis: >=4.0.0 <5.0.0-0'; pin
+  # the bare peer to the rc7-compatible release used by the root workspace.
   cordis: 4.0.0-rc.7
+  # fflate: single-version override so the prod-pruned bundle install hoists
+  # the same 0.8.3 ESM build apiproxy's named imports need (univerjs's exact
+  # 0.4.9 pin would otherwise win the top-level hoist in --prod and break
+  # boot). Mirrors the root workspace.
+  fflate: '0.8.3'
 
 minimumReleaseAgeExclude:
 ${minimumReleaseAgeExclude.map((p) => `  - '${p}'`).join('\n')}
@@ -267,6 +292,6 @@ const summary = {
   profileDeps: Object.keys(profileDeps),
   bundles,
   nameMismatches,
-  mygo: { version: MYGO_VERSION, packages: MYGO_PACKAGES },
+  mygo: { source: 'vendored', version: '0.2.0-rc.7', packages: MYGO_PACKAGES },
 };
 console.log(JSON.stringify(summary, null, 2));

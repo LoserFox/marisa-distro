@@ -20,7 +20,7 @@ import { cleanupAcpExampleTest } from './cleanup.ts'
  *
  * Keyless smoke: boot the REAL `cordis.yml` through the `dsh-acp-agent` bin as
  * an ACP subprocess and drive initialize + session/new — the real-Loader-path
- * guard (postmortem 0001) for THIS tree's export shapes, which now include the
+ * guard (postmortem 0001) for THIS tree's exports, including the
  * sandbox executor AND the approval service. No prompt is sent, so neither the
  * model nor a sandbox runner is ever exercised.
  *
@@ -62,7 +62,7 @@ function launchExampleAcpAgent(
   answer: 'allow-once' | 'reject-once',
   sandboxMode?: 'read-only' | 'workspace-write' | 'danger-full-access',
 ): Spawned {
-  const permissionRequests: Array<RequestPermissionRequest> = []
+  const permissionRequests: RequestPermissionRequest[] = []
   const launched = launchAcpTestAgent({
     agent: AGENT,
     cwd,
@@ -74,8 +74,8 @@ function launchExampleAcpAgent(
     requestPermission(params) {
       permissionRequests.push(params)
       const option = params.options.find(o => o.optionId === answer)
-      // The scripted machine policy selects the requested option; an
-      // unexpected request shape cancels (fail closed, never grants).
+      // The scripted machine policy selects the requested option. If that
+      // option is absent, the policy cancels (fail closed, never grant).
       if (option === undefined) return Promise.resolve({ outcome: { outcome: 'cancelled' } })
       return Promise.resolve({ outcome: { outcome: 'selected', optionId: option.optionId } })
     },
@@ -107,7 +107,7 @@ describe('default sandbox composition keyless smoke (real cordis.yml via the Loa
     const { client } = spawned
     // A dummy key boots the adapter; no prompt is ever sent, so no model call
     // and no sandbox runner probe happen. This drives the fiber tree the same
-    // way an ACP caller would, which catches a broken export/inject shape.
+    // way an ACP caller would, which catches broken exports or injection.
     const init = await client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })
     expect(init.protocolVersion).toBe(PROTOCOL_VERSION)
     expect(init.agentCapabilities).toEqual({

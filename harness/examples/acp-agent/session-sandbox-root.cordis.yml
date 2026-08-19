@@ -3,7 +3,7 @@
 # /tmp. A workspace-write mutation can therefore succeed only when the calling
 # session's cwd replaces the process-level fallback root.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:

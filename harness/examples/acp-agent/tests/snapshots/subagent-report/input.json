@@ -15,6 +15,13 @@
       "op": "waitForSubagentTurnEnd"
     },
     {
+      "op": "waitForTurnStart",
+      "minimumTurn": 2
+    },
+    {
+      "op": "waitForTurnEnd"
+    },
+    {
       "op": "promptAndWaitForAgentMessage",
       "text": "Repeat back, verbatim, the exact output the background subagent reported to you. Reply with only that text. Do not use any tools.",
       "waitForText": "CHILD_REPORT_OK"

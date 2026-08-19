@@ -1,7 +1,7 @@
 // src/activity.mjs 单测（node:test）。归属：活动推导逻辑改动跑本文件。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { deriveActivity, BURST_MS, mergeCelebrate } from '../.dsh-plugin/src/activity.mjs'
+import { deriveActivity, BURST_MS, mergeCelebrate } from '../lib/src/activity.mjs'
 
 test('无任务 → idle（working=false，无 burst）', () => {
   const r = deriveActivity({ tasks: [], nowMs: 1000 })

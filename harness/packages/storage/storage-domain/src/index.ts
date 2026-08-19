@@ -7,8 +7,8 @@
  * @module @deepseek-ai/dsh-storage-domain
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { storageBackendServiceKey } from '@deepseek-ai/dsh-storage'
 import { DomainError } from './error.ts'
 import { descriptorOf } from './spec.ts'
@@ -32,7 +32,7 @@ declare module '@deepseek-ai/dsh-storage' {
   }
 }
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     storageDomain: DomainFacility
   }

@@ -1,16 +1,16 @@
 /**
  * Enforce intra-package domain layering inside `packages/client/*\/src/client/`.
  * verify-module-graph covers package-level edges; this gate covers the
- * directory level the future package split will land on: domain directories
- * may import `contract/` and never each other, and only the assembly point
- * (`apply.ts` / `index.ts`) may import across domains.
+ * directory level: domain directories may import `contract/` and never each
+ * other, and only the assembly point (`apply.ts` / `index.ts`) may import
+ * across domains.
  *
  * Layer model (lower may not import higher):
- *   0  contract/            shared contract surface (types + slot declarations)
+ *   0  contract/            shared contract API (types + slot declarations)
  *   1  <domain>/ + service  domain implementations (skeleton/, chat/, ...)
  *   2  apply.ts, index.ts   assembly point and re-export shell
  *
- * Not yet wired into the gate sequence (loose-gate window); run directly:
+ * Run directly:
  *   pnpm exec tsx scripts/verify-client-domain-graph.ts
  */
 
@@ -51,7 +51,7 @@ function checkPackage(pkgName: string, clientDir: string): Violation[] {
     const source = readFileSync(join(clientDir, rel), 'utf8')
     for (const match of source.matchAll(/from\s+['"](\.[^'"]+)['"]/g)) {
       const spec = match[1]
-      if (spec === undefined) { continue }
+      if (spec === undefined) continue
       // Resolve the relative specifier against the importing file's directory
       // to a client-dir-relative path.
       const fromDir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : ''
@@ -71,7 +71,7 @@ function checkPackage(pkgName: string, clientDir: string): Violation[] {
         imported: spec,
         reason: fromDomain === ''
           ? `top-level non-assembly file imports domain "${toDomain}" (only apply/index may assemble)`
-          : `domain "${fromDomain}" imports sibling domain "${toDomain}" (route shared surface through contract/)`,
+          : `domain "${fromDomain}" imports sibling domain "${toDomain}" (route shared API through contract/)`,
       })
     }
   }

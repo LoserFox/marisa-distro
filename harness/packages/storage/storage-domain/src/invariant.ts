@@ -9,7 +9,7 @@
  * @module @deepseek-ai/dsh-storage-domain/invariant
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { DomainChanged } from './events.ts'
 

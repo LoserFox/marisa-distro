@@ -3,20 +3,29 @@
  * blob hashes for every in-scope document. The manifest contains only explicit
  * exclusions, which may have neither a counterpart nor a sidecar.
  * `--list` reports state; `--write <pairs...>` records the named confirmed
- * pairs (`--write --all` records every complete pair); a check or write named
- * with pair paths touches only those pairs, so update iteration does not pay
- * for a corpus scan. Translation quality remains a review responsibility.
+ * pairs (`--write --all` records every complete pair); `--cached <pairs...>`
+ * checks exact index bytes for hooks. A check or write named with pair paths
+ * touches only those pairs, so update iteration does not pay for a corpus
+ * scan. Translation quality remains a review responsibility.
  * See `docs/i18n/README.md` for the owning contract.
  */
 
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve, sep } from 'node:path'
-import { gitBlobHash, storeGitBlob } from './translation-pairing-git.ts'
+import { gitBlobHash, readGitIndexBlob, storeGitBlob } from './translation-pairing-git.ts'
 import {
+  parseTranslationPairingRecord,
+  renderTranslationPairingRecord,
+  translationPairPaths,
+} from './translation-pairing-record.ts'
+import {
+  languageSwitcherTargets,
   linksTo,
   parseTranslationMarkdown,
   parseTranslationPairingCliArgs,
   parseTranslationPairingManifest,
+  partitionGeneratedRegions,
+  requiresSourceLanguageSwitcher,
   isTranslationScopeFile,
   TRANSLATION_SCOPE_GLOB_EXCLUDES,
   translationStructureDiff,
@@ -33,6 +42,24 @@ try {
 }
 const listMode = request.mode === 'list'
 const writeMode = request.mode === 'write'
+const indexMode = request.input === 'index'
+
+const contentCache = new Map<string, Buffer | undefined>()
+
+/** Read one repository path from the selected worktree or index plane. */
+function readRepositoryFile(file: string): Buffer | undefined {
+  if (contentCache.has(file)) return contentCache.get(file)
+  const content = indexMode
+    ? readGitIndexBlob(root, file)?.content
+    : existsSync(join(root, file)) ? readFileSync(join(root, file)) : undefined
+  contentCache.set(file, content)
+  return content
+}
+
+/** Whether one path exists in the selected content plane. */
+function repositoryFileExists(file: string): boolean {
+  return readRepositoryFile(file) !== undefined
+}
 
 /** Discover source Markdown and pairing sidecars before applying the corpus predicate. */
 const SCOPE_PATTERNS = [
@@ -42,7 +69,11 @@ const SCOPE_PATTERNS = [
   '.agents/notes/**/*.i18n.yaml',
 ]
 
-const manifest = parseTranslationPairingManifest(readFileSync(join(root, 'scripts/translation-pairing.manifest.json'), 'utf8'))
+const manifestContent = readRepositoryFile('scripts/translation-pairing.manifest.json')
+if (manifestContent === undefined) {
+  throw new Error('scripts/translation-pairing.manifest.json is missing from the selected content plane')
+}
+const manifest = parseTranslationPairingManifest(manifestContent.toString('utf8'))
 
 /**
  * An excluded entry ending in `/` excludes the whole directory. The trailing
@@ -54,56 +85,26 @@ function isExcluded(file: string): boolean {
   return manifest.excluded.some(entry => (entry.endsWith('/') ? file.startsWith(entry) : file === entry))
 }
 
-/** The three paths of a pair, derived from the English-file path. */
-function pairPaths(source: string): { zh: string; meta: string } {
-  return { zh: source.replace(/\.md$/, '.zh.md'), meta: source.replace(/\.md$/, '.i18n.yaml') }
-}
-
-const META_LINE = /^([^:#]+\.md): ([0-9a-f]{40})$/
-
-/** Parse a `foo.i18n.yaml` consistency record: basename → recorded blob hash. */
-function parseMeta(content: string): Map<string, string> | undefined {
-  const out = new Map<string, string>()
-  for (const line of content.split('\n')) {
-    if (line === '' || line.startsWith('#')) continue
-    const match = META_LINE.exec(line)
-    if (!match?.[1] || !match[2]) return undefined
-    out.set(match[1], match[2])
-  }
-  return out
-}
-
-/** Render a `foo.i18n.yaml` consistency record. */
-function renderMeta(source: string, sourceHash: string, zh: string, zhHash: string): string {
-  return [
-    '# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each',
-    '# side as of the last confirmed-consistent state. Both languages carry equal authority;',
-    '# after editing either side, bring the other along and re-record with:',
-    `#   pnpm run verify-translation-pairing --write ${source}`,
-    `${basename(source)}: ${sourceHash}`,
-    `${basename(zh)}: ${zhHash}`,
-    '',
-  ].join('\n')
-}
-
 // Enumerate the scope once: the whole corpus, or exactly the named pairs'
 // three files (a named pair whose files are absent is caught by the same
 // completeness rules that cover discovered remnants).
 const files = new Set<string>()
 if (request.scope === 'pairs') {
   for (const anchor of request.anchors) {
-    for (const file of [anchor, ...Object.values(pairPaths(anchor))]) {
-      if (existsSync(join(root, file))) files.add(file)
+    const { source, zh, meta } = translationPairPaths(anchor)
+    for (const file of [source, zh, meta]) {
+      if (repositoryFileExists(file)) files.add(file)
     }
-    // A named anchor with no files on disk still enters the source list so
-    // the check reports it instead of silently passing an empty scope.
-    if (!existsSync(join(root, anchor))) files.add(anchor)
+    // A named worktree anchor with no files still enters the source list so
+    // an interactive check reports it. An index check accepts a complete
+    // three-file deletion and still rejects every partial deletion below.
+    if (!indexMode && !repositoryFileExists(anchor)) files.add(anchor)
   }
 } else {
   for (const pattern of SCOPE_PATTERNS) {
     for (const match of globSync(pattern, { cwd: root, exclude: TRANSLATION_SCOPE_GLOB_EXCLUDES })) {
       const normalized = match.split(sep).join('/')
-      if (isTranslationScopeFile(normalized)) { files.add(normalized) }
+      if (isTranslationScopeFile(normalized)) files.add(normalized)
     }
   }
 }
@@ -113,8 +114,11 @@ const sources = [...files].filter(f => f.endsWith('.md') && !f.endsWith('.zh.md'
 
 if (request.scope === 'pairs') {
   const rejected = request.anchors.filter(anchor => !isTranslationScopeFile(anchor) || isExcluded(anchor))
-  const absent = request.anchors.filter(anchor => ![anchor, ...Object.values(pairPaths(anchor))].some(file => existsSync(join(root, file))))
-  if (rejected.length > 0 || absent.length > 0) {
+  const absent = request.anchors.filter((anchor) => {
+    const { source, zh, meta } = translationPairPaths(anchor)
+    return ![source, zh, meta].some(repositoryFileExists)
+  })
+  if (rejected.length > 0 || (!indexMode && absent.length > 0)) {
     for (const anchor of rejected) {
       console.error(`verify-translation-pairing: ${anchor} is not an in-scope pair (excluded or outside the documentation corpus; see docs/i18n/README.md)`)
     }
@@ -132,20 +136,25 @@ if (writeMode) {
   let written = 0
   for (const source of sources) {
     if (isExcluded(source)) continue
-    const { zh, meta } = pairPaths(source)
-    if (!existsSync(join(root, source)) || !existsSync(join(root, zh))) {
+    const paths = translationPairPaths(source)
+    const { zh, meta } = paths
+    if (!repositoryFileExists(source) || !repositoryFileExists(zh)) {
       if (request.scope === 'pairs') {
-        console.error(`verify-translation-pairing: cannot record ${source}: missing ${existsSync(join(root, source)) ? zh : source}`)
+        console.error(`verify-translation-pairing: cannot record ${source}: missing ${repositoryFileExists(source) ? zh : source}`)
         process.exit(2)
       }
       continue
     }
-    const sourceContent = readFileSync(join(root, source))
-    const zhContent = readFileSync(join(root, zh))
+    const sourceContent = readRepositoryFile(source)
+    const zhContent = readRepositoryFile(zh)
+    if (sourceContent === undefined || zhContent === undefined) throw new Error(`${source}: complete pair became unreadable`)
     // A consistency record is also a recovery pointer for the briefing
     // generator. Persist both snapshots even when the sidecar text is already
     // current, because the bytes may exist only in this working tree.
-    const record = renderMeta(source, storeGitBlob(root, sourceContent), zh, storeGitBlob(root, zhContent))
+    const record = renderTranslationPairingRecord(paths, {
+      sourceHash: storeGitBlob(root, sourceContent),
+      zhHash: storeGitBlob(root, zhContent),
+    })
     if (existsSync(join(root, meta)) && readFileSync(join(root, meta), 'utf8') === record) continue
     writeFileSync(join(root, meta), record)
     console.log(`verify-translation-pairing: recorded ${meta}`)
@@ -161,8 +170,8 @@ const state = new Map<string, 'ok' | 'out-of-sync' | 'missing'>()
 // 1. Every discovered, non-excluded source merges bilingual.
 for (const source of sources) {
   if (isExcluded(source)) continue
-  const { zh } = pairPaths(source)
-  if (!existsSync(join(root, zh))) {
+  const { zh } = translationPairPaths(source)
+  if (!repositoryFileExists(zh)) {
     errors.push(`${source}: in-scope documentation must merge bilingual (docs/i18n/README.md); add the counterpart and record the pair`)
     state.set(source, 'missing')
   }
@@ -176,8 +185,13 @@ for (const zh of translations) pairAnchors.add(zh.replace(/\.zh\.md$/, '.md'))
 for (const meta of metas) pairAnchors.add(meta.replace(/\.i18n\.yaml$/, '.md'))
 
 for (const source of [...pairAnchors].sort()) {
-  const { zh, meta } = pairPaths(source)
-  const have = { source: existsSync(join(root, source)), zh: existsSync(join(root, zh)), meta: existsSync(join(root, meta)) }
+  const paths = translationPairPaths(source)
+  const { zh, meta } = paths
+  const have = {
+    source: repositoryFileExists(source),
+    zh: repositoryFileExists(zh),
+    meta: repositoryFileExists(meta),
+  }
 
   if (isExcluded(source)) {
     if (have.zh) errors.push(`${zh}: ${source} is excluded from pairing (generated or bilingual-by-construction); this translation must not exist`)
@@ -190,10 +204,14 @@ for (const source of [...pairAnchors].sort()) {
     continue
   }
 
-  const sourceContent = readFileSync(join(root, source))
-  const zhContent = readFileSync(join(root, zh))
-  const record = parseMeta(readFileSync(join(root, meta), 'utf8'))
-  if (!record || record.size !== 2 || !record.has(basename(source)) || !record.has(basename(zh))) {
+  const sourceContent = readRepositoryFile(source)
+  const zhContent = readRepositoryFile(zh)
+  const metaContent = readRepositoryFile(meta)
+  if (sourceContent === undefined || zhContent === undefined || metaContent === undefined) {
+    throw new Error(`${source}: complete pair became unreadable`)
+  }
+  const record = parseTranslationPairingRecord(metaContent.toString('utf8'), paths)
+  if (record === undefined) {
     errors.push(`${meta}: malformed consistency record (expected exactly \`${basename(source)}: <40-hex>\` and \`${basename(zh)}: <40-hex>\`)`)
     continue
   }
@@ -201,7 +219,8 @@ for (const source of [...pairAnchors].sort()) {
   let consistent = true
   for (const [file, content] of [[source, sourceContent], [zh, zhContent]] as const) {
     const current = gitBlobHash(content)
-    if (record.get(basename(file)) !== current) {
+    const recorded = file === source ? record.sourceHash : record.zhHash
+    if (recorded !== current) {
       errors.push(`${file}: out of sync — content no longer matches the pair's last confirmed-consistent state in ${meta} (bring the other side along, then re-record with --write)`)
       consistent = false
     }
@@ -211,17 +230,40 @@ for (const source of [...pairAnchors].sort()) {
     continue
   }
 
+  // Generated regions are language-invariant: the exact same generator output
+  // (markers included) must appear in both sides, in the same order. The
+  // structural signature below compares the region content again as part of
+  // the whole document; this dedicated check exists to name the divergence
+  // precisely and to reject a region grammar violation on either side.
+  let sourceRegions: { regions: string[]; stripped: string }
+  let zhRegions: { regions: string[]; stripped: string }
+  try {
+    sourceRegions = partitionGeneratedRegions(sourceContent.toString('utf8'))
+    zhRegions = partitionGeneratedRegions(zhContent.toString('utf8'))
+  } catch (error) {
+    errors.push(`${source} ↔ ${zh}: ${error instanceof Error ? error.message : String(error)}`)
+    state.set(source, 'out-of-sync')
+    continue
+  }
+  if (sourceRegions.regions.length !== zhRegions.regions.length
+    || sourceRegions.regions.some((region, index) => region !== zhRegions.regions[index])) {
+    errors.push(`${source} ↔ ${zh}: generated regions differ between the pair — regenerate (the generator writes both sides byte-identically)`)
+    state.set(source, 'out-of-sync')
+  }
+
   const sourceTree = parseTranslationMarkdown(sourceContent.toString('utf8'))
   const zhTree = parseTranslationMarkdown(zhContent.toString('utf8'))
-  if (!linksTo(zhTree, basename(source))) {
+  const sourceSwitcherTargets = languageSwitcherTargets(source)
+  const zhSwitcherTargets = languageSwitcherTargets(zh)
+  if (!linksTo(zhTree, sourceSwitcherTargets)) {
     errors.push(`${zh}: missing language switcher — no link to ${basename(source)}`)
   }
-  if (!linksTo(sourceTree, basename(zh))) {
+  if (requiresSourceLanguageSwitcher(source) && !linksTo(sourceTree, zhSwitcherTargets)) {
     errors.push(`${source}: missing language switcher — no link back to ${basename(zh)}`)
   }
   for (const divergence of translationStructureDiff(
-    translationStructureSignature(sourceTree, basename(zh)),
-    translationStructureSignature(zhTree, basename(source)),
+    translationStructureSignature(sourceTree, zhSwitcherTargets),
+    translationStructureSignature(zhTree, sourceSwitcherTargets),
   )) {
     errors.push(`${source} ↔ ${zh}: ${divergence}`)
   }
@@ -247,11 +289,11 @@ if (listMode) {
 
 if (errors.length === 0) {
   console.log(request.scope === 'pairs'
-    ? `verify-translation-pairing: ${pairAnchors.size} named pair(s) consistent; the corpus-wide check still runs in doc-sync.`
+    ? `verify-translation-pairing: ${pairAnchors.size} named ${indexMode ? 'staged ' : ''}pair(s) consistent; the corpus-wide check still runs in doc-sync.`
     : `verify-translation-pairing: ${pairAnchors.size} pair(s) checked across all in-scope documentation, all consistent.`)
   process.exit(0)
 }
 
-console.error('verify-translation-pairing: bilingual pairing contract violated (see docs/i18n/README.md):')
+console.error('verify-translation-pairing: bilingual pairing rules violated (see docs/i18n/README.md):')
 for (const message of errors) console.error(`  ${message}`)
 process.exit(1)

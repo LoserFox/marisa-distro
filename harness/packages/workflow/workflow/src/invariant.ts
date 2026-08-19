@@ -1,6 +1,6 @@
 /** Package-owned workflow lifecycle invariants. @module @deepseek-ai/dsh-workflow/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type {
   WorkflowAgentEndInfo,
@@ -117,7 +117,7 @@ const install: InvariantInstaller = (ctx, fail) => {
   }, { global: true })
   ctx.on('workflow/agent-end', (info, agent) => {
     /* v8 ignore next -- internal/dispatch stages the same agent object */
-    if (!stagedAgentEnds.delete(agent)) { return }
+    if (!stagedAgentEnds.delete(agent)) return
     traceFor(traces, info, fail).agents.delete(agent.seq)
   }, { global: true })
   ctx.on('workflow/end', (info, result) => {

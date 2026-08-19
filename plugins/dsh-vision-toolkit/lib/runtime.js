@@ -6,15 +6,27 @@
  * @module dsh-vision-toolkit/runtime
  */
 import { createHash, randomUUID } from 'node:crypto';
-import { readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SaxesParser } from 'saxes';
 import { describeArtifact } from "./artifacts.js";
+import { isAnonymousProvider, isBuiltInFreeVisionProvider } from "./config.js";
+import { BUILT_IN_FREE_VISION_KEY } from "./defaults.js";
 import { VisionToolkitError } from "./errors.js";
 import { assertDistinctOutput, commitStagedDirectory, commitStagedOutput, createPathPolicy, createStagedDirectory, createStagedOutput, isWithin, resolveHtmlFile, resolveInputFile, resolveOutputDirectory, resolveOutputFile, seedStagedDirectory, } from "./paths.js";
 import { parseCropOutput, parseDominantColorsOutput, parseExtractForegroundOutput, parseHtmlScreenshotOutput, parseLocationOutput, parsePixelDiffOutput, parseTraceOutput, UpstreamAdapter, } from "./upstream.js";
 import { PLUGIN_VERSION } from "./version.js";
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+const VISION_MODEL_TEST_IMAGE = fileURLToPath(new URL('../assets/vision-model-test.png', import.meta.url));
+const VISION_MODEL_TEST_PROMPT = 'This is an explicit service readiness test. Reply with one short sentence confirming that you received the image.';
+/** Bump when the Pillow compression ladder changes so stale cache entries are ignored. */
+const COMPRESSED_IMAGE_CACHE_VERSION = 'v2';
+/** Cache keys carry 64-bit digests so Windows paths stay below MAX_PATH; the full file sha256 is computed on read and compared against this prefix. */
+const COMPRESSED_IMAGE_CACHE_KEY_DIGEST_LENGTH = 16;
+const COMPRESSED_IMAGE_CACHE_MAX_ENTRIES = 200;
+const COMPRESSED_IMAGE_CACHE_MAX_BYTES = 512 * 1024 * 1024;
+const COMPRESSED_IMAGE_CACHE_STALE_PARTIAL_MS = 60 * 60 * 1000;
 function svgDocumentPathCount(svg) {
     const parser = new SaxesParser({ xmlns: true });
     let depth = 0;
@@ -305,11 +317,13 @@ export class VisionToolkitRuntime {
         }
         return value;
     }
-    operationError(tool, error, deadline) {
-        if (deadline.cancelled)
-            return new VisionToolkitError('cancelled', `${tool}: cancelled`);
-        if (deadline.timedOut)
-            return new VisionToolkitError('timeout', `${tool}: timed out`);
+    operationError(tool, error, deadline, phase = 'execution') {
+        if (deadline.cancelled) {
+            return new VisionToolkitError('cancelled', phase === 'queue' ? `${tool}: cancelled while waiting for a concurrency slot` : `${tool}: cancelled`);
+        }
+        if (deadline.timedOut) {
+            return new VisionToolkitError('timeout', phase === 'queue' ? `${tool}: timed out while waiting for a concurrency slot` : `${tool}: timed out`);
+        }
         if (error instanceof VisionToolkitError)
             return error;
         return new VisionToolkitError('runtime', `${tool}: execution failed`, { cause: error });
@@ -321,10 +335,11 @@ export class VisionToolkitRuntime {
         return { key, value };
     }
     async runOperation(tool, options, action, permits = 1) {
-        const deadline = createDeadline(options.signal, this.timeout(options));
+        const timeoutMs = this.timeout(options);
         const semaphore = this.semaphore(options);
         const metrics = {
             startedAt: Date.now(),
+            queueMs: 0,
             upstreamMs: 0,
             imageBytes: 0,
             imagePixels: 0,
@@ -333,60 +348,295 @@ export class VisionToolkitRuntime {
             usedVisionService: false,
         };
         let acquired = false;
+        const queueDeadline = createDeadline(options.signal, timeoutMs);
         try {
-            await semaphore.value.acquire(deadline.signal, permits);
+            await semaphore.value.acquire(queueDeadline.signal, permits);
             acquired = true;
-            const value = await action({ signal: deadline.signal, metrics });
-            if (deadline.signal.aborted)
-                throw this.operationError(tool, undefined, deadline);
-            this.ctx.logger.info('dsh-vision-toolkit tool=%s outcome=ok totalMs=%d upstreamMs=%d images=%d imageBytes=%d imagePixels=%d cacheHits=%d model=%s', tool, Date.now() - metrics.startedAt, metrics.upstreamMs, metrics.imageCount, metrics.imageBytes, metrics.imagePixels, metrics.cacheHits, metrics.usedVisionService ? this.config.provider.model : 'local');
+            if (queueDeadline.signal.aborted)
+                throw this.operationError(tool, undefined, queueDeadline, 'queue');
+            metrics.queueMs = Date.now() - metrics.startedAt;
+        }
+        catch (error) {
+            metrics.queueMs = Date.now() - metrics.startedAt;
+            const classified = this.operationError(tool, error, queueDeadline, 'queue');
+            if (acquired) {
+                semaphore.value.release(permits);
+                acquired = false;
+            }
+            this.ctx.logger.warn('dsh-vision-toolkit tool=%s outcome=error category=%s totalMs=%d queueMs=%d upstreamMs=%d images=%d imageBytes=%d imagePixels=%d cacheHits=%d', tool, classified.code, Date.now() - metrics.startedAt, metrics.queueMs, metrics.upstreamMs, metrics.imageCount, metrics.imageBytes, metrics.imagePixels, metrics.cacheHits);
+            throw classified;
+        }
+        finally {
+            queueDeadline.cleanup();
+            if (!acquired && semaphore.value.idle)
+                this.semaphores.delete(semaphore.key);
+        }
+        const executionDeadline = createDeadline(options.signal, timeoutMs);
+        try {
+            if (executionDeadline.signal.aborted)
+                throw this.operationError(tool, undefined, executionDeadline);
+            const value = await action({ signal: executionDeadline.signal, metrics });
+            if (executionDeadline.signal.aborted)
+                throw this.operationError(tool, undefined, executionDeadline);
+            this.ctx.logger.info('dsh-vision-toolkit tool=%s outcome=ok totalMs=%d queueMs=%d upstreamMs=%d images=%d imageBytes=%d imagePixels=%d cacheHits=%d model=%s', tool, Date.now() - metrics.startedAt, metrics.queueMs, metrics.upstreamMs, metrics.imageCount, metrics.imageBytes, metrics.imagePixels, metrics.cacheHits, metrics.usedVisionService ? this.config.provider.model : 'local');
             return value;
         }
         catch (error) {
-            const classified = this.operationError(tool, error, deadline);
-            this.ctx.logger.warn('dsh-vision-toolkit tool=%s outcome=error category=%s totalMs=%d upstreamMs=%d images=%d imageBytes=%d imagePixels=%d cacheHits=%d', tool, classified.code, Date.now() - metrics.startedAt, metrics.upstreamMs, metrics.imageCount, metrics.imageBytes, metrics.imagePixels, metrics.cacheHits);
+            const classified = this.operationError(tool, error, executionDeadline);
+            this.ctx.logger.warn('dsh-vision-toolkit tool=%s outcome=error category=%s totalMs=%d queueMs=%d upstreamMs=%d images=%d imageBytes=%d imagePixels=%d cacheHits=%d', tool, classified.code, Date.now() - metrics.startedAt, metrics.queueMs, metrics.upstreamMs, metrics.imageCount, metrics.imageBytes, metrics.imagePixels, metrics.cacheHits);
             throw classified;
         }
         finally {
             if (acquired)
                 semaphore.value.release(permits);
-            deadline.cleanup();
+            executionDeadline.cleanup();
             if (semaphore.value.idle)
                 this.semaphores.delete(semaphore.key);
         }
     }
     /** Resolve the configured credential at the remote-operation boundary. */
     async resolveVisionEnv() {
-        const resolved = await this.ctx.credentials.resolve(this.config.provider.credential);
+        if (isAnonymousProvider(this.config.provider)) {
+            return this.visionEnv({
+                // The pinned upstream client requires a non-empty value. The anonymous
+                // Zen endpoint treats Bearer public as anonymous and never as a secret
+                // credential.
+                value: 'public',
+                source: 'anonymous',
+            });
+        }
+        const resolved = isBuiltInFreeVisionProvider(this.config.provider)
+            ? { value: BUILT_IN_FREE_VISION_KEY, source: 'built-in' }
+            : await this.ctx.credentials.resolve(this.config.provider.credential);
         if (resolved === undefined) {
             throw new VisionToolkitError('config', `credential ${this.config.provider.credential} is not configured; set it through DSH credentials`);
         }
+        return this.visionEnv(resolved);
+    }
+    visionEnv(resolved) {
+        const sslVerify = process.env.VISION_SSL_VERIFY?.trim();
         return {
             VISION_API_KEY: resolved.value,
             VISION_BASE_URL: this.config.provider.baseUrl,
             VISION_MODEL: this.config.provider.model,
+            VISION_API_PROTOCOL: this.config.provider.protocol === 'anthropic' ? 'anthropic' : 'chat_completions',
+            VISION_ANTHROPIC_THINKING: this.config.provider.anthropicThinking,
+            ...(sslVerify === undefined ? {} : { VISION_SSL_VERIFY: sslVerify }),
+            VISION_USER_AGENT: this.config.provider.userAgent,
             LANG: this.config.language,
         };
     }
     pathPolicy(workspace) {
         return createPathPolicy(workspace, this.config.allowedDirs);
     }
+    async compressedImageRoot(policy) {
+        const root = join(policy.workspace, '.dsh-vision-toolkit', 'tmp', 'compressed-images');
+        let current = policy.workspace;
+        for (const segment of ['.dsh-vision-toolkit', 'tmp', 'compressed-images']) {
+            current = join(current, segment);
+            try {
+                await mkdir(current, { mode: 0o700 });
+            }
+            catch (error) {
+                if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST'))
+                    throw error;
+            }
+            const info = await lstat(current);
+            if (info.isSymbolicLink() || !info.isDirectory()) {
+                throw new VisionToolkitError('path', `compressed-image cache path is not a real directory: ${current}`);
+            }
+            if (!isWithin(policy.workspace, current)) {
+                throw new VisionToolkitError('path', `compressed-image cache path escaped the workspace: ${current}`);
+            }
+        }
+        const canonical = await realpath(root);
+        if (!isWithin(policy.workspace, canonical)) {
+            throw new VisionToolkitError('path', 'compressed-image cache resolved outside the workspace');
+        }
+        return canonical;
+    }
+    async readCacheCandidate(root, name, expectedOutDigestPrefix, maxBytes, maxPixels, operation) {
+        const candidate = join(root, name);
+        let info;
+        try {
+            info = await lstat(candidate);
+        }
+        catch {
+            return undefined;
+        }
+        if (!info.isFile() || info.size < 1 || info.size > maxBytes)
+            return undefined;
+        let real;
+        try {
+            real = await realpath(candidate);
+        }
+        catch {
+            return undefined;
+        }
+        if (!isWithin(root, real))
+            return undefined;
+        let bytes;
+        try {
+            bytes = await readFile(real, { signal: operation.signal });
+        }
+        catch {
+            return undefined;
+        }
+        const digest = createHash('sha256').update(bytes).digest('hex');
+        if (bytes.length !== info.size || !digest.startsWith(expectedOutDigestPrefix))
+            return undefined;
+        let probed;
+        try {
+            probed = await this.adapter.probeImageSize(real, { signal: operation.signal });
+        }
+        catch {
+            probed = undefined;
+        }
+        const extension = extname(real).toLowerCase();
+        if (probed === undefined
+            || FORMAT_BY_EXTENSION.get(extension) !== probed.format
+            || probed.width * probed.height > maxPixels) {
+            return undefined;
+        }
+        return { path: real, bytes: bytes.length, width: probed.width, height: probed.height, format: probed.format };
+    }
+    cacheEntryOutDigest(entry, prefix) {
+        const tail = entry.slice(prefix.length + 1);
+        return /^[0-9a-f]{16}-/u.test(tail) ? tail.slice(0, 16) : undefined;
+    }
+    async pruneCompressedCache(root) {
+        let entries;
+        try {
+            entries = await readdir(root);
+        }
+        catch {
+            return;
+        }
+        const stalePartials = [];
+        const candidates = [];
+        for (const name of entries) {
+            if (name.startsWith('.')) {
+                if (name.endsWith('.partial')) {
+                    const info = await lstat(join(root, name)).catch(() => undefined);
+                    if (info !== undefined && Date.now() - info.mtimeMs > COMPRESSED_IMAGE_CACHE_STALE_PARTIAL_MS) {
+                        stalePartials.push(name);
+                    }
+                }
+                continue;
+            }
+            let info;
+            try {
+                info = await lstat(join(root, name));
+            }
+            catch {
+                continue;
+            }
+            candidates.push({
+                name,
+                size: info.isFile() ? info.size : 0,
+                mtime: info.mtimeMs,
+                removable: !info.isFile() || !name.startsWith(`${COMPRESSED_IMAGE_CACHE_VERSION}-`),
+            });
+        }
+        candidates.sort((a, b) => a.mtime - b.mtime);
+        let totalBytes = 0;
+        let kept = 0;
+        const remove = [];
+        for (const candidate of candidates) {
+            if (candidate.removable
+                || totalBytes + candidate.size > COMPRESSED_IMAGE_CACHE_MAX_BYTES
+                || kept >= COMPRESSED_IMAGE_CACHE_MAX_ENTRIES) {
+                remove.push(candidate.name);
+            }
+            else {
+                totalBytes += candidate.size;
+                kept += 1;
+            }
+        }
+        await Promise.all([...stalePartials, ...remove].map(name => rm(join(root, name), { force: true }).catch(() => { })));
+    }
+    async autoCompressImage(image, policy, operation) {
+        let bytes;
+        try {
+            bytes = await readFile(image.path, { signal: operation.signal });
+        }
+        catch (error) {
+            throw new VisionToolkitError('input', `image changed while preparing the vision request: ${image.path}`, { cause: error });
+        }
+        if (bytes.length !== image.bytes) {
+            throw new VisionToolkitError('input', `image changed while preparing the vision request: ${image.path}`);
+        }
+        const digest = createHash('sha256').update(bytes).digest('hex').slice(0, COMPRESSED_IMAGE_CACHE_KEY_DIGEST_LENGTH);
+        const root = await this.compressedImageRoot(policy);
+        await this.pruneCompressedCache(root);
+        const prefix = `${COMPRESSED_IMAGE_CACHE_VERSION}-${digest}-b${this.config.maxImageBytes}-p${this.config.maxImagePixels}`;
+        for (const entry of await readdir(root)) {
+            if (!entry.startsWith(`${prefix}-`) || entry.startsWith('.'))
+                continue;
+            const outDigestPrefix = this.cacheEntryOutDigest(entry, prefix);
+            if (outDigestPrefix === undefined) {
+                await rm(join(root, entry), { force: true }).catch(() => { });
+                continue;
+            }
+            const cached = await this.readCacheCandidate(root, entry, outDigestPrefix, this.config.maxImageBytes, this.config.maxImagePixels, operation);
+            if (cached !== undefined) {
+                return { ...cached, originalPath: image.path };
+            }
+            await rm(join(root, entry), { force: true }).catch(() => { });
+        }
+        const staged = join(root, `.${prefix}-${randomUUID()}.partial`);
+        let compressed;
+        try {
+            compressed = await this.adapter.compressImage(image.path, staged, this.config.maxImageBytes, this.config.maxImagePixels, { signal: operation.signal });
+        }
+        catch (error) {
+            await rm(staged, { force: true }).catch(() => { });
+            throw error;
+        }
+        const extension = compressed.format === 'jpeg' ? 'jpg' : compressed.format;
+        const stagedBytes = await readFile(staged, { signal: operation.signal });
+        const outDigest = createHash('sha256').update(stagedBytes).digest('hex').slice(0, COMPRESSED_IMAGE_CACHE_KEY_DIGEST_LENGTH);
+        const finalName = `${prefix}-${outDigest}-${compressed.width}x${compressed.height}.${extension}`;
+        const finalPath = join(root, finalName);
+        const existing = await this.readCacheCandidate(root, finalName, outDigest, this.config.maxImageBytes, this.config.maxImagePixels, operation);
+        if (existing !== undefined) {
+            await rm(staged, { force: true }).catch(() => { });
+            return { ...existing, originalPath: image.path };
+        }
+        await rm(finalPath, { force: true }).catch(() => { });
+        try {
+            await rename(staged, finalPath);
+        }
+        catch (error) {
+            await rm(staged, { force: true }).catch(() => { });
+            throw new VisionToolkitError('path', `cannot commit compressed image cache entry: ${finalPath}`, { cause: error });
+        }
+        await this.pruneCompressedCache(root);
+        return {
+            path: finalPath,
+            bytes: compressed.bytes,
+            width: compressed.width,
+            height: compressed.height,
+            format: compressed.format,
+            originalPath: image.path,
+        };
+    }
     async validateImage(raw, policy, operation) {
         const image = await resolveInputFile(raw, policy);
-        if (image.bytes > this.config.maxImageBytes) {
-            throw new VisionToolkitError('capacity', `image is ${image.bytes} bytes, exceeding maxImageBytes ${this.config.maxImageBytes}`);
-        }
         const decoded = await this.adapter.probeImageSize(image.path, { signal: operation.signal });
         const pixels = decoded.width * decoded.height;
-        if (!Number.isSafeInteger(pixels) || pixels > this.config.maxImagePixels) {
-            throw new VisionToolkitError('capacity', `image is ${decoded.width}x${decoded.height} (${pixels} pixels), exceeding maxImagePixels ${this.config.maxImagePixels}`);
+        if (!Number.isSafeInteger(pixels) || pixels < 1) {
+            throw new VisionToolkitError('input', `image dimensions are invalid: ${decoded.width}x${decoded.height}`);
         }
         const extension = extname(image.path).toLowerCase();
         const expected = FORMAT_BY_EXTENSION.get(extension);
         if (expected !== decoded.format) {
             throw new VisionToolkitError('input', `image content is ${decoded.format}, but the filename uses ${extension}`);
         }
-        return { ...image, width: decoded.width, height: decoded.height, format: decoded.format };
+        if (image.bytes <= this.config.maxImageBytes && pixels <= this.config.maxImagePixels) {
+            return { ...image, width: decoded.width, height: decoded.height, format: decoded.format, originalPath: image.path };
+        }
+        return this.autoCompressImage(image, policy, operation);
     }
     accountImage(image, operation) {
         operation.metrics.imageCount += 1;
@@ -418,6 +668,10 @@ export class VisionToolkitRuntime {
             provider: {
                 baseUrl: env.VISION_BASE_URL,
                 model: env.VISION_MODEL,
+                protocol: env.VISION_API_PROTOCOL,
+                anthropicThinking: env.VISION_ANTHROPIC_THINKING,
+                sslVerify: env.VISION_SSL_VERIFY ?? null,
+                userAgent: env.VISION_USER_AGENT,
                 language: env.LANG,
                 credentialSha256: createHash('sha256').update(env.VISION_API_KEY).digest('hex'),
             },
@@ -455,11 +709,12 @@ export class VisionToolkitRuntime {
         }
     }
     async annotateLocations(tool, image, elements, output, policy, operation) {
-        const extension = extname(image.path).toLowerCase();
-        const stem = basename(image.path, extension);
+        const extension = extname(image.originalPath).toLowerCase();
+        const stem = basename(image.originalPath, extension);
         const suffix = tool === 'vision_ground' ? 'ground' : 'detect';
         const finalPath = resolveOutputFile(output, policy, `${stem}.${suffix}.preview.png`, ['.png']);
         assertDistinctOutput(image.path, finalPath);
+        assertDistinctOutput(image.originalPath, finalPath);
         const staged = createStagedOutput(policy, '.png');
         try {
             const started = Date.now();
@@ -622,10 +877,11 @@ export class VisionToolkitRuntime {
             const policy = await this.pathPolicy(options.workspace);
             const image = await this.validateImage(request.image, policy, operation);
             this.accountImage(image, operation);
-            const sourceExtension = extname(image.path).toLowerCase();
-            const stem = basename(image.path, sourceExtension);
+            const sourceExtension = extname(image.originalPath).toLowerCase();
+            const stem = basename(image.originalPath, sourceExtension);
             const finalPath = resolveOutputFile(request.output, policy, request.scale !== undefined && request.scale > 1 ? `${stem}.crop@${request.scale}x.png` : `${stem}.crop.png`, ['.png', '.jpg', '.jpeg']);
             assertDistinctOutput(image.path, finalPath);
+            assertDistinctOutput(image.originalPath, finalPath);
             const outputExtension = extname(finalPath).toLowerCase();
             const staged = createStagedOutput(policy, outputExtension);
             try {
@@ -683,10 +939,11 @@ export class VisionToolkitRuntime {
             const policy = await this.pathPolicy(options.workspace);
             const image = await this.validateImage(request.image, policy, operation);
             this.accountImage(image, operation);
-            const extension = extname(image.path).toLowerCase();
-            const stem = basename(image.path, extension);
+            const extension = extname(image.originalPath).toLowerCase();
+            const stem = basename(image.originalPath, extension);
             const finalPath = resolveOutputFile(request.output, policy, `${stem}.svg`, ['.svg']);
             assertDistinctOutput(image.path, finalPath);
+            assertDistinctOutput(image.originalPath, finalPath);
             const staged = createStagedOutput(policy, '.svg');
             try {
                 const result = await this.runUpstream('trace', [
@@ -750,10 +1007,13 @@ export class VisionToolkitRuntime {
             const rebuilt = await this.validateImage(request.rebuilt, policy, operation);
             this.accountImage(original, operation);
             this.accountImage(rebuilt, operation);
-            const originalStem = basename(original.path, extname(original.path));
-            const rebuiltStem = basename(rebuilt.path, extname(rebuilt.path));
+            const originalStem = basename(original.originalPath, extname(original.originalPath));
+            const rebuiltStem = basename(rebuilt.originalPath, extname(rebuilt.originalPath));
             const finalDirectory = resolveOutputDirectory(request.runName, policy, `${originalStem}-vs-${rebuiltStem}.pixel-diff`);
-            if (isWithin(finalDirectory, original.path) || isWithin(finalDirectory, rebuilt.path)) {
+            if (isWithin(finalDirectory, original.path)
+                || isWithin(finalDirectory, rebuilt.path)
+                || isWithin(finalDirectory, original.originalPath)
+                || isWithin(finalDirectory, rebuilt.originalPath)) {
                 throw new VisionToolkitError('input', 'pixel_diff artifact directory would replace an input image');
             }
             const stagedDirectory = await createStagedDirectory(policy);
@@ -876,9 +1136,9 @@ export class VisionToolkitRuntime {
             const policy = await this.pathPolicy(options.workspace);
             const image = await this.validateImage(request.image, policy, operation);
             this.accountImage(image, operation);
-            const stem = basename(image.path, extname(image.path));
+            const stem = basename(image.originalPath, extname(image.originalPath));
             const finalDirectory = resolveOutputDirectory(request.runName, policy, `${stem}.long-ocr`);
-            if (isWithin(finalDirectory, image.path)) {
+            if (isWithin(finalDirectory, image.path) || isWithin(finalDirectory, image.originalPath)) {
                 throw new VisionToolkitError('input', 'long_screenshot_ocr artifact directory would replace the input image');
             }
             const stagedDirectory = await createStagedDirectory(policy);
@@ -1028,10 +1288,11 @@ export class VisionToolkitRuntime {
             if (excludeColor !== undefined && !HEX_COLOR_PATTERN.test(excludeColor)) {
                 throw new VisionToolkitError('input', 'extract_foreground.excludeColor must be #RRGGBB');
             }
-            const extension = extname(image.path).toLowerCase();
-            const stem = basename(image.path, extension);
+            const extension = extname(image.originalPath).toLowerCase();
+            const stem = basename(image.originalPath, extension);
             const finalPath = resolveOutputFile(request.output, policy, `${stem}.foreground.png`, ['.png']);
             assertDistinctOutput(image.path, finalPath);
+            assertDistinctOutput(image.originalPath, finalPath);
             const staged = createStagedOutput(policy, '.png');
             try {
                 const result = await this.runUpstream('extract_foreground', [
@@ -1164,6 +1425,7 @@ export class VisionToolkitRuntime {
             const height = integerInRange(request.height, 800, 1, 8192, 'html_screenshot.height');
             const scale = integerInRange(request.scale, 1, 1, 4, 'html_screenshot.scale');
             const waitMs = integerInRange(request.waitMs, 0, 0, 120000, 'html_screenshot.waitMs');
+            const fullPage = request.fullPage === true;
             const outputPixels = width * height * scale * scale;
             if (!Number.isSafeInteger(outputPixels) || outputPixels > this.config.maxImagePixels) {
                 throw new VisionToolkitError('capacity', `HTML screenshot would create ${outputPixels} pixels, exceeding maxImagePixels ${this.config.maxImagePixels}`);
@@ -1190,16 +1452,31 @@ export class VisionToolkitRuntime {
                     String(scale),
                     '--wait-ms',
                     String(waitMs),
+                    ...(fullPage ? ['--full-page', '--max-pixels', String(this.config.maxImagePixels)] : []),
                 ], operation);
                 const parsed = parseHtmlScreenshotOutput(result.stdout);
                 const expectedWidth = width * scale;
-                const expectedHeight = height * scale;
-                if (parsed.outputPath !== staged || parsed.width !== expectedWidth || parsed.height !== expectedHeight) {
+                if (parsed.outputPath !== staged || parsed.width !== expectedWidth) {
+                    throw new VisionToolkitError('output', 'html_screenshot: upstream summary does not match the requested output');
+                }
+                if (fullPage !== (parsed.pageHeight !== undefined)) {
+                    throw new VisionToolkitError('output', 'html_screenshot: upstream full-page metadata does not match the request');
+                }
+                const pageHeight = parsed.pageHeight;
+                const expectedHeight = pageHeight === undefined ? height * scale : pageHeight * scale;
+                if (pageHeight !== undefined && (!Number.isInteger(pageHeight) || pageHeight <= 0)) {
+                    throw new VisionToolkitError('output', 'html_screenshot: upstream reported an invalid page height');
+                }
+                const outputPixels = expectedWidth * expectedHeight;
+                if (!Number.isSafeInteger(outputPixels) || outputPixels > this.config.maxImagePixels) {
+                    throw new VisionToolkitError('capacity', `HTML screenshot would create ${outputPixels} pixels, exceeding maxImagePixels ${this.config.maxImagePixels}`);
+                }
+                if (parsed.height !== expectedHeight) {
                     throw new VisionToolkitError('output', 'html_screenshot: upstream summary does not match the requested output');
                 }
                 const generated = await this.probeGeneratedImage(staged, operation, 'html_screenshot');
                 if (generated.format !== 'png' || generated.width !== expectedWidth || generated.height !== expectedHeight) {
-                    throw new VisionToolkitError('output', 'html_screenshot: generated PNG dimensions do not match the viewport');
+                    throw new VisionToolkitError('output', 'html_screenshot: generated PNG dimensions do not match the reported output');
                 }
                 await commitStagedOutput(staged, finalPath, policy);
                 const artifact = await describeArtifact(finalPath, policy, {
@@ -1215,6 +1492,7 @@ export class VisionToolkitRuntime {
                     viewport: { width, height, scale },
                     width: expectedWidth,
                     height: expectedHeight,
+                    ...(pageHeight === undefined ? {} : { pageHeight }),
                     artifact,
                 };
             }
@@ -1235,8 +1513,8 @@ export class VisionToolkitRuntime {
             return { status: 'error', detail: `${label} is not writable: ${path}` };
         }
     }
-    /** health: inspect local readiness and optionally probe the configured `/models` endpoint. */
-    async health(testConnection, options) {
+    /** Health: inspect local readiness, optionally probe `/models`, and explicitly test one real multimodal request. */
+    async health(testConnection, options, testModel = false) {
         return this.runOperation('vision_toolkit_health', options, async (operation) => {
             const info = this.upstreamVersion;
             const python = { status: 'ok', detail: `${info.pythonVersion} via ${info.python}` };
@@ -1260,18 +1538,26 @@ export class VisionToolkitRuntime {
             }
             let resolvedCredential;
             let credential;
-            try {
-                resolvedCredential = await this.ctx.credentials.resolve(this.config.provider.credential);
-                credential = resolvedCredential === undefined
-                    ? { status: 'error', detail: `credential ${this.config.provider.credential} is not configured` }
-                    : { status: 'ok', detail: `credential ${this.config.provider.credential} is resolvable` };
+            if (isAnonymousProvider(this.config.provider)) {
+                credential = { status: 'ok', detail: 'Anonymous provider; no user credential is required' };
             }
-            catch {
-                credential = { status: 'error', detail: `credential ${this.config.provider.credential} could not be resolved` };
+            else {
+                try {
+                    resolvedCredential = isBuiltInFreeVisionProvider(this.config.provider)
+                        ? { value: BUILT_IN_FREE_VISION_KEY, source: 'built-in' }
+                        : await this.ctx.credentials.resolve(this.config.provider.credential);
+                    credential = resolvedCredential === undefined
+                        ? { status: 'error', detail: `credential ${this.config.provider.credential} is not configured` }
+                        : { status: 'ok', detail: `credential ${this.config.provider.credential} is resolvable` };
+                }
+                catch {
+                    credential = { status: 'error', detail: `credential ${this.config.provider.credential} could not be resolved` };
+                }
             }
             let artifactDirectory;
             try {
-                const policy = await this.pathPolicy(options.workspace);
+                // allowedDirs are session input roots; they do not affect output readiness.
+                const policy = await createPathPolicy(options.workspace, []);
                 artifactDirectory = await this.writableDirectoryCheck(policy.outputDir, 'Artifact directory');
             }
             catch {
@@ -1282,8 +1568,12 @@ export class VisionToolkitRuntime {
                 status: 'not_tested',
                 detail: 'Connection was not tested; pass testConnection=true to query the configured /models endpoint',
             };
+            let model = {
+                status: 'not_tested',
+                detail: 'Vision model was not tested; run an explicit model test to send the bundled diagnostic image',
+            };
             if (testConnection) {
-                if (resolvedCredential === undefined) {
+                if (this.config.provider.authMode === 'credential' && resolvedCredential === undefined) {
                     service = { status: 'error', detail: 'Connection test skipped because the configured credential is unavailable' };
                 }
                 else {
@@ -1291,9 +1581,24 @@ export class VisionToolkitRuntime {
                     const endpoint = `${this.config.provider.baseUrl}/models`;
                     try {
                         const started = Date.now();
+                        const headers = {
+                            Accept: 'application/json',
+                            'User-Agent': this.config.provider.userAgent,
+                        };
+                        // Anonymous mode sends no user credential; the endpoint must treat
+                        // the unauthenticated request as the anonymous service.
+                        if (resolvedCredential !== undefined) {
+                            if (this.config.provider.protocol === 'anthropic') {
+                                headers['x-api-key'] = resolvedCredential.value;
+                                headers['anthropic-version'] = '2023-06-01';
+                            }
+                            else {
+                                headers.Authorization = `Bearer ${resolvedCredential.value}`;
+                            }
+                        }
                         const response = await fetch(endpoint, {
                             method: 'GET',
-                            headers: { Authorization: `Bearer ${resolvedCredential.value}`, Accept: 'application/json' },
+                            headers,
                             signal: operation.signal,
                         });
                         operation.metrics.upstreamMs += Date.now() - started;
@@ -1301,8 +1606,14 @@ export class VisionToolkitRuntime {
                         if (response.ok) {
                             service = { status: 'ok', detail: `Service responded at ${endpoint} (HTTP ${response.status})` };
                         }
-                        else if (response.status === 401 || response.status === 403) {
+                        else if (response.status === 401) {
                             service = { status: 'error', detail: `Service rejected the configured credential (HTTP ${response.status})` };
+                        }
+                        else if (response.status === 403) {
+                            // Some providers (e.g. Groq preview/account restrictions) block GET /models
+                            // while real multimodal requests still work. Treat 403 as a warning so the
+                            // explicit vision-model test, not the model list endpoint, decides access.
+                            service = { status: 'warning', detail: `Service is reachable but restricted GET /models (HTTP 403); the credential may still be valid for real vision requests` };
                         }
                         else if (response.status === 404 || response.status === 405) {
                             service = { status: 'warning', detail: `Service is reachable but does not expose GET /models (HTTP ${response.status})` };
@@ -1321,7 +1632,37 @@ export class VisionToolkitRuntime {
                     }
                 }
             }
-            const checks = { python, dependencies, chrome, credential, artifactDirectory, tempDirectory, service };
+            if (testModel) {
+                let modelEnv;
+                if (isAnonymousProvider(this.config.provider)) {
+                    modelEnv = await this.resolveVisionEnv();
+                }
+                else if (resolvedCredential !== undefined) {
+                    modelEnv = this.visionEnv(resolvedCredential);
+                }
+                if (modelEnv === undefined) {
+                    model = { status: 'error', detail: 'Vision model test skipped because the configured credential is unavailable' };
+                }
+                else {
+                    try {
+                        const result = await this.runUpstream('glance', [VISION_MODEL_TEST_IMAGE, '-q', VISION_MODEL_TEST_PROMPT], operation, modelEnv);
+                        if (result.stdout.trim().length === 0) {
+                            throw new VisionToolkitError('output', 'glance: vision API returned an empty description');
+                        }
+                        model = {
+                            status: 'ok',
+                            detail: `Vision model ${this.config.provider.model} completed a multimodal request`,
+                        };
+                    }
+                    catch (error) {
+                        if (operation.signal.aborted)
+                            throw error;
+                        const detail = error instanceof Error ? error.message : String(error);
+                        model = { status: 'error', detail: `Vision model test failed: ${detail.slice(0, 600)}` };
+                    }
+                }
+            }
+            const checks = { python, dependencies, chrome, credential, artifactDirectory, tempDirectory, service, model };
             const healthy = Object.values(checks).every(check => check.status !== 'error');
             return {
                 pluginVersion: PLUGIN_VERSION,
@@ -1329,6 +1670,7 @@ export class VisionToolkitRuntime {
                 checks,
                 healthy,
                 connectionTested: testConnection,
+                modelTested: testModel,
             };
         });
     }

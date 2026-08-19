@@ -1,9 +1,9 @@
 // Keyless browser regression for pwsh UI parity with bash: a seeded session
 // whose pwsh call/result is presented by the REAL tool-pwsh on replay (the
 // api-proxy recomputes presentation views from logged args/result content)
-// must render as a bash-shaped terminal card with the parsed exit-status
-// pill — not the generic console-fenced card the pwsh presenter used to
-// emit. The seed is authored, not recorded: its header line carries no `cwd`
+// must render with the same terminal card layout as bash and show the parsed exit-status
+// pill — not a generic console-fenced card. The seed is authored, not
+// recorded: its header line carries no `cwd`
 // field (seedSession writes the session cwd itself, and a Windows temp path
 // substituted into the header would not round-trip through its JSON parse),
 // and no event references the workspace, so the lane replays on any host
@@ -43,7 +43,7 @@ const HAS_PWSH = MODE === 'record' ? false : spawnSync(
   { encoding: 'utf8' },
 ).status === 0
 
-describe.skipIf(MODE === 'record' || !HAS_PWSH)('web e2e: pwsh calls render as bash-shaped terminal cards', () => {
+describe.skipIf(MODE === 'record' || !HAS_PWSH)('web e2e: pwsh calls use the bash terminal-card layout', () => {
   let scaffold: WebScaffold
   let browser: Browser
   let page: Page
@@ -68,14 +68,17 @@ describe.skipIf(MODE === 'record' || !HAS_PWSH)('web e2e: pwsh calls render as b
     onTestFailed(() => saveFailureShot(page, 'web-e2e-pwsh-terminal'))
     // Open the seeded session through content search: the sidebar groups
     // sessions by workspace and its row order is world-dependent, while the
-    // search index covers the seeded log deterministically.
-    const search = page.getByPlaceholder('Search name, keywords', { exact: false })
+    // search index covers the seeded log deterministically. Search is a
+    // collapsed header action; expand it so the input is actionable.
+    const searchButton = page.getByRole('button', { name: 'Search sessions' })
+    if (await searchButton.getAttribute('aria-expanded') !== 'true') await searchButton.click()
+    const search = page.getByPlaceholder('Search sessions', { exact: false })
     await search.fill('Run a PowerShell command')
     const result = page.getByRole('tree', { name: 'Search results' }).getByRole('treeitem')
     await expect.poll(() => result.count(), { timeout: 15_000 }).toBe(1)
     await result.click()
     await page.getByRole('tab', { name: 'Chat', exact: true }).waitFor({ timeout: 15_000 })
-    // The tool row is expand-gated: the settled bash-shaped row carries the
+    // The tool row is expand-gated: the settled row uses the bash layout and carries the
     // shell-family variant, and the terminal card lives in the expanded body.
     const row = page.locator('[data-tool="pwsh"]').first()
     await row.waitFor({ timeout: 15_000 })

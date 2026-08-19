@@ -6,7 +6,7 @@ English | [中文](2026-06-30-pre-tool-input-rewrite.zh.md)
 
 ## Problem
 
-The [interception-seams Agent Note](../../implemented/feature/2026-06-30-interception-seams.md) defines `tools/pre-execute` as an allow/deny/ask gate over an execution whose identity is already protected and whose arguments are deeply frozen. Claude Code's `PreToolUse` hook also offers `updatedInput`, so a faithful bridge needs an explicit rewrite mechanism. A rewrite cannot be a mutation escape hatch on the existing execution object: it must keep the durable history, audit record, presentation, and executed value consistent.
+The [interception extension-points Agent Note](../../implemented/feature/2026-06-30-interception-extension-points.md) defines `tools/pre-execute` as an allow/deny/ask gate over an execution whose identity is already protected and whose arguments are deeply frozen. Claude Code's `PreToolUse` hook also offers `updatedInput`, so a faithful bridge needs an explicit rewrite mechanism. A rewrite cannot be a mutation escape hatch on the existing execution object: it must keep the durable history, audit record, presentation, and executed value consistent.
 
 ## The problem: three readers of pre-execution arguments
 
@@ -49,5 +49,5 @@ Allowing a pre-execute listener to assign `exec.arguments` would provide only an
 
 - Does rewriting the `assistant/message` tool-call block corrupt any provider's expectation on replay, or is a separate correction safer?
 - Should the original arguments be preserved on the `tool/call` event (audit) and, if so, under what field?
-- Does the rewrite decision move before the log commit or become a dedicated earlier seam, and how do existing pre-tool allow/deny hooks avoid running twice?
+- Does the rewrite decision move before the log commit or become a dedicated earlier extension point, and how do existing pre-tool allow/deny hooks avoid running twice?
 - How does this interact with a future permission `ask` flow (a user approving a rewritten call)?

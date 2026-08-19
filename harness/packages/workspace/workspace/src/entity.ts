@@ -207,7 +207,9 @@ export class WorkspaceEntity implements Workspace {
         const sessionIds = changed.sessionIds.filter(
           id => this.host.sessionPath(id) === changed.path,
         )
-        if (changed === current && sessionIds.length === current.sessionIds.length) throw unchangedSentinel
+        if (changed === current && sessionIds.length === current.sessionIds.length) {
+          throw unchangedSentinel
+        }
         return { ...changed, sessionIds, updatedAt: new Date().toISOString() }
       })
     } catch (error) {

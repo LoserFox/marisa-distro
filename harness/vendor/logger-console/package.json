@@ -1,8 +1,15 @@
 {
-  "name": "@cordisjs/plugin-logger-console",
+  "name": "@deepseek-ai/cordis-plugin-logger-console",
   "description": "Console logger exporter for cordis",
-  "version": "1.0.0",
-  "private": true,
+  "version": "1.0.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "vendor/logger-console"
+  },
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/shared.d.ts",
@@ -25,11 +32,11 @@
   "author": "Shigma <shigma10826@gmail.com>",
   "license": "MIT",
   "peerDependencies": {
-    "cordis": "^4.0.0-rc.7"
+    "@deepseek-ai/cordis": "workspace:^"
   },
   "dependencies": {
-    "cosmokit": "^1.8.1",
-    "schemastery": "^3.18.0",
+    "@deepseek-ai/cosmokit": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^",
     "supports-color": "^9.4.0"
   }
 }

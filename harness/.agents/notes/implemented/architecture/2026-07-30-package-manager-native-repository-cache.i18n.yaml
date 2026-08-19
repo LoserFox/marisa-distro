@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-07-30-package-manager-native-repository-cache.md
-2026-07-30-package-manager-native-repository-cache.md: f8a6706065a936ca4a9abf2a50d266a60f09b252
-2026-07-30-package-manager-native-repository-cache.zh.md: b1fea3d655f8d7aeb466744dc27bbf4ba69993ec

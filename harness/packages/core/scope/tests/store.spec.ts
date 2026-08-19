@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import {
   AnonymousEntries,
   createScope,
@@ -201,7 +201,7 @@ describe('ScopedLayers', () => {
 
   it('returns the exact context effect disposer', () => {
     const rawDispose = vi.fn()
-    const effect = vi.fn(() => { return rawDispose })
+    const effect = vi.fn(() => rawDispose)
     const ctx = { effect } as unknown as Context
     const action = vi.fn(() => vi.fn())
     const layers = new ScopedLayers(scope => new TestLayer(scope), vi.fn())
@@ -220,7 +220,7 @@ describe('ScopedLayers', () => {
     let failFactory = true
     const layers = new ScopedLayers(
       (selected) => {
-        if (selected !== undefined && failFactory) { throw new Error('factory failed') }
+        if (selected !== undefined && failFactory) throw new Error('factory failed')
         return new TestLayer(selected)
       },
       vi.fn(),

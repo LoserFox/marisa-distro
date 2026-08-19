@@ -6,11 +6,11 @@
  * @module @deepseek-ai/dsh-agent/dispatch
  */
 
-import type { Context, Events } from 'cordis'
+import type { Context, Events } from '@deepseek-ai/cordis'
 import { scopeTarget } from '@deepseek-ai/dsh-scope'
 import type { Scoped } from '@deepseek-ai/dsh-scope'
 import type { AssembleContext } from '@deepseek-ai/dsh-system-prompt'
-import type { Agent } from './types.ts'
+import type { Agent } from './runtime-types.ts'
 
 /** Extract the parameter tuple from an event handler type (its `this` is not part of the tuple). */
 type Params<F> = F extends (...args: infer P) => unknown ? P : never
@@ -122,7 +122,7 @@ export function agentEvents(ctx: Context, agent: Agent, carrier: Scoped<Agent> =
       // starves later listeners, and returned promises are discarded. Agent
       // notifications are non-vetoing, so resolve the same filtered callback
       // set ourselves and contain both failure modes independently.
-      const args: Array<unknown> = [carrier, name, fused(payload)]
+      const args: unknown[] = [carrier, name, fused(payload)]
       const callbacks = ctx.events.dispatch('emit', args)
       for (const callback of callbacks) {
         try {
@@ -172,5 +172,5 @@ export function emitAgentEvent<K extends AgentSubjectEvent>(
  * @returns the context to pass to `assemble()`.
  */
 export function assembleContextFor(agent: Agent, signal?: AbortSignal): AssembleContext {
-  return { agent, scope: agent, ...signal !== undefined ? { signal } : {} }
+  return { agent, scope: agent, ...signal === undefined ? {} : { signal } }
 }

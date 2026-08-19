@@ -2,13 +2,13 @@
 
 English | [中文](README.zh.md)
 
-Settings shell plugin: a pure composition face. It occupies `sidebar.settings` with the trigger chrome and modal settings panel, and declares the slots registrants fill: `settings.trigger` / `settings.header` / `settings.close` (chrome content), `settings.action` (ordered content-header actions), `settings.section` (one page per feature), and `settings.onboarding` (ordered feature-owned pages in a full-viewport stage). The shell ships no copy of its own — all text arrives from registrants (ui-settings-general owns chrome, General, and the product notice; features own their actions, sections, rows, and conditional onboarding pages). Nav labels may be locale-following thunks, so the nav projection resolves them through `resolveSlotLabel` and re-renders on the section ledger bump or the locale revision (an optional `ctx.get('locale')` read; no hard locale dependency).
+The settings domain's base layer, with two roles and no presentation of its own. It provides `ctx.settingsScope`, the Host transport every preference row binds its durable namespace section through, and it declares the settings slot types registrants fill: `settings.trigger` / `settings.header` / `settings.close` (chrome content), `settings.action` (ordered content-header actions), `settings.section` (one page per feature), `settings.plugins.tab` (feature-owned pages inside the Plugins section), and `settings.onboarding` (ordered feature-owned pages). It depends on no `ui-*` presentation package, so any feature that owns a preference can reach it; the settings SHELL — the `sidebar.settings` occupant, its navigation, and the chrome — lives in ui-settings-general, because a shell dependency on ui-sidebar would close a reference graph cycle through ui-layout and ui-theme. The shell's own contract types live beside the shell for the same reason.
 
-The shell projects the onboarding ledger into ascending order and mounts exactly one page at a time; the takeover chrome (body-level stage, mask, app-root `inert`) belongs to the step itself through ui-primitives' `OnboardingSurface`, so a mounted step still resolving its private facts renders null and neither paints nor blocks anything — the shell shows no empty stage while a step decides. The active registrant receives its id, `complete()`, and an `openSection(id)` callback; completing or skipping transfers ownership to the next entry. Registrants own durable completion, capability readiness, copy, mutations, and the surface wrap, so independently registered flows cannot stack and the shell does not become a second configuration fact source.
+The plugin injects nothing and waits for nothing: `ctx.settingsScope.bind(spec)` resolves the wire face through the CALLER's context at call time, so the bound scope's disposer belongs to the calling fiber, and the caller injects `connection` for the transport and `remote` for the invalidation. Listeners exist before the first background read starts, so a row's activation never blocks on the settings transport. A bound scope reloads on the forwarded `settings/document-updated` event for its own namespace and on `connection/reset`. Writes carry one field path and the last known namespace revision as `expectedRevision`; a rejected or failed write re-reads unless a newer write already superseded it, and a stale read never publishes over a newer one. Without a `decode` in the spec, a section that is not a plain object, fails its rehydrated schema, or carries a schema envelope this client cannot rehydrate publishes no value at all, so a row renders its own absent state instead of a half-decoded one.
 
 ## Model Experience
 
-None, as the settings shell serves browser UI composition; nothing here reaches a model request.
+None, as the settings domain base serves browser preference storage and slot declarations; nothing here reaches a model request.
 
 #### KV Cache effect
 
@@ -16,4 +16,5 @@ None; this package neither assembles nor sends a provider request.
 
 ## Known Limitations and Deferred Work
 
-- **Panel is browser-preference scope only** — host-side settings surfaces (permission mode, tool-call mode) have no RPC backing yet; their skeletons live in ui-settings-general.
+- **Remote browsers get no durable settings** — the settings RPCs are loopback-only, so a scope bound in a non-loopback browser starts `unavailable` and never crosses the wire; every row it backs is inert there.
+- **One field per write** — `set` sends a single `set` op, so a row that must move two fields together has no transaction and publishes two revisions.

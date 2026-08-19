@@ -156,7 +156,7 @@ function walkJsonValue(value: unknown, detach: boolean): JsonValue | true | unde
       const key = keys[index]
       /* v8 ignore next -- the loop is bounded by the captured key count. */
       if (key === undefined) return undefined
-      tasks.push({ kind: 'object-property', source: current as Record<string, unknown>, key, ...(target !== undefined ? { target } : {}) })
+      tasks.push({ kind: 'object-property', source: current as Record<string, unknown>, key, ...(target === undefined ? {} : { target }) })
     }
   }
   return detach ? root : true

@@ -6,7 +6,7 @@
 
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import {
   BUNDLED_SKILL_RANK,
   type SkillCandidate,
@@ -35,7 +35,7 @@ const CANDIDATE: SkillCandidate = {
 
 const provider: SkillProvider = {
   name: PROVIDER_NAME,
-  list: () => { return Promise.resolve([CANDIDATE]) },
+  list: () => Promise.resolve([CANDIDATE]),
   async get(_candidate): Promise<SkillDefinition> {
     return {
       name: CANDIDATE.name,

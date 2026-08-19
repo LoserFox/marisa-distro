@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { createUserMessage, CallId, LlmAdapter } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
@@ -53,11 +53,13 @@ function sessionAgent(session: Session, id = 'agent'): Agent {
   }
 }
 
-function openMessageTurn(session: Session, turn: number): void {
+function openMessageTurn(session: Session, turn: number, clientTimeZone?: string): void {
   session.append('turn/start', { turn })
   session.append('user/message', createUserMessage({
     content: [{ type: 'text', text: `turn ${turn}` }],
-    source: { kind: 'user' },
+    source: clientTimeZone === undefined
+      ? { kind: 'user' }
+      : { kind: 'user', rpcId: `turn-${String(turn)}`, clientTimeZone } as never,
   }), { surfaceOp: 'append' })
 }
 
@@ -80,13 +82,18 @@ async function fire(
   step: number,
   signal: AbortSignal = SIGNAL,
 ): Promise<void> {
+  const proposed = createUserMessage({
+    content: [{ type: 'text', text: 'request proposal' }],
+    source: { kind: 'plugin', plugin: 'time-context-test' },
+  })
   const decision = await agentEvents(ctx, agent).waterfall(
     'agent/pre-step',
-    { messages: [], turn, step, signal },
-    () => Promise.resolve({ kind: 'enter' as const, messages: [] }),
+    { messages: [proposed], turn, step, signal },
+    () => Promise.resolve({ kind: 'enter' as const, messages: [proposed] }),
   )
   if (decision.kind === 'enter') {
     for (const message of decision.messages) {
+      if (message === proposed) continue
       agent.session.append('user/message', message, { surfaceOp: 'append' })
     }
   }
@@ -148,13 +155,14 @@ describe('durable step context', () => {
   it('records turn, step, zoned time, and the preceding model-visible message baseline', async () => {
     const { ctx } = await mount({ timeZone: 'Asia/Shanghai' })
     const session = Session.create(SessionId('first'))
-    openMessageTurn(session, 1)
+    openMessageTurn(session, 1, 'Asia/Shanghai')
     vi.setSystemTime(BASE + 90_061_000)
 
     await fire(ctx, sessionAgent(session), 1, 1)
 
     expect(contextTexts(session)).toEqual([
       'Time sampled while preparing turn 1, step 1: 2026-07-15T09:01:01+08:00[Asia/Shanghai]\n'
+      + 'Browser time zone for this request: Asia/Shanghai. Interpret otherwise-unqualified dates and times in this zone.\n'
       + 'Elapsed since the preceding model-visible message: 1d 1h 1m 1s.',
     ])
     const event = session.events.at(-1)
@@ -170,6 +178,7 @@ describe('durable step context', () => {
       sections: [{
         name: 'time-context',
         text: 'Time sampled while preparing turn 1, step 1: 2026-07-15T09:01:01+08:00[Asia/Shanghai]\n'
+          + 'Browser time zone for this request: Asia/Shanghai. Interpret otherwise-unqualified dates and times in this zone.\n'
           + 'Elapsed since the preceding model-visible message: 1d 1h 1m 1s.',
       }],
     })
@@ -203,7 +212,37 @@ describe('durable step context', () => {
 
     expect(contextTexts(session)[1]).toBe(
       'Time sampled while preparing turn 3, step 2: 2026-07-14T00:01:01+00:00[UTC]\n'
+      + 'Browser time zone for this request: unavailable. Ask the user to clarify otherwise-unqualified dates and times.\n'
       + 'Elapsed since the preceding step context: 1m 1s.',
+    )
+  })
+
+  it('formats in one browser zone and falls back when steering supplies mixed zones', async () => {
+    const { ctx } = await mount({ timeZone: 'UTC' })
+    const resolved = Session.create(SessionId('browser-zone-resolved'))
+    openMessageTurn(resolved, 1, 'America/New_York')
+    await fire(ctx, sessionAgent(resolved), 1, 1)
+    expect(contextTexts(resolved)[0]).toContain(
+      '2026-07-13T20:00:00-04:00[America/New_York]\n'
+      + 'Browser time zone for this request: America/New_York. '
+      + 'Interpret otherwise-unqualified dates and times in this zone.',
+    )
+
+    const mixed = Session.create(SessionId('browser-zone-mixed'))
+    openMessageTurn(mixed, 1, 'Asia/Shanghai')
+    mixed.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'steering from another browser' }],
+      source: {
+        kind: 'user',
+        rpcId: 'mixed-steer',
+        clientTimeZone: 'America/New_York',
+      } as never,
+    }), { surfaceOp: 'append' })
+    await fire(ctx, sessionAgent(mixed), 1, 1)
+    expect(contextTexts(mixed)[0]).toContain(
+      '2026-07-14T00:00:00+00:00[UTC]\n'
+      + 'Browser time zone for this request: mixed ["America/New_York","Asia/Shanghai"]. '
+      + 'Ask the user to clarify otherwise-unqualified dates and times.',
     )
   })
 
@@ -254,7 +293,7 @@ describe('durable step context', () => {
     if (user === undefined || reading === undefined) throw new Error('missing source surface events')
     original.append('user/message', createUserMessage({
       content: [{ type: 'text', text: 'compacted history' }],
-      source: { kind: 'plugin', plugin: 'compact-basic' },
+      source: { kind: 'plugin', plugin: 'compaction-basic' },
     }), {
       surfaceOp: { op: 'replace', start: user.seq, end: reading.seq },
       sourceEventSeqs: [user.seq, reading.seq],

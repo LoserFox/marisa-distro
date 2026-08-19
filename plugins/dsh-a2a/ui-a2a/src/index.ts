@@ -5,6 +5,7 @@ import type { RpcResult } from '@deepseek-ai/dsh-host-apiproxy/api'
 import { A2aError, type A2aMeshService } from '@dpskh/a2a'
 import { AGENT_NAME_RE, PROJECT_NAME_RE, peerView } from '@dpskh/a2a/view'
 import {
+  A2A_EVENTS_PATH,
   A2A_RPC_CHANNEL,
   A2A_RPC_ENDPOINTS,
   a2aRequestSchemas,
@@ -13,13 +14,12 @@ import {
   type A2aProjectView,
   type A2aSnapshot,
 } from './api.ts'
-
-const WATCH_TIMEOUT_MS = 25_000
+import { PluginEvents } from './events.ts'
 
 /** Stable Cordis plugin name. */
 export const name = 'ui-a2a'
 /** Host services required by the bridge. */
-export const inject = ['connection', 'a2aMesh']
+export const inject = ['connection', 'a2aMesh', 'webServer']
 
 /** Project the durable hub record to the browser contract. */
 function projectView(project: {
@@ -75,14 +75,19 @@ function invalidRequest(endpoint: string): RpcResult<unknown> {
   })
 }
 
-/** Register the Host bridge and long-poll invalidation channel. */
+/**
+ * Register the Host bridge and the plugin-owned downlink: one WebSocket
+ * endpoint pushing `changed` frames on `a2a/change`, replacing the old
+ * per-session watch long-poll. Unary RPC (snapshot/connect/projectCreate/
+ * disconnect) stays on the Connection seam.
+ */
 export function apply(ctx: Context): void {
   const connection = ctx.get('connection') as HostConnectionHandle
   const mesh = ctx.get('a2aMesh') as A2aMeshService
+  const events = new PluginEvents(ctx, A2A_EVENTS_PATH)
   let nextRevision = 0
   let globalRevision = 0
   const sessionRevisions = new Map<string, number>()
-  const waiters = new Map<string, Set<(nextRevision: number) => void>>()
   const revisionFor = (sessionId: string): number =>
     Math.max(globalRevision, sessionRevisions.get(sessionId) ?? 0)
 
@@ -90,41 +95,17 @@ export function apply(ctx: Context): void {
     nextRevision += 1
     if (change.scope === 'all') {
       globalRevision = nextRevision
-      for (const [sessionId, pending] of waiters) {
-        for (const resolve of pending) resolve(revisionFor(sessionId))
-      }
-      waiters.clear()
+      events.broadcast({ type: 'changed', scope: 'all', revision: nextRevision })
       return
     }
     sessionRevisions.set(change.agentId, nextRevision)
-    const pending = waiters.get(change.agentId)
-    if (pending === undefined) return
-    for (const resolve of pending) resolve(nextRevision)
-    waiters.delete(change.agentId)
-  })
-
-  const waitForChange = (sessionId: string, current: number, signal: AbortSignal): Promise<number> => {
-    const revision = revisionFor(sessionId)
-    if (current !== revision) return Promise.resolve(revision)
-    return new Promise((resolve) => {
-      let settled = false
-      const pending = waiters.get(sessionId) ?? new Set<(nextRevision: number) => void>()
-      waiters.set(sessionId, pending)
-      const finish = (revision: number): void => {
-        if (settled) return
-        settled = true
-        clearTimeout(timer)
-        signal.removeEventListener('abort', abort)
-        pending.delete(finish)
-        if (pending.size === 0) waiters.delete(sessionId)
-        resolve(revision)
-      }
-      const abort = (): void => { finish(revisionFor(sessionId)) }
-      const timer = setTimeout(() => { finish(revisionFor(sessionId)) }, WATCH_TIMEOUT_MS)
-      pending.add(finish)
-      signal.addEventListener('abort', abort, { once: true })
+    events.broadcast({
+      type: 'changed',
+      scope: 'session',
+      sessionId: change.agentId,
+      revision: nextRevision,
     })
-  }
+  })
 
   const handler: ConnectionRpcHandler = async (endpoint, payload, signal) => {
     try {
@@ -176,11 +157,6 @@ export function apply(ctx: Context): void {
           if (!parsed.success) return invalidRequest(endpoint)
           return ok({ removed: await mesh.disconnect(parsed.data.sessionId) })
         }
-        case A2A_RPC_ENDPOINTS.watch: {
-          const parsed = a2aRequestSchemas.watch.safeParse(payload)
-          if (!parsed.success) return invalidRequest(endpoint)
-          return ok({ revision: await waitForChange(parsed.data.sessionId, parsed.data.revision, signal) })
-        }
         default:
           return invalidRequest(endpoint)
       }
@@ -200,11 +176,8 @@ export function apply(ctx: Context): void {
   ctx.effect(() => {
     const dispose = connection.rpc.handle(A2A_RPC_CHANNEL, handler, { authority: 'trusted-host' })
     return async () => {
-      for (const [sessionId, pending] of waiters) {
-        for (const resolve of pending) resolve(revisionFor(sessionId))
-      }
-      waiters.clear()
+      events.close()
       await dispose()
     }
-  }, 'ui-a2a: connection RPC')
+  }, 'ui-a2a: connection RPC + downlink')
 }

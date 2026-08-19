@@ -57,7 +57,7 @@ function render(pkgs: Pkg[]): string {
     const ia = GROUP_ORDER.indexOf(a)
     const ib = GROUP_ORDER.indexOf(b)
     const na = ia === -1 ? Number.MAX_SAFE_INTEGER : ia
-    const nb = ib !== -1 ? ib : Number.MAX_SAFE_INTEGER
+    const nb = ib === -1 ? Number.MAX_SAFE_INTEGER : ib
     return na - nb || a.localeCompare(b)
   })
   const groupBlocks: string[] = []

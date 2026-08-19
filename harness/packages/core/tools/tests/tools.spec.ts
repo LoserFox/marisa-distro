@@ -1,10 +1,10 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { createUserMessage, CallId, HarnessError, type ContentBlock  } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import ApprovalService, { type ApprovalOutcome, type ApprovalRequest } from '@deepseek-ai/dsh-user-approval'
-import ToolRegistry, {
+import ToolRuntime, {
   defineContentToolFixture, defineTool, JsonSchemaError, parameterSchemaSpecToJsonSchema, validateArgs, ToolArgsError, ToolNotFoundError,
   TOOL_ABORTED, TOOL_ABORTED_BEFORE_DISPATCH,
   type InferArgs, type JsonValue, type ParameterSchemaSpec, type PreToolDecision, type PostToolDecision,
@@ -16,7 +16,7 @@ const testToolSignal = new AbortController().signal
 async function setup() {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   return ctx
 }
 
@@ -33,7 +33,7 @@ const echoTool = defineTool({
   },
 })
 
-describe('ToolRegistry', () => {
+describe('ToolRuntime', () => {
   it('registers tools, exposes schemas, and feeds the system-prompt assembly', async () => {
     const ctx = await setup()
     ctx.tools.register(echoTool)
@@ -907,6 +907,25 @@ describe('ToolRegistry', () => {
     })
   })
 
+  it('keeps the normalized content when the final content transform returns undefined', async () => {
+    const ctx = await setup()
+    let finalized = 0
+    ctx.tools.register({
+      ...echoTool,
+      name: 'identity-finalizer',
+      finalizeContent() {
+        finalized += 1
+        return undefined
+      },
+    })
+
+    const result = await ctx.tools.execute({ signal: testToolSignal, callId: CallId('identity-finalizer'), name: 'identity-finalizer', arguments: {} })
+
+    expect(result.isError).toBe(false)
+    expect(result.content).toEqual([{ type: 'text', text: '' }])
+    expect(finalized).toBe(1)
+  })
+
   it('a block decision can ALSO attach additionalContexts', async () => {
     const ctx = await setup()
     ctx.tools.register(echoTool)
@@ -1068,7 +1087,7 @@ describe('ToolRegistry', () => {
 
     const result = await ctx.tools.execute({ signal: testToolSignal, callId: CallId('c1'), name: 'traced', arguments: { text: 'hi' } })
     expect(result).toEqual({ content: [{ type: 'text', text: 'hi' }], isError: false, value: [{ type: 'text', text: 'hi' }] })
-    // The around seam wraps dispatch; pre gates before it, post runs over its result.
+    // The around-dispatch extension point wraps dispatch; pre gates before it, post runs over its result.
     expect(order).toEqual(['pre', 'execute:before', 'dispatch', 'execute:after', 'post'])
   })
 
@@ -1646,7 +1665,7 @@ describe('ToolRegistry', () => {
     const result = await ctx.tools.execute({ signal: testToolSignal, callId: CallId('c1'), name: 'echo', arguments: { text: 'hi' } })
     expect(result.isError).toBe(true)
     expect(result.content[0]).toMatchObject({ text: 'Error: nope' })
-    expect(entered).toBe(false) // a denied call never enters the around-dispatch seam
+    expect(entered).toBe(false) // A denied call never enters the around-dispatch extension point.
   })
 
   it('a thrown tool is normalized to an isError result BEFORE a tools/execute listener sees next()', async () => {
@@ -1804,7 +1823,7 @@ describe('ToolRegistry', () => {
       signal: testToolSignal, callId: CallId('cached-second'), name: 'object-output', arguments: {},
     })
 
-    expect(!first.isError ? first.value : undefined).toBe('cached')
+    expect(first.isError ? undefined : first.value).toBe('cached')
     expect(objectBodyRan).toBe(false)
     expect(second).toMatchObject({
       isError: true,
@@ -2430,7 +2449,7 @@ describe('schema DSL optional and nested contracts', () => {
   })
 })
 
-describe('ToolRegistry.get', () => {
+describe('ToolRuntime.get', () => {
   it('get() returns the registered tool definition', async () => {
     const ctx = await setup()
     ctx.tools.register(echoTool)

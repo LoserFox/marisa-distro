@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-07-31-fail-loud-releases-the-terminal.md
-2026-07-31-fail-loud-releases-the-terminal.md: 2a6e7fcbbdd5d35bcf70dee09fdb9e5592486b78
-2026-07-31-fail-loud-releases-the-terminal.zh.md: f75c21cf79b241e6714c10ec7df9ac25f3d978b4
+2026-07-31-fail-loud-releases-the-terminal.md: d5a97d73ec60897a3a40f3c99417e43de190af9c
+2026-07-31-fail-loud-releases-the-terminal.zh.md: 3de0a038fd644d13a6953333e772878858ae6875

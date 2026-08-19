@@ -6,11 +6,11 @@ The [`dsh-code-review`](../../.agents/skills/dsh-code-review/SKILL.md) skill is 
 
 ## What the maintainer receives
 
-Run the private tool daily with a two-UTC-day overlap; until the proposed scheduler has completed its acceptance run, the operator invokes the wrapper manually at the same cadence. A manual weekly recovery run uses a seven-day window. The workflow:
+The operator invokes the wrapper manually, daily with a two-UTC-day overlap; a manual weekly recovery run uses a seven-day window. The workflow:
 
 1. It selects PRs merged in the chosen window (default two UTC days for the daily cadence, seven for weekly) whose merge commit is reachable from `origin/master`. PRs whose merge commit is not reachable (stacked branches whose parent was squashed) or that exceed a 250-commit acquisition cap are logged to `skipped-pulls.json` and skipped rather than aborting the run.
 2. It collects pre-merge human review feedback with commit anchors (inline comments and review submissions), then compares feedback-time and final landed PR patches. It does not acquire PR conversation comments because current GitHub state cannot give them a force-push-safe feedback-time baseline, and it excludes target-branch-only changes from adoption evidence.
-3. Two independently configured reviewer adapters classify provenance and adoption, then classify agreed-adopted items against the current skill.
+3. Two independently configured reviewer adapters classify who wrote each item and whether the change adopted it, then classify agreed-adopted items against the current skill.
 4. The primary adapter drafts a complete revised `SKILL.md`; both adapters review the same diff; blocking findings loop until both approve.
 5. `pnpm run doc-sync` and `pnpm run lint` run against the candidate before the tool declares success.
 
@@ -20,7 +20,7 @@ Each run stores its artifacts on the operator's machine. The saved diff, candida
 
 When a run produces a candidate, a macOS notification arrives with a `dsh-code-review-promote <timestamp>` hint.
 
-1. **Read the diff on its own merits.** Do not defer to "the reviewers approved" — the maintainer contract is that the operator is the final judgment. Look for checklist bloat, historical prose, unsupported extrapolation from a single incident, and duplicated coverage with existing skill or authoritative-doc content.
+1. **Read the diff on its own merits.** Do not defer to "the reviewers approved"; the maintainer contract is that the operator makes the final decision. Look for checklist bloat, historical prose, unsupported extrapolation from a single incident, and duplicated coverage with existing skill or authoritative-doc content.
 
    ```sh
    ls ~/dsh-code-review-outputs/                         # every candidate ever produced
@@ -38,7 +38,7 @@ When a run produces a candidate, a macOS notification arrives with a `dsh-code-r
      rm ~/dsh-code-review-outputs/2026-07-16T02-00-00Z.{diff,SKILL.md,manifest.json}
      ```
    - **Batch.** Keep the candidate aside if the update is small and could combine with a future one. The source-skill check still applies; rerun the analysis or manually rebase and re-review the diff if `master` changes first.
-   - **Promote.** From a clean `master` checkout of the repo, run the promote helper. It refreshes `master`, verifies that the current skill matches the recorded source blob, applies the saved diff, and opens a draft PR whose body carries the manifest's provenance summary. It stops on skill drift rather than overwriting newer guidance; the operator still reviews the PR on GitHub and either merges it or closes it.
+   - **Promote.** From a clean `master` checkout of the repo, run the promote helper. It refreshes `master`, verifies that the current skill matches the recorded source blob, applies the saved diff, and opens a draft PR whose body lists the source feedback URLs or IDs, landed commit range, originating run, checks, and operator edits. It stops on skill drift rather than overwriting newer guidance; the operator still reviews the PR on GitHub and either merges it or closes it.
 
      ```sh
      cd ~/path/to/deepseek-harness   # clean master

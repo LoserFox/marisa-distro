@@ -10,8 +10,8 @@
  * @module @deepseek-ai/dsh-subagent-dsh-sdk
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { SubagentCapabilities, SubagentProvider, SubagentStartRequest } from '@deepseek-ai/dsh-subagent'
 import { assertPositiveFinite, NO_START_CAPABILITIES, resolveChildCwd, validateConfiguredCwd } from '@deepseek-ai/dsh-subagent'
 import {
@@ -90,7 +90,7 @@ type ResolvedConfig = Required<Omit<Config, 'cwd' | 'maxTokens'>> & Pick<Config,
  * child cannot honor `outputSchema`/`maxDepth`/`toolFilter`/`persona` (the
  * service rejects a request needing any of them before `start` runs).
  */
-class SdkProvider implements SubagentProvider {
+class SdkSubagentProvider implements SubagentProvider {
   readonly capabilities: SubagentCapabilities = NO_START_CAPABILITIES
   // Context contract: an out-of-process SDK child starts fresh — no parent conversation crosses the process boundary.
   readonly inheritsParentContext = false
@@ -104,7 +104,7 @@ class SdkProvider implements SubagentProvider {
       cwd: resolveChildCwd('subagent-dsh-sdk', this.config.cwd, request.parent.session.header.cwd),
       provider: this.config.provider,
       model: this.config.model,
-      ...this.config.maxTokens !== undefined ? { maxTokens: this.config.maxTokens } : {},
+      ...this.config.maxTokens === undefined ? {} : { maxTokens: this.config.maxTokens },
       env: this.config.env,
       shutdownTimeoutMs: this.config.shutdownTimeoutMs,
       disposeEofGraceMs: this.config.disposeEofGraceMs,
@@ -134,5 +134,5 @@ export function apply(ctx: Context, config: Config): void {
   const validated: ResolvedConfig = configuredCwd === undefined
     ? resolved
     : { ...resolved, cwd: configuredCwd }
-  ctx.subagents.registerProvider(new SdkProvider(validated.providerName, ctx, validated))
+  ctx.subagents.registerProvider(new SdkSubagentProvider(validated.providerName, ctx, validated))
 }

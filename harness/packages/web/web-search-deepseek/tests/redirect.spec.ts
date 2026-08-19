@@ -8,6 +8,12 @@ import { createServer, type IncomingMessage, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { DeepSeekSearchProvider } from '@deepseek-ai/dsh-web-search-deepseek'
 
+/** Construct the provider over a fixed options value; production passes a live thunk. */
+import type { DeepSeekSearchProviderOptions } from '@deepseek-ai/dsh-web-search-deepseek'
+
+const searchProvider = (options: DeepSeekSearchProviderOptions): DeepSeekSearchProvider =>
+  new DeepSeekSearchProvider(() => options)
+
 const TEST_API_KEY = 'redirect-test-key'
 const TEST_QUERY = 'private redirect query'
 const targetRequests: ReceivedRequest[] = []
@@ -46,7 +52,7 @@ afterAll(async () => {
 describe('DeepSeekSearchProvider redirect policy', () => {
   it.each([301, 302, 303, 307, 308])('rejects HTTP %i before contacting Location', async (status) => {
     targetRequests.length = 0
-    const provider = new DeepSeekSearchProvider({
+    const provider = searchProvider({
       apiKey: TEST_API_KEY,
       baseURL: `${redirectOrigin}/${status}`,
       model: 'deepseek-chat',
@@ -110,7 +116,7 @@ async function listen(server: Server): Promise<string> {
 
 /** Close a listening fixture server after every request has settled. */
 async function close(server: Server): Promise<void> {
-  if (!server.listening) { return }
+  if (!server.listening) return
   await new Promise<void>((resolve, reject) => server.close((error) => {
     if (error === undefined) resolve()
     else reject(error)

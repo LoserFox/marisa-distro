@@ -5,7 +5,7 @@
  * pinned CLI contracts into stable data.
  * @module dsh-vision-toolkit/upstream
  */
-import type { Context } from 'cordis';
+import type { Context } from '@deepseek-ai/cordis';
 import type { SubprocessOutcome } from '@deepseek-ai/dsh-subprocess';
 import type { ResolvedVisionToolkitConfig } from './config.ts';
 import { VisionToolkitError } from './errors.ts';
@@ -17,6 +17,10 @@ export interface UpstreamEnvironment {
     VISION_API_KEY: string;
     VISION_BASE_URL: string;
     VISION_MODEL: string;
+    VISION_API_PROTOCOL: 'chat_completions' | 'anthropic';
+    VISION_ANTHROPIC_THINKING: 'omit' | 'disabled' | 'adaptive';
+    VISION_SSL_VERIFY?: string;
+    VISION_USER_AGENT: string;
     LANG: 'zh' | 'en';
 }
 /** Pinned upstream identity plus prepared runtime facts. */
@@ -137,6 +141,20 @@ export interface HtmlScreenshotOutput {
     outputPath: string;
     width: number;
     height: number;
+    pageHeight?: number;
+}
+/** Result of one automatic Pillow compression pass for an oversized image. */
+export interface CompressedImageInfo {
+    bytes: number;
+    width: number;
+    height: number;
+    format: 'png' | 'jpeg' | 'gif' | 'webp';
+    mode: string;
+    lossy: boolean;
+    resized: boolean;
+    candidate: string;
+    /** True when the source image had multiple animation frames. */
+    sourceAnimated: boolean;
 }
 /** Parse one numbered upstream location line (`N. position label x1: ..., ...`). */
 export declare function parseLocationLine(line: string): LocatedElement | undefined;
@@ -181,6 +199,14 @@ export declare class UpstreamAdapter {
         format: string;
         mode: string;
     }>;
+    /**
+     * Auto-compress one oversized image under the configured byte and pixel
+     * budgets. The Pillow helper prefers lossless re-encodes, then quality
+     * reduction, and only downscales when neither can reach the budget.
+     */
+    compressImage(sourcePath: string, destPath: string, maxBytes: number, maxPixels: number, options: {
+        signal: AbortSignal;
+    }): Promise<CompressedImageInfo>;
     private runPythonCode;
     /** Draw validated pixel boxes and labels into a PNG preview with Pillow. */
     renderAnnotatedPreview(imagePath: string, outputPath: string, elements: readonly LocatedElement[], options: {

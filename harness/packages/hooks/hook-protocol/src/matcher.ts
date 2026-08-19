@@ -37,7 +37,7 @@ function compileRegex(pattern: string): RegExp | undefined {
 export function matcherDiagnostic(matcher: string | undefined, mode: MatcherMode): string | undefined {
   if (isMatchAll(matcher)) return undefined
   const pattern = matcher as string
-  if (mode === 'claude' && CLAUDE_LITERAL.test(pattern)) return undefined
+  if (mode === 'claude-code' && CLAUDE_LITERAL.test(pattern)) return undefined
   return compileRegex(pattern) === undefined
     ? `invalid ${mode} regex matcher ${JSON.stringify(pattern)}`
     : undefined
@@ -58,6 +58,8 @@ export function matchesMatcher(matcher: string | undefined, query: string, mode:
   if (isMatchAll(matcher)) return true
   // matcher is a non-empty string past the match-all guard.
   const pattern = matcher as string
-  if (mode === 'claude' && CLAUDE_LITERAL.test(pattern)) return pattern.split('|').includes(query)
+  if (mode === 'claude-code' && CLAUDE_LITERAL.test(pattern)) {
+    return pattern.split('|').includes(query)
+  }
   return compileRegex(pattern)?.test(query) ?? false
 }

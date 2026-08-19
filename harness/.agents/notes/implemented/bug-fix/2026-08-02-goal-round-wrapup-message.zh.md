@@ -18,13 +18,13 @@ Goal Round 的 `complete` 或 `blocked` 成功不再调用 `concludeTurn()`。�
 
 ## 验证
 
-`tool-goal` 包测试钉住两个终态 action 注入的上下文（source、标签、objective、禁止再调工具条款）与不存在的 `concludesTurn`，以及人类直接 pause 与 complete 的不注入路径，文件覆盖率 100%。`llm-replay` 单元测试钉住占位符契约：最后一次匹配取胜的捕获、无捕获组时整体匹配回退，以及未匹配、非法、未闭合模式的明确报错。新增 keyless ACP 快照 `goal-wrapup` 驱动成品应用走完 create → 第一轮 → 自主 complete，并在持久会话日志与 ACP stdout 流中同时断言 plugin 来源的收尾注入、同轮内的收尾 assistant 消息与 `completed` 轮次结束。
+`tool-goal` 包测试钉住两个终态 action 注入的上下文（source、标签、objective、禁止再调工具条款）与不存在的 `concludesTurn`，以及人类直接 pause 与 complete 的不注入路径，文件覆盖率 100%。`llm-replay` 单元测试钉住占位符约定：最后一次匹配取胜的捕获、无捕获组时整体匹配回退，以及未匹配、非法、未闭合模式的明确报错。新增 keyless ACP 快照 `goal-wrapup` 驱动成品应用走完 create → 第一轮 → 自主 complete，并在持久会话日志与 ACP stdout 流中同时断言 plugin 来源的收尾注入、同轮内的收尾 assistant 消息与 `completed` 轮次结束。
 
 ## 曾考虑的替代方案
 
 - **在 `update_goal` 的 UI 卡片上展示完成文本** — 拒绝：`complete` 如今不携带任何自由文本；新增 `summary` 参数会让面向用户的汇报走工具参数通道，而且依然砍掉了模型在结果之后的自然发言。
 - **保留 `concludeTurn()` 并新增“再多一步纯文本”的 loop 原语** — 拒绝：为常规停止路径已经能提供的行为（只要没有结果终结轮次）增加新的 `agent-loop` 机制。
-- **把指令写进工具结果内容** — 拒绝：goal 工具的规范输出是被程序化消费的紧凑 JSON；在其中混入散文指令会把模型侧契约和工具的可回放值搅在一起。
+- **把指令写进工具结果内容** — 拒绝：goal 工具的规范输出是被程序化消费的紧凑 JSON；在其中混入散文指令会把模型侧约定和工具的可回放值搅在一起。
 
 ## Consequences
 

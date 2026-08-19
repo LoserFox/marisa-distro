@@ -63,7 +63,7 @@ function topoSort(packages: PackageGraphNode[], groupOrder: readonly string[], g
   while (remaining.size > 0) {
     const ready = [...remaining.values()]
       .filter(pkg => pkg.deps.every(dep => placed.has(dep)))
-      .sort((a, b) => { return comparePackages(a, b, groupOrder) })
+      .sort((a, b) => comparePackages(a, b, groupOrder))
     if (ready.length === 0) throw new Error(`${gate}: dependency cycle among ${[...remaining.keys()].join(', ')}`)
     for (const pkg of ready) {
       out.push(pkg)

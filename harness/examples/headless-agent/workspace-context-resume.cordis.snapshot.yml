@@ -29,7 +29,7 @@
     skills:
       enabled: false
     toolBash: false
-    toolTasks: false
+    toolJobs: false
     goals: false
 
 # Await the persisted resume before the headless driver inspects root agents.

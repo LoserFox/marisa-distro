@@ -10,7 +10,7 @@ The desktop GUI asks users to type an absolute path when they add an existing wo
 
 ## Decision
 
-Add a single-folder `host.pickDirectory` RPC and expose it through `WorkspacesService`. The workspace menu presents the flat **Add workspace...** action (two actions when this was decided — **Open local folder...** beside a create-by-name entry the [one-route Note](../simplification/2026-07-31-one-route-to-add-a-workspace.md) later removed). Selecting a folder reuses the existing `workspace.create({ path })` flow, selects the returned workspace, and starts a blank session.
+Add a single-folder `host.pickDirectory` RPC and expose it through `WorkspaceRuntime`. The workspace menu presents the flat **Add workspace...** action (two actions when this was decided — **Open local folder...** beside a create-by-name entry the [one-route Note](../simplification/2026-07-31-one-route-to-add-a-workspace.md) later removed). Selecting a folder reuses the existing `workspace.create({ path })` flow, selects the returned workspace, and starts a blank session.
 
 The workspace manager must upsert the returned workspace before the selection callback runs. A newly adopted directory therefore renders its basename immediately. Reopening an already registered path preserves its existing workspace title.
 

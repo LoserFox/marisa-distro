@@ -1,12 +1,12 @@
 /**
- * Execute command hooks through `ctx.bash`, using its credential scrub,
+ * Execute command hooks through `ctx.shell`, using its credential scrub,
  * process-group cancellation, and timeout machinery. The bridge supplies the
  * trusted stdin payload and dialect environment, then this module decodes the
  * captured outcome.
  * @module @deepseek-ai/dsh-hook-protocol/runner
  */
 
-import type { BashExecutor } from '@deepseek-ai/dsh-bash'
+import type { ShellExecutor } from '@deepseek-ai/dsh-shell'
 import { parseHookOutput } from './codec.ts'
 import type { CommandHook, HookOutput } from './types.ts'
 
@@ -15,7 +15,7 @@ import type { CommandHook, HookOutput } from './types.ts'
  * Claude Code and Codex apply to a hook whose config sets no `timeout`. It
  * lives here, once, as the protocol's default; the bridges' `defaultTimeoutMs`
  * config defaults to it, and a per-hook {@link CommandHook.timeoutSec} is the
- * override surface.
+ * override API.
  */
 export const DEFAULT_HOOK_TIMEOUT_MS = 600_000
 
@@ -58,14 +58,14 @@ export interface RunHookResult {
  * timeout in seconds overrides the default; trusted environment entries merge
  * after the executor scrub. Infrastructure rejection becomes an outcome with
  * no exit code, so this function never throws or crashes the calling turn.
- * @param bash - the executor seam the command runs through.
+ * @param bash - The executor service the command runs through.
  * @param hook - the configured command; its `timeoutSec` (wire unit: seconds) overrides the default timeout.
  * @param options - the invocation's payload, env, cwd, signal, stdin framing, and default timeout.
  * @param now - millisecond clock used for the reported duration.
  * @returns the decoded output plus the run's wall-clock duration.
  */
 export async function runHook(
-  bash: BashExecutor,
+  bash: ShellExecutor,
   hook: CommandHook,
   options: RunHookOptions,
   now: () => number,
@@ -85,7 +85,7 @@ export async function runHook(
 
   try {
     const result = await bash.run(bash.resolve(request))
-    // BashRunResult.exitCode is `number | null` (null = died by signal); the
+    // ShellRunResult.exitCode is `number | null` (null = died by signal); the
     // protocol's exit-code contract is numeric, so a signal death maps to
     // `undefined` (a non-blocking error — no clean exit code to act on).
     const exitCode = result.exitCode ?? undefined

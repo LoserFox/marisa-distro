@@ -8,7 +8,7 @@
  * `keyof SlotMap & string` is the declare-merge key pattern: SlotMap is empty
  * in this compilation unit (intersection reads `never`) but consumers merge
  * keys in; the rule fires on the empty-map view, not on real redundancy. */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { SlotMap } from '@deepseek-ai/dsh-client-ui-slots'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
@@ -27,7 +27,7 @@ export const inject = ['invariants']
  */
 const install: InvariantInstaller = (ctx, fail) => {
   ctx.on('internal/dispatch', (_mode, eventName, args) => {
-    if (eventName !== 'slots/changed') { return }
+    if (eventName !== 'slots/changed') return
     const key: unknown = args[0]
     if (typeof key !== 'string' || key === '') {
       fail("'slots/changed' dispatched without a slot key argument")

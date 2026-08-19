@@ -1,10 +1,10 @@
 import { describe, expect, expectTypeOf, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import type { Events } from 'cordis'
-import { createScope } from '@deepseek-ai/dsh-scope'
+import { Context } from '@deepseek-ai/cordis'
+import type { Events } from '@deepseek-ai/cordis'
+import { bindScopeParent, createScope } from '@deepseek-ai/dsh-scope'
 import type { Scope } from '@deepseek-ai/dsh-scope'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import type { PreToolDecision, ToolDefinition, ToolExecution, ToolExecutionInput, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 
@@ -17,7 +17,7 @@ const testToolSignal = new AbortController().signal
 async function mount(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt, {})
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   return ctx
 }
 
@@ -181,21 +181,84 @@ describe('restrict()', () => {
     expect(ctx.tools.schemas(key).map(t => t.name)).toEqual(['b'])
   })
 
-  it('fails loud on an unscoped call, an empty filter, and non-global names', async () => {
+  it('fails loud on an unscoped call, an empty filter, and names it does not inherit', async () => {
     const ctx = await mount()
     const { scope } = await mintAgentScope(ctx, 'a')
     ctx.tools.register(tool('real'))
     scope.ctx.tools.register(tool('local'))
     expect(() => ctx.tools.restrict({ deny: ['real'] })).toThrow(/requires a scoped context/)
     expect(() => scope.ctx.tools.restrict({})).toThrow(/no-op/)
+    // A scope's own registration is exempt from its own filter, so naming it
+    // is a caller error rather than a silent no-op.
     expect(() => scope.ctx.tools.restrict({ allow: ['local'] })).toThrow(/unknown global tool "local"/)
-    expect(() => scope.ctx.tools.restrict({ allow: ['reall'] })).toThrow(/unknown global tool "reall"; known global tools: real/)
+    expect(() => scope.ctx.tools.restrict({ allow: ['reall'] })).toThrow(/unknown global tool "reall".*known global tools: real/s)
     expect(() => scope.ctx.tools.restrict({ deny: ['ghost', 'wraith'] })).toThrow(/unknown global tools "ghost", "wraith"/)
 
     const emptyCtx = await mount()
     const { scope: emptyScope } = await mintAgentScope(emptyCtx, 'empty')
     expect(() => emptyScope.ctx.tools.restrict({ deny: ['ghost'] }))
       .toThrow(/known global tools: \(none\)/)
+  })
+})
+
+describe('restrict() over an inherited scope layer', () => {
+  /** Mint a child scope parented to `parent`, as a subagent's creation window does. */
+  async function mintChild(ctx: Context, parentKey: Agent, name: string): Promise<{ scope: Scope; key: Agent }> {
+    const key = { id: name as SessionId } as Agent
+    bindScopeParent(key, parentKey)
+    let scope!: Scope
+    await ctx.plugin(Object.assign((inner: Context) => { scope = createScope(inner, key) },
+      { inject: ['tools', 'systemPrompt'] }))
+    return { scope, key }
+  }
+
+  it('filters tools the child inherits from an ancestor scope, not only global ones', async () => {
+    // The shape every preset deployment has: no model-facing row in the global
+    // layer, all of them contributed by an ancestor scope the child joined.
+    const ctx = await mount()
+    const parent = await mintAgentScope(ctx, 'parent')
+    parent.scope.ctx.tools.register(tool('bash'))
+    parent.scope.ctx.tools.register(tool('read'))
+    const child = await mintChild(ctx, parent.key, 'child')
+
+    expect(ctx.tools.schemas(child.key).map(t => t.name).sort()).toEqual(['bash', 'read'])
+    child.scope.ctx.tools.restrict({ deny: ['bash'] })
+
+    // Reading the exempt set as "the global layer" left this unfiltered, and
+    // the name unrestrictable in the first place.
+    expect(ctx.tools.schemas(child.key).map(t => t.name)).toEqual(['read'])
+    expect(await run(ctx, 'bash', child.key)).toBe('Error: unknown tool "bash"')
+    // The ancestor keeps its whole surface: a child's filter is its own.
+    expect(ctx.tools.schemas(parent.key).map(t => t.name).sort()).toEqual(['bash', 'read'])
+  })
+
+  it('keeps the child\'s own registrations outside its own filter', async () => {
+    // The delegation runtime registers a child's reporting and structured
+    // output tools into the child's own layer; an `allow` naming only the
+    // capabilities the child may use must not strip them.
+    const ctx = await mount()
+    const parent = await mintAgentScope(ctx, 'parent')
+    parent.scope.ctx.tools.register(tool('bash'))
+    parent.scope.ctx.tools.register(tool('read'))
+    const child = await mintChild(ctx, parent.key, 'child')
+    child.scope.ctx.tools.register(tool('report'))
+
+    child.scope.ctx.tools.restrict({ allow: ['read'] })
+
+    expect(ctx.tools.schemas(child.key).map(t => t.name).sort()).toEqual(['read', 'report'])
+    expect(await run(ctx, 'report', child.key)).toBe('ran:report')
+  })
+
+  it('lets an ancestor\'s restriction reach every scope nested inside it', async () => {
+    const ctx = await mount()
+    ctx.tools.register(tool('web'))
+    const parent = await mintAgentScope(ctx, 'parent')
+    parent.scope.ctx.tools.register(tool('bash'))
+    const child = await mintChild(ctx, parent.key, 'child')
+    parent.scope.ctx.tools.restrict({ deny: ['web'] })
+
+    expect(ctx.tools.schemas(child.key).map(t => t.name)).toEqual(['bash'])
+    expect(ctx.tools.schemas(parent.key).map(t => t.name)).toEqual(['bash'])
   })
 })
 
@@ -271,7 +334,7 @@ describe('scoped execution dispatch', () => {
 
   it('live-iterates a guard registered by an earlier guard', async () => {
     const ctx = await mount()
-    const calls: Array<string> = []
+    const calls: string[] = []
     let added = false
     ctx.tools.register(tool('t'))
     ctx.tools.guard(() => {
@@ -468,7 +531,7 @@ describe('scoped execution dispatch', () => {
       signal: testToolSignal,
       get parent(): ToolExecutionToken | undefined {
         parentReads += 1
-        return parentReads !== 1 ? forged : undefined
+        return parentReads === 1 ? undefined : forged
       },
     } as ToolExecutionInput
 

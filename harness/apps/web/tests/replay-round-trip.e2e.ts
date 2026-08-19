@@ -1,6 +1,6 @@
 // Web e2e scenario: fresh round trip. A real chromium types a prompt into the
 // real composer; the wire, apiproxy, agent loop, and the REAL bash tool (echo
-// in the temp workspace) all run; the model seam is dsh-llm-replay (keyless)
+// in the temp workspace) all run; the model adapter is dsh-llm-replay (keyless)
 // or the live adapter (record). Drive steps run in every mode and wait only
 // on generic completion (whenTurnSettled — never model-content selectors, so
 // record cannot hang on a live model answering differently); assertion steps
@@ -43,7 +43,7 @@ describe('web e2e: fresh round trip through the real assembly', () => {
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({
-      ...(MODE !== 'record' ? { replayFixture: FIXTURE, paceMs: 15 } : {}),
+      ...(MODE === 'record' ? {} : { replayFixture: FIXTURE, paceMs: 15 }),
     })
     scaffold.ctx.on('session/event', (_session, event: SessionEvent) => { sessionEvents.push(event) })
     browser = await chromium.launch()
@@ -101,14 +101,14 @@ describe('web e2e: fresh round trip through the real assembly', () => {
       callId: CallId('web-url-probe'),
       name: 'bash',
       arguments: {
-        command: 'printf \'%s\\n%s\\n\' "$DSH_WEB_URL" "$DSH_WEB_MODE"',
+        command: 'printf \'%s\\n\' "$DSH_WEB_URL"',
         description: 'Print current Web runtime',
       },
       agent,
     })
     expect(result.isError).toBe(false)
     expect(result.content.filter(block => block.type === 'text').map(block => block.text).join(''))
-      .toBe(`${scaffold.baseUrl}\nproduction\n`)
+      .toBe(`${scaffold.baseUrl}\n`)
   })
 
   it.skipIf(MODE === 'record')('rendered the settled turn: markdown, tool row, composer restore', async () => {
@@ -122,7 +122,7 @@ describe('web e2e: fresh round trip through the real assembly', () => {
     // World state, not self-report: the real bash executor returned the exact
     // command output, and the turn closed cleanly.
     const bashCall = sessionEvents.find(event => event.type === 'tool/call' && event.data.name === 'bash')
-    if (bashCall?.type !== 'tool/call') { throw new Error('the replayed turn did not call the bash tool') }
+    if (bashCall?.type !== 'tool/call') throw new Error('the replayed turn did not call the bash tool')
     const bashResult = sessionEvents.find(event =>
       event.type === 'tool/result' && event.data.message.source.callId === bashCall.data.callId)
     if (bashResult?.type !== 'tool/result') throw new Error('the bash tool call produced no durable result')

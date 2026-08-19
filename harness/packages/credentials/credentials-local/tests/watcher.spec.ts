@@ -1,10 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { CredentialsLocal } from '../src/index.ts'
+import { LocalCredentialProvider } from '../src/index.ts'
+
+const fsHarness = vi.hoisted(() => ({
+  nextReadError: undefined as NodeJS.ErrnoException | undefined,
+}))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...actual,
+    readFile: (async (path: unknown, ...rest: never[]) => {
+      const error = fsHarness.nextReadError
+      if (error !== undefined) {
+        fsHarness.nextReadError = undefined
+        throw error
+      }
+      return (actual.readFile as (path: unknown, ...args: never[]) => Promise<unknown>)(path, ...rest)
+    }) as typeof actual.readFile,
+  }
+})
 
 /** Credential documents are seeded owner-only, exactly as the provider creates them. */
 function writeCredentials(file: string, text: string): Promise<void> {
@@ -48,6 +67,7 @@ const KEY = credentialRef('DSH_CRED_PIPE')
 const cleanups: Array<() => Promise<void>> = []
 
 afterEach(async () => {
+  fsHarness.nextReadError = undefined
   while (cleanups.length > 0) await cleanups.pop()!()
   ;(await fakeInstances()).length = 0
 })
@@ -58,9 +78,9 @@ async function tempDir(): Promise<string> {
   return dir
 }
 
-async function boot(config: ConstructorParameters<typeof CredentialsLocal>[1]): Promise<Context> {
+async function boot(config: ConstructorParameters<typeof LocalCredentialProvider>[1]): Promise<Context> {
   const ctx = new Context()
-  const fiber = ctx.plugin(CredentialsLocal, config)
+  const fiber = ctx.plugin(LocalCredentialProvider, config)
   cleanups.push(async () => {
     await fiber.dispose()
   })
@@ -107,6 +127,21 @@ describe('watcher pipeline', () => {
     expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'good', source: 'file' })
   })
 
+  it('keeps the last good snapshot when the read fails after its permission check', async () => {
+    const dir = await tempDir()
+    const path = join(dir, '.credentials.yaml')
+    await writeCredentials(path, 'DSH_CRED_PIPE: good\n')
+    const ctx = await boot({ path, debounceMs: 5 })
+    fsHarness.nextReadError = Object.assign(new Error('EACCES: injected read failure'), { code: 'EACCES' })
+
+    const [instance] = await fakeInstances()
+    instance!.watcher.emit('all', 'change', path)
+    await vi.waitFor(() => {
+      expect(fsHarness.nextReadError).toBeUndefined()
+    })
+    expect(await ctx.credentials.resolve(KEY)).toEqual({ value: 'good', source: 'file' })
+  })
+
   it('keeps the reload queue alive after an invariant violation escapes the fan-out', async () => {
     const dir = await tempDir()
     const path = join(dir, '.credentials.yaml')
@@ -139,7 +174,7 @@ describe('watcher pipeline', () => {
     const path = join(dir, '.credentials.yaml')
     await writeCredentials(path, 'DSH_CRED_PIPE: initial\n')
     const ctx = new Context()
-    const fiber = ctx.plugin(CredentialsLocal, { path, debounceMs: 5 })
+    const fiber = ctx.plugin(LocalCredentialProvider, { path, debounceMs: 5 })
     await fiber
     let disposed = false
     let postDisposeCommits = 0
@@ -166,7 +201,7 @@ describe('watcher pipeline', () => {
     const path = join(dir, '.credentials.yaml')
     await writeCredentials(path, 'DSH_CRED_PIPE: doomed\n')
     const ctx = await boot({ path, debounceMs: 5 })
-    const seen: Array<string> = []
+    const seen: string[] = []
     ctx.on('credentials/updated', (ref) => {
       seen.push(ref)
     })
@@ -185,7 +220,7 @@ describe('watcher pipeline', () => {
     const path = join(dir, '.credentials.yaml')
     await writeCredentials(path, 'DSH_CRED_PIPE: a\n')
     const ctx = await boot({ path, debounceMs: 5 })
-    const seen: Array<string> = []
+    const seen: string[] = []
     ctx.on('credentials/updated', (ref) => {
       seen.push(ref)
     })

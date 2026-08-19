@@ -8,11 +8,11 @@
 
 ## 与专用搜索端点的区别
 
-Exa 和 Perplexity 提供专用搜索端点，DeepSeek 则没有。该提供方改为发起一次携带 `web_search` 服务器工具的**完整 Messages 模型调用**，因此一次搜索会消耗完整模型轮次的延迟与 token，比纯检索端点更重。DeepSeek 在服务器侧执行搜索，返回**结构化** `web_search_tool_result` 块；提供方解析这些块，**绝不会从模型文本中抓取 URL**。
+Exa 和 Perplexity 提供专用搜索端点，DeepSeek 则没有。该提供方改为发起一次携带 `web_search` 服务器工具的**完整 Messages 模型调用**，因此一次搜索会产生完整模型轮次的延迟与 token 开销，比纯检索端点更重。DeepSeek 在服务器侧执行搜索，返回**结构化** `web_search_tool_result` 块；提供方解析这些块，**绝不会从模型文本中抓取 URL**。
 
-**严格模式**：如果响应不含 `web_search_tool_result` 块（未触发原生搜索），提供方会抛出 `WebError` `WEB_PROVIDER_ERROR`，而非降级为文本抓取；这种行为诚实且可诊断。
+**严格模式**：如果响应不含 `web_search_tool_result` 块（未触发原生搜索），提供方会抛出 `WebError` `WEB_PROVIDER_ERROR`，而非降级为文本抓取。
 
-它复用 `DEEPSEEK_API_KEY` 凭据引用（不增加密钥），但**不会**复用 `$DEEPSEEK_BASE_URL`：搜索端点使用 Anthropic 兼容基址（`https://api.deepseek.com/anthropic/v1`），不同于大语言模型（LLM）适配器使用的 chat-completions 基址（`https://api.deepseek.com`）。已挂载的凭据服务具有权威性；没有该服务时，提供方会回退到启动进程的环境变量。每次搜索都会解析该引用，因此在 Web 的 Models 页中存储或轮换的密钥无需重启，即可用于下一次调用。
+它复用 `DEEPSEEK_API_KEY` 凭据引用（不增加密钥），但**不会**复用 `$DEEPSEEK_BASE_URL`：搜索端点使用 Anthropic 兼容基址（`https://api.deepseek.com/anthropic/v1`），不同于 LLM（大语言模型）适配器使用的 chat-completions 基址（`https://api.deepseek.com`）。已挂载的凭据服务具有权威性；没有该服务时，提供方会回退到启动进程的环境变量。每次搜索都会解析该引用，因此在 Web 的 Models 页中存储或轮换的密钥无需重启，即可用于下一次调用。
 
 ## 配置
 
@@ -34,9 +34,11 @@ Exa 和 Perplexity 提供专用搜索端点，DeepSeek 则没有。该提供方�
     baseURL: https://gateway.internal/anthropic/v1
 ```
 
+上面的条目是 `web-search-deepseek` Settings 段的 base 层：叠加其上的用户层会作用于**下一次**搜索，因为提供方是按次投影该段，而不是在注册时固化它。因此端点或模型变化时，seam 的提供方选择不会闪断。`apiKey` 带有 `role('secret')`，所以它在任何一层都不会出现在 `describe()` 响应中——配置表层只能知道 credentials 领域是否为 `apiKeyEnv` 所命名的引用持有值，而无从知道某一层是否带着字面密钥。
+
 ## 映射
 
-DeepSeek 不返回该提供方可作为 `content` 信任的提供方生成答案表层，因此省略 `content`。`sources[]` 来自 `web_search_result` 配置项，这些配置项位于 `web_search_tool_result` 块内：`url` ← `url`、`title` ← `title`、`publishedAt` ← `page_age`。`cited_text` 配置项按 URL 标识，单独位于文本块的 `citations[]` 中；提供方会将其作为 snippet 连接，没有摘录时省略 `snippet`。
+DeepSeek 返回的提供方生成答案均不被该提供方信任为 `content`，因此省略 `content`。`sources[]` 来自 `web_search_result` 条目，这些条目位于 `web_search_tool_result` 块内：`url` ← `url`、`title` ← `title`、`publishedAt` ← `page_age`。`cited_text` 条目按 URL 标识，单独位于文本块的 `citations[]` 中；提供方会按 URL 将它们关联到相应结果，没有摘录时省略 `snippet`。
 
 结果按 URL 去重，因为一次请求可能在多次搜索中呈现同一页面。DeepSeek 公开 `maxUses` 而非结果数量旋钮，因此 seam 会强制执行 `maxResults`：截断 `sources[]` 并设置 `truncated`。
 
@@ -79,6 +81,6 @@ DeepSeek 不返回该提供方可作为 `content` 信任的提供方生成答案
 ## 已知限制与暂缓事项
 
 - **一次搜索需要完整的 Messages 模型轮次**：会产生延迟与生成 token，并且最多执行 `maxUses` 次服务器侧搜索；DeepSeek 不公开专用检索端点。
-- **动态凭据的可用性在操作内部解析**：同步的 `available()` 契约可以确认解析器存在，但无法查询异步凭据存储。因此，选中的无密钥提供方会使搜索以 `WEB_PROVIDER_CREDENTIAL_MISSING` 失败；稳定的 `web_search` schema 仍保持注册。调用方取消在本地与该预检存在竞态，但无法强制任意凭据后端自行停止工作。
+- **动态凭据的可用性在操作内部解析**：同步的 `available()` 约定可以确认解析器存在，但无法查询异步凭据存储。因此，选中的无密钥提供方会使搜索以 `WEB_PROVIDER_CREDENTIAL_MISSING` 失败；稳定的 `web_search` schema 仍保持注册。调用方取消在本地与该预检存在竞态，但无法强制任意凭据后端自行停止工作。
 - **超量返回的源仍消耗 token**：协议没有结果数量旋钮，`maxResults` 只能由 seam 在事后截断。
 - **未引用的结果没有 `snippet`**：只有 `text` 块中的引用（`cited_text`）匹配其 URL 时，源才会获得 snippet。

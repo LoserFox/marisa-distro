@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 
-describe('Session TypeRT provider', () => {
+describe('Session Typert provider', () => {
   it('contributes live Session lookup in either service load order', async () => {
     const ctx = new Context()
     const sessionFiber = ctx.plugin(SessionStore)

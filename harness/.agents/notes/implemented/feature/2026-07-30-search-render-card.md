@@ -18,7 +18,7 @@ The discriminant is `shape`, not `kind`, deliberately: the same presentation mod
 
 One view with two shapes rather than two cards, because both tools are the same visual object — a search result — and a web consumer switches on one `card` value, then on `shape` for the row layout. The discriminated `shape` keeps each variant's fields non-optional (a matches view always has `files`, a paths view always has `paths`) instead of a single interface where every shape-specific field is optional.
 
-The view carries **no** result text. An earlier revision attached the model-facing `result.content` to the view; that was a no-op because consumer fallbacks already read the raw `tool/result` content, and it serialized the whole search text a second time into the persisted view. The view is the structured shape only; a UI without a search card falls back to the raw result content.
+The view carries **no** result text. Attaching the model-facing `result.content` would be a no-op — consumer fallbacks already read the raw `tool/result` content — and would serialize the whole search text a second time into the persisted view. The view is the structured shape only; a UI without a search card falls back to the raw result content.
 
 The card tag is result-time only. A search call stays a `GenericCallView` (`kind: 'search'`): the pending state has no matches or paths to show, so there is nothing a `SearchCallView` would carry that the generic title does not. This is the asymmetry with the terminal card, whose call view carries the command, cwd, and description that exist before execution; a search's structured content exists only after `execute`.
 
@@ -30,7 +30,7 @@ The card tag is result-time only. A search call stays a `GenericCallView` (`kind
 
 The `SearchMeta` member shapes are object-literal `type` aliases, not the `SearchFileMatches`/`SearchLineMatch` interfaces the view exposes, because only a type alias is assignable to the `JsonValue` index signature `presentationMeta` returns; the two are structurally identical, so the projected value still reads back as a `SearchResultView`.
 
-A consumer without a dedicated `search` arm falls back to the same generic body and reads the model-facing text from the raw result. Because the search view carries no `content` of its own and grep/glob returned a generic card before this PR, that fallback stays byte-identical to the pre-search-card path. The frontend that renders the structured `files`/`paths` shape is independent of this backend contract and its two producers.
+A consumer without a dedicated `search` arm falls back to the same generic body and reads the model-facing text from the raw result. Because the search view carries no `content` of its own and grep/glob previously returned a generic card, that fallback stays byte-identical to the pre-search-card path. The frontend that renders the structured `files`/`paths` shape is independent of this backend contract and its two producers.
 
 ## Alternatives considered
 
@@ -40,7 +40,7 @@ A consumer without a dedicated `search` arm falls back to the same generic body 
 
 **Attach the model-facing text as the view's `content`.** Rejected: a no-op for every current consumer and a second serialization of the whole search text into the persisted view. The view is the structured shape; text fallback reads the raw result content.
 
-**A meta channel on `PostToolDecision` so `dsh-spill-policy` bounds `meta` like it bounds `content`.** Rejected for this PR: it changes the core tool decision contract and the spill-policy plugin for one tool's payload. The projection bounding its own `meta` at a config byte cap is self-contained and keeps the seam unchanged.
+**A meta channel on `PostToolDecision` so `dsh-spill-policy` bounds `meta` like it bounds `content`.** Rejected here: it changes the core tool decision contract and the spill-policy plugin for one tool's payload. The projection bounding its own `meta` at a config byte cap is self-contained and keeps the seam unchanged.
 
 **A call-time `SearchCallView` mirroring the terminal card's both-sides symmetry.** Rejected: a search call has no matches or paths before `execute`, so the view would carry only the title the `GenericCallView` already carries.
 

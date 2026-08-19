@@ -1,18 +1,18 @@
 /**
  * Web shell boot kernel — the face consumed by the apps/web entry. Everything
  * here is machinery that cannot itself be a loader entry, and none of it
- * value-imports a plugin package (web2 shell self-sufficiency rule: the
+ * value-imports a plugin package (shell self-sufficiency rule: the
  * loading page must work while — especially when — plugins fail). The one
- * sanctioned exception is the modules package (design §4.7 bootstrap
+ * sanctioned exception is the modules package (bootstrap
  * identity): the module system cannot arrive through itself, so its class
  * and its client-half wrapper are shell-bundled and the kernel adopts its
  * plugin entry once cordis is up.
  *
  * AppWebEntry.run(), module face first, then plugin face: parse
- * `window.__DSH_BOOT__` into the two-view BootManifest (wire boundary, D16)
+ * `window.__DSH_BOOT__` into the two-view BootManifest (wire boundary)
  * → build the module system over the module-view rows → render the loading
  * page → prefetch every `immediately` row in parallel with mounting the
- * vendored cordis Loader (internal-seam injection BEFORE any entry exists —
+ * vendored cordis Loader (`internal` contract injection BEFORE any entry exists —
  * the bare-import fallback in tree.import must never run in a browser) →
  * await the prefetch tier, THEN adopt the modules entry and create one
  * loader entry per plugin-view row plus the shell-own app-shell assembly
@@ -32,8 +32,8 @@
  * decisions (the app-shell assembly is itself a graph entry, the only
  * shell-own module registered with the module system).
  */
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { createRoot, type Root } from 'react-dom/client'
 import * as ModulesClient from '@deepseek-ai/dsh-client-modules/client'
 import {
@@ -47,7 +47,7 @@ import { getStaticModules } from './seed.ts'
 import { STATE_LABELS, createLoaderStatusStore, createSignal } from './loader-status.ts'
 import './base.css'
 
-/** Module transport seam the shell passes through (jsdom tests replace the <script> path). */
+/** Module transport hook the shell passes through (jsdom tests replace the <script> path). */
 export type BootSeams = Pick<ClientModuleSystemOptions, 'loadBundle'>
 
 /**
@@ -80,7 +80,7 @@ export class AppWebEntry {
   /**
    * Hold the mount point; all work happens in {@link run}.
    * @param el - mount point (the app's #root).
-   * @param seams - optional module transport overrides (test environments).
+   * @param seams - Optional module transport overrides for test environments.
    */
   constructor(el: HTMLElement, seams?: BootSeams) {
     this.el = el
@@ -101,9 +101,9 @@ export class AppWebEntry {
       modules: this.manifest.modules, staticModules: getStaticModules(), ...this.seams,
     })
     // The app-shell assembly is the only shell-own module: every other graph
-    // row is a plugin bundle arriving through fetch (web2 single package form).
+    // row is a plugin bundle arriving through fetch.
     this.modules.registerStatic(APP_SHELL_ID, AppShell)
-    // Adoption handoff, supply side (design §4.7): register the modules
+    // Adoption handoff, supply side: register the modules
     // package's own client half under its bare package name (= graph row id
     // = entry name — a suffixed key would miss the statics branch and
     // trigger a real fetch), and put the instance on the kernel slot the
@@ -157,7 +157,7 @@ export class AppWebEntry {
       })))
   }
 
-  /** Plugin face: mount the Loader, inject the internal seam, adopt modules, create the graph entries, settle, sweep. */
+  /** Plugin face: mount the Loader, inject the `internal` contract, adopt modules, create the graph entries, settle, sweep. */
   private async runPluginBoot(prefetching: Promise<void>): Promise<void> {
     const ctx = this.ctx
     await ctx.plugin(Loader)
@@ -172,7 +172,7 @@ export class AppWebEntry {
     // fiber (child plugin fibers share the same entry).
     ctx.on('internal/status', (fiber) => {
       const entry = fiber.entry
-      if (entry === undefined || entry.fiber === undefined) { return }
+      if (entry === undefined || entry.fiber === undefined) return
       this.status.set(entry.options.name, STATE_LABELS[entry.fiber.state])
     })
 
@@ -215,7 +215,7 @@ export class AppWebEntry {
    */
   private assertEntriesActive(): void {
     const ctx = this.ctx
-    const failures: Array<string> = []
+    const failures: string[] = []
     for (const entry of ctx.loader.entries()) {
       const name = entry.options.name
       if (entry.fiber === undefined) {

@@ -12,8 +12,8 @@
 import { mkdir, opendir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join, posix, resolve, win32 } from 'node:path'
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import {
   DirectoryPicker, DirectoryPickerError,
 } from '@deepseek-ai/dsh-host-directory-picker'
@@ -253,7 +253,7 @@ export default class BrowseDirectoryPicker extends DirectoryPicker {
       try {
         for (;;) {
           const dirent = await raceAbort(level.read(), signal)
-          if (dirent === null) { break }
+          if (dirent === null) break
           // Only rows a browser could enter contend for the window; dirent
           // says "directory" outright, a symlink needs the later stat probe.
           if (!dirent.isDirectory() && !dirent.isSymbolicLink()) continue

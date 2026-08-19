@@ -2,7 +2,7 @@
 # the auxiliary route consumes replay.override.json with pacing so its accepted
 # title commits only after the main turn has closed.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -42,7 +42,7 @@
                   models:
                     - id: title-model
           - id: session-title-provider
-            name: '@deepseek-ai/dsh-session-title-first-message-llm'
+            name: '@deepseek-ai/dsh-session-title-first-prompt-llm'
             config:
               targetWords: 5
               targetCjkCharacters: 10

@@ -1,7 +1,7 @@
 # Keyless runner-classification composition: replay authored model turns and
 # replace the shipping provider with a deterministic process-launch stand-in.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:

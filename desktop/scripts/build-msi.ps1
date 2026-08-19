@@ -1,6 +1,6 @@
 param(
   [string]$SourceExe = (Join-Path $PSScriptRoot '..\..\release\marisa-desktop-msi.exe'),
-  [string]$BackendZip = (Join-Path $PSScriptRoot '..\bundle\backend.zip'),
+  [string]$BackendZip = (Join-Path $PSScriptRoot '..\bundle\backend.tar.zst'),
   [string]$Output = (Join-Path $PSScriptRoot '..\..\release\Marisa-DSH-0.1.0-x64.msi'),
   [string]$Version = '0.1.0'
 )

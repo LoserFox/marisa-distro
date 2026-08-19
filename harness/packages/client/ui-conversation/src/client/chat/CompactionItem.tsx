@@ -3,7 +3,7 @@
 // marker reports where the model stopped seeing that history — it never
 // replaces it. The framed checkpoint payload is written for the model and is
 // not rendered; the disclosure shows the summary from the checkpoint's own
-// provenance, and a window cut that left that provenance outside makes the row
+// cited `compaction/summary` event, and a window cut that left that event outside makes the row
 // non-expandable rather than empty.
 
 import { memo, useState } from 'react'

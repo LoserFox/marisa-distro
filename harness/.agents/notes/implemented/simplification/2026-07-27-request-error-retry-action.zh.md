@@ -26,4 +26,4 @@ waterfall 结算后，循环读取该动作，关闭失败轮次，并从持久�
 
 恢复归属、异步修复和重试决策共用一条类型化返回路径。活跃 agent 接口与具体循环不再具有空闲无提示词再运行能力和重试窗口状态。调用方如果不提交后续提示词，就无法重启任意失败的非请求工作；瞬时策略与上下文溢出策略则保留编号重试轮次、从持久历史重建、有限的策略私有预算和取消优先级。
 
-聚焦的 agent-loop 测试固定了重试链、未处理失败保持终态、恢复失败和取消竞态。llm-retry 与 compact-basic 测试套件固定其策略自有的动作返回，而 ACP（Agent Client Protocol）、goal-session 和 plan-mode 集成测试固定后继轮次承接。
+聚焦的 agent-loop 测试固定了重试链、未处理失败保持终态、恢复失败和取消竞态。llm-retry 与 compaction-basic 测试套件固定其策略自有的动作返回，而 ACP（Agent Client Protocol）、goal-round-driver 和 plan-mode 集成测试固定后继轮次承接。

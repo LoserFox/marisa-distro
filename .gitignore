@@ -14,3 +14,12 @@ desktop/.git/
 # 本地启动器和平台构建缓存。
 harness/bin/dsh.cmd
 desktop/build/
+
+# 内嵌后端 bundle（286MB）与解包/临时杂项
+desktop/bundle/backend.tar.zst
+.tmp/
+.tmp-*/
+desktop/.jprobe/
+parse_out.txt
+*.bak-rc6sync
+dsh-mygo/.git/

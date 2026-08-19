@@ -9,10 +9,19 @@
   ],
   "references": [
     {
+      "path": "../../attachment/attachment"
+    },
+    {
+      "path": "../../util/brand"
+    },
+    {
       "path": "../../../vendor/cordis"
     },
     {
       "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-attachment"
     },
     {
       "path": "../ui-primitives"
@@ -24,10 +33,25 @@
       "path": "../runtime"
     },
     {
-      "path": "../../session-projection/session-projection"
+      "path": "../../core/agent"
+    },
+    {
+      "path": "../../core/tools"
+    },
+    {
+      "path": "../../interaction/commands"
+    },
+    {
+      "path": "../../session/session-projection"
+    },
+    {
+      "path": "../../session/session-stats"
     },
     {
       "path": "../../llm/token-meter"
+    },
+    {
+      "path": "../../llm/llm-retry"
     },
     {
       "path": "../../plan/plan-mode"
@@ -39,7 +63,7 @@
       "path": "../../todo/tool-todo"
     },
     {
-      "path": "../ui-slash"
+      "path": "../ui-input-trigger"
     },
     {
       "path": "../ui-layout"
@@ -48,10 +72,16 @@
       "path": "../locale"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../settings/settings"
     },
     {
-      "path": "../../ui/permission"
+      "path": "../../runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../interaction/permission-presets"
+    },
+    {
+      "path": "../ui-settings"
     }
   ],
   "exclude": [

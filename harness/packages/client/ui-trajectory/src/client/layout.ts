@@ -5,6 +5,7 @@
 import type {
   AssistantBlock,
   AssistantMessageNode,
+  ConversationLocation,
   ConversationSnapshot,
   RequestInspectionSnapshot,
   RequestPromptChange,
@@ -12,7 +13,6 @@ import type {
   ToolCallBlock,
   ToolResultNode,
 } from '@deepseek-ai/dsh-client-runtime/client'
-import { extractMarkdownPlainText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   TrajectoryCellProps,
   TrajectorySourceBlock,
@@ -35,6 +35,7 @@ export interface TrajectoryTurnModel {
 /** Snapshot slice the trajectory view folds. */
 export interface TrajectoryLayoutInput {
   nodes: ConversationSnapshot['nodes']
+  eventLocations?: ReadonlyMap<number, ConversationLocation>
   partial: ConversationSnapshot['partial']
   runningCalls: ConversationSnapshot['runningCalls']
   requests?: readonly RequestView[]
@@ -70,12 +71,9 @@ interface TurnBucket {
 type AssistantRequestView = Extract<RequestView, { purpose: 'assistant' }>
 type CompactionRequestView = Extract<RequestView, { purpose: 'compaction' }>
 
-const PREVIEW_SOURCE_CHARACTERS = 2_048
-const PREVIEW_OUTPUT_CHARACTERS = 512
-
 type InputNode = Extract<
   ConversationSnapshot['nodes'][number],
-  { kind: 'user' | 'context' }
+  { kind: 'user' | 'steering' | 'context' }
 >
 
 type OrderedLayoutEntry =
@@ -110,10 +108,19 @@ function layoutEntryOrder(entry: OrderedLayoutEntry): number {
 
 function inputCellDetail(node: InputNode): Pick<
   TrajectoryCellProps,
-  'text' | 'sourceSeq' | 'messageSource' | 'inputDetail' | 'sourceBlocks' | 'timeSeconds' | 'startedAt'
+  | 'text'
+  | 'previewMarkdown'
+  | 'sourceSeq'
+  | 'messageSource'
+  | 'inputDetail'
+  | 'sourceBlocks'
+  | 'timeSeconds'
+  | 'startedAt'
 > {
+  const previewMarkdown = previewContent(node.content)
   return {
-    text: summarizeContent(node.content),
+    text: '',
+    ...(previewMarkdown === undefined ? {} : { previewMarkdown }),
     sourceSeq: node.seq,
     messageSource: node.source,
     inputDetail: detailContent(node.content),
@@ -130,12 +137,13 @@ function inputCellDetail(node: InputNode): Pick<
  */
 export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly TrajectoryTurnModel[] {
   const {
-    nodes, partial, runningCalls, requests = [], callSchemas,
+    nodes, eventLocations, partial, runningCalls, requests = [], callSchemas,
   } = input
   const resultByCall = indexResults(nodes)
   const callById = new Map<string, ToolCallBlock>(resultByCall)
   for (const call of runningCalls) callById.set(call.callId, call)
   const emittedCallIds = indexAssistantCallIds(nodes)
+  const followingAssistants = indexFollowingAssistants(nodes)
   const callStartById = new Map<string, number>()
   for (const result of resultByCall.values()) {
     const startedAt = finiteTime(result.callTime)
@@ -179,6 +187,19 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
       return
     }
     groups.push({ title, laid: [...laid] })
+  }
+  const pushStepInput = (turn: number, step: number, laid: readonly LaidCell[]) => {
+    if (laid.length === 0) return
+    const groups = bucket(turn).groups
+    const title = `Step ${step}`
+    const existing = groups.find(group => group.title === title)
+    if (existing === undefined) {
+      groups.push({ title, laid: [...laid] })
+      return
+    }
+    const request = existing.laid.findIndex(entry => entry.cell.requestOnly === true)
+    if (request === -1) existing.laid.push(...laid)
+    else existing.laid.splice(request, 0, ...laid)
   }
 
   const representedRequests = new Set<string>()
@@ -293,7 +314,10 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
             ? request.error ?? 'Compaction failed'
             : request.summary === undefined
               ? 'Context compacted'
-              : summarizeContent(request.summary),
+              : '',
+        ...(request.status === 'complete' && request.summary !== undefined
+          ? previewContentProperty(request.summary)
+          : {}),
         sourceSeq: request.startSeq,
         ...(request.summary === undefined
           ? {}
@@ -330,7 +354,7 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
     if (node.kind === 'user') {
       // user/message has no turn on the wire; enclose it in the next assistant
       // (or partial) turn, else open the turn after the last assistant.
-      const turn = enclosingUserTurn(nodes, i, partial, lastAssistantTurn)
+      const turn = enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
       pushMessage(turn, {
         absTime: finiteTime(node.time),
         cell: {
@@ -340,6 +364,26 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
           opensTurn: true,
         },
       })
+      prevAbsTime = finiteTime(node.time) ?? prevAbsTime
+      continue
+    }
+    if (node.kind === 'steering') {
+      const placement = steeringPlacement(
+        followingAssistants[i],
+        partial,
+        lastAssistantTurn,
+        eventLocations?.get(node.seq),
+      )
+      const laid = {
+        absTime: finiteTime(node.time),
+        cell: {
+          index: ++index,
+          kind: 'user' as const,
+          ...inputCellDetail(node),
+        },
+      }
+      if (placement.step === undefined) pushMessage(placement.turn, laid)
+      else pushStepInput(placement.turn, placement.step, [laid])
       prevAbsTime = finiteTime(node.time) ?? prevAbsTime
       continue
     }
@@ -356,7 +400,7 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
       continue
     }
     if (node.kind === 'context') {
-      const turn = enclosingUserTurn(nodes, i, partial, lastAssistantTurn)
+      const turn = enclosingUserTurn(followingAssistants[i], partial, lastAssistantTurn)
       pushMessage(turn, {
         absTime: finiteTime(node.time),
         cell: {
@@ -377,6 +421,7 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
     if (node.kind === 'tool-result') {
       if (!emittedCallIds.has(node.callId)) {
         const toolName = node.call?.name
+        const resultPreview = summarizeResult(node)
         const laidList: LaidCell[] = [{
           absTime: finiteTime(node.callTime ?? node.time),
           ...(toolName !== undefined ? { toolName } : {}),
@@ -386,13 +431,13 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
             index: ++index,
             kind: 'tool',
             sourceSeq: node.seq,
-            text: node.call !== null
+            ...(node.call !== null
               ? summarizeCall(node.call.name, node.call.argsRaw)
-              : summarizeResult(node),
+              : resultAsText(resultPreview)),
             ...(node.call !== null ? { inputDetail: node.call.argsRaw } : {}),
             outputDetail: detailResult(node),
             outputBlocks: node.content.map(block => sourceBlock(block)),
-            result: summarizeResult(node),
+            ...resultPreview,
             callId: node.callId,
             isError: node.isError,
             timeSeconds: durationSeconds(node.time, node.callTime),
@@ -440,7 +485,7 @@ export function deriveTrajectoryLayout(input: TrajectoryLayoutInput): readonly T
       cell: {
         index: ++index,
         kind: 'tool',
-        text: summarizeCall(call.name, call.argsRaw),
+        ...summarizeCall(call.name, call.argsRaw),
         inputDetail: call.argsRaw,
         callId: call.callId,
         timeSeconds: null,
@@ -650,11 +695,14 @@ function expandAssistant(
     recordId: `assistant\u0000${node.turn}\u0000${node.step}`,
     kind: 'message',
     sourceSeq: node.seq,
-    text: messageText !== ''
-      ? summarizeText(messageText)
+    text: messageText !== '' || thinkingText !== ''
+      ? ''
+      : summarizeAssistantActivity(node.blocks),
+    ...(messageText !== ''
+      ? { previewMarkdown: messageText }
       : thinkingText !== ''
-        ? summarizeText(thinkingText)
-        : summarizeAssistantActivity(node.blocks),
+        ? { previewMarkdown: thinkingText }
+        : {}),
     ...(messageText !== '' ? { outputDetail: messageText } : {}),
     ...(thinkingText !== '' ? { thinkingDetail: thinkingText } : {}),
     sourceBlocks: node.blocks.map(block => assistantSourceBlock(block)),
@@ -681,6 +729,7 @@ function expandAssistant(
       : durationSeconds(result.time, result.callTime)
     const callAbs = finiteTime(callStarts.get(block.callId))
     const call = calls.get(block.callId)
+    const resultPreview = result === undefined ? undefined : summarizeResult(result)
     out.push({
       absTime: callAbs,
       toolName: block.name,
@@ -688,14 +737,14 @@ function expandAssistant(
       ...(call === undefined ? {} : { subCalls: call.subCalls }),
       cell: {
         index: ++index, kind: 'tool',
-        text: summarizeCall(block.name, block.argsRaw),
+        ...summarizeCall(block.name, block.argsRaw),
         inputDetail: block.argsRaw,
         callId: block.callId,
         ...(result !== undefined
           ? {
             outputDetail: detailResult(result),
             outputBlocks: result.content.map(block => sourceBlock(block)),
-            result: summarizeResult(result),
+            ...resultPreview,
             isError: result.isError,
           }
           : {}),
@@ -735,6 +784,12 @@ function assistantSourceBlock(block: AssistantBlock): TrajectorySourceBlock {
       content: block.argsRaw,
       callId: block.callId,
       toolName: block.name,
+    }
+    // Attachment refs carry no fetchable bytes, so the record shows the
+    // durable metadata instead of an inline preview.
+    case 'image': return {
+      type: 'image',
+      content: stringifySourceValue(block.attachment),
     }
     case 'other': return sourceBlock(block.block)
   }
@@ -802,20 +857,51 @@ function stringifySourceValue(value: unknown): string {
  * in-flight partial, else the turn after the last finalized assistant (or 1).
  */
 function enclosingUserTurn(
-  nodes: ConversationSnapshot['nodes'],
-  userIndex: number,
+  followingAssistant: AssistantMessageNode | undefined,
   partial: ConversationSnapshot['partial'],
   lastAssistantTurn: number | null,
 ): number {
-  for (let i = userIndex + 1; i < nodes.length; i++) {
-    const n = nodes[i]
-    /* v8 ignore next -- dense-array guard: i stays within nodes.length, so the undefined arm needs a sparse array no caller builds. */
-    if (n === undefined) continue
-    if (n.kind === 'assistant') return n.turn
-  }
+  if (followingAssistant !== undefined) return followingAssistant.turn
   if (partial !== null) return partial.turn
   if (lastAssistantTurn !== null) return lastAssistantTurn + 1
   return 1
+}
+
+function steeringPlacement(
+  followingAssistant: AssistantMessageNode | undefined,
+  partial: ConversationSnapshot['partial'],
+  lastAssistantTurn: number | null,
+  location: ConversationLocation | undefined,
+): { turn: number; step?: number } {
+  if (location?.kind === 'step') {
+    return { turn: location.turn.turn, step: location.step.step }
+  }
+  const locatedTurn = location?.kind === 'turn' ? location.turn.turn : undefined
+  if (followingAssistant !== undefined
+    && (locatedTurn === undefined || followingAssistant.turn === locatedTurn)) {
+    return {
+      turn: followingAssistant.turn,
+      ...(followingAssistant.step > 0 ? { step: followingAssistant.step } : {}),
+    }
+  }
+  if (partial !== null && (locatedTurn === undefined || partial.turn === locatedTurn)) {
+    return { turn: partial.turn, ...(partial.step > 0 ? { step: partial.step } : {}) }
+  }
+  if (locatedTurn !== undefined) return { turn: locatedTurn }
+  return { turn: lastAssistantTurn ?? 1 }
+}
+
+function indexFollowingAssistants(
+  nodes: ConversationSnapshot['nodes'],
+): readonly (AssistantMessageNode | undefined)[] {
+  const following = new Array<AssistantMessageNode | undefined>(nodes.length)
+  let assistant: AssistantMessageNode | undefined
+  for (let index = nodes.length - 1; index >= 0; index--) {
+    following[index] = assistant
+    const node = nodes[index]
+    if (node?.kind === 'assistant') assistant = node
+  }
+  return following
 }
 
 function enclosingPromptTurn(
@@ -913,6 +999,7 @@ function expandSubCalls(
   let index = startIndex
   for (const sub of subs) {
     const settled = 'kind' in sub
+    const resultPreview = settled ? summarizeResult(sub) : undefined
     const laid: LaidCell = {
       absTime: settled ? finiteTime(sub.callTime ?? sub.time) : finiteTime(sub.time),
       toolName: settled ? sub.call?.name ?? sub.callId : sub.name,
@@ -921,9 +1008,11 @@ function expandSubCalls(
         index: ++index,
         kind: 'subtool',
         callId: sub.callId,
-        text: settled
-          ? (sub.call !== null ? summarizeCall(sub.call.name, sub.call.argsRaw) : summarizeResult(sub))
-          : summarizeCall(sub.name, sub.argsRaw),
+        ...(settled
+          ? (sub.call !== null
+            ? summarizeCall(sub.call.name, sub.call.argsRaw)
+            : resultAsText(resultPreview))
+          : summarizeCall(sub.name, sub.argsRaw)),
         ...(settled
           ? (sub.call !== null ? { inputDetail: sub.call.argsRaw } : {})
           : { inputDetail: sub.argsRaw }),
@@ -931,12 +1020,12 @@ function expandSubCalls(
           ? {
             outputDetail: detailResult(sub),
             outputBlocks: sub.content.map(block => sourceBlock(block)),
-            result: summarizeResult(sub),
+            ...resultPreview,
             isError: sub.isError,
           }
           : {}),
-        // PR3's start/settle pair carries per-sub-call wall time; a running
-        // (unsettled) or pre-pair log entry shows the em dash.
+        // The code-dispatch start/settle pair carries per-sub-call wall time;
+        // a running (unsettled) or pre-pair log entry shows the em dash.
         timeSeconds: settled ? durationSeconds(sub.time, sub.callTime) : null,
         startedAt: settled
           ? finiteTime(sub.callTime)
@@ -952,22 +1041,39 @@ function expandSubCalls(
   return out
 }
 
-function summarizeCall(name: string, argsRaw: string): string {
-  const args = trajectoryPreviewText(argsRaw)
-  if (args === '') return name
-  return `${name} · ${args}`
+function summarizeCall(
+  name: string,
+  argsRaw: string,
+): Pick<TrajectoryCellProps, 'text' | 'previewMarkdown'> {
+  return {
+    text: name,
+    ...(argsRaw === '' ? {} : { previewMarkdown: argsRaw }),
+  }
 }
 
-function summarizeResult(node: ToolResultNode): string {
+function summarizeResult(
+  node: ToolResultNode,
+): Pick<TrajectoryCellProps, 'result' | 'resultPreviewMarkdown'> {
   if (node.isError) {
-    return node.error?.code ?? 'error'
+    return { result: node.error?.code ?? 'error' }
   }
   for (const block of node.content) {
     if (block.type === 'text' && typeof block.text === 'string' && block.text !== '') {
-      return summarizeText(block.text)
+      return { result: '', resultPreviewMarkdown: block.text }
     }
   }
-  return 'No output'
+  return { result: 'No output' }
+}
+
+function resultAsText(
+  result: Pick<TrajectoryCellProps, 'result' | 'resultPreviewMarkdown'> | undefined,
+): Pick<TrajectoryCellProps, 'text' | 'previewMarkdown'> {
+  return {
+    text: result?.result ?? '',
+    ...(result?.resultPreviewMarkdown === undefined
+      ? {}
+      : { previewMarkdown: result.resultPreviewMarkdown }),
+  }
 }
 
 function detailResult(node: ToolResultNode): string {
@@ -1003,28 +1109,18 @@ function detailReasoning(content: readonly { type: string; text?: string }[]): s
     .join('\n')
 }
 
-function summarizeContent(content: readonly { type: string; text?: string }[]): string {
+function previewContent(
+  content: readonly { type: string; text?: string }[],
+): string | undefined {
   for (const block of content) {
-    if (block.type === 'text' && typeof block.text === 'string') return summarizeText(block.text)
+    if (block.type === 'text' && typeof block.text === 'string') return block.text
   }
-  return ''
+  return undefined
 }
 
-function summarizeText(text: string): string {
-  return trajectoryPreviewText(text)
-}
-
-/**
- * Build a bounded one-line ledger preview without parsing the complete Markdown document.
- * Full source remains on the cell for the inspector.
- * @param text - Untrusted message, reasoning, payload, or result text.
- * @returns A compact preview capped independently from the retained source.
- */
-export function trajectoryPreviewText(text: string): string {
-  const source = text.slice(0, PREVIEW_SOURCE_CHARACTERS)
-  const compact = extractMarkdownPlainText(source).replace(/\s+/g, ' ').trim()
-  const preview = compact.slice(0, PREVIEW_OUTPUT_CHARACTERS).trimEnd()
-  return source.length < text.length || preview.length < compact.length
-    ? `${preview}…`
-    : preview
+function previewContentProperty(
+  content: readonly { type: string; text?: string }[],
+): Pick<TrajectoryCellProps, 'previewMarkdown'> {
+  const previewMarkdown = previewContent(content)
+  return previewMarkdown === undefined ? {} : { previewMarkdown }
 }

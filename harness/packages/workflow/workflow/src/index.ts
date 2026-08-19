@@ -1,19 +1,18 @@
 /**
- * Workflow capability seam. Implementations execute orchestration scripts;
+ * Service Definition for the workflow capability seam. Service Providers execute orchestration scripts;
  * observe-only lifecycle events never expose run control.
  * @module @deepseek-ai/dsh-workflow
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
   WorkflowResultInfo,
-  WorkflowRun,
   WorkflowRunInfo,
-  WorkflowStartRequest,
 } from './types.ts'
+import type { WorkflowRun, WorkflowStartRequest } from './runtime-types.ts'
 
 export { WorkflowRunId } from './types.ts'
 export type {
@@ -24,15 +23,14 @@ export type {
   WorkflowPhase,
   WorkflowResult,
   WorkflowResultInfo,
-  WorkflowRun,
   WorkflowRunInfo,
-  WorkflowStartRequest,
   WorkflowStopReason,
 } from './types.ts'
+export type { WorkflowRun, WorkflowStartRequest } from './runtime-types.ts'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    workflows: WorkflowService
+    workflowEngine: WorkflowEngine
   }
 
   interface Events {
@@ -92,7 +90,7 @@ declare module 'cordis' {
   }
 }
 
-/** The full set of `workflow/*` event names {@link WorkflowService.emitWorkflowEvent} dispatches. */
+/** The full set of `workflow/*` event names {@link WorkflowEngine.emitWorkflowEvent} dispatches. */
 export type WorkflowEventName =
   | 'workflow/start'
   | 'workflow/phase'
@@ -126,7 +124,7 @@ export type WorkflowErrorCode =
  * discipline: `parallel()`/`pipeline()` re-throw a fatal error (a typo'd
  * option or a tripped cap must kill the script loudly), and reserve the
  * per-item `null` for child-run failures and ordinary in-stage script errors.
- * Every {@link WorkflowErrorCode} is fatal in this cut; the flag exists so the
+ * Every {@link WorkflowErrorCode} is fatal; the flag exists so the
  * distinction is explicit at every catch site rather than implied.
  */
 export class WorkflowError extends HarnessError {
@@ -150,15 +148,15 @@ export function isFatalWorkflowError(error: unknown): boolean {
 }
 
 /**
- * Workflow execution seam. Invalid requests throw before publication; a live
+ * Workflow Service Definition contract. Invalid requests throw before publication; a live
  * run is holder-owned, its result never rejects, cancellation and disposal are
  * bounded, and disposal waits for child cleanup within that bound. Lifecycle
  * listener failures are contained, and `workflow/end` fires exactly once as the
  * result settles.
  */
-export abstract class WorkflowService extends Service {
+export abstract class WorkflowEngine extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'workflows')
+    super(ctx, 'workflowEngine')
   }
 
   /**
@@ -202,4 +200,4 @@ function renderListenerError(error: unknown): string {
   }
 }
 
-export default WorkflowService
+export default WorkflowEngine

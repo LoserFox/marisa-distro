@@ -8,6 +8,7 @@ import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client
 import type {
   A2aApiClient, A2aApiError, A2aApiResult, A2aProjectView, A2aSnapshot,
 } from '../api.ts'
+import type { PluginEventStream } from './event-stream.ts'
 
 /** Shared A2A state rendered by every browser surface. */
 export interface A2aDirectoryState {
@@ -28,7 +29,7 @@ export class A2aDirectory {
   private generation = 0
   private disposed = false
   private refreshQueued = false
-  private watchAbort: AbortController | undefined
+  private unsubscribeEvents: (() => void) | undefined
 
   /** React-compatible subscription without exposing an unbound store method. */
   readonly subscribe = (listener: () => void): (() => void) => this.store.subscribe(listener)
@@ -39,11 +40,18 @@ export class A2aDirectory {
   /**
    * @param a2a - typed A2A client over public Connection RPC.
    * @param sessionId - owning session.
+   * @param events - shared plugin-owned change stream (one socket for all sessions).
    */
   constructor(
     private readonly a2a: A2aApiClient,
     private readonly sessionId: SessionId,
-  ) {}
+    events: PluginEventStream,
+  ) {
+    this.unsubscribeEvents = events.subscribe((frame) => {
+      if (this.disposed) return
+      if (frame.scope === 'all' || frame.sessionId === this.sessionId) this.invalidate()
+    })
+  }
 
   /** Refresh the complete A2A state. */
   async load(): Promise<void> {
@@ -66,7 +74,6 @@ export class A2aDirectory {
       state.status = 'ready'
       state.error = null
     })
-    this.armWatch(result.value.revision)
   }
 
   /** Coalesce one Host invalidation into one authoritative refresh. */
@@ -107,8 +114,6 @@ export class A2aDirectory {
    */
   async createProject(name: string, displayName?: string): Promise<A2aProjectView | null> {
     const generation = ++this.generation
-    this.watchAbort?.abort()
-    this.watchAbort = undefined
     this.store.update((state) => { state.status = 'mutating'; state.error = null })
     const result = await this.a2a.projectCreate({
       name,
@@ -139,8 +144,6 @@ export class A2aDirectory {
   /** Host generation reset: discard stale state and re-baseline. */
   resetConnected(): void {
     if (this.disposed) return
-    this.watchAbort?.abort()
-    this.watchAbort = undefined
     ++this.generation
     this.refreshQueued = false
     this.store.update((state) => {
@@ -151,37 +154,19 @@ export class A2aDirectory {
     void this.load()
   }
 
-  /** Scope teardown prevents late responses from writing. */
+  /** Scope teardown drops the event subscription and prevents late writes. */
   dispose(): void {
     this.refreshQueued = false
-    this.watchAbort?.abort()
-    this.watchAbort = undefined
+    this.unsubscribeEvents?.()
+    this.unsubscribeEvents = undefined
     this.disposed = true
     ++this.generation
-  }
-
-  private armWatch(revision: number): void {
-    this.watchAbort?.abort()
-    const controller = new AbortController()
-    this.watchAbort = controller
-    void this.a2a.watch({ sessionId: this.sessionId, revision }, controller.signal).then((result) => {
-      if (this.disposed || this.watchAbort !== controller) return
-      this.watchAbort = undefined
-      if (!result.ok) return
-      if (result.value.revision === revision) this.armWatch(revision)
-      else this.invalidate()
-    }).catch(() => {
-      // An aborted or reset Connection call is recovered by resetConnected()
-      // or the existing focus/visibility refresh.
-    })
   }
 
   private async mutate(
     call: () => Promise<A2aApiResult<unknown>>,
   ): Promise<boolean> {
     const generation = ++this.generation
-    this.watchAbort?.abort()
-    this.watchAbort = undefined
     this.store.update((state) => { state.status = 'mutating'; state.error = null })
     const result = await call()
     if (this.disposed || generation !== this.generation) return false

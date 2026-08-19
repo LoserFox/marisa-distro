@@ -4,11 +4,11 @@ Status: implemented
 
 English | [中文](2026-07-26-code-mode-live-parallel-dispatch.zh.md)
 
-> Scope: the third PR of the Code Mode UI stack — the `tool/code-dispatch-start` event, per-sub-call running state in the web chat, and the bridge's scheduler reusing the native concurrency contract. Builds on the [host foundation](2026-07-26-code-dispatch-ui-foundation.md) and [chat sub-call rows](2026-07-26-code-mode-chat-subcall-rows.md); the native contract itself is owned by the [parallel tool-call note](2026-07-10-parallel-tool-call-execution.md).
+> Scope: the `tool/code-dispatch-start` event, per-sub-call running state in the web chat, and the bridge's scheduler reusing the native concurrency contract. Builds on the [host foundation](2026-07-26-code-dispatch-ui-foundation.md) and [chat sub-call rows](2026-07-26-code-mode-chat-subcall-rows.md); the native contract itself is owned by the [parallel tool-call note](2026-07-10-parallel-tool-call-execution.md).
 
 ## Problem
 
-Two gaps remained after the first two PRs. Sub-call rows appeared only when each dispatch *settled* — while one ran, the UI showed nothing for it, so a slow sub-call read as a stalled parent. And the bridge serialized every binding call ("even `Promise.all` executes one at a time"), a placeholder from before tools carried concurrency metadata: `isConcurrencySafe` now exists, the loop scheduler already runs native siblings in bounded pools, and a Code Mode program awaiting three independent reads paid 3× the latency the native path would.
+Two gaps remained after the host foundation and chat sub-call rows shipped. Sub-call rows appeared only when each dispatch *settled* — while one ran, the UI showed nothing for it, so a slow sub-call read as a stalled parent. And the bridge serialized every binding call ("even `Promise.all` executes one at a time"), a placeholder from before tools carried concurrency metadata: `isConcurrencySafe` now exists, the loop scheduler already runs native siblings in bounded pools, and a Code Mode program awaiting three independent reads paid 3× the latency the native path would.
 
 ## Decision
 
@@ -29,4 +29,4 @@ Two gaps remained after the first two PRs. Sub-call rows appeared only when each
 
 ## Consequences
 
-Programs get native-grade latency for independent reads with no new model-side API — `Promise.all` simply works better, and prompt guidance changed accordingly. The web UI shows per-sub-call running rings live (fixture emits start/settle pairs; jsdom pins the running shape; the runtime spec pins in-place settlement, out-of-order completion, and callTime pairing). PR6 (trajectory/waterfall spans) can now draw truthful spans from the pair's timing. The spill PR (next) inherits the settle event as its single bounding point.
+Programs get native-grade latency for independent reads with no new model-side API — `Promise.all` simply works better, and prompt guidance changed accordingly. The web UI shows per-sub-call running rings live (fixture emits start/settle pairs; jsdom pins the running shape; the runtime spec pins in-place settlement, out-of-order completion, and callTime pairing). Trajectory/waterfall sub-call spans draw truthful timing from the pair. Spill bounding ([code-dispatch log spill](2026-07-26-code-dispatch-log-spill.md)) inherits the settle event as its single bounding point.

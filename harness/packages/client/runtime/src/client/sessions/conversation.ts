@@ -1,18 +1,24 @@
 // ConversationSnapshot / ConversationNode: the only data shape the logic layer feeds the UI.
-// Immutability contract: every change swaps the top-level object; unchanged
-// substructures keep their references (the React.memo premise). callId/approvalId stay plain
-// string here (narrow to real brands when convenient).
+// Publication contract: every change swaps the top-level object; unchanged
+// substructures keep their references (the React.memo premise). Chat node and
+// Location stores are stable live readers, so old snapshots are not time-point
+// views. callId/approvalId stay plain string here (narrow to real brands when
+// convenient).
 
 import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm/types'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { LlmRetryEventData } from '@deepseek-ai/dsh-llm-retry/types'
 import type { TodoItem } from '@deepseek-ai/dsh-session/types'
 import type {
   RpcError, SessionId, SubagentAddress, ToolCallView, ToolResultView,
-} from '@deepseek-ai/dsh-client-connection/client'
+} from '@deepseek-ai/dsh-api-remotes/client'
 import type { PendingInteraction } from './pending.ts'
 import type { ContextProvenanceView, KnownContextForm } from './context-provenance.ts'
+import type {
+  ChatConversationViewNode, ConversationTimelineSnapshot, ConversationViewSnapshotStore,
+} from '../contract/conversation.ts'
 export type { TodoItem }
 
 /** Request configuration recorded for one provider call. */
@@ -38,6 +44,7 @@ export interface AssistantProvenanceView {
 export type AssistantBlock =
   | { kind: 'text'; text: string }
   | { kind: 'reasoning'; text: string }
+  | { kind: 'image'; attachment: ImageAttachmentRef }
   | { kind: 'tool-call'; callId: string; name: string; argsRaw: string }
   | { kind: 'other'; block: unknown }
 
@@ -59,6 +66,7 @@ export function toAssistantBlock(block: ContentBlock): AssistantBlock {
   switch (block.type) {
     case 'text': return { kind: 'text', text: block.text }
     case 'reasoning': return { kind: 'reasoning', text: block.text }
+    case 'image': return { kind: 'image', attachment: block.attachment }
     case 'tool-call': return { kind: 'tool-call', callId: String(block.id), name: block.name, argsRaw: block.arguments }
     default: return { kind: 'other', block }
   }
@@ -88,6 +96,12 @@ export interface AssistantTiming {
 export interface AssistantMessageNode {
   kind: 'assistant'
   seq: number
+  /**
+   * Stable identity of the finalized model output, carried from the
+   * `assistant/message` event. Absent on interruption-frozen partials: those
+   * were never finalized, so they address no durable message.
+   */
+  messageId?: MessageId
   /** Unix epoch ms from the source session event (or turn/end when frozen from a partial). */
   time: number
   turn: number
@@ -155,6 +169,17 @@ export interface TurnErrorNode {
   code?: string
 }
 
+/** Durable notice for a turn ended by the per-request output-token cap. */
+export interface TurnMaxTokensNode {
+  kind: 'turn-max-tokens'
+  /** Seq of the owning turn/end event. */
+  seq: number
+  /** Unix epoch ms from the turn/end event. */
+  time: number
+  turn: number
+  step: number
+}
+
 /** A tool result paired (when in-window) with its call head. */
 export interface ToolResultNode {
   kind: 'tool-result'
@@ -191,14 +216,14 @@ export interface CompactionSummaryNode {
   seq: number
   /** Unix epoch ms of the checkpoint event. */
   time: number
-  /** Summary text from the checkpoint's `compact/summary` provenance; null when
-   *  the window cut left that provenance outside (the marker is then not expandable). */
+  /** Summary text from the checkpoint's cited `compaction/summary` event; null when
+   *  the window cut left that event outside (the marker is then not expandable). */
   summary: string | null
-  /** Seq of the loaded `compact/summary` event, or null when that provenance is outside the window. */
+  /** Seq of the loaded `compaction/summary` event, or null when that event is outside the window. */
   summaryEventSeq: number | null
-  /** Number of surface items replaced, or null when summary provenance is unavailable or malformed. */
+  /** Number of surface items replaced, or null when the summary event is unavailable or malformed. */
   shadowedItemCount: number | null
-  /** Estimated token price of the replaced items, or null when summary provenance is unavailable or malformed. */
+  /** Estimated token price of the replaced items, or null when the summary event is unavailable or malformed. */
   shadowedTokenCount: number | null
 }
 
@@ -206,7 +231,7 @@ export interface CompactionSummaryNode {
  * Fallback for surface events this UI version does not know: the documented
  * default arm of `SessionEventMap`, which is merge-extensible, so the
  * projection's switch cannot end in `assertNever`. No event produces this node
- * today — `isAppendSurfaceEvent` admits only the four types in core's
+ * today — `isAppendSurfaceEvent` admits only the three types in core's
  * `SurfaceEventType`, and each has its own arm — and it exists so widening that
  * set core-side degrades to a raw row instead of dropping the event silently.
  */
@@ -222,8 +247,8 @@ export interface UnknownSurfaceNode {
 /**
  * One slash-command lifecycle folded from the log-only `command/run` /
  * `command/done` pair (paired by commandId, mirroring tool call↔result).
- * Log-only events are not surface events, so the TranscriptAdapter indexes
- * them separately and merges the nodes into the flow by seq. A window cut
+ * Log-only events are not surface events, so the command Definition indexes
+ * them separately and the Chat builder orders the resulting node by seq. A window cut
  * between the pair soft-falls like tool pairs: a done with no in-window run
  * still builds a node (name/args null), and a run with no done renders as
  * still executing.
@@ -260,6 +285,7 @@ export type ConversationNode =
   | ContextMessageNode
   | ModelRetryNode
   | TurnErrorNode
+  | TurnMaxTokensNode
   | ToolResultNode
   | CommandNode
   | CompactionSummaryNode
@@ -311,21 +337,20 @@ export type OpenState = 'cold' | 'loading' | 'open' | 'error'
  * Input-area shape of an OPEN session, derived at snapshot assembly (the one
  * place that knows the predicate — consumers switch, never re-derive):
  *
- * - `blank`: no activity ever (no nodes, no partial, not running, no pending
- *   waits, no prompt attempt) — the UI renders the blank-session guidance
- *   hero.
- * - `engaging`: the first prompt was initiated but no content landed yet —
- *   the UI holds the composer through the accept → running → first-event
- *   frames. Entered synchronously before prompt()'s first await.
- * - `active`: content exists (nodes, partial, running turn, or pending
- *   waits) — the ordinary conversation view.
+ * - `blank`: the authoritative blank bit is still set and no prompt was
+ *   attempted — the UI renders the blank-session guidance hero.
+ * - `engaging`: a first prompt was attempted, but no accepted turn or other
+ *   authoritative activity signal has arrived — the UI keeps the composer
+ *   visible through admission and error frames.
+ * - `active`: the session is non-blank beyond its pending first prompt,
+ *   contains visible non-command Chat content, is running, or owns a pending
+ *   interaction — the ordinary conversation view.
  *
- * Monotone within a session object: blank → engaging → active, no returns.
  * A failed first prompt stays `engaging` (composer + error strip — retry
- * semantics; bouncing back to the hero would discard the error context).
+ * semantics; returning to the hero would discard the error context).
  * Sessions whose window is not open (`loading`/`error`) are outside phase
  * jurisdiction: consumers branch on {@link ConversationSnapshot.openState}
- * first (phase still reports `active`-ish facts but must not be rendered).
+ * first.
  */
 export type ComposerPhase = 'blank' | 'engaging' | 'active'
 
@@ -335,10 +360,83 @@ export interface PromptError {
   error: RpcError
 }
 
+/**
+ * Stable live per-key reader. An old ChatSnapshot observes later flushes
+ * through this store.
+ */
+export interface ChatNodeStore {
+  /** @param key - stable Conversation Context key. @returns current Node, when visible or hidden. */
+  get(key: string): ChatConversationViewNode | undefined
+  /** @returns all currently materialized Nodes without imposing render order. */
+  values(): readonly ChatConversationViewNode[]
+}
+
+/**
+ * Stable live Location index. An old ChatSnapshot observes later membership
+ * changes through this index.
+ */
+export interface ChatLocationNodeIndex {
+  /** @param turn - owning turn. @returns ordered Chat Node keys in the turn. */
+  getTurn(turn: number): readonly string[]
+  /** @param turn - owning turn. @param step - owning step. @returns ordered Chat Node keys in the step. */
+  getStep(turn: number, step: number): readonly string[]
+}
+
+/** Compatibility projection backing StatsLine and the legacy top-level snapshot fields. */
+export interface LegacyConversationSlice {
+  readonly nodes: readonly ConversationNode[]
+  readonly turnTimings: ReadonlyMap<number, { readonly startTime: number; readonly endTime?: number }>
+  readonly turnEnds: ReadonlyMap<number, number>
+  readonly partial: PartialAssistant | null
+  readonly runningCalls: readonly RunningToolCall[]
+}
+
+/** Incremental Chat publication with immutable order and stable live keyed readers. */
+export interface ChatSnapshot {
+  readonly order: readonly string[]
+  readonly nodes: ChatNodeStore
+  readonly locations: ChatLocationNodeIndex
+  readonly timeline: ConversationTimelineSnapshot
+  readonly legacy: LegacyConversationSlice
+}
+
+const EMPTY_LIST: readonly never[] = []
+const EMPTY_TIMELINE: ConversationTimelineSnapshot = { turnOrder: EMPTY_LIST, turns: new Map() }
+
+/** Empty target store used by fixtures and Sessions without registered views. */
+export const EMPTY_CONVERSATION_VIEWS: ConversationViewSnapshotStore = {
+  get: () => undefined,
+}
+
+/** Empty Chat target used before a view builder is registered. */
+export const EMPTY_CHAT_SNAPSHOT: ChatSnapshot = {
+  order: EMPTY_LIST,
+  nodes: {
+    get: () => undefined,
+    values: () => EMPTY_LIST,
+  },
+  locations: {
+    getTurn: () => EMPTY_LIST,
+    getStep: () => EMPTY_LIST,
+  },
+  timeline: EMPTY_TIMELINE,
+  legacy: {
+    nodes: EMPTY_LIST,
+    turnTimings: new Map(),
+    turnEnds: new Map(),
+    partial: null,
+    runningCalls: EMPTY_LIST,
+  },
+}
+
 /** The immutable snapshot contract Session hands to uSES (see the web client architecture RFC). */
 export interface ConversationSnapshot {
   sessionId: SessionId
-  /** Human transcript plus retry notices and interrupted-turn terminal nodes in event order. */
+  /** Registered target snapshots assembled from Session events. */
+  views: ConversationViewSnapshotStore
+  /** Final Chat target assembled from independently registered business Definitions. */
+  chat: ChatSnapshot
+  /** Legacy top-level compatibility field mirrored from the registered Chat Definitions. */
   nodes: readonly ConversationNode[]
   /** Exact in-window `turn/start` time and optional matching `turn/end` time. */
   turnTimings: ReadonlyMap<number, { readonly startTime: number; readonly endTime?: number }>

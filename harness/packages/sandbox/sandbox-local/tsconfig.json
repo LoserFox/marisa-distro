@@ -27,7 +27,13 @@
       "path": "../sandbox"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../sandbox-windows-acl"
+    },
+    {
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Client Tool presentation plugin. `ui-conversation` supplies one ordered root call through `conversation.chat.tool`; this package renders that root and its Code Dispatch children, then dispatches every atomic call through the keyed `tool.call.toolview` slot. Unregistered Tool names use the generic card.
+Client Tool presentation plugin. `ui-conversation` dispatches each ordered `tool-call` Conversation Node through the matching key of `conversation.chat.node`; this package renders its root and Code Dispatch children, then dispatches every atomic call through the keyed `tool.call.toolview` slot. Unregistered Tool names use the generic card.
 
 Business UI packages register only their wire Tool names and atomic views. They do not pair Session events, rebuild the transcript, or own root/subcall topology. The Runtime remains authoritative for call/result pairing, lifecycle, and recursive `subCalls` projection; the conversation view remains authoritative for ChatFlow placement.
 
@@ -10,7 +10,7 @@ Business UI packages register only their wire Tool names and atomic views. They 
 
 `ToolCallTree` receives one root `ToolCallBlock` that already contains recursive `subCalls`, selection state, the session `cwd`, and Host callbacks for opening files and inspecting calls. It recursively walks the standard call blocks and sends the root and children at every depth through the same atomic dispatch path, without subscribing to a separate parent-to-children map.
 
-Each root and child wrapper preserves the `conversation.chat.tool` call-anchor DOM contract used for paging and selection.
+Each root and child wrapper preserves the `data-chat-anchor-key="call:<id>"` and `data-chat-call-id` DOM contract used for paging and selection.
 
 The package also fills `conversation.details.tool` with `ToolDetails`. The row and details renderers share the same pure card models for `terminal`, `read`, `diff`, `search`, and `web` render intents. Unknown intent tags and malformed wire card data fall back to flattened Tool result text.
 
@@ -30,7 +30,7 @@ ctx.slots.inject('tool.call.toolview', () =>
 
 The owner payload is `ToolCallOwnerProps`: `callId`, `toolName`, the frozen `block`, optional `cwd`, and plain `openFile`/`inspect` callbacks. The registration receives the normal session slot runtime share. It does not receive React nodes, Runtime services, or root/subcall knowledge.
 
-This package currently owns the generic fallback and the built-in bash/pwsh, read, write/edit, grep/glob, web, todo, question, and Code Dispatch presentations. `ui-skill` demonstrates a business-owned registration for `skill`.
+This package currently owns the generic fallback and the built-in shell/pwsh, read, write/edit, grep/glob, web, todo, question, and Code Dispatch presentations. `ui-skill` demonstrates a business-owned registration for `skill`.
 
 Card-specific limits and fallback rules remain in the owning [terminal](../../../.agents/notes/implemented/feature/2026-07-28-web-terminal-card.md), [diff](../../../.agents/notes/implemented/feature/2026-07-30-web-diff-card.md), [read](../../../.agents/notes/implemented/feature/2026-07-30-web-read-card-frontend.md), [search](../../../.agents/notes/implemented/feature/2026-07-30-web-search-card.md), and [web](../../../.agents/notes/implemented/feature/2026-07-30-web-result-card-frontend.md) notes.
 
@@ -44,6 +44,6 @@ None. The package is client-only presentation.
 
 ## Known Limitations and Deferred Work
 
-- The Host excludes `run_code` from Code Mode program bindings, so production events currently produce one dispatch level; the recursive Runtime/UI contract is ready for future nested producers.
-- Existing first-party Tool views are initially colocated here and can move to their owning business packages independently through the keyed slot.
-- Tool copy temporarily reuses the `ui-conversation` locale namespace.
+- The Host excludes `run_code` from Code Mode program bindings, so production events produce one dispatch level; the recursive Runtime/UI contract supports nesting.
+- First-party Tool views are colocated here and can move to their owning business packages independently through the keyed slot.
+- Tool copy reuses the `ui-conversation` locale namespace.

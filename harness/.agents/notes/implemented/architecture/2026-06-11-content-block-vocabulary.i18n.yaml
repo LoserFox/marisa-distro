@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-06-11-content-block-vocabulary.md
 2026-06-11-content-block-vocabulary.md: 5228724bb9101307db9929aaf7831b477c2a6022
-2026-06-11-content-block-vocabulary.zh.md: ffcbbc13dfe9176941f4838b0078d3850403a16c
+2026-06-11-content-block-vocabulary.zh.md: b43de335917c6b5304a94b296fcb8253827b0600

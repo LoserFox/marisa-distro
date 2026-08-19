@@ -1,10 +1,10 @@
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import LlmService from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
@@ -39,10 +39,10 @@ afterEach(async () => {
 
 async function loopHarness(): Promise<Context> {
   const created = new Context()
-  await created.plugin(LlmService)
+  await created.plugin(LlmRuntime)
   await created.plugin(SessionStore)
   await created.plugin(SystemPrompt, { persona: SYSTEM })
-  await created.plugin(ToolRegistry)
+  await created.plugin(ToolRuntime)
   await created.plugin(AgentRegistry)
   await created.plugin(AgentLoop, { agents: [] })
   await created.plugin(LlmDeepSeek)

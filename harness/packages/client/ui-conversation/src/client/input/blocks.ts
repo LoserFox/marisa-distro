@@ -2,7 +2,7 @@
  * Composer blocks: the one way another plugin stops a session's input.
  *
  * The composer cannot read the plugins that would know — the dependency runs
- * ui-model → ui-conversation, never back — so a blocker pushes here and the
+ * ui-model-selection → ui-conversation, never back — so a blocker pushes here and the
  * bar reads its own session's store. A block carries the localized reason it
  * exists, because the plugin that raised it owns that copy; the composer only
  * knows how to render an inert textarea with a placeholder, exactly as it

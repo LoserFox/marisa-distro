@@ -10,16 +10,21 @@ import { globSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import ts from 'typescript'
 import { parseJsDoc, pointer, rawJsDoc, reportViolations } from './jsdoc.ts'
+import { githubSlug } from './verify-md-links.ts'
 
 const root = resolve(import.meta.dirname, '..')
 const OUT = 'docs/persistence-catalog.md'
+const OUT_RUNTIME_TYPES = 'packages/core/session/src/known-event-types.ts'
 
 /** The fenced-block info string for generated declaration blocks (skipped by
  * doc-typecheck, since their imported types are not standalone-compilable). */
 const FENCE = 'ts persistence-catalog'
 
-/** The package whose module id plugin merges augment (`declare module '…'`). */
-const SESSION_MODULE = '@deepseek-ai/dsh-session'
+/** The package that owns the durable event vocabulary. */
+const SESSION_PACKAGE = '@deepseek-ai/dsh-session'
+
+/** The type-only module that plugin declaration merges augment. */
+const SESSION_TYPES_MODULE = '@deepseek-ai/dsh-session/types'
 
 /** Event-envelope declarations rendered before the per-event vocabulary. */
 const EVENT_ENVELOPE_TYPE_NAMES = [
@@ -31,11 +36,12 @@ const EVENT_ENVELOPE_TYPE_NAMES = [
 
 type EventEnvelopeTypeName = typeof EVENT_ENVELOPE_TYPE_NAMES[number]
 
-/** Primary core-data-structures page for linked payload types. */
+/** Primary subsystems page for linked payload types. */
 const LINK_MAP: Record<string, string> = {
   CallId: 'core.md',
   ContentBlock: 'core.md',
   MessageSource: 'core.md',
+  ScheduleChange: 'schedule.md',
   StreamChunk: 'llm-streaming.md',
   TokenUsage: 'llm-streaming.md',
   TodoItem: 'session.md',
@@ -115,7 +121,7 @@ function declarationText(text: string, sf: ts.SourceFile, node: ts.Node): string
 /**
  * Every `interface SessionEventMap` declaration in a source file: the owning
  * top-level declaration (in `@deepseek-ai/dsh-session`) and any declaration
- * merge inside a `declare module '@deepseek-ai/dsh-session'` block. Both forms
+ * merge inside a `declare module '@deepseek-ai/dsh-session/types'` block. Both forms
  * declare members of the SAME merged interface, so both are catalogued
  * uniformly. `topLevel` distinguishes the owning form so the caller can verify
  * it actually lives in the owning package — an unrelated local interface that
@@ -125,10 +131,10 @@ function sessionEventMapDecls(sf: ts.SourceFile): { decl: ts.InterfaceDeclaratio
   const decls: { decl: ts.InterfaceDeclaration; topLevel: boolean }[] = []
   for (const stmt of sf.statements) {
     if (ts.isInterfaceDeclaration(stmt) && stmt.name.text === 'SessionEventMap') decls.push({ decl: stmt, topLevel: true })
-    if (ts.isModuleDeclaration(stmt) && ts.isStringLiteral(stmt.name) && stmt.name.text === SESSION_MODULE
+    if (ts.isModuleDeclaration(stmt) && ts.isStringLiteral(stmt.name) && stmt.name.text === SESSION_TYPES_MODULE
       && stmt.body && ts.isModuleBlock(stmt.body)) {
       for (const inner of stmt.body.statements) {
-        if (ts.isInterfaceDeclaration(inner) && inner.name.text === 'SessionEventMap') { decls.push({ decl: inner, topLevel: false }) }
+        if (ts.isInterfaceDeclaration(inner) && inner.name.text === 'SessionEventMap') decls.push({ decl: inner, topLevel: false })
       }
     }
   }
@@ -174,8 +180,8 @@ export function collectLogEvents(scanRoot: string = root): LogEventEntry[] {
         // the owning package. Same-named interfaces elsewhere are different
         // types and must not enter the on-disk catalog.
         const pkg = packageNameFor(rel, scanRoot)
-        if (pkg !== SESSION_MODULE) {
-          violations.push(`top-level interface SessionEventMap (${declSrc}) is outside ${SESSION_MODULE} (package ${pkg ?? 'unknown'}). Rename the interface, or contribute events via declare module '${SESSION_MODULE}'.`)
+        if (pkg !== SESSION_PACKAGE) {
+          violations.push(`top-level interface SessionEventMap (${declSrc}) is outside ${SESSION_PACKAGE} (package ${pkg ?? 'unknown'}). Rename the interface, or contribute events via declare module '${SESSION_TYPES_MODULE}'.`)
           continue
         }
         const exported = decl.modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) ?? false
@@ -243,7 +249,7 @@ export function collectEventEnvelopeTypes(scanRoot: string = root): EventEnvelop
     const abs = resolve(scanRoot, rel)
     const text = readFileSync(abs, 'utf8')
     if (!EVENT_ENVELOPE_TYPE_NAMES.some(name => text.includes(name))) continue
-    if (packageNameFor(rel, scanRoot) !== SESSION_MODULE) continue
+    if (packageNameFor(rel, scanRoot) !== SESSION_PACKAGE) continue
     const sf = ts.createSourceFile(abs, text, ts.ScriptTarget.Latest, true)
     for (const stmt of sf.statements) {
       if (!ts.isTypeAliasDeclaration(stmt) || !wanted.has(stmt.name.text)) continue
@@ -330,13 +336,14 @@ function typeLinks(payload: string): string {
     if (new RegExp(`\\b${name}\\b`).test(payload)) seen.add(name)
   }
   if (seen.size === 0) return ''
-  const links = [...seen].sort().map(n => `[${n}](core-data-structures/${LINK_MAP[n]})`)
+  const links = [...seen].sort().map(n => `[${n}](subsystems/${LINK_MAP[n]})`)
   return `Types: ${links.join(' · ')}`
 }
 
 /** Render one log event entry. */
 function renderEvent(e: AnnotatedLogEventEntry): string[] {
-  const out = [`#### \`${e.name}\` — ${e.surface ? 'surface' : 'log-only'}`, '']
+  const heading = `${e.name} — ${e.surface ? 'surface' : 'log-only'}`
+  const out = [`<a id="${githubSlug(heading)}"></a>`, '', `#### \`${e.name}\` — ${e.surface ? 'surface' : 'log-only'}`, '']
   out.push('```' + FENCE, e.declaration, '```', '')
   const links = typeLinks(e.payload)
   if (links) out.push(links, '')
@@ -352,11 +359,11 @@ export function render(events: AnnotatedLogEventEntry[], envelopeTypes: EventEnv
     '',
     '# Session Persistence Event Catalog',
     '',
-    'Every event type that can appear in a session\'s durable event log: the complete persisted `SessionEvent` envelope and each member of the merge-extensible `SessionEventMap` — the owning vocabulary in `@deepseek-ai/dsh-session` plus every plugin declaration merge in this repo — with source JSDoc, full payload declaration, surface badge, and declaration site. It complements [session.md](core-data-structures/session.md) (surface ordering and the `deriveMessages()` projection), [persistence.md](core-data-structures/persistence.md) (how the log is made durable), and the [cordis events catalog](cordis-catalog/events.md) (the live bus wiring — a log event is NOT a cordis event; it reaches listeners via the single `session/event` emit).',
+    'Every event type that can appear in a session\'s durable event log: the complete persisted `SessionEvent` envelope and each member of the merge-extensible `SessionEventMap` — the owning vocabulary in `@deepseek-ai/dsh-session` plus every plugin declaration merge into `@deepseek-ai/dsh-session/types` in this repo — with source JSDoc, full payload declaration, surface badge, and declaration site. It complements [session.md](subsystems/session.md) (surface ordering and the `deriveMessages()` projection), [persistence.md](subsystems/persistence.md) (how the log is made durable), and the generated region of [session.md](subsystems/session.md#cordis-surface) (the live bus wiring — a log event is NOT a cordis event; it reaches listeners via the single `session/event` emit).',
     '',
     'This file is GENERATED from source (`scripts/gen-persistence-catalog.ts`) and verified fresh by `pnpm run verify-persistence-catalog` (part of `doc-sync`) — do not edit it by hand. Declaration blocks retain the source declaration and nested property JSDoc, removing only the indentation imposed by a containing interface/module, and use a `ts persistence-catalog` fence (skipped by doc-typecheck because declarations reference types from their owning modules). Type names in a payload link to the page that documents them. See [the persistence-log-catalog Agent Note](../.agents/notes/archived/process/2026-07-04-persistence-log-catalog.md).',
     '',
-    'The envelope declarations below compose each event\'s `type`, monotonic `seq`, epoch-ms `time`, `data`, and the conditional `surfaceOp`/`sourceEventSeqs` fields. **surface** marks a `SurfaceEventType` member: it produces an LLM message and declares how it joins the surface list. **log-only** marks everything else: a durable, replayable record with no derived-history contribution. Every payload is JSON-serializable (enforced at `Session.append`), and the whole format is pinned at `SESSION_FORMAT_VERSION = 0` — pre-release, no compatibility implied ([the version stance](core-data-structures/persistence.md)). Scope: the packages in this repo; a downstream plugin can merge further event types, which are outside this catalog by construction.',
+    'The envelope declarations below compose each event\'s `type`, monotonic `seq`, epoch-ms `time`, `data`, the optional `ignorable` unknown-type skip marker, and the conditional `surfaceOp`/`sourceEventSeqs` fields. **surface** marks a `SurfaceEventType` member: it produces an LLM message and declares how it joins the surface list. **log-only** marks everything else: a durable, replayable record with no derived-history contribution. Every payload is JSON-serializable (enforced at `Session.append`), and the whole format is pinned at `SESSION_FORMAT_VERSION = 0` — pre-release, no compatibility implied ([the version stance](subsystems/persistence.md)). Scope: the packages in this repo; a downstream plugin can merge further event types, which are outside this catalog by construction.',
     '',
     '## Event envelope',
     '',
@@ -379,31 +386,79 @@ export function render(events: AnnotatedLogEventEntry[], envelopeTypes: EventEnv
   return lines.join('\n')
 }
 
-/** CLI entry: default writes the catalog, `--check` fails if the committed copy
+/**
+ * Render the runtime known-vocabulary module: every event type the packages in
+ * this repo can write, as a generated `ReadonlySet` the read path checks
+ * unknown-type refusal against (`SessionEvent.ignorable` contract).
+ */
+export function renderKnownEventTypes(events: AnnotatedLogEventEntry[]): string {
+  const names = [...new Set(events.map(e => e.name))].sort()
+  return [
+    '/**',
+    ' * GENERATED by `scripts/gen-persistence-catalog.ts` — do not edit by hand; run',
+    ' * `pnpm run gen-persistence-catalog` to regenerate (verified fresh by',
+    ' * `pnpm run verify-persistence-catalog`, part of `doc-sync`).',
+    ' * @module @deepseek-ai/dsh-session/known-event-types',
+    ' */',
+    '',
+    '/**',
+    ' * Every `SessionEventMap` member declared in this repository — the event',
+    ' * vocabulary this build understands. The persistence read path refuses to',
+    ' * interpret a log containing a type outside this set unless the event',
+    ' * carries the envelope\'s `ignorable` marker (see `SessionEvent.ignorable`',
+    ' * in `./types.ts`): such a log was likely written by a newer harness, and',
+    ' * silently skipping a required event would reconstruct a wrong session.',
+    ' * Downstream (out-of-repo) plugin events are outside this list by',
+    ' * construction; a registration surface for them is deferred until such a',
+    ' * consumer exists.',
+    ' */',
+    'export const KNOWN_SESSION_EVENT_TYPES: ReadonlySet<string> = new Set([',
+    ...names.map(name => `  '${name}',`),
+    '])',
+    '',
+  ].join('\n')
+}
+
+/** One generated artifact: repo-relative target and its freshly-rendered content. */
+interface GeneratedArtifact {
+  readonly out: string
+  readonly content: string
+}
+
+/** CLI entry: default writes the artifacts, `--check` fails if a committed copy
  * is stale. Guarded behind an entry-point check so importing this module for
- * tests neither regenerates the committed file nor calls process.exit. */
+ * tests neither regenerates the committed files nor calls process.exit. */
 function main(): void {
-  const content = render(annotateSurface(collectLogEvents(), collectSurfaceEventTypes()), collectEventEnvelopeTypes())
+  const events = annotateSurface(collectLogEvents(), collectSurfaceEventTypes())
+  const artifacts: GeneratedArtifact[] = [
+    { out: OUT, content: render(events, collectEventEnvelopeTypes()) },
+    { out: OUT_RUNTIME_TYPES, content: renderKnownEventTypes(events) },
+  ]
   if (process.argv.includes('--check')) {
-    let committed: string | null = null
-    try {
-      committed = readFileSync(resolve(root, OUT), 'utf8')
-    } catch {
-      // Only ENOENT (not yet generated) is expected; a present-but-unreadable
-      // file is not a state this repo produces. Either way the remedy is the
-      // same — regenerate — so treat a read failure as "stale".
-      committed = null
-    }
-    if (committed === content) {
-      console.log(`gen-persistence-catalog: ${OUT} is up to date.`)
+    const stale = artifacts.filter((artifact) => {
+      let committed: string | null = null
+      try {
+        committed = readFileSync(resolve(root, artifact.out), 'utf8')
+      } catch {
+        // Only ENOENT (not yet generated) is expected; a present-but-unreadable
+        // file is not a state this repo produces. Either way the remedy is the
+        // same — regenerate — so treat a read failure as "stale".
+        committed = null
+      }
+      return committed !== artifact.content
+    })
+    if (stale.length === 0) {
+      console.log(`gen-persistence-catalog: ${artifacts.map(a => a.out).join(', ')} are up to date.`)
       process.exit(0)
     }
-    console.error(`gen-persistence-catalog: ${OUT} is stale. Run \`pnpm run gen-persistence-catalog\` and commit ${OUT}.`)
+    console.error(`gen-persistence-catalog: ${stale.map(a => a.out).join(', ')} stale. Run \`pnpm run gen-persistence-catalog\` and commit the result.`)
     process.exit(1)
   }
 
-  writeFileSync(resolve(root, OUT), content)
-  console.log(`gen-persistence-catalog: wrote ${OUT}.`)
+  for (const artifact of artifacts) {
+    writeFileSync(resolve(root, artifact.out), artifact.content)
+    console.log(`gen-persistence-catalog: wrote ${artifact.out}.`)
+  }
 }
 
 // Run only when invoked as a script, not when imported by a test.

@@ -1,7 +1,7 @@
 # Keyless replay counterpart of code-mode-workspace-context.cordis.yml. It adds
 # Code Mode to the default filesystem suite and swaps in replay.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -25,6 +25,6 @@
             Verify your work by running the code or tests. Keep answers brief and factual.
       - insert:
           - id: code-runtime
-            name: '@deepseek-ai/dsh-code-runtime-worker'
+            name: '@deepseek-ai/dsh-code-runtime-worker-thread'
           - id: llm-replay
             name: '@deepseek-ai/dsh-llm-replay'

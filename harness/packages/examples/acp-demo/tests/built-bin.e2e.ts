@@ -32,11 +32,11 @@ const decompress = promisify(zstdDecompress)
 
 const dshPackages = [
   'examples/agent-spine-demo', 'core/agent', 'core/session', 'core/system-prompt',
-  'core/tools', 'core/agent-loop', 'llm/llm', 'bash/bash',
-  'bash/bash-local', 'bash/tool-bash', 'subprocess/subprocess', 'subprocess/subprocess-local', 'context/workspace-context', 'support/invariants', 'ui/app-boot',
-  'session-persistence/session-persistence',
-  'session-persistence/session-checkpoint-policy', 'session-persistence/session-persistence-jsonl',
-  'acp/acp', 'examples/acp-demo', 'util/paths',
+  'core/tools', 'core/agent-loop', 'llm/llm', 'shell/shell',
+  'shell/bash-local', 'shell/tool-bash', 'subprocess/subprocess', 'subprocess/subprocess-local', 'context/agent-instructions', 'runtime-diagnostics/invariants', 'boot/app-boot',
+  'session/session-persistence',
+  'session/session-checkpoint-policy', 'session/session-persistence-jsonl',
+  'acp/acp', 'examples/acp-demo', 'util/home-paths',
 ]
 const vendorPackages = [
   'cordis', 'loader', 'include', 'timer', 'hmr', 'logger-console',
@@ -150,7 +150,7 @@ describe.skipIf(!existsSync(acpBin))('dsh-acp-demo BUILT bin (node lib/bin.js, n
     const rawOut: string[] = []
     const passthrough = new Readable({ read() {} })
     child.stdout!.on('data', (buf: Buffer) => { rawOut.push(buf.toString('utf8')); passthrough.push(buf) })
-    child.stdout!.on('end', () => { return passthrough.push(null) })
+    child.stdout!.on('end', () => passthrough.push(null))
     const stream = ndJsonStream(
       Writable.toWeb(child.stdin!) as WritableStream<Uint8Array>,
       Readable.toWeb(passthrough) as ReadableStream<Uint8Array>,

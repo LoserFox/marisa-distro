@@ -1,19 +1,19 @@
 /**
- * Live TypeRT Remote dispatch over Cordis Services and registered providers.
+ * Live Typert Remote dispatch over Cordis Services and registered providers.
  * Transport, request correlation, and response envelopes belong to Connection.
  * @module @deepseek-ai/dsh-api-gateway
  */
 
-import { Context, Service, symbols } from 'cordis'
+import { Context, Service, symbols } from '@deepseek-ai/cordis'
 import type { ConnectionRpcHandler } from '@deepseek-ai/dsh-client-connection'
 import {
   remoteMethods,
-  TypeRTLookupFailure,
+  TypertLookupFailure,
   type InvocationDescriptor,
   type InvocationParameterDescriptor,
-  type TypeRTCodec,
-  type TypeRTGatewayBinding,
-} from '@deepseek-ai/dsh-type-meta'
+  type TypertCodec,
+  type TypertGatewayBinding,
+} from '@deepseek-ai/dsh-typert-protocol'
 import type {
   InvokeRemoteRequest,
   TypertGateway,
@@ -32,7 +32,7 @@ interface GatewayErrorOptions {
 }
 
 interface ResolvedBinding {
-  readonly binding: TypeRTGatewayBinding
+  readonly binding: TypertGatewayBinding
   readonly original: object
 }
 
@@ -70,9 +70,21 @@ export class TypertGatewayError extends Error {
   }
 }
 
+/** Business invocation lost its carrier cancellation race. */
+class RemoteInvocationCancelled extends Error {
+  /**
+   * @param endpoint - canonical Remote endpoint.
+   * @param cause - business rejection observed after carrier cancellation.
+   */
+  constructor(endpoint: string, cause: unknown) {
+    super(`Remote invocation "${endpoint}" was aborted`, { cause })
+    this.name = 'RemoteInvocationCancelled'
+  }
+}
+
 /**
  * Resolve strict generated definitions or conservative SRC markers against
- * current Cordis Services and TypeRT providers.
+ * current Cordis Services and Typert providers.
  * @typert service typertGateway
  */
 export class TypertGatewayService extends Service implements TypertGateway {
@@ -81,8 +93,8 @@ export class TypertGatewayService extends Service implements TypertGateway {
   private srcClaims: ReadonlySet<string> | undefined
 
   /**
-   * Register the Gateway against the active TypeRT registry.
-   * @param ctx - owning Host Context with TypeRT registry access.
+   * Register the Gateway against the active Typert registry.
+   * @param ctx - owning Host Context with Typert registry access.
    */
   constructor(ctx: Context) {
     super(ctx, 'typertGateway')
@@ -114,7 +126,7 @@ export class TypertGatewayService extends Service implements TypertGateway {
       const receiver = this.ctx.get(serviceKey) as unknown
       if (!isObject(receiver)) continue
       const original = originalOf(receiver)
-      const binding = Reflect.get(original, 'typertGateway') as unknown
+      const binding = Reflect.get(original, 'typertRemote') as unknown
       if (!isObject(binding) || typeof Reflect.get(binding, 'namespace') !== 'string') continue
       const namespace = Reflect.get(binding, 'namespace') as string
       for (const candidate of remoteMethods(original)) {
@@ -157,7 +169,17 @@ export class TypertGatewayService extends Service implements TypertGateway {
       )
     }
 
-    const result = await Reflect.apply(method, receiver, args) as unknown
+    let result: unknown
+    try {
+      result = await Reflect.apply(method, receiver, args) as unknown
+    } catch (error) {
+      if (request.signal?.aborted === true) throw new RemoteInvocationCancelled(endpoint, error)
+      throw error
+    }
+    // A weak descriptor declares no return type, so nothing returned is a void
+    // result and rides the wire as an absent value field. A strict descriptor
+    // keeps its schema: there, undefined has to be a declared result.
+    if (result === undefined && descriptor.result.mode !== 'strict') return result
     return decode(descriptor.result, result, 'result-invalid', endpoint, 'result')
   }
 
@@ -190,6 +212,9 @@ export class TypertGatewayService extends Service implements TypertGateway {
         args: payload.args,
         signal,
       })
+      // A void or explicitly absent business result carries no `value` field;
+      // JSON has no `undefined`, and the envelope's optional slot is the one
+      // representation of absence that both args and results already use.
       return { ok: true, value }
     } catch (error) {
       return rpcFailure(error)
@@ -216,7 +241,7 @@ export class TypertGatewayService extends Service implements TypertGateway {
       const receiver = this.ctx.get(serviceKey) as unknown
       if (!isObject(receiver)) continue
       const original = originalOf(receiver)
-      const value = Reflect.get(original, 'typertGateway') as unknown
+      const value = Reflect.get(original, 'typertRemote') as unknown
       if (value === undefined) continue
       const binding = readBinding(value, original, serviceKey, endpoint)
       if (binding.namespace !== namespace) continue
@@ -238,7 +263,7 @@ export class TypertGatewayService extends Service implements TypertGateway {
   }
 
   private srcDescriptor(
-    binding: TypeRTGatewayBinding,
+    binding: TypertGatewayBinding,
     marker: ReturnType<typeof remoteMethods>[number],
     method: string,
     endpoint: string,
@@ -360,7 +385,7 @@ export class TypertGatewayService extends Service implements TypertGateway {
     try {
       context = await provider.resolve(identity)
     } catch (cause) {
-      if (cause instanceof TypeRTLookupFailure) throw cause
+      if (cause instanceof TypertLookupFailure) throw cause
       throw new TypertGatewayError(
         'context-failed',
         endpoint,
@@ -384,6 +409,11 @@ export class TypertGatewayService extends Service implements TypertGateway {
     args: Readonly<Record<string, unknown>>,
     endpoint: string,
   ): Promise<unknown> {
+    // An absent field reached assertExactArguments' allowance, so this parameter
+    // takes undefined; a present-but-undefined field is not JSON-safe input and
+    // still fails decode. Lookup ids are never omissible, so absence here only
+    // ever belongs to a json parameter.
+    if (!Object.hasOwn(args, parameter.wire)) return undefined
     const value = decode(parameter.codec, args[parameter.wire], 'input-invalid', endpoint, parameter.wire)
     if (parameter.source === 'json') return value
     const key = parameter.lookup
@@ -418,7 +448,7 @@ export class TypertGatewayService extends Service implements TypertGateway {
     try {
       resolved = await provider.resolve(value)
     } catch (cause) {
-      if (cause instanceof TypeRTLookupFailure) throw cause
+      if (cause instanceof TypertLookupFailure) throw cause
       throw new TypertGatewayError(
         'lookup-failed',
         endpoint,
@@ -439,7 +469,13 @@ export class TypertGatewayService extends Service implements TypertGateway {
 }
 
 function rpcFailure(error: unknown): ConnectionRpcResult {
-  if (error instanceof TypeRTLookupFailure) {
+  if (error instanceof RemoteInvocationCancelled) {
+    return {
+      ok: false,
+      error: { code: 'cancelled', message: error.message, details: {} },
+    }
+  }
+  if (error instanceof TypertLookupFailure) {
     return { ok: false, error: error.failure as ConnectionRpcError }
   }
   return {
@@ -463,12 +499,12 @@ function validateBinding(
   endpoint: string,
 ): ResolvedBinding {
   const original = originalOf(receiver)
-  const value = Reflect.get(original, 'typertGateway') as unknown
+  const value = Reflect.get(original, 'typertRemote') as unknown
   if (value === undefined) {
     throw new TypertGatewayError(
       'binding-invalid',
       endpoint,
-      `Service ${JSON.stringify(serviceKey)} has no visible typertGateway binding`,
+      `Service ${JSON.stringify(serviceKey)} has no visible typertRemote binding`,
     )
   }
   return {
@@ -483,7 +519,7 @@ function readBinding(
   serviceKey: string,
   endpoint: string,
   namespace?: string,
-): TypeRTGatewayBinding {
+): TypertGatewayBinding {
   if (!isObject(value)
     || Reflect.get(value, 'service') !== original
     || Reflect.get(value, 'serviceKey') !== serviceKey
@@ -492,15 +528,15 @@ function readBinding(
     throw new TypertGatewayError(
       'binding-invalid',
       endpoint,
-      `Service ${JSON.stringify(serviceKey)} has an inconsistent typertGateway binding`,
+      `Service ${JSON.stringify(serviceKey)} has an inconsistent typertRemote binding`,
     )
   }
-  return value as unknown as TypeRTGatewayBinding
+  return value as unknown as TypertGatewayBinding
 }
 
 function originalOf(receiver: object): object {
   const original = Reflect.get(receiver, symbols.original) as unknown
-  return !isObject(original) ? receiver : original
+  return isObject(original) ? original : receiver
 }
 
 function methodParameterNames(service: object, method: string, endpoint: string): readonly string[] {
@@ -559,7 +595,15 @@ function assertExactArguments(
   if (descriptor.invocation.kind === 'context') expected.add(descriptor.invocation.wire)
   const actual = Reflect.ownKeys(args)
   const extra = actual.filter(key => typeof key !== 'string' || !expected.has(key))
-  const missing = [...expected].filter(key => !Object.hasOwn(args, key))
+  // A JSON field may be omitted when the strict descriptor declares absence,
+  // and always under SRC: a weak descriptor reads parameter names from the
+  // JavaScript signature and cannot see which are optional, so LIB is where an
+  // omitted required argument is caught. Lookup ids are never omissible.
+  const acceptsMissing = new Set(descriptor.parameters
+    .filter(parameter => parameter.source === 'json'
+      && (parameter.acceptsUndefined === true || parameter.codec.mode === 'src-json'))
+    .map(parameter => parameter.wire))
+  const missing = [...expected].filter(key => !Object.hasOwn(args, key) && !acceptsMissing.has(key))
   if (extra.length === 0 && missing.length === 0) return
   const clauses: string[] = []
   if (missing.length > 0) clauses.push(`missing ${missing.map(key => JSON.stringify(key)).join(', ')}`)
@@ -568,14 +612,17 @@ function assertExactArguments(
 }
 
 function decode(
-  codec: TypeRTCodec,
+  codec: TypertCodec,
   value: unknown,
   code: 'input-invalid' | 'result-invalid',
   endpoint: string,
   field: string,
 ): unknown {
   try {
-    if (codec.mode === 'strict') value = codec.schema.parse(value)
+    if (codec.mode === 'strict') {
+      value = codec.schema.parse(value)
+      if (value === undefined) return value
+    }
     assertJsonValue(value, new Set())
     return value
   } catch (cause) {

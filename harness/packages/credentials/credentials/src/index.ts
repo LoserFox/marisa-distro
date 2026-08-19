@@ -1,5 +1,5 @@
 /**
- * Credential seam (`ctx.credentials`). Settings and composition files carry
+ * Service Definition for the credential-reference capability seam (`ctx.credentials`). Settings and composition files carry
  * *references* to secrets — environment-variable names — while providers own
  * the actual values and their storage. Consumers resolve a reference once per
  * operation, so a changed credential reaches the next operation without any
@@ -8,11 +8,10 @@
  * @module @deepseek-ai/dsh-credentials
  */
 
-import { Context, Service } from 'cordis'
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import { Context, Service } from '@deepseek-ai/cordis'
+import type { CredentialRef } from './types.ts'
 
-/** Nominal reference to one credential: a POSIX-style environment-variable name. */
-export type CredentialRef = Branded<'CredentialRef'>
+export type { CredentialRef } from './types.ts'
 
 const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 
@@ -38,33 +37,17 @@ export interface ResolvedCredential {
 
 /** Source and writability facts for one reference, safe for configuration UIs — never the value. */
 export interface CredentialInfo {
-  /** Whether {@link Credentials.resolve} would currently return a value. */
+  /** Whether {@link CredentialProvider.resolve} would currently return a value. */
   configured: boolean
   /** Source layer currently supplying the value; absent while unconfigured. */
   source?: string
-  /** Whether {@link Credentials.set} would currently succeed for this reference. */
+  /** Whether {@link CredentialProvider.set} would currently succeed for this reference. */
   writable: boolean
 }
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    credentials: Credentials
-  }
-
-  interface Events {
-    /**
-     * Committed change to a provider-managed credential source: a `set`, an
-     * `unset`, or an external edit observed in storage. Ambient
-     * process-environment changes are not observable and never emit. Listener
-     * failures are contained and logged — a sync throw and an async rejection
-     * alike — without changing the committed operation's outcome, except
-     * `INVARIANT`-coded failures, which rethrow after every listener ran;
-     * that rethrow reaches the emitter only from synchronous listeners, so
-     * invariant checks on this event must not be async functions.
-     * @param ref - the reference whose stored value changed.
-     * @mode emit
-     */
-    'credentials/updated'(ref: CredentialRef): void
+    credentials: CredentialProvider
   }
 }
 
@@ -74,7 +57,7 @@ declare module 'cordis' {
  * value is absent everywhere — `resolve` skips it, `describe` reports it
  * unconfigured — so a blank never masquerades as a configured secret.
  */
-export abstract class Credentials extends Service {
+export abstract class CredentialProvider extends Service {
   constructor(ctx: Context) {
     super(ctx, 'credentials')
   }
@@ -148,7 +131,7 @@ export abstract class Credentials extends Service {
         this.warnListenerFailure(ref, error)
       }
     }
-    if (invariantFailure !== undefined) { throw invariantFailure as Error }
+    if (invariantFailure !== undefined) throw invariantFailure as Error
   }
   /* jscpd:ignore-end */
 
@@ -159,4 +142,4 @@ export abstract class Credentials extends Service {
   }
 }
 
-export default Credentials
+export default CredentialProvider

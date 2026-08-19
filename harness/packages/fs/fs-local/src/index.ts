@@ -4,9 +4,11 @@
  * @module @deepseek-ai/dsh-fs-local
  */
 
-import { Context } from 'cordis'
-import { resolve } from 'node:path'
-import z from 'schemastery'
+import { Context } from '@deepseek-ai/cordis'
+import { constants as bufferConstants } from 'node:buffer'
+import { isAbsolute, relative, resolve, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import z from '@deepseek-ai/schemastery'
 import { FileSystem, FsError, FsVersion } from '@deepseek-ai/dsh-fs'
 import type {
   FsDirEntry,
@@ -26,6 +28,7 @@ import {
   probeNoFollow,
   readForEdit,
   readTextForDiff,
+  readWholeBytes,
   readWholeText,
   resolveLocalTarget,
   restoreLineEndings,
@@ -38,9 +41,19 @@ import type { FsIoInternals } from './fsio.ts'
 export interface Config {
   /** Base directory for relative paths. Defaults to `process.cwd()`. */
   cwd?: string
+  /**
+   * Exclusive UTF-8 byte limit on each overwrite-diff side, capped by the
+   * runtime's safe allocation/decode maximum. Defaults to 10 MiB.
+   */
+  diffBasisMaxBytes?: number
 }
 
 type ResolvedConfig = Required<Config>
+const DEFAULT_DIFF_BASIS_MAX_BYTES = 10 * 1024 * 1024
+const MAX_DIFF_BASIS_BYTES = Math.min(
+  bufferConstants.MAX_LENGTH,
+  bufferConstants.MAX_STRING_LENGTH,
+)
 
 /**
  * The host-filesystem backend. Reads resolve relative paths from {@link Config.cwd}
@@ -51,11 +64,12 @@ type ResolvedConfig = Required<Config>
 export class LocalFileSystem extends FileSystem {
   static Config: z<Config> = z.object({
     cwd: z.string().default(process.cwd()),
+    diffBasisMaxBytes: z.number().default(DEFAULT_DIFF_BASIS_MAX_BYTES),
   })
 
   /** Validated config (schemastery applied the defaults before construction). */
   readonly config: ResolvedConfig
-  /** Test seam forwarded to fsio (force streaming path, pin temp names). */
+  /** Test hook forwarded to fsio for atomic-publication boundaries. */
   internals: FsIoInternals = {}
   /** Per-targetKey tail promise: serializes mutating ops so the read→guard→write
    * window can't interleave, making concurrent writes/edits deterministically
@@ -64,7 +78,13 @@ export class LocalFileSystem extends FileSystem {
 
   constructor(ctx: Context, config: Config) {
     super(ctx)
-    this.config = config as ResolvedConfig
+    const resolved = config as ResolvedConfig
+    if (!Number.isSafeInteger(resolved.diffBasisMaxBytes)
+      || resolved.diffBasisMaxBytes <= 0
+      || resolved.diffBasisMaxBytes > MAX_DIFF_BASIS_BYTES) {
+      throw new Error(`fs-local: diffBasisMaxBytes must be a positive safe integer no greater than ${MAX_DIFF_BASIS_BYTES}`)
+    }
+    this.config = resolved
   }
 
   /** Run `op` with exclusive access to `targetKey` (FIFO per key). */
@@ -72,7 +92,7 @@ export class LocalFileSystem extends FileSystem {
     const prior = this.locks.get(targetKey) ?? Promise.resolve()
     const run = prior.then(op, op)
     // Keep the chain alive but swallow this op's result/throw for the *next* waiter.
-    const tail = run.then(() => undefined, () => { return undefined })
+    const tail = run.then(() => undefined, () => undefined)
     this.locks.set(targetKey, tail)
     try {
       return await run
@@ -88,6 +108,19 @@ export class LocalFileSystem extends FileSystem {
     const local = await resolveLocalTarget(opts?.cwd ?? this.config.cwd, path)
     if (opts?.signal?.aborted) throw new FsError('resolve aborted', 'FS_ABORTED')
     return { targetKey: local.targetKey, displayPath: local.displayPath }
+  }
+
+  override processPath(target: FsTarget): string {
+    return String(target.targetKey)
+  }
+
+  override fileUrl(target: FsTarget): string {
+    return pathToFileURL(this.processPath(target)).href
+  }
+
+  override contains(parent: FsTarget, child: FsTarget): boolean {
+    const path = relative(this.processPath(parent), this.processPath(child))
+    return path === '' || (path !== '..' && !path.startsWith(`..${sep}`) && !isAbsolute(path))
   }
 
   override async stat(target: FsTarget, signal?: AbortSignal): Promise<FsInfo | undefined> {
@@ -113,6 +146,10 @@ export class LocalFileSystem extends FileSystem {
 
   override streamText(target: FsTarget, signal?: AbortSignal): Promise<AsyncIterable<string>> {
     return Promise.resolve(streamWholeText({ displayPath: target.displayPath, targetKey: target.targetKey }, signal))
+  }
+
+  override async readBytes(target: FsTarget, signal: AbortSignal | undefined, maxBytes: number): Promise<Uint8Array> {
+    return readWholeBytes({ displayPath: target.displayPath, targetKey: target.targetKey }, signal, maxBytes, this.internals)
   }
 
   override async listDir(target: FsTarget, signal?: AbortSignal): Promise<FsDirEntry[]> {
@@ -150,10 +187,24 @@ export class LocalFileSystem extends FileSystem {
       }
       // No expectation means an unconditional but still atomic write.
 
-      // Preserve prior text for contextual diffs; null falls back to a whole-file diff.
-      // TODO(overwrite-diff-bound): cap this UI-only pre-read for large files.
-      const before = existing ? await readTextForDiff(target.targetKey, signal) : null
-      await writeFileAtomic(target.targetKey, content, existing?.mode, signal, this.internals)
+      // Capture an optional contextual-diff basis before the write. The bounded
+      // reader checks the opened file itself, so an external replacement after
+      // `probe()` cannot turn this best-effort presentation read into an
+      // unbounded allocation. Either side at/above the configured limit yields
+      // `before: null`; consumers retain their whole-file fallback.
+      const diffable = existing !== null
+        && Buffer.byteLength(content, 'utf8') < this.config.diffBasisMaxBytes
+      const before = diffable
+        ? await readTextForDiff(target.targetKey, this.config.diffBasisMaxBytes, signal)
+        : null
+      await writeFileAtomic(
+        target.targetKey,
+        content,
+        existing?.mode,
+        signal,
+        this.internals,
+        expected?.kind === 'createIfAbsent' ? { displayPath: target.displayPath } : undefined,
+      )
       const after = await probe(target.targetKey)
       return {
         operation: existing ? 'update' : 'create',

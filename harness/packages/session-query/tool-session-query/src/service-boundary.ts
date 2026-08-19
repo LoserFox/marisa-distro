@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-tool-session-query/service-boundary
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import {
   SessionQueryError,
@@ -70,6 +70,10 @@ const SAFE_SESSION_QUERY_FAILURES = {
   SESSION_QUERY_PERSISTENCE_FAILED: {
     code: 'SESSION_QUERY_PERSISTENCE_FAILED',
     message: 'session history storage is unavailable',
+  },
+  SESSION_QUERY_SEARCH_DISABLED: {
+    code: 'SESSION_QUERY_SEARCH_DISABLED',
+    message: 'session search is disabled in this deployment',
   },
   SESSION_QUERY_SESSION_NOT_FOUND: {
     code: 'SESSION_QUERY_SESSION_NOT_FOUND',

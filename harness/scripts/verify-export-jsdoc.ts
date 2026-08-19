@@ -58,7 +58,7 @@ function thisReceiver(p: ts.ParameterDeclaration): boolean {
 }
 
 /**
- * Peel wrapper expressions that carry no surface of their own — parentheses,
+ * Peel wrapper expressions that define no API of their own — parentheses,
  * `as` / `satisfies` / angle-bracket casts, non-null assertions — so a
  * wrapped function expression is still classified as function-like.
  * @param e - the expression to unwrap.
@@ -75,9 +75,9 @@ function unwrapExpression(e: ts.Expression): ts.Expression {
 
 /**
  * Classify inline callable annotations. Mixed callable literals fail closed;
- * other annotations are ordinary value shapes.
+ * other annotations are ordinary value types.
  * @param type - the declarator's type annotation.
- * @returns the signature to check, 'refuse' for an unclassifiable callable literal, or null for a non-callable shape.
+ * @returns the signature to check, 'refuse' for an unclassifiable callable literal, or null for a non-callable type.
  */
 function callableAnnotation(type: ts.TypeNode): ts.SignatureDeclarationBase | 'refuse' | null {
   if (ts.isFunctionTypeNode(type)) return type
@@ -91,7 +91,7 @@ function callableAnnotation(type: ts.TypeNode): ts.SignatureDeclarationBase | 'r
 }
 
 /**
- * Find inherited documentation for a class member without exempting newly public surface.
+ * Find inherited documentation for a class member without exempting a newly public API.
  * @param cls - the class whose heritage to search.
  * @param name - the member name to look up.
  * @param staticSide - whether to search the constructor side instead of the instance side.
@@ -105,14 +105,14 @@ function heritageExemption(
   checker: ts.TypeChecker,
 ): { baseParams: Set<string> | null; baseVoidReturn: boolean | null } | null {
   const isProtected = (d: ts.Declaration): boolean =>
-    (!ts.canHaveModifiers(d) ? undefined : ts.getModifiers(d))?.some(m => m.kind === ts.SyntaxKind.ProtectedKeyword) ?? false
+    (ts.canHaveModifiers(d) ? ts.getModifiers(d) : undefined)?.some(m => m.kind === ts.SyntaxKind.ProtectedKeyword) ?? false
   for (const clause of cls.heritageClauses ?? []) {
     for (const t of clause.types) {
       const type = staticSide ? checker.getTypeAtLocation(t.expression) : checker.getTypeAtLocation(t)
       const prop = type.getProperty(name)
       if (prop === undefined) continue
       const decls = prop.declarations ?? []
-      if (decls.length > 0 && decls.every(isProtected)) continue // public override of a protected base: new surface
+      if (decls.length > 0 && decls.every(isProtected)) continue // public override of a protected base: new API
       let baseParams: Set<string> | null = null
       let baseVoidReturn: boolean | null = null
       for (const d of decls) {
@@ -192,7 +192,7 @@ function checkFunctionLike(
   if (!raw) { w.violations.push(`${where} has no JSDoc.`); return }
   if (!parseJsDoc(raw).doc) w.violations.push(`${where} has no description prose above its block tags.`)
   const { params, returns } = parseTags(raw)
-  checkParams(where, 'export', parameters, params, w.sf, thisReceiver, w.violations)
+  checkParams(where, 'exported', parameters, params, w.sf, thisReceiver, w.violations)
   if (!returnsWaived) checkReturns(where, returnType, returns, w.sf, w.violations)
 }
 
@@ -205,7 +205,7 @@ function checkFunctionLike(
  * statics are exempt; constructors are not checked (framework-constructed
  * plugins, and the class doc owns the story).
  * @param cls - the exported class declaration.
- * @param name - the class's surface name (namespace-qualified).
+ * @param name - the class's exported name (namespace-qualified).
  * @param w - the walk state violations append to.
  */
 function checkClass(cls: ts.ClassDeclaration, name: string, w: Walk): void {
@@ -230,12 +230,12 @@ function checkClass(cls: ts.ClassDeclaration, name: string, w: Walk): void {
         const raw = rawJsDoc(w.text, m)
         // The heritage declaration owns the prose; parameters the base never
         // names — including binding patterns, which no base declaration can
-        // name — are new surface and keep their @param duty.
+        // name — are new API and keep their @param duty.
         const base = exemption.baseParams
         const inBase = (p: ts.ParameterDeclaration): boolean =>
           base !== null && ts.isIdentifier(p.name) && base.has(p.name.text.replace(/^_+/, ''))
         if (base !== null && m.parameters.some(p => !thisReceiver(p) && !inBase(p))) {
-          checkParams(where, 'export', m.parameters, parseTags(raw).params, w.sf,
+          checkParams(where, 'exported', m.parameters, parseTags(raw).params, w.sf,
             p => thisReceiver(p) || inBase(p), w.violations)
         }
         // A void base return carried no @returns duty, so an override growing a concrete result
@@ -258,7 +258,7 @@ function checkClass(cls: ts.ClassDeclaration, name: string, w: Walk): void {
     } else if (ts.isSetAccessorDeclaration(m) && !documentedGetters.has(mname)) {
       checkDescribed(`exported class accessor '${name}.${mname}' (${pointer(w.rel, w.sf, m)})`, rawJsDoc(w.text, m), w)
     }
-    // index signatures / static blocks: not named surface
+    // index signatures / static blocks: no named API
   }
 }
 
@@ -310,7 +310,7 @@ function checkDecl(
     const raw = rawJsDoc(w.text, stmt) // JSDoc sits on the statement, not the declarator
     for (const d of stmt.declarationList.declarations) {
       const name = ts.isIdentifier(d.name) ? d.name.text : d.name.getText(w.sf)
-      if (only !== null && !only.has(name)) continue // sibling declarator the export list never named: not surface
+      if (only !== null && !only.has(name)) continue // sibling declarator the export list never named: not exported API
       if (prefix === '' && PROTOCOL_EXPORTS.has(name)) continue // cordis plugin-protocol slot
       const where = `exported const '${prefix}${name}'${at(d)}`
       const annotation = d.type !== undefined ? callableAnnotation(d.type) : null
@@ -321,7 +321,7 @@ function checkDecl(
         // tags against — fail closed rather than silently narrow the check.
         w.violations.push(`${where}: its callable type literal is not gate-classifiable; extract a named type and document it there.`)
       } else if (annotation !== null) {
-        // An INLINE callable annotation is the surface signature itself: its
+        // An INLINE callable annotation is the exported signature itself: its
         // parameters and result need docs right here. (A NAMED reference
         // type carries its docs at the type's own declaration instead.)
         checkFunctionLike(where, raw, annotation.parameters, annotation.type, false, w)
@@ -350,7 +350,7 @@ function checkDecl(
     }
     // In an ambient (`declare`) namespace body, members are implicitly
     // exported — no `export` modifier required — so the recursion must treat
-    // every statement as surface.
+    // every statement as exported API.
     const declared = ambient
       || ((ts.canHaveModifiers(stmt) ? ts.getModifiers(stmt) : undefined)?.some(m => m.kind === ts.SyntaxKind.DeclareKeyword) ?? false)
     if (body !== undefined && ts.isModuleBlock(body)) checkScope(body.statements, nsPrefix, w, declared)
@@ -376,7 +376,7 @@ function checkDecl(
   }
   // Fail CLOSED: an exported statement kind this dispatch does not recognize
   // must never pass silently — the gate's whole promise is that unchecked
-  // surface cannot exist. New TypeScript export forms extend the gate here.
+  // unchecked API cannot exist. New TypeScript export forms extend the gate here.
   w.violations.push(`exported statement${at(stmt)} uses an export form verify-export-jsdoc does not handle; extend the gate.`)
 }
 
@@ -385,7 +385,7 @@ function checkDecl(
  * exported declaration, resolving `export { … }` lists (no module specifier)
  * to their local declarations.
  * @param statements - the scope's statements.
- * @param prefix - the namespace qualification for surface names ('' at top level).
+ * @param prefix - the namespace qualification for exported names ('' at top level).
  * @param w - the walk state violations append to.
  * @param ambient - whether this scope is ambient (`declare` namespace or a declaration file), where members export implicitly.
  */
@@ -445,8 +445,8 @@ function checkScope(
     }
     if (ts.isExportAssignment(stmt)) {
       if (stmt.isExportEquals) {
-        // `export =` has no ESM consumer surface in this repo and the walk
-        // cannot classify its operand's shape; refuse rather than fail open.
+        // `export =` has no ESM consumer API in this repo and the walk
+        // cannot classify its operand's type; refuse rather than fail open.
         w.violations.push(`export-equals assignment (${pointer(w.rel, w.sf, stmt)}) is not a gate-supported export form; use ESM named exports.`)
         continue
       }
@@ -599,11 +599,11 @@ export function collectExportJsdocViolations(scanRoot: string = root): string[] 
   return violations
 }
 
-/** CLI entry: list every violation and exit 1, or confirm a clean surface. */
+/** CLI entry: list every violation and exit 1, or confirm a documented API. */
 function main(): void {
   const violations = collectExportJsdocViolations()
   if (violations.length === 0) {
-    console.log('verify-export-jsdoc: every exported name on the package surface is documented.')
+    console.log('verify-export-jsdoc: every exported name in each package API is documented.')
     return
   }
   console.error(`verify-export-jsdoc: ${violations.length} JSDoc completeness violation(s) (see AGENTS.md):`)

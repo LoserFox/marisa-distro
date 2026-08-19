@@ -35,7 +35,7 @@ async function importWithNative(native: NativeMock): Promise<typeof import('../s
         func: (definition: string) => {
           if (definition.includes('GetFileSecurityW')) return native.getFileSecurityW
           if (definition.includes('SetFileSecurityW')) return native.setFileSecurityW
-          if (definition.includes('ReplaceFileW')) { return native.replaceFileW }
+          if (definition.includes('ReplaceFileW')) return native.replaceFileW
           if (definition.includes('GetLastError')) return native.getLastError
           throw new Error(`unexpected native function: ${definition}`)
         },
@@ -134,7 +134,7 @@ describe('Windows file-security helpers', () => {
     })
 
     const replaceFailure = successfulNative(Buffer.from([1]))
-    replaceFailure.replaceFileW = () => { return 0 }
+    replaceFailure.replaceFileW = () => 0
     replaceFailure.getLastError = () => 2
     const replaceModule = await importWithNative(replaceFailure)
     await expect(replaceModule.replaceFileWin32('target', 'temp')).rejects.toMatchObject({

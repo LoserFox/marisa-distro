@@ -4,7 +4,7 @@
  * reads via props.useStore.
  */
 import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ThemePreference } from './index.ts'
+import type { ThemePreference } from '../theme-settings.ts'
 
 /** Store state mirrored from the theme snapshot. */
 export interface AppearanceRowState {
@@ -25,10 +25,10 @@ type AppearanceRowActions = {
  */
 export function createAppearanceRowStore(): EngineStoreHandle<AppearanceRowState, AppearanceRowActions> {
   return defineStore({
-    init: (): AppearanceRowState => { return ({ preference: 'system', revision: -1 }) },
+    init: (): AppearanceRowState => ({ preference: 'system', revision: -1 }),
     actions: {
       sync: (d, preference: ThemePreference, revision: number) => {
-        if (revision <= d.revision) { return }
+        if (revision <= d.revision) return
         d.preference = preference
         d.revision = revision
       },

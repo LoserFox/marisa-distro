@@ -2,14 +2,15 @@
 // plus the shared estimator's pricing branches.
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { createMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, ToolSchema } from '@deepseek-ai/dsh-llm'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import TokenMeterService from '@deepseek-ai/dsh-token-meter'
+import TokenMeter from '@deepseek-ai/dsh-token-meter'
 import type { ContextBreakdownProjection } from '@deepseek-ai/dsh-token-meter/client'
+import { CompactionId } from '@deepseek-ai/dsh-compaction'
 import { contextBreakdownProjectionDefinition } from '../src/breakdown-projection.ts'
 import {
   estimateContent,
@@ -31,7 +32,7 @@ async function harness(): Promise<{ ctx: Context; session: Session }> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
   await ctx.plugin(SessionProjectionRegistry)
-  await ctx.plugin(TokenMeterService)
+  await ctx.plugin(TokenMeter)
   return { ctx, session: ctx.sessions.create() }
 }
 
@@ -49,7 +50,7 @@ function appendUser(session: Session, text: string): number {
 }
 
 /**
- * Meter one upcoming replacement the way compact-basic does: price the
+ * Meter one upcoming replacement the way compaction-basic does: price the
  * replaced span from the measurement service's own nodes and log the
  * shadow-price event directly before the replace.
  */
@@ -58,7 +59,8 @@ function appendSummaryMeter(ctx: Context, session: Session, start: number, end: 
   const startIdx = nodes.findIndex(node => node.seq === start)
   const endIdx = nodes.findIndex(node => node.seq === end)
   const shadowed = nodes.slice(startIdx, endIdx + 1)
-  session.append('compact/summary', {
+  session.append('compaction/summary', {
+    compactionId: CompactionId('context-breakdown-summary'),
     summary: [{ type: 'text', text: 'summary' }],
     shadowedRange: { start, end },
     shadowedSeqs: shadowed.map(node => node.seq),
@@ -136,7 +138,7 @@ describe('contextBreakdown session projection', () => {
     expect(projected(ctx, session).messageTokens).toBe(estimateMessage(summary))
   })
 
-  it('keeps the message figure equal to the service surface across appends and a compaction', async () => {
+  it('keeps the message figure equal to the service result across appends and a compaction', async () => {
     const { ctx, session } = await harness()
     // The panel's composition rows and `measure()` answer the same question in
     // the same vocabulary; one shared fold is what makes that true.
@@ -198,7 +200,7 @@ describe('contextBreakdown session projection', () => {
       surfaceOp: 'append',
     } as unknown as SessionEvent)
     const meter = (start: number, end: number, seq: number): SessionEvent => ({
-      type: 'compact/prune',
+      type: 'compaction/prune',
       seq,
       time: 0,
       data: { shadowedRange: { start, end }, shadowedSeqs: [start, end], shadowedTokenCount: 5 },
@@ -258,7 +260,7 @@ describe('contextBreakdown session projection', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionProjectionRegistry)
-    const meterFiber = await ctx.plugin(TokenMeterService)
+    const meterFiber = await ctx.plugin(TokenMeter)
     const session = ctx.sessions.create()
     session.append('request/header', {
       header: { config: CONFIG, system: 'You are terse.' },
@@ -272,7 +274,7 @@ describe('contextBreakdown session projection', () => {
     await meterFiber.dispose()
     expect(ctx.sessionProjections.snapshot(session).values).not.toHaveProperty('contextBreakdown')
 
-    await ctx.plugin(TokenMeterService)
+    await ctx.plugin(TokenMeter)
     expect(ctx.sessionProjections.viewCheckpoint(checkpoint).contextBreakdown).toEqual({
       systemTokens: estimateSystemTokens({ config: CONFIG, system: 'You are terse.' }),
       toolsTokens: 0,

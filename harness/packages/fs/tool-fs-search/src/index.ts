@@ -8,7 +8,7 @@
  *
  * Local workspace discovery is a process-backed `rg` workflow, so these tools
  * execute through `ctx.subprocess.spawn()` with fixed ripgrep argv templates —
- * never `ctx.bash`, never `ctx.bash.start()`, never a model-visible background
+ * never `ctx.shell`, never `ctx.shell.start()`, never a model-visible background
  * task. The tool layer owns schemas, argument validation, argv construction
  * ({@link module:@deepseek-ai/dsh-tool-fs-search/glob} /
  * {@link module:@deepseek-ai/dsh-tool-fs-search/grep}), result parsing,
@@ -26,8 +26,8 @@
  * @module @deepseek-ai/dsh-tool-fs-search
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { GLOB_MAX_RESULTS, applyGlobTool } from './glob.ts'
 import { GREP_MAX_LINE_BYTES, GREP_MAX_MATCHES, applyGrepTool } from './grep.ts'
@@ -87,7 +87,10 @@ export interface Config {
   graceMs?: number
   /** Max bytes retained for one search's stderr tail; the excerpt is embedded in `SEARCH_*` error messages, never shown on success. */
   stderrMaxBytes?: number
-  /** Cooperative tool-call timeout budget (ms) on both tools, enforced by `@deepseek-ai/dsh-timeout-policy` through `exec.signal`. */
+  /**
+   * Cooperative tool-call timeout budget (ms) on both tools, enforced by
+   * `@deepseek-ai/dsh-tool-call-timeout-policy` through `exec.signal`.
+   */
   timeoutMs?: number
 }
 
@@ -108,7 +111,9 @@ type ResolvedConfig = Required<Config>
 
 /** Every search cap counts items/bytes/milliseconds — a positive integer, or retention and timeout arithmetic misbehaves silently. */
 function assertPositiveInteger(name: string, value: number): void {
-  if (!Number.isInteger(value) || value < 1) throw new Error(`tool-fs-search: ${name} must be a positive integer`)
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`tool-fs-search: ${name} must be a positive integer`)
+  }
 }
 
 /**

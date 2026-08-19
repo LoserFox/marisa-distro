@@ -40,7 +40,7 @@ Context 与 AgentEventDispatch 调用只贡献由字符串字面量构成的有�
 
 恰好一个匹配项会生成解析函数。存在多个匹配项时，含义不明确，生成器会失败。没有匹配项时，事件必须标记 `@dshScopeScan unsupported`；该标记只用于路由键有意留在事件参数之外的情况，例如按所属 agent（智能体）路由的会话事件和按父 agent 路由的 subagent 生命周期事件。此标记只表示扫描不受支持，不编码事件名、参数下标、属性路径或替代类型。
 
-提交到仓库的 [`scoped-events.generated.ts`](../../../../packages/core/scope/src/scoped-events.generated.ts) 是位于 scoped dispatch 所属包中的纯运行时映射，不导入任何事件声明方包。语义完整性由生成器自身保证：根 Program 枚举所有 scoped `Events` 声明与真实 `scopeTarget` 契约，通过 checker 解析唯一的 payload 路径，并在渲染 `unknown[]` 运行时边界前拒绝缺失、陈旧或含义不明确的条目。
+提交到仓库的 [`scoped-events.generated.ts`](../../../../packages/core/scope/src/scoped-events.generated.ts) 是位于 scoped dispatch 所属包中的纯运行时映射，不导入任何事件声明方包。语义完整性由生成器自身保证：根 Program 枚举所有 scoped `Events` 声明与真实 `scopeTarget` 约定，通过 checker 解析唯一的 payload 路径，并在渲染 `unknown[]` 运行时边界前拒绝缺失、陈旧或含义不明确的条目。
 
 `dsh-scope/invariant` companion 消费这份映射，不再维护手写事件表。Program 分析发生在仓库门禁内，而不是依赖生成的类型导入，因此 `dsh-scope` 和 `dsh-invariants` 都不需要依赖所有事件声明方。
 
@@ -59,7 +59,7 @@ Context 与 AgentEventDispatch 调用只贡献由字符串字面量构成的有�
 ## 后果
 
 - 事件关系生成依据语义接收者身份和封闭事件值，不再依赖局部命名约定；
-- 带作用域的事件成员关系、主体提取和运行时不变式覆盖来自事件声明与真实 dispatch 契约，不再来自手写表；
-- 修改事件名、参数位置、主体属性或路由键类型时，会在其所属契约处触发生成失败；
+- 带作用域的事件成员关系、主体提取和运行时不变式覆盖来自事件声明与真实 dispatch 约定，不再来自手写表；
+- 修改事件名、参数位置、主体属性或路由键类型时，会在其所属约定处触发生成失败；
 - 构建扁平化 Program 比解析孤立文件消耗更多启动时间和内存，语义门禁也依赖有效的根项目图；
 - 生成的 TypeScript 仍属于提交到仓库的源码：事件声明方或 dispatch 形态发生变化后，必须重新生成该文件和受影响的文档。

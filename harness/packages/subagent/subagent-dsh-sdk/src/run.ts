@@ -16,7 +16,7 @@ import { DeepSeekHarness, type HarnessNotification } from '@deepseek-ai/dsh-sdk-
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { SessionId, type SessionEvent, type TurnEndReason } from '@deepseek-ai/dsh-session'
 import type { SubagentResult, SubagentRun, SubagentStartRequest, SubagentStopReason } from '@deepseek-ai/dsh-subagent'
-import { settleRunResult, subprocessRunHandle } from '@deepseek-ai/dsh-subagent'
+import { AssistantOutputFold, settleRunResult, subprocessRunHandle } from '@deepseek-ai/dsh-subagent'
 import { scrubbedParentEnv } from '@deepseek-ai/dsh-subprocess'
 
 /** Resolved spawn spec for an SDK runtime child process (no defaults — see Config). */
@@ -163,24 +163,14 @@ export async function startSdkRun(request: SubagentStartRequest, spec: SdkRunSpe
   }
 
   const childSessionId = `session-${randomUUID().replaceAll('-', '')}`
-  // The child's final answer: the last complete assistant message when one
-  // exists, else the text streamed so far (a partial answer surviving cancel).
-  let lastMessage: ContentBlock[] | undefined
-  const partial: string[] = []
+  // The child's final answer under the seam's canonical selection rule
+  // (`AssistantOutputFold`); a partial answer survives cancel and error paths.
+  const fold = new AssistantOutputFold()
   const observe = (notification: HarnessNotification): void => {
     if (notification.method !== 'session.event' || notification.params.sessionId !== childSessionId) return
-    const event = notification.params.event as SessionEvent
-    if (event.type === 'assistant/chunk' && event.data.chunk.type === 'text-delta') {
-      partial.push(event.data.chunk.text)
-    } else if (event.type === 'assistant/message') {
-      lastMessage = event.data.message.content
-    }
+    fold.push(notification.params.event as SessionEvent)
   }
-  const collectOutput = (): ContentBlock[] => {
-    if (lastMessage !== undefined) return lastMessage
-    const text = partial.join('')
-    return text.length > 0 ? [{ type: 'text', text }] : []
-  }
+  const collectOutput = (): ContentBlock[] => fold.collect() ?? []
 
   // Race the child turn against local cancellation; the shared settlement
   // flattens failures under the seam's never-reject contract.

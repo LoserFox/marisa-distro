@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import WebService, {
+import { Context } from '@deepseek-ai/cordis'
+import WebRuntime, {
   WebError,
   type WebFetchProvider,
   type WebFetchResult,
@@ -33,14 +33,14 @@ function fetchResult(marker: string): WebFetchResult {
   return { url: 'https://example.com', statusCode: 200, body: { kind: 'text', content: marker }, truncated: false }
 }
 
-/** Mount a WebService on a fresh root context with the given config. */
-async function mountWeb(config: ConstructorParameters<typeof WebService>[1] = {}): Promise<{ ctx: Context; web: WebService }> {
+/** Mount a WebRuntime on a fresh root context with the given config. */
+async function mountWeb(config: ConstructorParameters<typeof WebRuntime>[1] = {}): Promise<{ ctx: Context; web: WebRuntime }> {
   const ctx = new Context()
-  await ctx.plugin(WebService, config)
+  await ctx.plugin(WebRuntime, config)
   return { ctx, web: ctx.web }
 }
 
-describe('WebService registration', () => {
+describe('WebRuntime registration', () => {
   it('registers a search provider and unregisters it via the returned disposer', async () => {
     const { web } = await mountWeb()
 
@@ -75,7 +75,7 @@ describe('WebService registration', () => {
   })
 })
 
-describe('WebService execution resolution', () => {
+describe('WebRuntime execution resolution', () => {
   it('throws WEB_PROVIDER_UNAVAILABLE when nothing is registered', async () => {
     const { web } = await mountWeb()
     await expect(web.search({ query: 'q' })).rejects.toThrow(expect.objectContaining({ code: 'WEB_PROVIDER_UNAVAILABLE' }))
@@ -89,7 +89,7 @@ describe('WebService execution resolution', () => {
 
   it('throws WEB_PROVIDER_CONFIGURED_MISSING for an unregistered configured id', async () => {
     const { web } = await mountWeb({ searchProvider: 'perplexity' })
-    web.registerSearchProvider(makeSearchProvider('exa', available, () => { return Promise.resolve(searchResult('exa')) }))
+    web.registerSearchProvider(makeSearchProvider('exa', available, () => Promise.resolve(searchResult('exa'))))
     await expect(web.search({ query: 'q' })).rejects.toThrow(expect.objectContaining({ code: 'WEB_PROVIDER_CONFIGURED_MISSING' }))
   })
 
@@ -156,7 +156,7 @@ describe('WebService execution resolution', () => {
   })
 })
 
-describe('WebService maxResults enforcement', () => {
+describe('WebRuntime maxResults enforcement', () => {
   it('truncates sources and sets truncated when a provider over-returns', async () => {
     const { web } = await mountWeb()
     web.registerSearchProvider(makeSearchProvider('exa', available, () => Promise.resolve(searchResult('exa', {
@@ -188,12 +188,12 @@ describe('WebService maxResults enforcement', () => {
   })
 })
 
-describe('WebService fetch capability', () => {
+describe('WebRuntime fetch capability', () => {
   it('resolves and runs the fetch provider independently of search', async () => {
     const { web } = await mountWeb()
-    web.registerFetchProvider(makeFetchProvider('local-http', available, fetchResult('local-http')))
+    web.registerFetchProvider(makeFetchProvider('http', available, fetchResult('http')))
     const result = await web.fetch({ url: 'https://example.com' })
-    expect(result.body.content).toBe('local-http')
+    expect(result.body.content).toBe('http')
     expect(result.statusCode).toBe(200)
   })
 

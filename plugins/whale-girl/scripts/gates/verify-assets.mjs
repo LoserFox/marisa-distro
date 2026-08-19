@@ -13,8 +13,8 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { STATE_NAMES, PLAYBACK_MODES, PLAYBACK_MIN_FRAMES } from '../../.dsh-plugin/client/logic.mjs'
-import { ROLE_ID_RE } from '../../.dsh-plugin/client/character.mjs'
+import { STATE_NAMES, PLAYBACK_MODES, PLAYBACK_MIN_FRAMES } from '../../lib/client/logic.mjs'
+import { ROLE_ID_RE } from '../../lib/client/character.mjs'
 
 const ROOT = resolve(import.meta.dirname, '../..')
 
@@ -36,7 +36,7 @@ function pngSize(file) {
 
 /** 校验一个角色的 states（sheet 文件在 assets/characters/<id>/ 下）。 */
 function checkStates(states, roleId, errors, root) {
-  const dir = roleId === null ? join(root, '.dsh-plugin', 'assets') : join(root, '.dsh-plugin', 'assets', 'characters', roleId)
+  const dir = roleId === null ? join(root, 'lib', 'assets') : join(root, 'lib', 'assets', 'characters', roleId)
   const label = roleId === null ? 'states' : `characters.${roleId}.states`
   // 必备集：全部 15 状态必须声明（素材全量契约——不再 emoji 降级）。
   const declared = new Set(Object.keys(states))
@@ -98,7 +98,7 @@ function checkStates(states, roleId, errors, root) {
 /** 校验 assets manifest。返回 { ok, errors }。 */
 export function check(root = ROOT) {
   const errors = []
-  const manifestPath = join(root, '.dsh-plugin', 'assets', 'manifest.json')
+  const manifestPath = join(root, 'lib', 'assets', 'manifest.json')
   let manifest
   try {
     manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
@@ -106,14 +106,14 @@ export function check(root = ROOT) {
     return { ok: false, errors: [`assets/manifest.json 无法解析：${error instanceof Error ? error.message : String(error)}`] }
   }
   if (manifest === null || typeof manifest !== 'object') {
-    return { ok: false, errors: ['.dsh-plugin/assets/manifest.json 必须是对象'] }
+    return { ok: false, errors: ['lib/assets/manifest.json 必须是对象'] }
   }
   // 角色索引（characters）优先；顶层 states（旧格式）若并存也校验——两种格式都校验，
   // 防止「characters 存在时顶层遗留块无人管」的死数据盲区。
   const hasCharacters = manifest.characters !== undefined
   if (hasCharacters) {
     if (manifest.characters === null || typeof manifest.characters !== 'object' || Array.isArray(manifest.characters)) {
-      return { ok: false, errors: ['.dsh-plugin/assets/manifest.json 的 characters 必须是对象'] }
+      return { ok: false, errors: ['lib/assets/manifest.json 的 characters 必须是对象'] }
     }
     for (const [roleId, ch] of Object.entries(manifest.characters)) {
       if (!ROLE_ID_RE.test(roleId)) {
@@ -138,14 +138,14 @@ export function check(root = ROOT) {
     // 并存校验：顶层 states 若存在（旧格式兼容块），按平铺目录同样校验——不允许死数据逃过门禁。
     if (manifest.states !== undefined) {
       if (manifest.states === null || typeof manifest.states !== 'object' || Array.isArray(manifest.states)) {
-        errors.push('.dsh-plugin/assets/manifest.json 的顶层 states（兼容块）必须是对象')
+        errors.push('lib/assets/manifest.json 的顶层 states（兼容块）必须是对象')
       } else {
         checkStates(manifest.states, null, errors, root)
       }
     }
   } else {
     if (manifest.states === undefined || typeof manifest.states !== 'object' || Array.isArray(manifest.states)) {
-      return { ok: false, errors: ['.dsh-plugin/assets/manifest.json 缺 states 对象（或 characters 角色索引）'] }
+      return { ok: false, errors: ['lib/assets/manifest.json 缺 states 对象（或 characters 角色索引）'] }
     }
     checkStates(manifest.states, null, errors, root)
   }

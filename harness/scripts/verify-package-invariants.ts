@@ -1,4 +1,4 @@
-/** Verify package-owned invariant source and publication contracts. */
+/** Verify package-owned invariant source and publication rules. */
 
 import { resolve } from 'node:path'
 import {

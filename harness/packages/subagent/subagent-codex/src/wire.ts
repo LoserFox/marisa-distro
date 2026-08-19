@@ -1,5 +1,5 @@
 /**
- * Minimal Codex app-server 0.146.0 protocol adapter. The shared JSON-RPC
+ * Minimal Codex app-server 0.147.0 protocol adapter. The shared JSON-RPC
  * transport owns framing and request correlation; this module owns only the
  * product methods, current thread/turn association, unattended approval
  * responses, and terminal-answer selection.
@@ -338,7 +338,7 @@ export class CodexAppServerWire {
         }
         return
       }
-      if (id !== this.turnId) { return }
+      if (id !== this.turnId) return
       const item = object(params.item, 'item/completed item')
       if (item.type !== 'agentMessage') return
       const text = typeof item.text === 'string'

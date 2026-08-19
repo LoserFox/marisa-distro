@@ -1,12 +1,12 @@
 /**
- * Tests for the filesystem provider seam itself: registration, duplicate-service
+ * Tests for the filesystem Service Definition: registration, duplicate-service
  * behavior, disposal, and the branded id factories. The provider primitives and
- * policy live in `dsh-fs-local` and `dsh-fs-policy`; this seam owns only the
+ * policy live in `dsh-fs-local` and `dsh-fs-observation-policy`; this seam owns only the
  * abstract service contract, so a minimal fake backend exercises it.
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { FileSystem, FsError, FsTargetKey, FsVersion } from '@deepseek-ai/dsh-fs'
 import type {
   FsDirEntry,
@@ -19,12 +19,17 @@ import type {
   FsWriteOutcome,
 } from '@deepseek-ai/dsh-fs'
 
-/** A minimal in-memory fake implementing the eight provider primitives. */
+/** A minimal in-memory fake implementing the provider primitives. */
 class FakeFileSystem extends FileSystem {
   files = new Map<string, string>()
 
   override async resolve(path: string): Promise<FsTarget> {
     return { targetKey: FsTargetKey(path), displayPath: path }
+  }
+  override processPath(target: FsTarget): string { return String(target.targetKey) }
+  override fileUrl(target: FsTarget): string { return `file:///${encodeURIComponent(String(target.targetKey))}` }
+  override contains(parent: FsTarget, child: FsTarget): boolean {
+    return child.targetKey === parent.targetKey || String(child.targetKey).startsWith(`${parent.targetKey}/`)
   }
   override async stat(target: FsTarget): Promise<FsInfo | undefined> {
     const content = this.files.get(target.targetKey)
@@ -44,6 +49,13 @@ class FakeFileSystem extends FileSystem {
   override async streamText(target: FsTarget): Promise<AsyncIterable<string>> {
     const content = await this.readText(target)
     return (async function* () { yield content })()
+  }
+  override async readBytes(target: FsTarget, _signal: AbortSignal | undefined, maxBytes: number): Promise<Uint8Array> {
+    const bytes = new TextEncoder().encode(await this.readText(target))
+    if (bytes.length > maxBytes) {
+      throw new FsError(`too large: ${target.displayPath}`, 'FS_TOO_LARGE')
+    }
+    return bytes
   }
   override async listDir(target: FsTarget): Promise<FsDirEntry[]> {
     if (target.targetKey !== 'skills') throw new FsError(`not a directory: ${target.displayPath}`, 'FS_NOT_DIRECTORY')
@@ -75,6 +87,7 @@ describe('FileSystem provider seam', () => {
     const ctx = new Context()
     await ctx.plugin(FakeFileSystem)
     const fs = ctx.fs as FakeFileSystem
+    expect(fs.sandboxMode).toBeUndefined()
     fs.files.set('a.txt', 'hi')
     const target = await fs.resolve('a.txt')
     expect((await fs.stat(target))?.type).toBe('file')
@@ -104,6 +117,16 @@ describe('FileSystem provider seam', () => {
     let streamed = ''
     for await (const chunk of await fs.streamText(target)) streamed += chunk
     expect(streamed).toBe(await fs.readText(target))
+  })
+
+  it('readBytes returns raw content and enforces the byte cap with FS_TOO_LARGE', async () => {
+    const ctx = new Context()
+    await ctx.plugin(FakeFileSystem)
+    const fs = ctx.fs as FakeFileSystem
+    fs.files.set('a.bin', 'hi')
+    const target = await fs.resolve('a.bin')
+    expect(await fs.readBytes(target, undefined, 2)).toEqual(new TextEncoder().encode('hi'))
+    await expect(fs.readBytes(target, undefined, 1)).rejects.toMatchObject({ code: 'FS_TOO_LARGE' })
   })
 
   it('listDir returns child entry targets without reading file content', async () => {

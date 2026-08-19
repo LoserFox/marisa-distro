@@ -80,7 +80,7 @@ export function apply(ctx: Context) {
 To stop a plugin instance early:
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 declare const ctx: Context
 declare function myPlugin(ctx: Context): void
@@ -98,7 +98,7 @@ await fiber.dispose()
 
 ## Hot replacement (HMR)
 
-With `@cordisjs/plugin-hmr` loaded from `cordis.yml`, editing a plugin source file triggers:
+With `@deepseek-ai/cordis-plugin-hmr` loaded from `cordis.yml`, editing a plugin source file triggers:
 
 1. Unload the old plugin and clean up its registrations.
 2. Load the new code.
@@ -134,3 +134,4 @@ effect cleaned up
 
 - [Services and dependencies](./service.md) — expose a capability to other plugins
 - [Event system](./events.md) — communicate between plugins
+- [Cordis tutorial](../../../cordis-tutorial/index.md) — the same lifecycle, services, and events built step by step against the Cordis runtime

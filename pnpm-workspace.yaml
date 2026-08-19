@@ -16,8 +16,17 @@ packages:
   - 'harness/native/landlock-run/packages/entry'
   - 'harness/native/landlock-run/packages/linux-arm64'
   - 'harness/native/landlock-run/packages/linux-x64'
+  # rc7 sync (2026-08-18): examples/ and website/ are upstream workspace
+  # members referenced by tsconfig.host.json; keeping harness sources pristine
+  # (submodule direction) means their deps install here instead of trimming
+  # the upstream tsconfig.
+  - 'harness/examples'
+  - 'harness/website'
   - 'plugins/*'
   - 'bundles/*'
+  # vendored MyGO (omdsh-dev/dsh-mygo@next, keyed-adapted 2026-08-18);
+  # its own pnpm-workspace.yaml is NOT staged to avoid the nested-workspace pitfall.
+  - 'dsh-mygo/packages/*/*'
   - 'profiles/marisa/runtime'
 
 nodeLinker: hoisted
@@ -45,11 +54,23 @@ allowBuilds:
 # workspace package and all harness links untouched.
 overrides:
   '@dsh-external/dsh-code-map>schemastery': 'npm:@deepseek-ai/schemastery@3.18.1'
-  # Some third-party plugin declares bare `cordis: >=4.0.0 <5.0.0-0`, which no
-  # version satisfies: npm has no stable cordis 4 (latest is 4.0.0-rc.8) and
-  # the vendored workspace copy is 4.0.0-rc.7. pnpm >= 11.22 resolves peers
-  # strictly and fails the profile install; force the workspace version.
+  # Some third-party plugin declares bare `cordis: >=4.0.0 <5.0.0-0`; pin
+  # the bare peer to the rc7-compatible published release.
   cordis: 4.0.0-rc.7
+  # rc7 sync (2026-08-18): upstream pins typescript@6.0.3 (harness devDep ^6.0.3);
+  # without an override the hoisted top-level resolves 5.9.3 and tsc -b fails
+  # on rc7 test sources. All peer ranges (>=4.8 / >=5) accept 6.0.3.
+  typescript: 6.0.3
+  # fflate: @deepseek-ai/dsh-host-apiproxy imports `{ Zip } from "fflate"`,
+  # which only works against an ESM build (0.8.x). @univerjs-pro/exchange-client
+  # pins 0.4.9 exactly (CJS-only, no exports map). The bundled --prod install
+  # prunes devDeps (including @types/three, the other 0.8.3 edge), leaving
+  # 0.4.9 the hoist winner at the workspace root; the pnpm hoisted linker does
+  # not nest a conflicting version for workspace members, so apiproxy resolves
+  # 0.4.9 and the backend never boots. A single-version override makes the
+  # top-level hoist deterministic in every install mode; the bundle prunes
+  # @univerjs* anyway, and dev-mode xlsx zip keeps working on 0.8.x.
+  fflate: '0.8.3'
 # 近期发布的 registry 包会被 minimumReleaseAge 默认拦截；
 # 根 workspace 与 profile 生成器各自维护其依赖的 exclude 列表。
 minimumReleaseAgeExclude:
@@ -138,11 +159,12 @@ minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-user-approval@0.1.0-rc.6'
   - '@deepseek-ai/dsh-user-questions@0.1.0-rc.6'
   - '@deepseek-ai/schemastery@0.1.0-rc.6'
-  - '@r05en1cu/dsh-mygo@0.2.0-rc.6'
-  - '@r05en1cu/dsh-mygo-cli@0.2.0-rc.6'
-  - '@r05en1cu/dsh-mygo-ext-panel@0.2.0-rc.6'
-  - '@r05en1cu/dsh-mygo-loader-hub@0.2.0-rc.6'
-  - '@r05en1cu/dsh-mygo-api@0.2.0-rc.6'
-  - '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.6'
+  - '@r05en1cu/dsh-mygo@0.2.0-rc.7'
+  - '@r05en1cu/dsh-mygo-cli@0.2.0-rc.7'
+  - '@r05en1cu/dsh-mygo-ext-panel@0.2.0-rc.7'
+  - '@r05en1cu/dsh-mygo-loader-hub@0.2.0-rc.7'
+  - '@r05en1cu/dsh-mygo-api@0.2.0-rc.7'
+  - '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.7'
 patchedDependencies:
-  '@deepseek-ai/dsh-client-modules@0.1.0-rc.6': patches/@deepseek-ai__dsh-client-modules@0.1.0-rc.6.patch
+  # (2026-08-18) emptied: MyGO is now vendored source (dsh-mygo/, keyed fix
+  # applied in-tree) instead of the npm build that needed the patch.

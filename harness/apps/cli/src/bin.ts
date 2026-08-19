@@ -21,7 +21,7 @@ function readVersion(): string {
   const manifest = JSON.parse(
     readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'),
   ) as { version?: unknown }
-  return typeof manifest.version !== 'string' ? '0.0.0' : manifest.version
+  return typeof manifest.version === 'string' ? manifest.version : '0.0.0'
 }
 
 const invocation = parseDshArgs(process.argv.slice(2), readVersion())
@@ -33,22 +33,8 @@ switch (invocation.mode) {
       environment: loadLayeredEnv('dsh'),
       profile: invocation.profile,
       patchFiles: invocation.patches,
+      args: invocation.args,
     })
-    break
-  }
-  case 'run': {
-    const { runProfile } = await import('./profile-boot.ts')
-    await runProfile({
-      environment: loadLayeredEnv('dsh'),
-      profile: invocation.profile,
-      patchFiles: invocation.patches,
-      task: invocation.task,
-    })
-    break
-  }
-  case 'web': {
-    const { runWeb } = await import('./web.ts')
-    await runWeb(invocation, loadLayeredEnv('dsh'))
     break
   }
   case 'plugin': {

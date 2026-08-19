@@ -16,7 +16,7 @@ Web 停止按钮调用 `session.cancel`，后者映射到广义 `agent.cancel({ 
 
 AgentLoop 不会启动并发的替代轮次。它会关闭并 flush 被中断的轮次，达到取消的完全停稳，然后通过现有 FIFO 驱动器认领下一个可唤醒的 queued 入队项。该认领会发出 `agent/inbox/dequeue`，因此 Host 的权威 `session/queue` 快照会退役已认领行，并使剩余队尾保持可见。浏览器既不重发，也不提升任何行。忽略取消的工作会延迟这一交接，直到该工作结算。
 
-该映射只更改 Web 客户端使用的 Host `session.cancel` 端点。`Agent.cancel()` 默认契约仍为广义取消，ACP 和 TUI 保留既有取消策略，`AgentHandle.dispose()` 在拆卸期间仍会清除待处理工作。移除 Queue 行仍是用于丢弃单个待处理入队项的显式 Web 操作。
+该映射只更改 Web 客户端使用的 Host `session.cancel` 端点。`Agent.cancel()` 默认约定仍为广义取消，ACP 和 TUI 保留既有取消策略，`AgentHandle.dispose()` 在拆卸期间仍会清除待处理工作。移除 Queue 行仍是用于丢弃单个待处理入队项的显式 Web 操作。
 
 ## 考虑过的替代方案
 

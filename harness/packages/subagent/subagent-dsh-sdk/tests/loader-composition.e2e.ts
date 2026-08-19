@@ -68,7 +68,7 @@ describe('SDK subagent cwd inheritance through a real cordis.yml', () => {
         DSH_TEST_CHILD_COMMAND: childLaunch.command,
         DSH_TEST_CHILD_ARGS: JSON.stringify(childLaunch.args),
         DSH_TEST_CHILD_ENV: JSON.stringify({
-          ...Object.fromEntries(Object.entries(childLaunch.env).filter(([, value]) => { return value !== undefined })),
+          ...Object.fromEntries(Object.entries(childLaunch.env).filter(([, value]) => value !== undefined)),
         }),
       },
       inspect: async (cwd) => {

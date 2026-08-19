@@ -162,28 +162,31 @@ describe('P1 upstream output parsers', () => {
     })
   })
 
-  it('parses palette and candidate dominant-color modes', () => {
+  it('parses palette and candidate dominant-color modes with empty bars', () => {
     expect(parseDominantColorsOutput([
       'region 0,0,100,50 - 100x50 px',
       'top 2 of 4 clusters (merged at distance <= 8):',
       '#336699   42.1%  ####################',
-      '#FFFFFF   31.0%  ###############',
+      '#FFFFFF    1.5%',
     ].join('\n'))).toMatchObject({
       mode: 'palette',
       clusterCount: 4,
-      colors: [{ color: '#336699', sharePct: 42.1 }, { color: '#FFFFFF', sharePct: 31 }],
+      colors: [{ color: '#336699', sharePct: 42.1 }, { color: '#FFFFFF', sharePct: 1.5 }],
     })
     expect(parseDominantColorsOutput([
       'region 0,0,100,50 - 100x50 px (5000 px sampled)',
       'candidate   share   mean_d  wt    bar',
       '*#336699    42.1%   4.0   100%  ####',
-      ' #FFFFFF    31.0%  22.0    40%  ##',
+      ' #FFFFFF     0.0%  22.0     0%',
       'winner: #336699 (* in table) - wt is soft-match closeness, so the winner need not have the highest share; 42.1% of region pixels within distance <= 16',
     ].join('\n'))).toMatchObject({
       mode: 'candidates',
       sampledPixels: 5000,
       winner: '#336699',
       matchedWithinTolerance: true,
+      candidates: expect.arrayContaining([
+        expect.objectContaining({ color: '#FFFFFF', sharePct: 0, weightedScorePct: 0 }),
+      ]),
     })
   })
 
@@ -192,6 +195,12 @@ describe('P1 upstream output parsers', () => {
       outputPath: '/tmp/page.png',
       width: 1280,
       height: 800,
+    })
+    expect(parseHtmlScreenshotOutput('wrote /tmp/page.png (1280x4210; pageHeight=4210)')).toEqual({
+      outputPath: '/tmp/page.png',
+      width: 1280,
+      height: 4210,
+      pageHeight: 4210,
     })
     expect(() => parsePixelDiffOutput('overall difference: maybe')).toThrowError(/unexpected output/)
     expect(() => parseDominantColorsOutput('unknown')).toThrowError(/missing region header/)

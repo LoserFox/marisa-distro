@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import WebService from '@deepseek-ai/dsh-web'
+import { Context } from '@deepseek-ai/cordis'
+import WebRuntime from '@deepseek-ai/dsh-web'
 import { ExaSearchProvider, EXA_PROVIDER_ID } from '@deepseek-ai/dsh-web-search-exa'
 import * as exaPlugin from '@deepseek-ai/dsh-web-search-exa'
 import { mapExaResponse, mapExaResult } from '../src/provider.ts'
@@ -202,7 +202,7 @@ describe('web-search-exa plugin registration', () => {
   it('registers the provider into ctx.web (HMR-safe)', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ results: [] })))
     const ctx = new Context()
-    await ctx.plugin(WebService, { searchProvider: EXA_PROVIDER_ID })
+    await ctx.plugin(WebRuntime, { searchProvider: EXA_PROVIDER_ID })
     const fiber = await ctx.plugin(exaPlugin, { apiKey: 'exa-key' })
     await expect(ctx.web.search({ query: 'q' })).resolves.toMatchObject({ sources: [], truncated: false })
     await fiber.dispose()
@@ -218,7 +218,7 @@ describe('web-search-exa plugin registration', () => {
     const fetchMock = vi.fn(async () => jsonResponse({ results: [] }))
     vi.stubGlobal('fetch', fetchMock)
     const ctx = new Context()
-    await ctx.plugin(WebService, { searchProvider: EXA_PROVIDER_ID })
+    await ctx.plugin(WebRuntime, { searchProvider: EXA_PROVIDER_ID })
     const fiber = await ctx.plugin(exaPlugin, { apiKey: 'exa-key', searchType: 'keyword', highlightsPerResult: 2, numResults: 9 })
     await ctx.web.search({ query: 'q' })
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
@@ -233,7 +233,7 @@ describe('web-search-exa plugin registration', () => {
       const fetchMock = vi.fn(async () => jsonResponse({ results: [] }))
       vi.stubGlobal('fetch', fetchMock)
       const ctx = new Context()
-      await ctx.plugin(WebService, { searchProvider: EXA_PROVIDER_ID })
+      await ctx.plugin(WebRuntime, { searchProvider: EXA_PROVIDER_ID })
       const fiber = await ctx.plugin(exaPlugin, {})
       await ctx.web.search({ query: 'q' })
       const [url] = fetchMock.mock.calls[0] as unknown as [string]
@@ -250,7 +250,7 @@ describe('web-search-exa plugin registration', () => {
     delete process.env.EXA_API_KEY
     try {
       const ctx = new Context()
-      await ctx.plugin(WebService, { searchProvider: EXA_PROVIDER_ID })
+      await ctx.plugin(WebRuntime, { searchProvider: EXA_PROVIDER_ID })
       await ctx.plugin(exaPlugin, {})
       await expect(ctx.web.search({ query: 'q' }))
         .rejects.toThrow(expect.objectContaining({ code: 'WEB_PROVIDER_CONFIGURED_UNAVAILABLE' }))

@@ -15,7 +15,7 @@ export interface DocumentTitleProps {
 export function DocumentTitle({ title }: DocumentTitleProps): null {
   const original = useRef(document.title)
   useEffect(() => {
-    document.title = title !== undefined ? `${title} — ${original.current}` : original.current
+    document.title = title === undefined ? original.current : `${title} — ${original.current}`
     return () => { document.title = original.current }
   }, [title])
   return null

@@ -6,11 +6,11 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
-import WebService from '@deepseek-ai/dsh-web'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
+import WebRuntime from '@deepseek-ai/dsh-web'
 import * as toolWeb from '@deepseek-ai/dsh-tool-web'
 
 describe('dsh-tool-web real-load-path guard', () => {
@@ -28,8 +28,8 @@ describe('dsh-tool-web real-load-path guard', () => {
   it('boots over ctx.web through the unwrapped module without an inject error', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(WebService, {})
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(WebRuntime, {})
 
     const loader = Object.create(Loader.prototype) as Loader
     const unwrapped = loader.unwrapExports(toolWeb) as Parameters<Context['plugin']>[0]

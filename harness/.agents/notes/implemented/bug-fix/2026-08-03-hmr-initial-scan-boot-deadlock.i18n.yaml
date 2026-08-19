@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-03-hmr-initial-scan-boot-deadlock.md
-2026-08-03-hmr-initial-scan-boot-deadlock.md: 4b3e259c216d258c321ab06c41225b33ed240d19
-2026-08-03-hmr-initial-scan-boot-deadlock.zh.md: ce1bc8396ac6e7fb6ecb1647fe2b29cdc788c7e1
+2026-08-03-hmr-initial-scan-boot-deadlock.md: e578b4d5fa973ee8f4986e570264c328f58bedc1
+2026-08-03-hmr-initial-scan-boot-deadlock.zh.md: 7123e423aab1293d138a1c24cb0dded00a83c89a

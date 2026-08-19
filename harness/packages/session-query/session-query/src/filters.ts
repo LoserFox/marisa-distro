@@ -186,7 +186,7 @@ function copyRange<K extends 'created-at' | 'seq' | 'time'>(
   const copy = {
     kind,
     ...range.from === undefined ? {} : { from: range.from },
-    ...range.to !== undefined ? { to: range.to } : {},
+    ...range.to === undefined ? {} : { to: range.to },
   }
   validateRange(kind, copy)
   return copy

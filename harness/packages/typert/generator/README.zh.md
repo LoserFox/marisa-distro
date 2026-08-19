@@ -4,7 +4,7 @@
 
 TypeScript 项目分析器和模型驱动的 Typert 生成器。在生成任何产物之前，它会先将开发者编写的源类型树转换为独立于编译器的 `FaceModel` 和 `TypeGraph` 数据。静态分析无需 Cordis 即可消费该模型；各产物生成组件均不会接收 TypeScript 抽象语法树（AST）或类型检查器对象。
 
-分析器可以分别使用由 `tsconfig.host.json` 或 `tsconfig.client.json` 初始化的独立 `ts.Program`。直接 Project Reference 确定 compiler project 成员关系；带 `dshClient` 的普通单 project package 可按公开 subpath 同时贡献 Host 与 Client 运行时 face，显式引用 `tsconfig.host.json` 或 `tsconfig.client.json` 的拆分 project 则只贡献所选 face。`package.json#exports` 确定所有跨包公开边界，跨 face 的边只能来自源码导入或重新导出。NPM 依赖拥有的类型（包括 `@types` 包中的全局声明）继续以 `external` 引用表示，不会被展开。
+分析器可以分别使用由 `tsconfig.host.json` 或 `tsconfig.client.json` 初始化的独立 `ts.Program`。直接项目引用确定编译器 face 的成员归属，而包子路径确定 Typert 运行时 face 的贡献：声明 `dsh.client` 的普通单项目包可以同时贡献 Host 与 Client 运行时模型；只有通过 `tsconfig.host.json` 或 `tsconfig.client.json` 显式引用的拆分项目，才会被限制在相应 face。`package.json#exports` 确定所有跨包公开边界，跨 face 的边只能来自源码导入或重新导出。NPM 依赖拥有的类型（包括 `@types` 包中的全局声明）继续以 `external` 引用表示，不会被展开。
 
 ## 分析模型
 
@@ -18,7 +18,7 @@ TypeScript 项目分析器和模型驱动的 Typert 生成器。在生成任何�
 
 `WorkspaceTypertGenerator` 会遍历从 Cordis `Context` 或 `Events` 扩充声明及显式 `@typert` 声明可达的包公开导出，以发现贡献方。发布产物时，它要求宿主侧产物位于 `lib/typert.host.{js,d.ts}` 并以 `package/typert` 暴露，客户端侧产物位于 `lib/typert.client.{js,d.ts}` 并以 `package/client/typert` 暴露。生成的声明将 `TYPERT` 暴露为 `unknown`，因此参与贡献的业务包无需依赖运行时注册表。
 
-各包可自行选择是否发布，未提供对应公开入口的业务包无需生成 Typert 产物。仓库的 Host tsdown 会以 `tsconfig.host.json` 为唯一 program 种子运行 workspace TypeRT 生成；它既生成 Host 反射产物，也把 Host Remote 契约投影为 Client 使用的 `typert.remote-client.*`。后续 Client tsdown 不启动 TypeRT，也不分析 `tsconfig.client.json`。静态消费方仍可直接调用 `WorkspaceAnalyzer`，显式选择 face 与包子集，并在不发布或加载运行时产物的情况下分批处理包。
+各包可自行选择是否发布，未提供对应公开入口的业务包无需生成 Typert 产物。仓库的 Host tsdown 会以 `tsconfig.host.json` 为唯一 program 种子运行 workspace Typert 生成；它既生成 Host 反射产物，也把 Host Remote 约定投影为 Client 使用的 `typert.remote-client.*`。后续 Client tsdown 不启动 Typert，也不分析 `tsconfig.client.json`。静态消费方仍可直接调用 `WorkspaceAnalyzer`，显式选择 face 与包子集，并在不发布或加载运行时产物的情况下分批处理包。
 
 ## 本仓库的 Cordis 投影
 

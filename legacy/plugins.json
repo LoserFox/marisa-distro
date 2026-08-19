@@ -1,0 +1,241 @@
+{
+  "name": "marisa",
+  "version": "0.1.1",
+  "generated": "2026-08-13",
+  "plugins": [
+    {
+      "name": "dsh-better-sidebar",
+      "source": "npm",
+      "version": "^0.10.3",
+      "bundle": true
+    },
+    {
+      "name": "@loserfox/git-identity",
+      "source": "git",
+      "dir": "dsh-git-identity",
+      "repo": "https://github.com/dsh-external/dsh-git-identity.git",
+      "needs-build": true,
+      "has-lib": false,
+      "patch-id": null
+    },
+    {
+      "name": "@deepseek-ai/dsh-genui",
+      "source": "git",
+      "dir": "dsh-genui",
+      "repo": "https://github.com/dsh-external/dsh-genui.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-external/workflow",
+      "source": "git",
+      "dir": "dsh_workflow",
+      "repo": "https://github.com/dsh-external/dsh_workflow.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-external/dsh-vision-toolkit",
+      "source": "git",
+      "dir": "dsh-vision-toolkit",
+      "repo": "https://github.com/dsh-external/dsh-vision-toolkit.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@bill9109/dsh-web-ui-notify",
+      "source": "git",
+      "dir": "dsh-web-ui-approval-notify",
+      "repo": "https://github.com/dsh-external/dsh-web-ui-approval-notify.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null,
+      "id": "ui-notify"
+    },
+    {
+      "name": "@dsh-external/dsh-suggested-replies",
+      "source": "git",
+      "dir": "dsh-suggested-replies",
+      "repo": "https://github.com/dsh-external/dsh-suggested-replies.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "whale-girl",
+      "source": "git",
+      "dir": "whale-girl",
+      "repo": "https://github.com/dsh-external/whale-girl.git",
+      "needs-build": true,
+      "has-lib": false,
+      "patch-id": null
+    },
+    {
+      "name": "@deepseek-ai/dsh-qwen-mm",
+      "source": "git",
+      "dir": "Qwen-MM-Plugins",
+      "repo": "https://github.com/dsh-external/Qwen-MM-Plugins.git",
+      "needs-build": true,
+      "has-lib": false,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-community/multimedia-webui-input",
+      "source": "git",
+      "dir": "dsh-multimedia-webui-input",
+      "repo": "https://github.com/dsh-external/dsh-multimedia-webui-input.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@bill9109/dsh-drag-and-drop",
+      "source": "git",
+      "dir": "dsh-drag-and-drop",
+      "repo": "https://github.com/dsh-external/dsh-drag-and-drop.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null,
+      "id": "drag-and-drop"
+    },
+    {
+      "name": "@dsh-external/dsh-stickers",
+      "source": "git",
+      "dir": "dsh-stickers",
+      "repo": "https://github.com/dsh-external/dsh-stickers.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-external/dsh-code-map",
+      "source": "git",
+      "dir": "dsh-code-map",
+      "repo": "https://github.com/dsh-external/dsh-code-map.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "dsh-llm-fallbacks",
+      "source": "npm",
+      "version": "^0.1.0-alpha.1",
+      "bundle": true
+    },
+    {
+      "name": "@dsh-external/dsh-ui-progress",
+      "source": "git",
+      "dir": "dsh-ui-progress",
+      "repo": "https://github.com/lhh010/dsh-ui-progress.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-community/dsh-paste-input",
+      "source": "git",
+      "dir": "dsh-paste-input",
+      "repo": "https://github.com/lhh010/dsh-paste-input.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-external/dsh-input-history",
+      "source": "git",
+      "dir": "dsh-input-history",
+      "repo": "https://github.com/lhh010/dsh-input-history.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@canglongcl/dsh-web-review",
+      "source": "npm",
+      "version": "^0.1.0",
+      "bundle": true
+    },
+    {
+      "name": "@dsh-external/dsh-artifact",
+      "source": "git",
+      "dir": "dsh-artifact",
+      "repo": "https://github.com/dsh-external/dsh-artifact.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@huanlin/dsh-plugin-yet-another-subagent",
+      "source": "npm",
+      "version": "^0.1.2"
+    },
+    {
+      "name": "@huanlin/dsh-plugin-ya-workspace-sidebar",
+      "source": "npm",
+      "version": "^0.1.0"
+    },
+    {
+      "name": "@huanlin/dsh-plugin-interpreters",
+      "source": "npm",
+      "version": "^0.1.0"
+    },
+    {
+      "name": "@huanlin/dsh-plugin-mineru",
+      "source": "npm",
+      "version": "^0.2.1"
+    },
+    {
+      "name": "@huanlin/dsh-plugin-aigc-canvas",
+      "source": "npm",
+      "version": "^0.1.0"
+    },
+    {
+      "name": "dsh-sonar",
+      "source": "git",
+      "dir": "dsh-sonar",
+      "repo": "https://github.com/dsh-external/dsh-sonar.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-external/dsh-sidechain",
+      "source": "git",
+      "dir": "dsh-sidechain",
+      "repo": "https://github.com/dsh-external/dsh-sidechain.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dsh-external/dsh-diff-viewer",
+      "source": "git",
+      "dir": "dsh-diff-viewer",
+      "repo": "https://github.com/dsh-external/dsh-diff-viewer.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@deepseek-ai/dsh-track",
+      "source": "git",
+      "dir": "dsh-track",
+      "repo": "https://github.com/dsh-external/dsh-track.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    },
+    {
+      "name": "@dpskh/a2a",
+      "source": "git",
+      "dir": "dsh-a2a",
+      "repo": "https://github.com/dsh-external/dsh-a2a.git",
+      "needs-build": true,
+      "has-lib": true,
+      "patch-id": null
+    }
+  ]
+}

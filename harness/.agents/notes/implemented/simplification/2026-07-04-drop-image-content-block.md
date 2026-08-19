@@ -18,7 +18,7 @@ Remove `ImageBlock`, its map entry, and image-specific branches from adapters an
 
 `ContentBlockMap` can reintroduce images when adapters and compaction support them. ACP may remain a text-only automation protocol. Keeping a core type whose only implementation is rejection would advertise an unusable surface; absence gives producers an immediate compile-time failure instead.
 
-The recorded fallback, had review landed on keeping the slot: keep `ImageBlock` but replace every silent skip with a loud rejection, and document that policy in the vocabulary — the silent drop was the one state with no defender. Review landed on removal; the fallback stands as the documented alternative should the slot ever return ahead of a full feature.
+The documented fallback, should the slot ever return ahead of a full feature: keep `ImageBlock` but replace every silent skip with a loud rejection, and document that policy in the vocabulary — the silent drop was the one state with no defender.
 
 ## Verification
 

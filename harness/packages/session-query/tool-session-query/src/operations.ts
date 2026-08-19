@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-tool-session-query/operations
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import {
@@ -102,7 +102,7 @@ async function executeSessionSearch(
 
   const parentIds = collected.items
     .map(hit => hit.header.parentSession)
-    .filter((id): id is SessionId => { return id !== undefined })
+    .filter((id): id is SessionId => id !== undefined)
   const authorizedParents = await workspaceAccess.authorizeSessionIds(ctx, caller, parentIds, exec.signal)
   const titles = await workspaceAccess.readTitles(
     ctx,
@@ -229,7 +229,7 @@ async function executeEventRead(
       sessionId,
       seq: args.seq,
       ...args.before === undefined ? {} : { before: args.before },
-      ...args.after !== undefined ? { after: args.after } : {},
+      ...args.after === undefined ? {} : { after: args.after },
     }, exec.signal))
   workspaceAccess.assertObservedTargetAuthorized(caller, sessionId, window.session)
   const title = await workspaceAccess.readTitle(ctx, caller, sessionId, exec.signal)

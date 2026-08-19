@@ -13,15 +13,17 @@ import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { Context } from '@deepseek-ai/cordis'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { z } from 'zod'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
+import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
-import { CallId } from '@deepseek-ai/dsh-llm'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
+import { CallId, LlmAdapter, LlmRuntime } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { apply } from '@deepseek-ai/dsh-mcp-client/src/index.ts'
 import { publicToolName } from '@deepseek-ai/dsh-mcp-client/src/tools.ts'
 import type { Config } from '@deepseek-ai/dsh-mcp-client'
@@ -39,23 +41,35 @@ const localBin = join(packageDir, 'node_modules', '.bin')
 async function mountRegistry(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   return ctx
 }
 
-/** Apply the MCP client plugin and wait for tools to be registered. */
-async function applyAndWait(ctx: Context, config: Config, timeoutMs = 20_000): Promise<void> {
-  // Annotated bindings (not withResolvers<void>()): the tests lint layer runs
-  // no-invalid-void-type with default options, which rejects the explicit
-  // type argument in call position but accepts the inferred form.
-  const gate: PromiseWithResolvers<void> = Promise.withResolvers()
-  const timer = setTimeout(
-    () => { gate.reject(new Error(`applyAndWait timed out after ${timeoutMs}ms — no tools/change event`)) },
-    timeoutMs,
-  )
-  ctx.on('tools/change', () => { clearTimeout(timer); gate.resolve() })
-  apply(ctx, config)
-  await gate.promise
+/** Exact-route adapter used to prove real MCP image admission without an API key. */
+class ImageAdapter extends LlmAdapter {
+  override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
+    return Promise.resolve({ provider, id: model, name: model, inputModalities: ['text', 'image'] })
+  }
+
+  stream(_options: GenerateOptions): AsyncIterable<StreamChunk> {
+    throw new Error('MCP image e2e never streams')
+  }
+}
+
+async function mountImageRegistry(dshHome: string): Promise<Context> {
+  const ctx = await mountRegistry()
+  await ctx.plugin(LocalAttachmentStore, { dshHome })
+  await ctx.plugin(LlmRuntime)
+  ctx.llm.registerAdapter(['visual'], new ImageAdapter())
+  return ctx
+}
+
+/** Calling-agent stand-in pinned to the keyless image-capable route. */
+function imageAgent(): object {
+  return {
+    options: { provider: 'visual', model: 'vision' },
+    session: { requestHeader: () => undefined },
+  }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -81,6 +95,7 @@ function nextCallId(): CallId {
 
 describe('fixture server — controlled scenarios', () => {
   let ctx: Context
+  let home: string
 
   const fixtureConfig: Config = {
     transport: 'stdio',
@@ -90,16 +105,19 @@ describe('fixture server — controlled scenarios', () => {
     env: {},
     cwd: packageDir,
     toolCallTimeoutMs: 15_000,
+    failOnStartupError: false,
   }
 
   beforeAll(async () => {
-    ctx = await mountRegistry()
-    await applyAndWait(ctx, fixtureConfig)
+    home = await mkdtemp(join(tmpdir(), 'mcp-image-e2e-'))
+    ctx = await mountImageRegistry(home)
+    await apply(ctx, fixtureConfig)
   }, 30_000)
 
   afterAll(async () => {
     if (ctx) await ctx.fiber.dispose()
     await sleep(200)
+    await rm(home, { recursive: true, force: true })
   })
 
   it('discovers all fixture tools under the server namespace', () => {
@@ -155,16 +173,23 @@ describe('fixture server — controlled scenarios', () => {
     expect(result.content[0]).toMatchObject({ type: 'text' })
   })
 
-  it('executes image() → image placeholder', async () => {
+  it('executes image() → ordered durable image content', async () => {
     const result = await ctx.tools.execute({
-      signal: testToolSignal,
+      signal: testToolSignal, agent: imageAgent() as never,
       callId: nextCallId(), name: 'mcp__fixture__image', arguments: {},
     })
     expect(result.isError).toBe(false)
-    const text = textOf(result.content[0])
-    expect(text).toContain('Here is an image:')
-    expect(text).toContain('[image: image/png, content discarded]')
-    expect(text).toContain('End of image.')
+    expect(result.content).toHaveLength(3)
+    expect(result.content[0]).toEqual({ type: 'text', text: 'Here is an image:' })
+    expect(result.content[2]).toEqual({ type: 'text', text: 'End of image.' })
+    const image = result.content[1]
+    if (image?.type !== 'image') throw new Error(`expected an image block, got ${JSON.stringify(image)}`)
+    expect(image.attachment).toMatchObject({ mediaType: 'image/png', width: 1, height: 1 })
+    const stored = await ctx.attachments.readImage(image.attachment)
+    expect(stored.data.byteLength).toBe(image.attachment.bytes)
+    if (result.isError) throw new Error('expected MCP image success')
+    expect(JSON.stringify(result.value)).toContain('iVBORw0KGgo')
+    expect(JSON.stringify(result.content)).not.toContain('iVBORw0KGgo')
   })
 })
 
@@ -179,10 +204,11 @@ describe('fixture server — duplicate serverName', () => {
       env: {},
       cwd: packageDir,
       toolCallTimeoutMs: 15_000,
+      failOnStartupError: false,
     }
-    await applyAndWait(ctx, config)
+    await apply(ctx, config)
 
-    expect(() => { apply(ctx, config) }).toThrow(/serverName "dup" is already in use/)
+    await expect(apply(ctx, config)).rejects.toThrow(/serverName "dup" is already in use/)
 
     await ctx.fiber.dispose()
     await sleep(200)
@@ -192,7 +218,7 @@ describe('fixture server — duplicate serverName', () => {
 describe('fixture server — disposal', () => {
   it('disposes cleanly without error', async () => {
     const ctx = await mountRegistry()
-    await applyAndWait(ctx, {
+    await apply(ctx, {
       transport: 'stdio',
       serverName: 'fixture',
       command: process.execPath,
@@ -200,6 +226,7 @@ describe('fixture server — disposal', () => {
       env: {},
       cwd: packageDir,
       toolCallTimeoutMs: 15_000,
+      failOnStartupError: false,
     })
 
     // Tools are registered before dispose.
@@ -209,6 +236,87 @@ describe('fixture server — disposal', () => {
     // Dispose should complete without throwing.
     await ctx.fiber.dispose()
     await sleep(200)
+  }, 30_000)
+})
+
+describe('fixture server — crash recovery', () => {
+  function crashConfig(serverName: string, reconnect: NonNullable<Config['reconnect']>): Config {
+    return {
+      transport: 'stdio',
+      serverName,
+      command: process.execPath,
+      args: [fixtureServerPath],
+      env: {},
+      cwd: packageDir,
+      toolCallTimeoutMs: 15_000,
+      failOnStartupError: false,
+      reconnect,
+    }
+  }
+
+  it('auto-reconnects after a stdio crash and serves tool calls again', async () => {
+    const ctx = await mountRegistry()
+    await apply(ctx, crashConfig('crashy', { initialDelayMs: 50, maxDelayMs: 500, maxAttempts: 40 }))
+
+    const before = await ctx.tools.execute({
+      signal: testToolSignal,
+      callId: nextCallId(), name: 'mcp__crashy__add', arguments: { a: 2, b: 3 },
+    })
+    expect(textOf(before.content[0])).toBe('5')
+
+    // The crash tool replies, then kills the real child process.
+    const crash = await ctx.tools.execute({
+      signal: testToolSignal,
+      callId: nextCallId(), name: 'mcp__crashy__crash', arguments: {},
+    })
+    expect(crash.isError).toBe(false)
+
+    // Recovery is proven by the world: a post-crash call round-trips through
+    // the respawned server process.
+    await vi.waitFor(async () => {
+      const after = await ctx.tools.execute({
+        signal: testToolSignal,
+        callId: nextCallId(), name: 'mcp__crashy__add', arguments: { a: 20, b: 22 },
+      })
+      expect(after.isError).toBe(false)
+      expect(textOf(after.content[0])).toBe('42')
+    }, { timeout: 15_000, interval: 250 })
+
+    // The recovered generation replaced the dead one: no duplicates, no leak.
+    const addEntries = ctx.tools.schemas().map(s => s.name).filter(name => name === 'mcp__crashy__add')
+    expect(addEntries).toHaveLength(1)
+
+    await ctx.fiber.dispose()
+    await sleep(200)
+  }, 30_000)
+
+  it('plugin unload during an outage stops reconnection and unregisters tools', async () => {
+    const ctx = await mountRegistry()
+    const fiber = ctx.plugin(
+      { name: 'mcp-client', inject: ['tools'], apply },
+      crashConfig('ephemeral', { initialDelayMs: 8_000, maxDelayMs: 8_000, maxAttempts: 5 }),
+    )
+    // Cordis awaits async apply() as startup work; wait for it.
+    await vi.waitFor(() => { expect(ctx.tools.get('mcp__ephemeral__add')).toBeDefined() }, { timeout: 20_000 })
+
+    const crash = await ctx.tools.execute({
+      signal: testToolSignal,
+      callId: nextCallId(), name: 'mcp__ephemeral__crash', arguments: {},
+    })
+    expect(crash.isError).toBe(false)
+
+    // Give the transport close a moment to land the supervisor in its 8s
+    // backoff wait, then unload: disposal must not sit out the backoff.
+    await sleep(300)
+    const started = Date.now()
+    await fiber.dispose()
+    expect(Date.now() - started).toBeLessThan(4_000)
+
+    expect(ctx.tools.get('mcp__ephemeral__add')).toBeUndefined()
+    await sleep(200)
+    expect(ctx.tools.get('mcp__ephemeral__add')).toBeUndefined()
+
+    await ctx.fiber.dispose()
   }, 30_000)
 })
 
@@ -225,11 +333,12 @@ describe('server-everything — official test server', () => {
     env: {},
     cwd: '',
     toolCallTimeoutMs: 30_000,
+    failOnStartupError: false,
   }
 
   beforeAll(async () => {
     ctx = await mountRegistry()
-    await applyAndWait(ctx, config)
+    await apply(ctx, config)
   }, 60_000)
 
   afterAll(async () => {
@@ -264,13 +373,14 @@ describe('server-everything — official test server', () => {
     expect(textOf(result.content[0])).toContain('10')
   })
 
-  it('executes get-tiny-image → image placeholder', async () => {
+  it('executes get-tiny-image → explicit refusal without a durable route', async () => {
     const result = await ctx.tools.execute({
       signal: testToolSignal,
       callId: nextCallId(), name: 'mcp__everything__get-tiny-image', arguments: {},
     })
     expect(result.isError).toBe(false)
-    expect(textOf(result.content[0])).toContain('[image: image/png, content discarded]')
+    expect(result.content.map(block => block.type === 'text' ? block.text : '').join('\n'))
+      .toContain('[image unavailable: image/png; no attachment store is mounted;')
   })
 })
 
@@ -292,8 +402,9 @@ describe('server-filesystem — real filesystem operations', () => {
       env: {},
       cwd: '',
       toolCallTimeoutMs: 30_000,
+      failOnStartupError: false,
     }
-    await applyAndWait(ctx, config)
+    await apply(ctx, config)
   }, 60_000)
 
   afterAll(async () => {
@@ -408,8 +519,9 @@ describe('streamable-http — in-process MCP server', () => {
       url: baseUrl,
       headers: { Authorization: 'Bearer e2e-test-token' },
       toolCallTimeoutMs: 15_000,
+      failOnStartupError: false,
     }
-    await applyAndWait(ctx, config)
+    await apply(ctx, config)
   }, 30_000)
 
   afterAll(async () => {

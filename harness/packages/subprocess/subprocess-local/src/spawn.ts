@@ -24,16 +24,26 @@ import type {
   SubprocessOutputMode,
   SubprocessSpawnSpec,
 } from '@deepseek-ai/dsh-subprocess'
+import { linuxProcessGroupHasLiveMembers } from './process-inspector.ts'
 
 /**
- * Build a child environment: explicit caller entries merge after the scrubbed
- * parent base. A string deliberately restores or overrides an entry; an
- * explicit `undefined` tombstone removes an ordinary ambient entry.
+ * Build a child environment: explicit caller entries override the scrubbed
+ * parent base using the target platform's environment-key semantics. A string
+ * deliberately restores or overrides an entry; an explicit `undefined`
+ * tombstone removes an ordinary ambient entry.
  * @param extra - explicit caller entries and tombstones, merged after the scrub.
  * @returns the environment to hand to `spawn` for the child process.
  */
 export function childEnv(extra?: Readonly<NodeJS.ProcessEnv>): NodeJS.ProcessEnv {
-  return { ...scrubbedParentEnv(), ...extra }
+  const env = scrubbedParentEnv()
+  if (process.platform !== 'win32') return { ...env, ...extra }
+  let entries: [string, string | undefined][] = Object.entries(env)
+  for (const [key, value] of Object.entries(extra ?? {})) {
+    const normalized = key.toUpperCase()
+    entries = entries.filter(([inherited]) => inherited.toUpperCase() !== normalized)
+    entries.push([key, value])
+  }
+  return Object.fromEntries(entries)
 }
 
 /** Injectable knobs so tests can exercise spill and platform behavior deterministically. */
@@ -44,6 +54,18 @@ export interface SpawnInternals {
   taskkill?: (pid: number) => void
   /** Host platform override for signalling decisions. */
   platform?: NodeJS.Platform
+  /** Linux process-group member probe (defaults to `/proc` inspection). */
+  linuxProcessGroupHasLiveMembers?: (processGroupId: number) => boolean | undefined
+}
+
+/**
+ * Local-only synchronous final termination used by the owning service during
+ * host exit and as the last fallback after failed normal disposal. It is
+ * intentionally absent from the public subprocess seam.
+ */
+export interface LocalSubprocessHandle extends SubprocessHandle {
+  /** Force-terminate the current tree synchronously without starting timers or waits. */
+  terminateForHostExit(): void
 }
 
 /**
@@ -301,13 +323,14 @@ function signalTree(
  * @returns live subprocess handle.
  * @throws when `graceMs` cannot be represented by one Node timer.
  */
-export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInternals = {}): SubprocessHandle {
+export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInternals = {}): LocalSubprocessHandle {
   if (!Number.isFinite(spec.graceMs) || spec.graceMs <= 0 || spec.graceMs > MAX_TIMER_DELAY_MS) {
     throw new Error(`subprocess graceMs must be a positive finite number no greater than ${MAX_TIMER_DELAY_MS}`)
   }
   const spillDir = internals.spillDir ?? privateSpillDir()
   const platform = internals.platform ?? process.platform
   const taskkill = internals.taskkill ?? taskkillProcessTree
+  const linuxGroupHasLiveMembers = internals.linuxProcessGroupHasLiveMembers ?? linuxProcessGroupHasLiveMembers
 
   if (spec.signal?.aborted) {
     throw new Error(`aborted before spawn: ${String(spec.signal.reason ?? 'aborted')}`)
@@ -329,7 +352,7 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
     env,
     stdio: [
       stdinMode === 'ignore' ? 'ignore' : 'pipe',
-      outMode !== 'inherit' ? 'pipe' : 'inherit',
+      outMode === 'inherit' ? 'inherit' : 'pipe',
       errMode === 'inherit' ? 'inherit' : 'pipe',
     ],
     // `detached` gives teardown a tree root on POSIX (its own process group);
@@ -367,6 +390,11 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
     }
     try {
       process.kill(-pid, 0)
+      // A group containing only unreaped zombies still answers kill(0), but
+      // it can execute no work and cannot be signalled into quiescence. Only
+      // inspect after direct-child settlement so live-process polls remain a
+      // syscall rather than repeated process-table scans.
+      if (settled && platform === 'linux' && linuxGroupHasLiveMembers(pid) === false) return false
       return true
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
@@ -422,6 +450,10 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
     // the pending SIGKILL is a commitment, and a parent exiting before it
     // fires would orphan a trapped survivor. Self-bounds at graceMs.
     graceTimer = setTimeout(() => { kill('SIGKILL') }, spec.graceMs)
+  }
+
+  const terminateForHostExit = (): void => {
+    kill('SIGKILL')
   }
 
   // The caller owns timeout classification; this layer only reacts to abort.
@@ -496,7 +528,7 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
     pid,
     /* v8 ignore start -- pipe-mode fds exist on every spawn Node returns; the null-coalesces guard a nonconforming ChildProcess only. */
     stdin: stdinMode === 'pipe' ? child.stdin ?? undefined : undefined,
-    stdout: outMode !== 'pipe' ? undefined : child.stdout ?? undefined,
+    stdout: outMode === 'pipe' ? child.stdout ?? undefined : undefined,
     stderr: errMode === 'pipe' ? child.stderr ?? undefined : undefined,
     /* v8 ignore stop */
     collected: {
@@ -505,6 +537,7 @@ export function spawnSubprocess(spec: SubprocessSpawnSpec, internals: SpawnInter
     },
     done,
     terminate,
+    terminateForHostExit,
     waitForExit,
   }
 }

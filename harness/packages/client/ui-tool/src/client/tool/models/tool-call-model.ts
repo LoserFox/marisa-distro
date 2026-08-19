@@ -25,7 +25,15 @@ export const VARIANT_TITLES: Record<ToolRowVariant, string> = {
   write: 'Write', edit: 'Edit', code: 'Code', others: 'Tool call',
 }
 
-/** Known tool name -> variant. */
+/**
+ * Known tool name -> variant.
+ *
+ * `cordis_define` is deliberately absent: ui-cordis registers a keyed
+ * `tool.call.toolview` entry for it, and a keyed hit REPLACES the generic row
+ * (this table is only reached through GenericToolCard, the dispatch fallback in
+ * ToolCallTree). An entry here would be unreachable, and a second title for the
+ * same call would be a second answer to a question the card already owns.
+ */
 const TOOL_VARIANTS: Record<string, ToolRowVariant> = {
   bash: 'bash',
   // The PowerShell twin is a shell tool: the bash row family (icon, colors)
@@ -39,16 +47,24 @@ const TOOL_VARIANTS: Record<string, ToolRowVariant> = {
   write: 'write',
   edit: 'edit',
   run_code: 'code',
-  cordis_inspect: 'read',
-  cordis_mount: 'code',
-  cordis_unmount: 'others',
+  cordis_package_inspect: 'read',
+  cordis_runtime_inspect: 'read',
+  // The three run-control verbs take one package id and produce a receipt, so
+  // the generic row is the decided intent, not an unclassified default: there is
+  // no program to show (that is `cordis_define`'s card) and no file to open. The
+  // id lands in the summary slot, and the titles below name the act.
+  cordis_run: 'others',
+  cordis_stop: 'others',
+  cordis_undefine: 'others',
 }
 
 /** Tool-owned titles that refine a generic row variant without replacing it. */
 const TOOL_TITLES: Record<string, string> = {
-  cordis_inspect: 'Inspect',
-  cordis_mount: 'Mount temporary Plugin',
-  cordis_unmount: 'Unmount temporary Plugin',
+  cordis_package_inspect: 'Inspect',
+  cordis_runtime_inspect: 'Inspect',
+  cordis_run: 'Run Cordis Plugin',
+  cordis_stop: 'Stop Cordis Plugin',
+  cordis_undefine: 'Remove Cordis Plugin',
   pwsh: 'Pwsh',
 }
 

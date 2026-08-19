@@ -39,7 +39,10 @@ async function v2Spans(sessionId: string) {
 }
 
 describe('segmentation eval — v2 spans vs golden boundaries (D1)', () => {
-  it('evaluates every golden session and reports Pk/WindowDiff/F1', async () => {
+  // Heavy deterministic work (zstd-decompressing 5 real golden sessions with
+  // up to 256MB buffers + rule segmentation) — the default 5s timeout is too
+  // tight when the suite runs in parallel; give it a real budget.
+  it('evaluates every golden session and reports Pk/WindowDiff/F1', { timeout: 30_000 }, async () => {
     const results = []
     for (const g of GOLDEN.sessions) {
       if (g.sessionId === 'main' || !g.tasks?.length) continue // no-task session: skip (no boundaries to score)
@@ -63,7 +66,7 @@ describe('segmentation eval — v2 spans vs golden boundaries (D1)', () => {
     console.log('SEG_EVAL', JSON.stringify({ results, aggregate: agg }, null, 2))
   })
 
-  it('v2 segmentation beats the one-segment-per-session baseline on boundary F1', async () => {
+  it('v2 segmentation beats the one-segment-per-session baseline on boundary F1', { timeout: 30_000 }, async () => {
     const v2Scores = []
     const baseScores = []
     for (const g of GOLDEN.sessions) {

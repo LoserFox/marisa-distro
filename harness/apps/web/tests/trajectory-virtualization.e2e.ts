@@ -3,6 +3,7 @@
 // DOM mounting stays bounded, and every scroll range remains reachable.
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
@@ -11,6 +12,8 @@ import type { StreamChunk } from '@deepseek-ai/dsh-llm'
 import type { ReplayEntry } from '@deepseek-ai/dsh-llm-replay'
 import { createChatScrollFixture } from './chat-scroll-fixture.ts'
 import {
+  captureStableAria,
+  compareOrRefreshGolden,
   launchWebScaffold,
   seedSession,
   watchConsole,
@@ -20,6 +23,10 @@ import {
 import { newEnglishPage, saveFailureShot } from './support.ts'
 
 const MODE = webSnapshotMode()
+const LOAD_MORE_EXPECTED = fileURLToPath(new URL(
+  './snapshots/trajectory-virtualization/load-more.expected.md',
+  import.meta.url,
+))
 const SESSION_ID = 'trajectory-virtualization-e2e'
 const FIXTURE = createChatScrollFixture({
   markerPrefix: 'TRAJECTORY_VIRTUAL',
@@ -59,7 +66,10 @@ interface RowAnchor {
 }
 
 async function openSeed(page: Page): Promise<void> {
-  const search = page.getByRole('textbox', { name: 'Search name, keywords...', exact: true })
+  // Search collapsed into a header action; expand it before filling.
+  const searchButton = page.getByRole('button', { name: 'Search sessions' })
+  if (await searchButton.getAttribute('aria-expanded') !== 'true') await searchButton.click()
+  const search = page.getByRole('textbox', { name: 'Search sessions...', exact: true })
   await search.fill(FIXTURE.markers.user(1))
   const result = page.getByRole('tree', { name: 'Search results' }).getByRole('treeitem')
   await expect.poll(() => result.count(), { timeout: 60_000 }).toBe(1)
@@ -147,10 +157,16 @@ async function loadToFirstTurn(page: Page): Promise<void> {
     await scrollToRatio(page, 0)
     if (await page.getByText(marker, { exact: false }).count() > 0) return
     const before = await logicalRows(page)
+    const anchor = await firstVisibleRow(page)
     await expect.poll(async () => ({
       marker: await page.getByText(marker, { exact: false }).count() > 0,
       rows: await logicalRows(page),
     }), { timeout: 30_000 }).not.toEqual({ marker: false, rows: before })
+    await nextPaint(page)
+    await expect.poll(async () => {
+      const top = await rowTop(page, anchor.key)
+      return top === null ? Number.POSITIVE_INFINITY : Math.abs(top - anchor.top)
+    }, { timeout: 15_000 }).toBeLessThanOrEqual(GEOMETRY_TOLERANCE)
   }
   throw new Error('trajectory did not reach the first turn after twelve older-page requests')
 }
@@ -182,7 +198,9 @@ describe('web e2e: Trajectory virtualization over tail-paged history', () => {
     tripwire = watchConsole(page)
     await page.goto(scaffold.baseUrl, { waitUntil: 'load' })
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
-    await page.getByText('1 session', { exact: true }).waitFor({ timeout: 30_000 })
+    // The compact layout dropped group session counts; the seeded baseline is
+    // the Ungrouped bucket once cold summaries load.
+    await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
   }, 120_000)
 
   afterAll(async () => {
@@ -225,8 +243,27 @@ describe('web e2e: Trajectory virtualization over tail-paged history', () => {
       expect(await page.getByText('Initial System Prompt', { exact: true }).count()).toBe(0)
       expect(await mountedRows(page)).toBeLessThanOrEqual(MAX_MOUNTED_ROWS)
 
-      await scrollToRatio(page, 0)
+      const loadMore = page.locator('[data-history-load] button')
+      await loadMore.waitFor({ timeout: 15_000 })
+      expect(await loadMore.textContent()).toBe('Load earlier history')
+      const loadMoreSnapshot = await captureStableAria(
+        page,
+        '[data-history-load]',
+        scaffold.workspaceCwd,
+      )
+      await compareOrRefreshGolden(LOAD_MORE_EXPECTED, loadMoreSnapshot, MODE)
+      // Avoid Playwright scrolling the offscreen first row into the automatic-load threshold.
+      await loadMore.evaluate((button: HTMLButtonElement) => { button.click() })
       await expect.poll(() => held, { timeout: 15_000 }).toBe(true)
+      await expect.poll(async () => ({
+        disabled: await loadMore.isDisabled(),
+        label: await loadMore.getAttribute('aria-label'),
+      }), { timeout: 15_000 }).toEqual({
+        disabled: true,
+        label: 'Loading earlier history…',
+      })
+
+      await scrollToRatio(page, 0)
       const anchor = await firstVisibleRow(page)
       const selectedRow = page.locator(
         `[data-trajectory-scroll] tr[data-trajectory-row-key=${JSON.stringify(anchor.key)}]`,

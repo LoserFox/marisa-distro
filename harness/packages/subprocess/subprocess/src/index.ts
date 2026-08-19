@@ -1,17 +1,17 @@
 /**
- * The subprocess seam (`ctx.subprocess`): spawn fully-specified commands into
- * managed process trees with Node-shaped stdio dispositions — raw pipes for
- * protocol streams, inherit for diagnostics, bounded spill-backed collection
- * for batch output — plus tree-scoped signalling. Command defaulting, shell
- * semantics, deadlines, teardown ladders, framing, and presentation belong to
- * consumers; the bash executor seam is the owning template. The local implementation lives in
+ * Service Definition for the subprocess capability seam (`ctx.subprocess`): execution-world executable lookup,
+ * fully specified managed process trees with raw or
+ * collected stdio, and one terminal-process primitive. Command defaulting,
+ * shell semantics, deadlines, protocol framing, terminal readiness, and
+ * presentation belong to consumers. The local implementation lives in
  * `@deepseek-ai/dsh-subprocess-local`.
  * @module @deepseek-ai/dsh-subprocess
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { DSH_ENV_PREFIX } from './types.ts'
 import type { SubprocessHandle, SubprocessSpawnSpec } from './types.ts'
+import type { SubprocessTerminalHandle, SubprocessTerminalSpawnSpec } from './types.ts'
 
 export { DSH_ENV_PREFIX } from './types.ts'
 export type {
@@ -28,6 +28,10 @@ export type {
   SubprocessSpawnSpec,
   SubprocessStdinMode,
   SubprocessStdio,
+  SubprocessTerminalForeground,
+  SubprocessTerminalHandle,
+  SubprocessTerminalSignal,
+  SubprocessTerminalSpawnSpec,
 } from './types.ts'
 
 /**
@@ -61,9 +65,9 @@ export function scrubbedParentEnv(): Record<string, string> {
   return env
 }
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    subprocess: SubprocessService
+    subprocess: SubprocessRuntime
   }
 }
 
@@ -74,6 +78,8 @@ declare module 'cordis' {
  * duplicate-service behavior).
  *
  * Implementations must honor these semantics:
+ * - Executable paths belong to one execution world shared with the mounted
+ *   filesystem provider.
  * - {@link spawn} returns immediately with a live handle; `done` resolves at
  *   process close with exit facts and rejects only for spawn-level failures.
  * - Collect-mode readers are offset-based and non-consuming, so independent
@@ -87,11 +93,33 @@ declare module 'cordis' {
  *   quiescence.
  * - Disposal of the service terminates all still-running managed processes
  *   and awaits their exit.
+ * - {@link spawnTerminal} owns terminal allocation, text transport,
+ *   foreground groups, signalling, and whole-session quiescence behind one
+ *   awaited termination method; readiness and persistent-shell policy stay
+ *   in the PTY consumer. Its output stream ends after queued terminal output
+ *   when the top-level process exits.
  */
-export abstract class SubprocessService extends Service {
+export abstract class SubprocessRuntime extends Service {
   constructor(ctx: Context) {
     super(ctx, 'subprocess')
   }
+
+  /**
+   * Resolve one configured executable in this provider's execution world.
+   * Absolute paths are verified; bare names use the provider's scrubbed PATH
+   * plus explicit environment overrides. Relative paths containing separators
+   * are rejected: the resolution base is undefined, so providers fail loud
+   * instead of guessing.
+   * @param command - absolute executable path or bare PATH name.
+   * @param env - explicit environment entries used for lookup.
+   * @param signal - aborts remote or local lookup.
+   * @returns a canonical executable path.
+   */
+  abstract resolveExecutable(
+    command: string,
+    env?: Readonly<Record<string, string>>,
+    signal?: AbortSignal,
+  ): Promise<string>
 
   /**
    * Start one managed child process from a fully-specified spec; this seam
@@ -100,6 +128,15 @@ export abstract class SubprocessService extends Service {
    * @returns the live process handle (streams/readers, signalling, outcome promise).
    */
   abstract spawn(spec: SubprocessSpawnSpec): SubprocessHandle
+
+  /**
+   * Allocate a real terminal and start one owned process session. This is the
+   * only non-pipe process primitive: implementations own terminal byte I/O,
+   * foreground groups, signals, and complete session-tree cleanup.
+   * @param spec - fully specified argv, cwd, environment, dimensions, grace, and allocation cancellation.
+   * @returns the live terminal handle after allocation succeeds.
+   */
+  abstract spawnTerminal(spec: SubprocessTerminalSpawnSpec): Promise<SubprocessTerminalHandle>
 }
 
-export default SubprocessService
+export default SubprocessRuntime

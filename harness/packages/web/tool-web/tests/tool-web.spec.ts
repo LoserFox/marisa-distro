@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import TurndownService from 'turndown'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { type ToolExecutionResult } from '@deepseek-ai/dsh-tools'
-import WebService from '@deepseek-ai/dsh-web'
+import ToolRuntime, { type ToolExecutionResult } from '@deepseek-ai/dsh-tools'
+import WebRuntime from '@deepseek-ai/dsh-web'
 import type { WebSearchProvider, WebSearchResult } from '@deepseek-ai/dsh-web'
 import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
 import {
@@ -36,14 +36,14 @@ function searchProvider(result: WebSearchResult, isAvailable = available): WebSe
 /** Mount the real registry, seam, and tool-web; return an executor helper. */
 async function mountTools(opts: {
   config?: ToolWeb.Config
-  webConfig?: ConstructorParameters<typeof WebService>[1]
+  webConfig?: ConstructorParameters<typeof WebRuntime>[1]
   search?: WebSearchProvider
   fetchProvider?: import('@deepseek-ai/dsh-web').WebFetchProvider
 } = {}): Promise<{ ctx: Context; fiber: Awaited<ReturnType<Context['plugin']>>; call: (name: string, args: unknown) => Promise<ToolExecutionResult> }> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
-  await ctx.plugin(WebService, opts.webConfig ?? {})
+  await ctx.plugin(ToolRuntime)
+  await ctx.plugin(WebRuntime, opts.webConfig ?? {})
   if (opts.search) ctx.web.registerSearchProvider(opts.search)
   if (opts.fetchProvider) ctx.web.registerFetchProvider(opts.fetchProvider)
   const fiber = await ctx.plugin(ToolWeb, opts.config ?? {})
@@ -595,7 +595,7 @@ describe('tool-web execution through the real registry', () => {
       truncated: false,
     })
     // The model schema exposes no timeout: the tool forwards only the url; the
-    // tool-call budget is owned by dsh-timeout-policy over exec.signal.
+    // tool-call budget is owned by dsh-tool-call-timeout-policy over exec.signal.
     expect(seen.request).toEqual({ url: 'https://a.test' })
     expect(seen.signal).toBe(controller.signal)
     await fiber.dispose()
@@ -660,7 +660,7 @@ describe('searchMaxResults is plugin config', () => {
     const provider: WebSearchProvider = {
       id: 'stub-search',
       available: () => available,
-      search: () => { return Promise.resolve({ sources, truncated: false }) },
+      search: () => Promise.resolve({ sources, truncated: false }),
     }
     const { fiber, call } = await mountTools({ config: { searchMaxResults: 2 }, webConfig: { searchProvider: 'stub-search' }, search: provider })
     const out = await call('web_search', { query: 'q' })
@@ -679,8 +679,8 @@ describe('searchMaxResults is plugin config', () => {
   ])('rejects a %s searchMaxResults at load', async (_label, value) => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(WebService, {})
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(WebRuntime, {})
     await expect(ctx.plugin(ToolWeb, { searchMaxResults: value }))
       .rejects.toThrow(/tool-web: searchMaxResults must be a positive integer/)
   })
@@ -707,8 +707,8 @@ describe('tool-call timeout budget is plugin config', () => {
   ])('rejects a non-positive-integer %s at load', async (key, config) => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(WebService, {})
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(WebRuntime, {})
     await expect(ctx.plugin(ToolWeb, config))
       .rejects.toThrow(new RegExp(`tool-web: ${key} must be a positive integer`))
   })
@@ -739,8 +739,8 @@ describe('fetchMaxOutputChars is plugin config', () => {
   it.each([0, -1, 1.5])('rejects an invalid fetchMaxOutputChars value %s at load', async (value) => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(WebService, {})
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(WebRuntime, {})
     await expect(ctx.plugin(ToolWeb, { fetchMaxOutputChars: value }))
       .rejects.toThrow(/tool-web: fetchMaxOutputChars must be a positive integer/)
   })

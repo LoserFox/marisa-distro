@@ -4,7 +4,7 @@
  */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-client-modules'
@@ -25,7 +25,7 @@ export const inject = ['invariants']
  */
 const install: InvariantInstaller = (ctx, fail) => {
   ctx.on('internal/plugin', () => {
-    const host = ctx.get('clientModuleHost')
+    const host = ctx.get('clientModules')
     if (host === undefined) return // browser side / host without the node half: nothing to audit
     for (const row of host.graph().entries) {
       if (host.clientPath(row.id) === undefined) {

@@ -69,7 +69,7 @@ export function TrajectoryCell({
     css.root,
     selected ? css.selected : undefined,
     className,
-  ].filter((c): c is string => { return c !== undefined }).join(' ')
+  ].filter((c): c is string => c !== undefined).join(' ')
   const showMetrics = kind === 'message'
   return (
     <div className={rootClass} data-kind={kind} data-selected={selected || undefined} {...rest}>

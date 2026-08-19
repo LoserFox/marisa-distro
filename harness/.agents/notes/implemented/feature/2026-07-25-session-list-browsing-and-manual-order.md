@@ -14,7 +14,7 @@ Two existing mechanisms stood in the way. First, the host durably promoted the a
 
 ### Flat rows and viewing state
 
-The group-by menu offers two modes, WorkSpace / In one list. WorkSpace mode renders peer session rows within each group in the manual order from `WorkspaceView.sessionIds`; In one list combines every session and sorts them strictly newest-first by `updatedAt`. Neither mode projects `parentId` into a list hierarchy; fork lineage remains session data only. [Web session fork actions](2026-07-27-web-session-fork-actions.md) define the complete fork behavior. The mode choice persists in the browser (`dsh.workspace.view`) across reloads.
+The group-by menu offers two modes, WorkSpace / In one list. WorkSpace mode renders peer session rows within each group in the manual order from `WorkspaceView.sessionIds`; In one list combines every session and sorts them strictly newest-first by `updatedAt`. Neither mode projects `parentId` into a list hierarchy; fork lineage remains session data only. [Web session fork actions](2026-07-27-web-session-fork-actions.md) define the complete fork behavior. The mode choice persists in the browser (`dsh.workspace.view`) across reloads. [Workspace Sidebar Order and Folding](2026-08-11-workspace-sidebar-order-and-folding.md) later added a browser-local recent-update view without changing the Host account's manual-order authority.
 
 ### Row interactions
 
@@ -24,7 +24,7 @@ The group-by menu offers two modes, WorkSpace / In one list. WorkSpace mode rend
 
 ### workspace.rename
 
-`workspace.rename({ workspaceId, title })`: the title is trimmed and must be non-blank; both the same-title no-op and the duplicate check evaluate inside the Host's serialized workspace-operation chain (shared with create-by-name, so concurrent explicit naming operations cannot interleave a duplicate or an out-of-order fake success), and a conflict returns `workspace-name-conflict`. Path adoption may derive a title already present because canonical path, not title, owns identity ([decision](../bug-fix/2026-07-31-same-basename-workspace-adoption.md)). Durability goes through `setTitle`'s mutate path, and the `domain/changed` listener broadcasts the `host/workspace-changed` frame automatically. The UI is a standard modal with a client-side duplicate pre-check.
+`workspace.rename({ workspaceId, title })`: the title is trimmed and must be non-blank; both the same-title no-op and the duplicate check evaluate inside the Host's serialized workspace-operation chain (shared with path adoption and deletion, so concurrent workspace operations cannot interleave a duplicate or an out-of-order fake success), and a conflict returns `workspace-name-conflict`. Path adoption may derive a title already present because canonical path, not title, owns identity ([decision](../bug-fix/2026-07-31-same-basename-workspace-adoption.md)). Durability goes through `setTitle`'s mutate path, and the `domain/changed` listener broadcasts the `host/workspace-changed` frame automatically. The UI is a standard modal with a client-side duplicate pre-check.
 
 ### Manual order: insertSessionBefore replaces activity pinning
 
@@ -44,13 +44,13 @@ ui-sidebar shrinks to the column-geometry shell: brand row, fold state machine, 
 
 **Optimistic reordering on drop** — client-first reordering needs failure rollback, one more entangled state in the object layer; local/LAN round-trips are millisecond-scale, so waiting for the host response is imperceptible. With a single order authority (trust the host completely), the frontend never invents an order.
 
-**Keep the rename dialog in ui-sidebar (smallest change)** — that is the problem itself: workspace-domain dialogs scattered in a borrowed slot, with each addition (the Delete confirmation is coming) repeating the cross-package wiring. Review first considered moving only the rename modal; the ruling was to give the whole browsing region to ui-workspace and leave the shell geometry-only.
+**Keep the rename dialog in ui-sidebar (smallest change)** — that is the problem itself: workspace-domain dialogs scattered in a borrowed slot, with each addition (the Delete confirmation is coming) repeating the cross-package wiring. Moving only the rename modal would repeat that wiring on the next dialog; the whole browsing region goes to ui-workspace and the shell stays geometry-only.
 
 **Nest sessions by fork lineage in WorkSpace mode** — nesting makes the current child visible only while its ancestors are expanded and limits in-group manual ordering to root nodes; `parentId` is lineage data, not a list-navigation structure. Flattening all sessions into peer rows lets each row be opened, searched, and ordered independently; In one list still disables drag because it has no workspace persistence carrier.
 
 ## Consequences
 
-- Manual order is the sole authority over the workspace account: an order the user arranges is never scrambled by activity; the cost is losing float-to-top-on-activity, whose signal now rides the row status dot and time label. The `WorkspaceView.sessionIds` wire contract is reworded to the manual-order semantics.
+- Manual order is the sole authority over the Host workspace account: activity never mutates `WorkspaceView.sessionIds`. A later browser-local recent-update view may promote active rows without changing that account; its separate semantics are defined in [Workspace Sidebar Order and Folding](2026-08-11-workspace-sidebar-order-and-folding.md).
 - The two-fact shell/region contract funnels every future workspace-domain feature (Delete confirmation, cross-group moves, Ungrouped adoption) into the single ui-workspace package; ui-sidebar no longer evolves with session-list features.
 - Flat mode supports neither reordering nor a create-in-workspace entry point (switching back to grouped view is required) — an accepted scope reduction.
 - Wiring session Delete and growing the wire status enum remain future iterations.

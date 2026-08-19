@@ -1,0 +1,68 @@
+{
+  "name": "@omdsh-dev/dsh-update-check",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Marisa 检查更新插件：定期检查 GitHub Releases，启动横幅 + 设置卡片提示新版本（仅检查+通知，不下载不安装，按钮深链 Release 资产）",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./invariant": "./lib/invariant.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "src",
+    "LICENSE",
+    "README.md",
+    "README.en.md",
+    "README.i18n.yaml"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "undici": "^7.29.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1-rc.1",
+    "@deepseek-ai/dsh-home-paths": "*",
+    "@deepseek-ai/dsh-settings": "*",
+    "@deepseek-ai/schemastery": "*",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "link:../../harness/vendor/cordis",
+    "@deepseek-ai/dsh-client-locale": "link:../../harness/packages/client/locale",
+    "@deepseek-ai/dsh-client-runtime": "link:../../harness/packages/client/runtime",
+    "@deepseek-ai/dsh-client-ui-settings-plugins": "link:../../harness/packages/client/ui-settings-plugins",
+    "@deepseek-ai/dsh-client-ui-slots": "link:../../harness/packages/client/ui-slots",
+    "@deepseek-ai/dsh-host-webserver": "link:../../harness/packages/host/webserver",
+    "@deepseek-ai/dsh-home-paths": "link:../../harness/packages/util/home-paths",
+    "@deepseek-ai/dsh-settings": "link:../../harness/packages/settings/settings",
+    "@deepseek-ai/schemastery": "link:../../harness/vendor/schemastery",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "license": "BSD-3-Clause"
+}

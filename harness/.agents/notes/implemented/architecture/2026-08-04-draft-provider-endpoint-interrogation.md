@@ -10,7 +10,7 @@ Once a pi-ai route became [a declaration rather than a catalog lookup](2026-08-0
 
 The obvious answer, a dynamic runtime catalog refreshed in the background, was rejected with the layer below it: it makes a route's model list external mutable state needing a cache, an invalidation story, and an offline path, while the product need is narrower. What is needed is a *question asked once*, whose answer the user adopts into `settings.yaml` — so `settings.yaml` remains the only thing deciding what a route serves.
 
-The awkward part is that the question is about something that does not exist yet. The provider being added has no route, no stored profile, and no stored credential; the endpoint and key are values in a form the user is still typing. Every existing seam operation is keyed by a registered provider route, so none of them can carry this.
+The awkward part is that the question is about something that does not exist yet. The provider being added has no route, no stored profile, and no stored credential; the endpoint and key are values in a form the user is still typing. Every existing LLM Service Definition operation is keyed by a registered provider route, so none of them can carry this.
 
 ## Decision
 
@@ -29,7 +29,7 @@ pi-ai supplies `createProvider({ fetchModels })` plus `Models.refresh()` and a `
 
 ## Alternatives considered
 
-**Key interrogation by provider route.** Symmetric with every other seam operation, and it would let the request omit the endpoint. But the case that motivates the feature — adding a provider — has no route, so the operation would only work for providers already configured, which are the ones that need it least.
+**Key interrogation by provider route.** Symmetric with every other LLM Service Definition operation, and it would let the request omit the endpoint. But the case that motivates the feature — adding a provider — has no route, so the operation would only work for providers already configured, which are the ones that need it least.
 
 **Put the capability on `LlmAdapter`.** Adapters are reached through a route registration, so this has the same problem, plus it would make an adapter instance answer questions about endpoints it does not serve.
 

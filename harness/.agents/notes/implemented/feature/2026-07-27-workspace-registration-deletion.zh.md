@@ -6,15 +6,15 @@ Status: implemented
 
 ## 问题
 
-Workspace 注册已有代码目录，使 GUI 能够为目录命名，并对其会话排序。该记录没有可靠的来源信息来证明 Harness 创建或拥有该目录，会话日志也是独立的持久化对象。若将行内 Delete 操作视为递归删除源码或删除会话，就会破坏该记录所有权边界之外的数据。
+Workspace 注册已有代码目录，使 GUI 能够为目录命名，并对其会话排序。该记录没有说 Harness 创建或拥有该目录，会话日志也是独立的持久化对象。若将行内 Delete 操作视为递归删除源码或删除会话，就会破坏该记录所有权边界之外的数据。
 
 现有菜单行只有视觉呈现，没有实际功能，因此持久化顺序、Workspace 表、Host 流、并发浏览器标签页、重连基线，以及列表请求与变更并发时的删除语义也没有定义。
 
 ## 决策
 
-`ctx.workspace.delete(id)` 只删除 Workspace 注册记录：其 id 会从持久化的 `workspaceIds` 中移除，`workspaces` 表行与实体缓存条目会消失，有序 `sessionIds` 账本也随该行一并消失。它绝不调用文件系统移除操作或 `SessionPersistence`；目录、所有用户文件、所有实时会话和所有已持久化的会话日志都会保留。侧边栏分组是所有存续 Workspace 账本的补集，因此这些会话（包括当前会话）会立即出现在 Ungrouped 下。
+`ctx.workspaceRegistry.delete(id)` 只删除 Workspace 注册记录：其 id 会从持久化的 `workspaceIds` 中移除，`workspaces` 表行与实体缓存条目会消失，有序 `sessionIds` 账本也随该行一并消失。它绝不调用文件系统移除操作或 `SessionPersistence`；目录、所有用户文件、所有实时会话和所有已持久化的会话日志都会保留。侧边栏分组是所有存续 Workspace 账本的补集，因此这些会话（包括当前会话）会立即出现在 Ungrouped 下。
 
-未知 id 在 domain seam 返回 `false`。`workspace.delete({ workspaceId })` 将该结果映射为 `workspace-not-found`；成功时返回 `{ deleted: true }`。`workspace.list` 仍是重连基线。
+未知 id 在领域约定处返回 `false`。`workspace.delete({ workspaceId })` 将该结果映射为 `workspace-not-found`；成功时返回 `{ deleted: true }`。`workspace.list` 仍是重连基线。
 
 ## 持久化提交与发布
 
@@ -22,13 +22,13 @@ Workspace 注册已有代码目录，使 GUI 能够为目录命名，并对其�
 
 Host 流在前一笔全局顺序写入期间继续保留其已提交 id 集合，只在删除表行时移除该 id。因此，创建回滚不会发出错误的移除帧，而每个已连接标签页都能收到从自身投影中删除该记录所需的准确 id。
 
-Create 与 delete 会在记录／顺序对可能分叉之前写入持久化的 `pendingMutation`。启动时只补全其中明确命名的 create 或 delete，并清除该标记；系统绝不会仅凭孤立表行的形状推断崩溃来源。因此，没有标记的顺序／表分叉仍会保持注册表原有的损坏直接失败语义。如果删除的表写入已经提交、但标记清理失败，操作仍会报告成功——请求状态和移除帧都已经提交——下一次启动会以幂等方式清除该标记。
+创建与删除会在记录／顺序对可能分叉之前写入持久化的 `pendingMutation`。启动时只补全该标记明确命名的操作，并清除标记；仅有一行孤立记录无法确定哪个操作被中断。因此，没有标记的顺序／表分叉仍会保持注册表原有的损坏直接失败语义。如果删除的表写入已经提交、但标记清理失败，操作仍会报告成功——所请求的状态和移除帧都已经提交——下一次启动会以幂等方式清除该标记。
 
 ## 客户端收敛
 
 `WorkspaceManager` 将 `host/workspace-changed` 与 `host/workspace-removed` 都视为有序增量，并在进行中的 `workspace.list` 响应之上回放。成功的一元删除会立即移除行，无需等待本次操作自己的流回显。移除操作具有幂等性；由于 Workspace id 永不复用，进程本地墓碑标记会拒绝延迟到达的 changed 帧或陈旧基线行。重连仍从 `workspace.list` 刷新；Workspace 增量绝不会剪除会话状态。
 
-删除确认框会保持待处理，直到 React Workspace 投影已经提交目标 id 的移除，因此下一次 Workspace 操作不会观察或定位到陈旧列表帧中的内容。
+删除确认框会保持待处理，直到 React Workspace 投影已经提交目标 id 的移除，因此下一次 Workspace 操作不会看到陈旧列表帧，也不会以其为操作目标。
 
 ## 确认交互
 

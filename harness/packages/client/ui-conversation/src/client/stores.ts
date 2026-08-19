@@ -9,8 +9,6 @@ import type { CallId, ChatStoreState, SelectionTarget } from './contract/views.t
 type ChatActions = {
   select: (draft: ChatStoreState, target: SelectionTarget | null) => void
   setDraft: (draft: ChatStoreState, text: string) => void
-  clearDraft: (draft: ChatStoreState) => void
-  restoreDraft: (draft: ChatStoreState, text: string) => void
   setView: (draft: ChatStoreState, view: string) => void
   setInspect: (draft: ChatStoreState, target: { callId: CallId } | null) => void
 }
@@ -21,15 +19,14 @@ type ChatActions = {
  */
 export function createChatStore(): EngineStoreHandle<ChatStoreState, ChatActions> {
   return defineStore({
+    // Anchored to the contract shape: consumers read the store through
+    // PropsStore<ChatStore>'s SnapshotSelectorHook<ChatStoreState>, so init
+    // and the contract cannot drift.
     init: (): ChatStoreState => ({ selection: null, draft: '', view: null, inspect: null }),
     persist: 'dsh.conversation.chat',
     actions: {
       select: (d, target: SelectionTarget | null) => { d.selection = target },
       setDraft: (d, text: string) => { d.draft = text },
-      clearDraft: (d) => { d.draft = '' },
-      // Optimistic-send failure restore: only when the user typed nothing new
-      // since the clear (send choreography lives in the inject factory).
-      restoreDraft: (d, text: string) => { if (d.draft === '') d.draft = text },
       setView: (d, view: string) => { d.view = view },
       setInspect: (d, target: { callId: CallId } | null) => { d.inspect = target },
     },

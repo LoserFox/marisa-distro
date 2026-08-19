@@ -34,7 +34,7 @@ type LanguageRowActions = {
  */
 export function createLanguageRowStore(): EngineStoreHandle<LanguageRowState, LanguageRowActions> {
   return defineStore({
-    init: (): LanguageRowState => { return ({ active: '', options: [], revision: -1 }) },
+    init: (): LanguageRowState => ({ active: '', options: [], revision: -1 }),
     actions: {
       sync: (d, active: string, options: LanguageOptionRow[], revision: number) => {
         if (revision <= d.revision) return

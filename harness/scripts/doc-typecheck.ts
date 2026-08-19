@@ -151,7 +151,7 @@ function workspaceReferences(): { path: string }[] {
   // `config` is typed `any` by the TS API; narrow it to the one field read here.
   const { references } = result.config as { references: { path: string }[] }
   return references.map(({ path }) => ({
-    path: !path.startsWith('./') ? `../${path}` : `../${path.slice(2)}`,
+    path: path.startsWith('./') ? `../${path.slice(2)}` : `../${path}`,
   }))
 }
 
@@ -221,7 +221,7 @@ const { primary: all, derivatives } = partitionPairedMarkdownDerivatives(
 const checked = all.filter(b => b.kind === 'check')
 const ignored = all.filter(b => b.kind === 'ignore')
 // Only compile-eligible fences belong in the opt-out ratio; every other skipped
-// kind has an independent verifier named in BlockKind's contract above.
+// kind has an independent verifier named in the BlockKind rules above.
 const ratioDenominator = checked.length + ignored.length
 
 if (checked.length === 0) {

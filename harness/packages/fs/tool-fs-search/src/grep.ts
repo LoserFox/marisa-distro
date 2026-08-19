@@ -11,16 +11,16 @@
  * @module @deepseek-ai/dsh-tool-fs-search/grep
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView, SearchResultView, ToolResult } from '@deepseek-ai/dsh-tools'
-import type { RetainedItems } from '@deepseek-ai/dsh-retention'
+import type { RetainedItems } from '@deepseek-ai/dsh-output-retention'
 import type { SpillRef } from '@deepseek-ai/dsh-spill'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type { GrepMatch } from './search-core.ts'
 import { SearchError, previewLine, retainGrepMatches, runRipgrep, toWorkdirRelative, trySaveFormattedResult } from './search-core.ts'
 import { grepSearchMeta, searchViewFromMeta } from './presentation.ts'
-import { acceptedSurfaceValue } from './surface.ts'
+import { acceptedDirectCallValue } from './direct-call.ts'
 
 /**
  * Default cap on flat matches retained inline by one `grep` call (the
@@ -118,7 +118,7 @@ export function buildGrepCommand(input: GrepInput): string[] {
 
 /**
  * The uniform malformed-output failure: raw `rg --json` is an internal
- * transport, so a shape surprise is a search failure, not a partial result.
+ * transport, so missing or invalid response fields cause a search failure, not a partial result.
  */
 function malformedRecord(detail: string, cause?: unknown): SearchError {
   return new SearchError(`grep received malformed ripgrep --json output (${detail})`, 'SEARCH_FAILED', cause !== undefined ? { cause } : undefined)
@@ -340,7 +340,7 @@ export function applyGrepTool(ctx: Context, caps: GrepToolCaps): void {
 
   ctx.on('tools/post-execute', async (exec, result, next) => {
     const decision = await next()
-    const value = acceptedSurfaceValue(ctx, tool, exec, result, decision) as { matches: GrepMatch[] } | undefined
+    const value = acceptedDirectCallValue(ctx, tool, exec, result, decision) as { matches: GrepMatch[] } | undefined
     if (value === undefined) return decision
     const matches = value.matches
     if (matches.length <= caps.maxMatches) return decision

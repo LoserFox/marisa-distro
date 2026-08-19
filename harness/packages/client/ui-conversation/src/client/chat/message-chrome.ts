@@ -87,7 +87,9 @@ export function formatMessageClock(time: number, t: ClockTranslate, now: number 
     d.getFullYear() === n.getFullYear()
     && d.getMonth() === n.getMonth()
     && d.getDate() === n.getDate()
-  ) return clock
+  ) {
+    return clock
+  }
   const params = { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() }
   const md = d.getFullYear() === n.getFullYear() ? t('clock.md', params) : t('clock.ymd', params)
   return `${md} ${clock}`

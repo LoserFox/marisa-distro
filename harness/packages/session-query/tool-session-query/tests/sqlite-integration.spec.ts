@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -10,10 +10,10 @@ import SessionStore, {
   SessionId,
   type Session,
 } from '@deepseek-ai/dsh-session'
-import SessionPersistenceJsonl from '@deepseek-ai/dsh-session-persistence-jsonl'
-import SessionQuerySqlite from '@deepseek-ai/dsh-session-query-sqlite'
+import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import SqliteSessionQueryEngine from '@deepseek-ai/dsh-session-query-sqlite'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as ToolSessionQuery from '@deepseek-ai/dsh-tool-session-query'
 
 const temporaryDirectories: string[] = []
@@ -31,16 +31,16 @@ function fakeAgent(session: Session): Agent {
 }
 
 describe('tool-session-query with the real SQLite provider', () => {
-  it('searches live prior-step history and a persisted same-workspace log', async () => {
+  it('searches live prior-step history and a persisted same-workspace log', { timeout: 20_000 }, async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-tool-session-query-'))
     temporaryDirectories.push(root)
     const ctx = new Context()
     contexts.push(ctx)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(SessionPersistenceJsonl, { root, compression: 'none' })
-    await ctx.plugin(SessionQuerySqlite, { path: join(root, 'session-query.db') })
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+    await ctx.plugin(SqliteSessionQueryEngine, { path: join(root, 'session-query.db') })
     await ctx.plugin(ToolSessionQuery)
 
     const persisted = SessionId('persisted')
@@ -96,7 +96,7 @@ describe('tool-session-query with the real SQLite provider', () => {
       .toContain('seq 0')
     const liveEvents = await execute('session_event_search', { query: 'live integration needle' })
     expect(liveEvents.isError).toBe(false)
-    expect(liveEvents.content.map(block => block.type !== 'text' ? '' : block.text).join('\n'))
+    expect(liveEvents.content.map(block => block.type === 'text' ? block.text : '').join('\n'))
       .toContain('seq 1')
   })
 
@@ -107,9 +107,9 @@ describe('tool-session-query with the real SQLite provider', () => {
     contexts.push(ctx)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(SessionPersistenceJsonl, { root, compression: 'none' })
-    await ctx.plugin(SessionQuerySqlite, { path: join(root, 'session-query.db') })
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+    await ctx.plugin(SqliteSessionQueryEngine, { path: join(root, 'session-query.db') })
     await ctx.plugin(ToolSessionQuery)
 
     const base = Date.parse('2026-07-24T00:00:00.000Z')

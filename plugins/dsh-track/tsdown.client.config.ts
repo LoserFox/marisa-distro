@@ -15,6 +15,11 @@ export default defineConfig({
   target: 'es2024',
   dts: false,
   clean: false,
+  // Inlined browser dependencies use Node's conventional development guard.
+  // Match DSH's clientBundle preset so the factory never reads a Node global.
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
+  },
   // DSH client-modules contract C6: register via __ModuleLoader__.load.
   banner: 'window.__ModuleLoader__.load({ id: "@fakechris/dsh-track", factory: (require) => { var module = { exports: {} }; var exports = module.exports;',
   footer: 'return module.exports; } });',

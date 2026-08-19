@@ -1,0 +1,62 @@
+/**
+ * Track Bridge client plugin — browser half.
+ *
+ * Visible surfaces:
+ * 1. A sidebar entry row ("Track") injected below New Session — the
+ *    primary entry point (sidebar slots are single-occupant; DOM injection
+ *    is the task-board precedent).
+ * 2. A center-column panel (capture wall + pending decisions + issues)
+ *    toggled by the entry, fed by the host HTTP API (/api/track/*).
+ * 3. A composer-dock strip showing pending counts.
+ * @module @fakechris/dsh-track/client
+ */
+import { TrackStrip } from "./strip.js";
+import { en, NS, zh } from "./locales.js";
+import { mountRightPanel, openTrackPanel, jumpToConversation } from "./right-panel.js";
+import { GraphView } from "./graph-view.js";
+/** Required services: slot registration, locale dictionaries, and the
+ *  sessions face (the right-panel jump-back links call ctx.sessions.open /
+ *  binding — cordis property access requires the service declared). */
+export const inject = ['slots', 'locale', 'sessions'];
+/**
+ * Client plugin body: sidebar entry + center panel + composer strip.
+ * @param ctx - client root context.
+ */
+export function apply(ctx) {
+    console.log('[dsh-track] client apply called');
+    ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-track: dictionaries');
+    // ---- right-side panel (lazyfish/side-panel pattern) ----
+    // The panel needs the client root context for the "jump back to this
+    // conversation" links (ctx.sessions.open / binding) — pass it through.
+    const panelDisposer = mountRightPanel(ctx);
+    ctx.effect(() => panelDisposer, 'dsh-track: right panel');
+    // ---- composer-dock strip (open capture count + panel entry) ----
+    // The count is fetched live by TrackStrip itself; the injected props only
+    // carry the initial value and the click action (opens the right panel).
+    const injectActions = () => ({
+        captures: 0,
+        onClick: openTrackPanel,
+    });
+    ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
+        name: 'conversation.composer.dock',
+        id: 'track',
+        order: 20,
+        locale: NS,
+        inject: injectActions,
+    }, TrackStrip));
+    // ---- 会话结构图 tab: register a native conversation.view entry so the
+    // host renders the tab, tracks the active underline, and mounts only the
+    // active view (ui-trajectory pattern — no DOM tab injection).
+    const t = ctx.locale.bind(NS);
+    ctx.slots.inject('conversation.view', () => ctx.slots.register({
+        name: 'conversation.view',
+        id: 'track-graph',
+        order: 20,
+        locale: NS,
+        label: () => t('view.graph'),
+        inject: (sessionId) => ({
+            sessionId,
+            onJump: (j) => { void jumpToConversation({ sessionId: j.sessionId, messageId: j.messageId }); },
+        }),
+    }, GraphView));
+}

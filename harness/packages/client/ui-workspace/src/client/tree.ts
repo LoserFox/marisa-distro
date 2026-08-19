@@ -32,6 +32,9 @@ export interface SessionNode {
   updatedAt: number
 }
 
+/** Session order selected by the Workspace browser. */
+export type SessionOrderBy = 'manual' | 'updated'
+
 /** One workspace group section: header row facts + visible top-level session rows. */
 export interface GroupNode {
   /** Group key: the workspace id or {@link UNGROUPED_KEY}. */
@@ -74,7 +77,9 @@ export interface SearchResultSet {
 
 /** Viewing state consumed by the derivation. */
 export interface TreeView {
-  expandedProjects: readonly string[]
+  expandedGroups: readonly string[]
+  /** Browser-local order for Sessions without a backing Workspace account. */
+  ungroupedOrder?: readonly string[]
 }
 
 interface Group {
@@ -92,7 +97,7 @@ interface Group {
  * @param cwd - directory path, or undefined for the ungrouped bucket.
  * @returns basename, the raw cwd when it has no basename, or the ungrouped label.
  */
-export function projectLabel(cwd: string | undefined): string {
+export function workspaceLabel(cwd: string | undefined): string {
   if (cwd === undefined || cwd === '') return UNGROUPED_LABEL
   const base = cwd.replace(/[/\\]+$/, '').split(/[/\\]/).pop()
   return base !== undefined && base !== '' ? base : cwd
@@ -136,21 +141,41 @@ function buildGroup(
   order: 'account' | 'recency',
 ): Group {
   const sessions = [...members]
-  // Workspace order is workspace.sessionIds; only Ungrouped lacks an account
-  // order and therefore falls back to recency.
+  // Real Workspace order comes from sessionIds. Ungrouped falls back to
+  // recency until the browser supplies its persisted local order.
   if (order === 'recency') sessions.sort(byRecency)
   return { key, workspaceId, cwd, createdAt, label, sessions }
+}
+
+/** Apply a stored Ungrouped order and append newly loose Sessions by recency. */
+function orderedUngrouped(members: readonly SessionSummary[], stored: readonly string[]): SessionSummary[] {
+  const byId = new Map(members.map(session => [session.id as string, session]))
+  const included = new Set<string>()
+  const ordered: SessionSummary[] = []
+  for (const key of stored) {
+    const session = byId.get(key)
+    if (session === undefined || included.has(key)) continue
+    ordered.push(session)
+    included.add(key)
+  }
+  for (const session of [...members].sort(byRecency)) {
+    if (included.has(session.id)) continue
+    ordered.push(session)
+  }
+  return ordered
 }
 
 /**
  * Group Sessions by Host Workspace: one group per entity in stable Host
  * order, with members resolved from sessionIds in their stored order. Sessions
- * outside every Workspace trail in the recency-ordered Ungrouped bucket.
+ * outside every Workspace trail in the browser-local Ungrouped order, which
+ * falls back to recency before that order is initialized.
  */
 function groupByWorkspace(
   list: SessionListState,
   workspaces: readonly WorkspaceView[],
   archived: ReadonlySet<SessionId>,
+  ungroupedOrder: readonly string[] | undefined,
 ): Group[] {
   const groups: Group[] = []
   const accounted = new Set<SessionId>()
@@ -173,7 +198,15 @@ function groupByWorkspace(
     .filter((s): s is SessionSummary =>
       s !== undefined && !accounted.has(s.id) && sessionVisible(s, list.current, archived))
   if (stray.length > 0) {
-    groups.push(buildGroup(UNGROUPED_KEY, undefined, undefined, undefined, UNGROUPED_LABEL, stray, 'recency'))
+    groups.push(buildGroup(
+      UNGROUPED_KEY,
+      undefined,
+      undefined,
+      undefined,
+      UNGROUPED_LABEL,
+      ungroupedOrder === undefined ? stray : orderedUngrouped(stray, ungroupedOrder),
+      ungroupedOrder === undefined ? 'recency' : 'account',
+    ))
   }
   return groups
 }
@@ -197,8 +230,8 @@ function sessionNode(
 /**
  * Derive the workspace browser groups with every session as a top-level row.
  *
- * Every group shows; sessions populate under expanded groups, preserving
- * Host account order. Blank sessions are excluded except for the selected
+ * Every group shows; sessions populate under expanded groups in the selected
+ * local order. Blank sessions are excluded except for the selected
  * provisional New Session row; archived sessions are excluded everywhere.
  * Content search lives outside this derivation
  * (see {@link deriveSearchResults}).
@@ -215,15 +248,15 @@ export function deriveGroups(
   view: TreeView,
 ): GroupNode[] {
   const archived = new Set(archivedSessionIds)
-  const expandedProjects = new Set(view.expandedProjects)
+  const expandedGroups = new Set(view.expandedGroups)
   const descendants = indexSubagentDescendants(list.byId)
   const currentGroup = list.current === undefined
     ? undefined
     : (workspaces.find(w => w.sessionIds.includes(list.current as SessionId))?.workspaceId as string | undefined)
         ?? UNGROUPED_KEY
   const groups: GroupNode[] = []
-  for (const g of groupByWorkspace(list, workspaces, archived)) {
-    const expanded = expandedProjects.has(g.key)
+  for (const g of groupByWorkspace(list, workspaces, archived, view.ungroupedOrder)) {
+    const expanded = expandedGroups.has(g.key)
     groups.push({
       key: g.key,
       workspaceId: g.workspaceId,
@@ -248,7 +281,10 @@ export function deriveGroups(
  * @param archivedSessionIds - registry-global archive set.
  * @returns flat rows in render order.
  */
-export function deriveFlat(list: SessionListState, archivedSessionIds: readonly SessionId[]): SessionNode[] {
+export function deriveFlat(
+  list: SessionListState,
+  archivedSessionIds: readonly SessionId[],
+): SessionNode[] {
   const archived = new Set(archivedSessionIds)
   const descendants = indexSubagentDescendants(list.byId)
   const rows: SessionSummary[] = []
@@ -302,7 +338,7 @@ export function deriveSearchResults(
     }
   }
   const labelOf = (summary: SessionSummary): string =>
-    workspaceBySession.get(summary.id) ?? projectLabel(summary.cwd)
+    workspaceBySession.get(summary.id) ?? workspaceLabel(summary.cwd)
   const contentBySession = new Map<SessionId, SessionSearchResultItem>()
   for (const item of content.items) {
     if (!contentBySession.has(item.sessionId)) contentBySession.set(item.sessionId, item)
@@ -333,7 +369,7 @@ export function deriveSearchResults(
   for (const summary of local) include(summary)
   for (const item of content.items) {
     const summary = list.byId[item.sessionId]
-    if (summary !== undefined && !summary.blank && sessionVisible(summary, list.current, archived)) { include(summary) }
+    if (summary !== undefined && !summary.blank && sessionVisible(summary, list.current, archived)) include(summary)
   }
 
   return {

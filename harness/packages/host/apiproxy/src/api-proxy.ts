@@ -5,15 +5,18 @@
 
 import { randomUUID } from 'node:crypto'
 import { mkdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
-import type { Context } from 'cordis'
-import { installAgentLlmTarget } from '@deepseek-ai/dsh-agent'
-import type { Agent, AgentLlmTarget, AgentLlmTargetRef, AgentOptions, AgentStatus } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, freezeMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import { dirname } from 'node:path'
+import type { Context } from '@deepseek-ai/cordis'
+import { installModelSelection } from '@deepseek-ai/dsh-agent'
+import type { Agent, ModelSelection, ModelSelectionRef, AgentOptions, AgentStatus } from '@deepseek-ai/dsh-agent'
+import type {} from '@deepseek-ai/dsh-agent-presets/types'
+import { AttachmentError } from '@deepseek-ai/dsh-attachment'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import { contentHasImage, createUserMessage, freezeMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import { errorChain } from '@deepseek-ai/dsh-llm'
-import type { MessageSource } from '@deepseek-ai/dsh-llm'
-import { isAppendSurfaceEvent, lastActivityTime } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionEventMap, SessionHeader, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
+import type { ContentBlock, MessageSource } from '@deepseek-ai/dsh-llm'
+import { isAppendSurfaceEvent, isJsonValue } from '@deepseek-ai/dsh-session'
+import type { JsonValue, Session, SessionEvent, SessionEventMap, SessionHeader, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
 import { SessionQueryError, type SessionSearchCursor } from '@deepseek-ai/dsh-session-query'
 import { SubagentError } from '@deepseek-ai/dsh-subagent'
@@ -22,17 +25,32 @@ import { isUserInvocable } from '@deepseek-ai/dsh-skill'
 import type { Workspace, WorkspaceRecord } from '@deepseek-ai/dsh-workspace'
 import {
   workspaceDomainState, workspaceRecord, WorkspaceId as brandWorkspaceId,
-  WorkspaceMoveInvalidError, WorkspaceUnknownSessionError,
+  WorkspaceMoveInvalidError, WorkspaceOrderInvalidError, WorkspaceUnknownSessionError,
 } from '@deepseek-ai/dsh-workspace'
 // Type-only: brings the `ctx.tools` Context merge into this program (viewFor reads presenters).
+import {
+  InvalidPresetIdError, PresetExistsError, PresetMountError,
+  PresetNotWritableError, resolveSessionPreset, UnknownPresetError,
+} from '@deepseek-ai/dsh-agent-presets'
+import type { PresetBearingSession } from '@deepseek-ai/dsh-agent-presets'
 import type {} from '@deepseek-ai/dsh-tools'
 import type {
   ApiProxy, ConfigurableProviderView, CredentialView, GoalRef, HistoryEntry, HostFrame,
   ModelCatalogFailure, ModelProviderGroup,
-  ModelReasoning, MuxFrame, QuestionResponsePayload, SessionProjectionsBlock, SessionSearchItem,
-  QueuedInboxItem, SessionSummary, SettingsNamespaceView, SubagentAddress, ToolEventView,
+  ModelReasoning, MuxFrame, PromptContentPart, QuestionResponsePayload, SessionListMetadata, SessionProjectionsBlock, SessionSearchItem,
+  QueuedInboxItem, SessionSummary, SettingsNamespaceView, SubagentAddress, JobView, ToolEventView,
   WorkspaceId, WorkspaceView,
 } from './api/index.ts'
+import {
+  DEFAULT_SESSION_LOG_COMPRESSION_LEVEL,
+  flushLiveSessionLog,
+  sessionLogExportDeps,
+  sessionLogZipFilename,
+  streamSessionLogZip,
+  type SessionLogExportReady,
+  type SessionLogCompressionLevel,
+} from './session-export.ts'
+import type { SessionRawArtifact } from '@deepseek-ai/dsh-session-persistence'
 import {
   SESSION_SEARCH_RESULT_LIMIT,
   SESSION_SEARCH_SNIPPET_MAX_CODE_POINTS,
@@ -40,13 +58,21 @@ import {
 } from './api/session-search.ts'
 // Type-only: resolves `ctx.get('sessionProjections')` to the projection registry.
 import type {} from '@deepseek-ai/dsh-session-projection'
+// Type-only: resolves `ctx.get('tasks')` to the background job registry.
+import type {} from '@deepseek-ai/dsh-jobs'
+import type { JobSnapshot } from '@deepseek-ai/dsh-jobs'
 // Type-only: resolves `ctx.get('sessionProjectionCache')` (the cold listing column).
 import type {} from '@deepseek-ai/dsh-session-projection-cache'
 // GoalError narrows domain rejections to their stable codes at the wire boundary.
 import { GoalError } from '@deepseek-ai/dsh-goal'
 import type { GoalRef as CoreGoalRef } from '@deepseek-ai/dsh-goal'
-// Type-only edges: resolve `ctx.get('commands')`, the `commands/change` event, and `ctx.get('skills')`.
+// Type-only edges: resolve the command-change stream and `ctx.get('skills')`.
 import type {} from '@deepseek-ai/dsh-commands'
+// Type-only: the dynamic-package runner's forwarded-event declarations. Its
+// client-safe `./types` subpath deliberately, not the package root — the root
+// merges `ctx.dynamicCordisRunner`, and a dependency on that package would
+// rebuild the api-remotes cycle this direction exists to avoid.
+import type {} from '@deepseek-ai/dsh-cordis-host-runner/types'
 import type {} from '@deepseek-ai/dsh-skill'
 // The settings/credentials seams: brand guards run at this wire boundary; the
 // service reads stay optional (`ctx.get`) so a composition without either
@@ -57,54 +83,160 @@ import { credentialRef } from '@deepseek-ai/dsh-credentials'
 // Value edge: the rename impl narrows the title service's validation failure; the import also resolves `ctx.get('sessionTitle')`.
 import { SessionTitleInvalidError } from '@deepseek-ai/dsh-session-title'
 import type { CallId } from '@deepseek-ai/dsh-llm/brand'
+import type { ScopeKey } from '@deepseek-ai/dsh-scope'
 import type { ApprovalOutcome, ApprovalRequestId } from '@deepseek-ai/dsh-user-approval'
 // Side-effect type import: resolves the `approval/request` waterfall and
 // `ctx.get('approval')` without a value dependency on the seam (optional composition).
 import type {} from '@deepseek-ai/dsh-user-approval'
 import { approvalResponsePayloadSchema } from './api/approvals.schema.ts'
+import { imageLimitsProjectionSchema, sessionListMetadataProjectionSchema } from './api/sessions.schema.ts'
 import { questionResponsePayloadSchema } from './api/questions.schema.ts'
 import type { ClientResponse, RpcError, RpcReceipt, RpcRequest, RpcResponse } from './api/rpc.ts'
 import { RpcId } from './api/rpc.ts'
 import type {
   AskUserQuestionAnswer, AskUserQuestionItem, AskUserQuestionRequest,
-} from '@deepseek-ai/dsh-user-interaction'
-import { UserInteractionError } from '@deepseek-ai/dsh-user-interaction'
+} from '@deepseek-ai/dsh-user-questions'
+import { UserQuestionError } from '@deepseek-ai/dsh-user-questions'
 import { DirectoryPickerError } from '@deepseek-ai/dsh-host-directory-picker'
 import {
   ApiRemoteSessionNotFound as SessionNotFound,
   ApiRemoteSubagentSessionOwnership as SubagentSessionOwnership,
+  API_REMOTE_FORWARDED_EVENTS,
   apiRemoteSubagentOwnershipError,
   createApiRemoteAgentResolver,
   hasApiRemoteSubagentOwner,
   inspectApiRemoteSession,
 } from '@deepseek-ai/dsh-api-remotes'
-import { openNativePath, openNativeTextFile } from './native-path-opener.ts'
+import { canOpenNativePath, openNativePath, openNativeTextFile } from './native-path-opener.ts'
 
 /** Page size when history is called without maxMessages. */
 const DEFAULT_MAX_MESSAGES = 50
-
-/**
- * The settings namespace carrying the user's default route. Named for the
- * gateway rather than for the package, because this key is what a person reads
- * and writes in `settings.yaml`; the row id in a composition happens to match
- * but does not determine it.
- */
-export const API_GATEWAY_SETTINGS_NAMESPACE = settingsNamespace('api-gateway')
-
-/** Non-model settings namespaces intentionally served to the Web client. */
-const WEB_SETTINGS_NAMESPACES = ['permission'] as const
 
 /** Provider work budget: at most 100 calls and 2,000 inspected hits. */
 const SESSION_SEARCH_PROVIDER_CALL_LIMIT = 100
 
 /** Bound cold-log stat fan-out and settle each started batch before cancellation returns. */
 const COLD_SUMMARY_BATCH_SIZE = 16
+/** Default maximum artifact size eligible for one cold blankness read. */
+export const DEFAULT_COLD_BLANK_PROBE_MAX_BYTES = 1024
 
 /** Conversation message event types (the pagination counting unit). */
 const MESSAGE_TYPES = new Set(['user/message', 'assistant/message'])
 
-/** Product settings intentionally exposed beside model-provider namespaces. */
-const PRODUCT_SETTINGS_NAMESPACES = new Set(['ui-onboarding'])
+/** Decode the browser payload while rejecting non-canonical base64 forms. */
+function decodeBase64(data: string): Uint8Array {
+  const decoded = Buffer.from(data, 'base64')
+  if (data.length === 0 || decoded.toString('base64') !== data) {
+    throw new AttachmentError('Image upload is not canonical base64.', 'INVALID_IMAGE_BASE64')
+  }
+  return new Uint8Array(decoded)
+}
+
+/** Validate one prompt as a batch before publishing any durable image object. */
+async function durablePromptContent(ctx: Context, content: readonly PromptContentPart[]): Promise<ContentBlock[]> {
+  if (content.every(part => part.type === 'text')) {
+    return content.map(part => ({ type: 'text', text: part.text }))
+  }
+  const prepared = content.map(part => part.type === 'text'
+    ? part
+    : { part, data: decodeBase64(part.data) })
+  const images = prepared.filter((part): part is Extract<typeof part, { data: Uint8Array }> => 'data' in part)
+  const refs = await ctx.attachments.saveImages(images.map(image => ({
+    data: image.data,
+    mediaType: image.part.mediaType,
+    ...image.part.name === undefined ? {} : { name: image.part.name },
+  })))
+  const blocks: ContentBlock[] = []
+  let imageIndex = 0
+  for (const item of prepared) {
+    if (!('data' in item)) {
+      blocks.push({ type: 'text', text: item.text })
+      continue
+    }
+    const attachment = refs[imageIndex++]
+    /* v8 ignore next -- each prepared image supplied exactly one saveImages input and therefore one ordered ref. */
+    if (attachment === undefined) throw new Error('attachment batch result did not preserve input cardinality')
+    blocks.push({ type: 'image', attachment })
+  }
+  return blocks
+}
+
+/** Search durable content for an image reference, including nested tool results. */
+function imageBlockIn(content: unknown, match: (ref: ImageAttachmentRef) => boolean): ImageAttachmentRef | undefined {
+  if (!Array.isArray(content)) return undefined
+  for (const value of content) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) continue
+    const block = value as { type?: unknown; attachment?: unknown; content?: unknown }
+    if (block.type === 'image' && typeof block.attachment === 'object' && block.attachment !== null) {
+      const ref = block.attachment as ImageAttachmentRef
+      if (match(ref)) return ref
+    }
+    if (block.type === 'tool-result') {
+      const nested = imageBlockIn(block.content, match)
+      if (nested !== undefined) return nested
+    }
+  }
+  return undefined
+}
+
+/** Search every durable event carrier that can own model-visible content. */
+function imageInEvent(event: SessionEvent, match: (ref: ImageAttachmentRef) => boolean): ImageAttachmentRef | undefined {
+  const data = event.data as {
+    content?: unknown
+    message?: { content?: unknown }
+    inserted?: Array<{ content?: unknown }>
+    chunk?: { type?: unknown; block?: unknown }
+  }
+  const direct = imageBlockIn(data.content, match)
+  if (direct !== undefined) return direct
+  if (data.message !== undefined) {
+    const wrapped = imageBlockIn(data.message.content, match)
+    if (wrapped !== undefined) return wrapped
+  }
+  if (data.inserted !== undefined) {
+    for (const message of data.inserted) {
+      const inserted = imageBlockIn(message.content, match)
+      if (inserted !== undefined) return inserted
+    }
+  }
+  if (event.type === 'assistant/chunk' && data.chunk?.type === 'block-end') {
+    return imageBlockIn([data.chunk.block], match)
+  }
+  return undefined
+}
+
+/** True when the current model-visible surface contains an image. */
+function messagesHaveImage(messages: readonly { content: readonly ContentBlock[] }[]): boolean {
+  return messages.some(message => contentHasImage(message.content))
+}
+
+/** Resolve the first reference matching one opaque id. */
+function referencedImage(events: readonly SessionEvent[], attachmentId: string): ImageAttachmentRef | undefined {
+  for (const event of events) {
+    const found = imageInEvent(event, ref => String(ref.attachmentId) === attachmentId)
+    if (found !== undefined) return found
+  }
+  return undefined
+}
+
+/** Strict browser-zone profile: UTC or an IANA Area/Location-style identifier. */
+const IANA_TIME_ZONE = /^[A-Za-z][A-Za-z0-9_+.-]*(?:\/[A-Za-z0-9_+.-]+)+$/
+
+/** Validate and canonicalize one browser-supplied IANA zone at the wire boundary. */
+function canonicalClientTimeZone(value: string): string | undefined {
+  if (value.length === 0 || value.trim() !== value
+    || (value !== 'UTC' && !IANA_TIME_ZONE.test(value))) return undefined
+  try {
+    const canonical = new Intl.DateTimeFormat('en-US', { timeZone: value })
+      .resolvedOptions().timeZone
+    /* v8 ignore next -- Intl returns UTC or a canonical IANA Area/Location for accepted input. */
+    if (canonical !== 'UTC' && !IANA_TIME_ZONE.test(canonical)) return undefined
+    return canonical
+  } catch {
+    // Intl rejects unsupported zone names; the RPC maps that parser rejection below.
+    return undefined
+  }
+}
 
 /** Read live abort state across awaits without treating it as synchronously immutable. */
 function isAborted(signal: AbortSignal): boolean {
@@ -116,7 +248,7 @@ function isAborted(signal: AbortSignal): boolean {
  * backwards from the window tail. Replacement copies never entered the
  * conversation a reader sees — they restate a shadowed range for the model
  * alone — so they consume no quota; the page stays one contiguous raw range,
- * which keeps a compaction's log-only provenance on the same page as its
+ * which keeps a compaction's log-only `compaction/summary` record on the same page as its
  * replacement. The cut is the starting seq of the oldest message group (chunks
  * group via sourceEventSeqs — never cut mid-message). The tail page naturally
  * includes the in-progress partial.
@@ -134,7 +266,12 @@ function paginate(
     if (!MESSAGE_TYPES.has(event.type) || !isAppendSurfaceEvent(event)) continue
     count++
     const sources = (event as { sourceEventSeqs?: number[] }).sourceEventSeqs
-    const groupStart = sources !== undefined && sources.length > 0 ? Math.min(event.seq, ...sources) : event.seq
+    let groupStart = event.seq
+    if (sources !== undefined) {
+      for (const source of sources) {
+        if (source < groupStart) groupStart = source
+      }
+    }
     if (count >= maxMessages) {
       cut = groupStart
       break
@@ -152,7 +289,7 @@ function ok<T>(request: RpcRequest<unknown>, value: T): RpcResponse<T> {
 /**
  * Build the provider/model catalog over every registered route. Shared by the
  * session-scoped `session.models` and host-scoped `llm.models`. Catalog
- * membership stays advisory: an unlisted session target remains valid for
+ * membership stays advisory: an unlisted session selection remains valid for
  * provider dispatch, but is not injected back into the selector after its
  * owning catalog stops advertising it. Per-provider failures ride `failures`
  * without failing the sound groups; groups that advertise nothing are dropped.
@@ -213,6 +350,35 @@ function err<T>(request: RpcRequest<unknown>, error: RpcError): RpcResponse<T> {
   return { rpcId: request.rpcId, result: { ok: false, error } }
 }
 
+/**
+ * The RPC refusal a preset failure becomes, or undefined when the failure is
+ * about something else.
+ *
+ * Both the session-create path and the switch path can be handed the same two
+ * failures, and a client that has to branch on the code needs them worded the
+ * same from either.
+ * @param request - the request being answered.
+ * @param error - the thrown value.
+ * @returns the refusal, or undefined when the caller should keep handling.
+ */
+function presetFailure(request: RpcRequest<unknown>, error: unknown): RpcResponse<never> | undefined {
+  if (error instanceof UnknownPresetError) {
+    return err(request, {
+      code: 'agent-preset-not-found',
+      message: error.message,
+      details: { agentPreset: error.presetId, available: [...error.available] },
+    })
+  }
+  if (error instanceof PresetMountError) {
+    return err(request, {
+      code: 'agent-preset-invalid',
+      message: error.message,
+      details: { agentPreset: error.presetId, reason: error.reason },
+    })
+  }
+  return undefined
+}
+
 /** Simple async queue: core callbacks push, the AsyncIterable pulls; abort/return cleans up. */
 class FrameQueue<F> {
   private buffer: F[] = []
@@ -256,9 +422,48 @@ function frame<F>(payload: F): RpcRequest<F> {
   return { rpcId: RpcId(randomUUID()), payload }
 }
 
+/**
+ * Narrow one allowlisted host event's argument list to the JSON values the
+ * wrapper frame carries. A rejected argument is an allowlist mistake (the
+ * forwarded path applies no projection), not hostile input, so it throws rather
+ * than degrading to a lossy frame. The throw surfaces where the forwarding
+ * listener runs, so the emitter's own listener containment logs it and drops
+ * that frame — loud in the Host log, not at load or at the emit. Exported for
+ * the test that owns this decision: every currently allowlisted event has a
+ * statically JSON-safe payload, so a type-legal `ctx.emit` cannot reach the
+ * rejection branch.
+ * @param event - forwarded host event name, named in the failure.
+ * @param args - the emitter's argument list.
+ * @returns the same arguments typed as JSON values.
+ */
+export function assertJsonArgs(event: string, args: readonly unknown[]): JsonValue[] {
+  for (const [index, arg] of args.entries()) {
+    if (!isJsonValue(arg)) {
+      throw new Error(`forwarded host event "${event}" argument ${index} is not lossless JSON data`)
+    }
+  }
+  return args as JsonValue[]
+}
+
 /** Queue the subscription baseline frame. */
 function subscribeSession(queue: FrameQueue<RpcRequest<MuxFrame>>, session: Session): void {
   queue.push(frame({ type: 'session/subscribed', sessionId: session.id, lastSeq: session.seq - 1 }))
+}
+
+/**
+ * Project registry snapshots onto the wire view, dropping the three internal
+ * fields {@link JobView} documents as absent.
+ */
+function jobViews(snapshots: readonly JobSnapshot[]): JobView[] {
+  return snapshots.map(job => ({
+    id: job.id,
+    kind: job.kind,
+    label: job.label,
+    status: job.status,
+    ...job.detail === undefined ? {} : { detail: job.detail },
+    startedAt: job.startedAt,
+    ...job.finishedAt === undefined ? {} : { finishedAt: job.finishedAt },
+  }))
 }
 
 /**
@@ -272,68 +477,119 @@ function sessionBlank(session: Session): boolean {
   return !session.events.some(event => event.type === 'turn/start')
 }
 
+/** Advance the Session-list hint projection by one committed event. */
+function applySessionListMetadata(state: SessionListMetadata, event: SessionEvent): SessionListMetadata {
+  const blank = state.blank && event.type !== 'turn/start'
+  const lastPromptAt = event.type === 'user/message' && event.data.source.kind === 'user'
+    ? event.time
+    : state.lastPromptAt
+  return blank === state.blank && lastPromptAt === state.lastPromptAt
+    ? state
+    : { blank, lastPromptAt }
+}
+
+/** Fold exact list metadata for an attached Session. */
+function sessionListMetadata(events: readonly SessionEvent[]): SessionListMetadata {
+  let state: SessionListMetadata = { blank: true, lastPromptAt: null }
+  for (const event of events) state = applySessionListMetadata(state, event)
+  return state
+}
+
+/** Sort by creation or latest human prompt, whichever is newer. */
+function sessionListUpdatedAt(header: SessionHeader, metadata: SessionListMetadata | undefined): number {
+  return Math.max(header.createdAt, metadata?.lastPromptAt ?? 0)
+}
+
 /** Shared Session-header projection for list baselines and creation frames. */
-function sessionListFields(header: SessionHeader): {
+function sessionListFields(header: SessionHeader, events: readonly SessionEvent[] = []): {
   parentSessionId?: SessionId
   origin?: 'subagent'
   cwd?: string
+  agentPreset?: string
 } {
+  // The preset comes from the log, not the header: a session that switched
+  // while blank ran its turns under the newer composition, and a picker
+  // showing the creation-time value would contradict what the model saw.
+  const agentPreset = resolveSessionPreset({ header, events })
   return {
     ...header.parentSession === undefined ? {} : { parentSessionId: header.parentSession },
     ...header.origin === undefined ? {} : { origin: header.origin },
     ...header.cwd === undefined ? {} : { cwd: header.cwd },
+    ...agentPreset === undefined ? {} : { agentPreset },
   }
 }
 
 /** SessionSummary projection for attached (in-memory) sessions. */
 function summarize(session: Session, running: boolean): SessionSummary {
+  const metadata = sessionListMetadata(session.events)
   return {
     sessionId: session.id,
-    // Excludes end-seed: a resumed-but-untouched session
-    // must not sort as freshly worked in.
-    updatedAt: lastActivityTime(session.events) ?? session.header.createdAt,
+    updatedAt: sessionListUpdatedAt(session.header, metadata),
     running,
-    blank: sessionBlank(session),
-    ...sessionListFields(session.header),
+    blank: metadata.blank,
+    ...sessionListFields(session.header, session.events),
   }
 }
 
 /**
- * SessionSummary projection for cold (persisted, unattached) sessions.
- * updatedAt is the log file's mtime; backends without a per-session file
- * (locate() undefined) fall back to the header's createdAt.
+ * Verify a possibly blank cold Session only when its physical artifact passes
+ * the configured per-Session size check. A stale `blank: true`, an
+ * absent cache row, a large or location-less artifact, and read failures all
+ * resolve to visible (`false`); listing must never hide a conversation on a
+ * cache hint or an unavailable optimization.
  */
-async function summarizeCold(
+async function probeColdSessionMetadata(
+  ctx: Context,
   persistence: SessionPersistence,
   meta: SessionHeader,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<SessionListMetadata | undefined> {
+  if (maxBytes === 0) return undefined
+  signal?.throwIfAborted()
+  const location = persistence.locate(meta)
+  if (location === undefined) return undefined
+  signal?.throwIfAborted()
+  let size: number
+  try {
+    size = (await stat(location.path)).size
+  } catch {
+    signal?.throwIfAborted()
+    return undefined
+  }
+  if (size > maxBytes) return undefined
+  try {
+    const { events } = await persistence.readFrom(meta.id, 0, signal)
+    signal?.throwIfAborted()
+    return sessionListMetadata(events)
+  } catch (error) {
+    signal?.throwIfAborted()
+    ctx.logger.warn(`session.list: blank probe for "${meta.id}" failed (serving it as visible): ${String(error)}`)
+    return undefined
+  }
+}
+
+/** SessionSummary projection for a cold persisted Session. */
+async function summarizeCold(
+  ctx: Context,
+  persistence: SessionPersistence,
+  meta: SessionHeader,
+  metadata: SessionListMetadata | undefined,
+  blankProbeMaxBytes: number,
   signal?: AbortSignal,
 ): Promise<SessionSummary> {
-  signal?.throwIfAborted()
-  let updatedAt = meta.createdAt
-  const location = persistence.locate(meta)
-  signal?.throwIfAborted()
-  if (location !== undefined) {
-    try {
-      updatedAt = (await stat(location.path)).mtimeMs
-    } catch {
-      // The log vanished between list() and stat() (concurrent cleanup); createdAt stands in.
-    }
-    signal?.throwIfAborted()
-  }
+  const probed = metadata?.blank === false
+    ? undefined
+    : await probeColdSessionMetadata(ctx, persistence, meta, blankProbeMaxBytes, signal)
   return {
     sessionId: meta.id,
-    updatedAt,
+    updatedAt: sessionListUpdatedAt(meta, probed ?? metadata),
     running: false,
-    // Lazy persistence keeps never-appended sessions out of list(); reading
-    // a cold log to check for turns would defeat the index read, so a listed
-    // cold session is served as not-blank (its log holds its conversation).
-    blank: false,
-    ...meta.parentSession === undefined ? {} : { parentSessionId: meta.parentSession },
-    ...meta.origin === undefined ? {} : { origin: meta.origin },
-    /* v8 ignore next -- the empty arm needs a cwd-less meta, but list()
-    filters those out (legacy logs are not served); the conditional mirrors
-    summarize() shape. */
-    ...meta.cwd === undefined ? {} : { cwd: meta.cwd },
+    blank: metadata?.blank === false ? false : probed?.blank ?? false,
+    // Header-only: reading the log for a blank-window preset switch would
+    // defeat the same index read, and attaching the session replaces this row
+    // with `summarize()`, which resolves the switch from the events.
+    ...sessionListFields(meta),
   }
 }
 
@@ -345,14 +601,14 @@ function directoryError(error: unknown): RpcError {
   return { code: 'internal', message: error instanceof Error ? error.message : String(error), details: {} }
 }
 
-/** Resolved Host routing and project-directory defaults consumed by the API implementation. */
+/** Resolved Agent model and project-directory defaults consumed by the API implementation. */
 export interface ApiProxyDefaults {
   /**
-   * The route a session starts from when its own log names none. Read on
+   * The model selection a session starts from when its own log names none. Read on
    * every access rather than captured, so a default saved during this process
    * reaches the sessions that have not run a turn yet.
    */
-  defaultTarget: () => AgentLlmTarget
+  defaultModelSelection: () => ModelSelection
   /**
    * Record a selection as the new default. Either absent, or a closure that
    * may itself decline — the gateway plugin always passes one, and it no-ops
@@ -361,15 +617,25 @@ export interface ApiProxyDefaults {
    * reported and swallowed: the switch already applies to its own session,
    * and undoing it because storage failed would be the worse outcome.
    */
-  persistDefaultTarget?: (target: AgentLlmTarget) => Promise<void>
+  saveDefaultModelSelection?: (selection: ModelSelection) => Promise<void>
   /** Default project directory for new sessions whose create request carries no cwd. */
   cwd: string
-  /** Parent directory for name-created workspaces. */
-  workspaceRoot: string
   /** Native open-with-default-application; injectable for carrier tests. */
   openPath?: (path: string, signal: AbortSignal) => Promise<void>
   /** Native text-editor handoff; injectable for settings-document tests. */
   openTextFile?: (path: string, signal: AbortSignal) => Promise<void>
+  /** Validated DEFLATE level for session-log ZIP entries; defaults to 6. */
+  sessionExportCompressionLevel?: SessionLogCompressionLevel
+  /** Maximum artifact size eligible for one cold blankness read. */
+  coldBlankProbeMaxBytes?: number
+  /**
+   * Whether handing a path to the native opener can work at all — the
+   * `hasDocument` capability the preset roster reports, and the switch
+   * between opening a preset directory and answering its path as text.
+   * Absent, an injected `openPath` counts as openable and everything else
+   * falls back to platform detection ({@link canOpenNativePath}).
+   */
+  canOpenPath?: () => boolean
 }
 
 /** The tool/call payload fields the presenter path reads. */
@@ -410,7 +676,7 @@ interface PendingQuestion {
   sessionId: SessionId
   questions: AskUserQuestionItem[]
   resolve: (answer: AskUserQuestionAnswer) => void
-  reject: (error: UserInteractionError) => void
+  reject: (error: UserQuestionError) => void
   signal?: AbortSignal
   onAbort?: () => void
 }
@@ -444,11 +710,21 @@ function matchesQuestions(payload: QuestionResponsePayload, pending: PendingQues
  * which soft-falls to no view. Presenter or JSON.parse throws also soft-fall:
  * the client's documented default (generic JSON card) covers every miss.
  */
-function viewFor(ctx: Context, event: SessionEvent, argsFor: (callId: string) => unknown): ToolEventView | undefined {
+function viewFor(
+  ctx: Context,
+  event: SessionEvent,
+  argsFor: (callId: string) => unknown,
+  // Presenters live with the definitions, and definitions live in the scope
+  // chain: a preset registers its tools into its standing layer. A live agent
+  // is a scope whose chain passes through its preset; a cold read passes the
+  // preset's standing key directly — no agent, no resume. An undefined scope
+  // sees only the global layer, which is the pre-preset deployment shape.
+  scope?: ScopeKey,
+): ToolEventView | undefined {
   try {
     if (event.type === 'tool/call') {
       const { name, arguments: raw } = event.data as ToolCallData
-      const view = ctx.tools.get(name)?.presentCall?.(JSON.parse(raw))
+      const view = ctx.tools.get(name, scope)?.presentCall?.(JSON.parse(raw))
       return view === undefined ? undefined : { for: 'call', view }
     }
     if (event.type === 'tool/result') {
@@ -457,7 +733,7 @@ function viewFor(ctx: Context, event: SessionEvent, argsFor: (callId: string) =>
       const callId = message.source.callId
       const call = argsFor(callId) as { name: string; args: unknown } | undefined
       if (call === undefined) return undefined
-      const view = ctx.tools.get(call.name)?.presentResult?.(call.args, {
+      const view = ctx.tools.get(call.name, scope)?.presentResult?.(call.args, {
         content: result.content,
         isError: result.isError === true,
         ...meta === undefined ? {} : { meta },
@@ -500,11 +776,12 @@ function historyPage(
   events: readonly SessionEvent[],
   beforeSeq: number | undefined,
   maxMessages: number | undefined,
+  scope?: ScopeKey,
 ): { events: HistoryEntry[]; hasMore: boolean } {
   const page = paginate(events, beforeSeq, maxMessages ?? DEFAULT_MAX_MESSAGES)
   return {
     events: page.events.map((event) => {
-      const view = viewFor(ctx, event, callId => backscanArgs(page.events, callId))
+      const view = viewFor(ctx, event, callId => backscanArgs(page.events, callId), scope)
       return { event, ...view === undefined ? {} : { view } }
     }),
     hasMore: page.hasMore,
@@ -520,6 +797,16 @@ function historyPage(
  * registry). An absent registry means the deployment has no projection seam:
  * the whole block is absent and clients treat every key as capability-absent.
  */
+/**
+ * Which session a transcript read is served from. An attached session is the
+ * live object and keeps appending, so its events and projection baseline are
+ * read together in one synchronous step; a detached one is already a frozen
+ * inspection.
+ */
+type HistorySource =
+  | { readonly kind: 'attached'; readonly session: Session }
+  | { readonly kind: 'detached'; readonly header: SessionHeader; readonly events: SessionEvent[] }
+
 function projectionsFor(ctx: Context, session: Session): SessionProjectionsBlock | undefined {
   const registry = ctx.get('sessionProjections')
   if (registry === undefined) return undefined
@@ -672,6 +959,57 @@ async function catalogChild(
   }
 }
 
+/**
+ * The requested preset differs from the one this session already runs.
+ *
+ * A session's composition is fixed at creation: its history was produced under
+ * that preset's tools, so adopting the identity under a different one would
+ * replay tool calls the rebuilt agent cannot make. Naming a different preset
+ * is therefore a caller error rather than a switch.
+ */
+/** The roster is absent: this deployment composes no agent presets at all. */
+function noRoster(agentPreset: string): RpcError {
+  return {
+    code: 'agent-preset-not-found',
+    message: 'this deployment composes no agent presets',
+    details: { agentPreset, available: [] },
+  }
+}
+
+/** Map one authoring/roster failure onto its wire code. */
+function presetError(agentPreset: string, error: unknown): RpcError {
+  if (error instanceof UnknownPresetError) {
+    return {
+      code: 'agent-preset-not-found',
+      message: error.message,
+      details: { agentPreset: error.presetId, available: [...error.available] },
+    }
+  }
+  if (error instanceof PresetNotWritableError) {
+    return { code: 'agent-preset-read-only', message: error.message, details: { agentPreset, reason: error.message } }
+  }
+  if (error instanceof InvalidPresetIdError || error instanceof PresetExistsError) {
+    return { code: 'agent-preset-invalid', message: error.message, details: { agentPreset, reason: error.message } }
+  }
+  return { code: 'internal', message: `agent preset "${agentPreset}": ${String(error)}`, details: {} }
+}
+
+class AgentPresetConflict extends Error {
+  constructor(
+    readonly sessionId: SessionId,
+    readonly requestedPreset: string,
+    readonly existingPreset: string | undefined,
+  ) {
+    super(
+      existingPreset === undefined
+        ? `session "${sessionId}" records no agent preset, so it cannot be adopted under one; `
+        + 'a deployment composing no roster records none on any session — '
+        : `session "${sessionId}" already runs agent preset ${JSON.stringify(existingPreset)}; `
+      + `requested ${JSON.stringify(requestedPreset)}. A session's preset is fixed at creation.`,
+    )
+  }
+}
+
 /** Requested identity already belongs to a session with another project cwd. */
 class SessionCwdConflict extends Error {
   constructor(
@@ -685,9 +1023,6 @@ class SessionCwdConflict extends Error {
     )
   }
 }
-
-/** Host failed before the registry could adopt a name-created directory. */
-class WorkspaceDirectoryCreationError extends Error {}
 
 /** An explicit Host naming operation would duplicate another Workspace title. */
 class WorkspaceNameConflictError extends Error {
@@ -738,13 +1073,25 @@ function changedWorkspaceView(workspaceId: string, value: unknown): WorkspaceVie
  * @returns the ApiProxy implementation.
  */
 export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiProxy {
-  /** The seed route each create/resume declares; re-read so it never goes stale. */
+  const sessionExportCompressionLevel = defaults.sessionExportCompressionLevel
+    ?? DEFAULT_SESSION_LOG_COMPRESSION_LEVEL
+  const coldBlankProbeMaxBytes = defaults.coldBlankProbeMaxBytes
+    ?? DEFAULT_COLD_BLANK_PROBE_MAX_BYTES
+  /** The seed model each create/resume declares; re-read so it never goes stale. */
   const agentOptions = (): AgentOptions => {
-    const { provider, model } = defaults.defaultTarget()
+    const { provider, model } = defaults.defaultModelSelection()
     return { provider, model }
   }
-  type WebLlmTargetRef = AgentLlmTargetRef & { current: AgentLlmTarget }
-  const targets = new WeakMap<Agent, WebLlmTargetRef>()
+  type WebModelSelectionRef = ModelSelectionRef & { current: ModelSelection }
+  const selections = new WeakMap<Agent, WebModelSelectionRef>()
+  /**
+   * Serializes `agentPreset.select` per session. Two concurrent selects both
+   * pass the blank check, and the second `unmountPresetFor` then finds nothing
+   * to unmount because the first already removed the record — leaving two
+   * compositions registered into one agent layer. The client's `busy` flag is
+   * not enforcement: the wire is reachable directly.
+   */
+  const presetSwitches = new Map<SessionId, Promise<unknown>>()
   /** Client-chosen identity creation/resume, deduplicated across concurrent retries. */
   const sessionCreations = new Map<SessionId, Promise<Agent>>()
   /** Serializes path ownership and explicit title checks with Workspace mutations. */
@@ -752,31 +1099,38 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
   const pendingQuestions = new Map<RpcId, PendingQuestion>()
   const pendingApprovals = new Map<RpcId, PendingApproval>()
   const muxQueues = new Set<FrameQueue<RpcRequest<MuxFrame>>>()
+  const imageAdmissionChains = new WeakMap<Agent, Promise<void>>()
+
+  /** Serialize image admission with model selection for one agent. */
+  function serializeImageAdmission<T>(agent: Agent, operation: () => Promise<T>): Promise<T> {
+    const result = (imageAdmissionChains.get(agent) ?? Promise.resolve()).then(operation)
+    imageAdmissionChains.set(agent, result.then(() => undefined, () => undefined))
+    return result
+  }
 
   /**
-   * Install or return the session-local target that prompt assembly snapshots.
+   * Install or return the session-local model selection that prompt assembly snapshots.
    *
    * Precedence, resolved on EVERY read rather than seeded once: a selection
    * made in this process, else the session's own latest logged request/header,
-   * else the live host default. Re-reading is what keeps the two tiers honest
-   * in both directions — a session that has run a turn derives its route from
-   * its log forever after, so changing the default never retargets it; and a
-   * session still blank (New Session reuses one rather than minting another)
-   * starts from a default saved after it was created. There is no create-time
+   * else the live Agent default. Re-reading keeps the two tiers exact in both
+   * directions: a session with a recorded request derives its selection from
+   * its log, while a blank session (New Session reuses one rather than minting
+   * another) reads any default saved after it was created. There is no create-time
    * per-session override tier on this wire — if one returns (a create-options
    * contribution), it must fold in between the selection and the log.
    */
-  function targetFor(agent: Agent): WebLlmTargetRef {
-    const installed = targets.get(agent)
+  function selectionFor(agent: Agent): WebModelSelectionRef {
+    const installed = selections.get(agent)
     if (installed !== undefined) return installed
-    let picked: AgentLlmTarget | undefined
-    const target: WebLlmTargetRef = {
-      get current(): AgentLlmTarget {
+    let picked: ModelSelection | undefined
+    const selection: WebModelSelectionRef = {
+      get current(): ModelSelection {
         if (picked !== undefined) return picked
         // Incrementally folded by the session, so a per-step read costs
         // O(new events) rather than a rescan.
         const logged = agent.session.requestHeader()?.config
-        if (logged === undefined) return defaults.defaultTarget()
+        if (logged === undefined) return defaults.defaultModelSelection()
         return {
           provider: logged.provider,
           model: logged.model,
@@ -785,21 +1139,81 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             : { reasoningEffort: logged.reasoningEffort },
         }
       },
-      set current(next: AgentLlmTarget) {
+      set current(next: ModelSelection) {
         picked = next
       },
       assembled: undefined,
     }
-    installAgentLlmTarget(agent.ctx, target)
-    targets.set(agent, target)
-    return target
+    installModelSelection(agent.ctx, selection)
+    selections.set(agent, selection)
+    return selection
   }
 
   /** Pre-publication setup used by both fresh and resumed Web agents. */
-  function installTarget(agentCtx: Context): void {
+  function installSelection(agentCtx: Context): void {
     const agent = agentCtx.agent
     if (agent === undefined) throw new Error('api-proxy: agent setup has no scoped agent')
-    targetFor(agent)
+    selectionFor(agent)
+  }
+
+  /**
+   * Reject an attempt to run an existing session under a different preset.
+   *
+   * A caller that names no preset always adopts the session as it is, so the
+   * common paths — reconnecting, resuming, retrying a create — are unaffected.
+   * @param sessionId - the identity being adopted.
+   * @param requested - the preset the request named, if any.
+   * @param existing - the preset the session RUNS, if any; both callers resolve
+   * it from the log, which differs from the creation header once a blank
+   * session has switched.
+   * @throws when both are present and differ.
+   */
+  function assertPresetUnchanged(
+    sessionId: SessionId,
+    requested: string | undefined,
+    existing: string | undefined,
+  ): void {
+    if (requested === undefined || requested === existing) return
+    throw new AgentPresetConflict(sessionId, requested, existing)
+  }
+
+  /**
+   * Resolve the preset an agent will be composed from, and the setup that
+   * installs it.
+   *
+   * The id is resolved BEFORE the session exists because the session boundary
+   * snapshots `meta` before asynchronous setup begins — a preset discovered
+   * during setup could never reach the header. Mounting still happens in
+   * setup, where a failure rolls the whole creation back rather than leaving a
+   * published session whose capabilities are half-installed.
+   *
+   * A deployment with no preset roster composes nothing and every session
+   * shares the host composition, which is the behavior before presets existed.
+   * @param presetId - the requested preset, or `undefined` for the default.
+   * @returns the id to record on the header (absent without a roster) and the setup callback.
+   * @throws when the roster supplies no such preset.
+   */
+  async function composeAgent(presetId: string | undefined): Promise<{
+    agentPreset?: string
+    setup: (agentCtx: Context) => Promise<void>
+  }> {
+    const presets = ctx.get('agentPresets')
+    if (presets === undefined) {
+      return {
+        setup: (agentCtx: Context) => {
+          installSelection(agentCtx)
+          return Promise.resolve()
+        },
+      }
+    }
+    const resolvedId = (await presets.resolve(presetId)).id
+    return {
+      agentPreset: resolvedId,
+      setup: async (agentCtx: Context) => {
+        installSelection(agentCtx)
+        await presets.mount(agentCtx, resolvedId)
+      },
+    }
   }
 
   const hasSubagentOwner = (
@@ -810,7 +1224,20 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     apiRemoteSubagentOwnershipError(sessionId)
   const inspectServable = (sessionId: SessionId): Promise<{ meta: SessionHeader; events: SessionEvent[] }> =>
     inspectApiRemoteSession(ctx, sessionId)
-  const agentFor = createApiRemoteAgentResolver(ctx, { agentOptions, setup: installTarget })
+  // Cold resume composes the preset the session recorded, for the same reason
+  // `session.create` does: its history was produced under that composition.
+  // Every generic entry point — prompt, models, commands — arrives here, so
+  // leaving it out meant a session opened after a restart ran on host tools
+  // and the deployment persona. Resolved from the LOG, not the header: a
+  // session that switched while blank ran its turns under the newer
+  // composition, and the header is written once at creation. Reading the
+  // header here would silently undo the switch on the next restart and
+  // restore that history under the old tool set.
+  const agentFor = createApiRemoteAgentResolver(ctx, {
+    agentOptions,
+    setup: async ({ meta, events }) =>
+      (await composeAgent(resolveSessionPreset({ header: meta, events }))).setup,
+  })
 
   /** Send one transient frame to every connected mux consumer. */
   function broadcast(payload: MuxFrame): void {
@@ -819,12 +1246,49 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
   }
 
   // Projection change feed → session/projection push frames. The carrier
-  // mints the wire frame (the seam package holds no wire vocabulary); the
+  // mints the wire frame (the Service Definition package holds no wire vocabulary); the
   // child activates only when a projection registry is composed, and the
   // subscription unwinds with this gateway's fiber.
   ctx.inject(['sessionProjections'], (projectionCtx) => {
     projectionCtx.sessionProjections.onChanged((session, key, value, seq) => {
       broadcast({ type: 'session/projection', sessionId: session.id, key, value, seq })
+    })
+  })
+
+  // The cache supplies recency and a monotonic non-blank hint. A cached
+  // `blank: true` remains only a prefix fact and is verified on the cold path.
+  ctx.inject(['sessionProjections'], (projectionCtx) => {
+    projectionCtx.sessionProjections.register<'sessionListMetadata', SessionListMetadata>({
+      key: 'sessionListMetadata',
+      schema: sessionListMetadataProjectionSchema,
+      init: () => ({ blank: true, lastPromptAt: null }),
+      apply: applySessionListMetadata,
+      view: state => state,
+      stateVersion: 1,
+    })
+  })
+
+  // The imageLimits projection unit: the attachments config this proxy
+  // enforces at prompt admission, constant per host boot. `apply` keeps the
+  // same state reference for every event, so no change frames are ever
+  // pushed — baselines alone carry the value — and clients pre-check intake
+  // and label upload affordances from it. Registered here, not in the
+  // attachment Service Definition: dsh-llm depends on dsh-attachment, so the
+  // seam package cannot reference the projection registry without a cycle,
+  // and the per-message rules the value describes are this proxy's own
+  // admission checks. The child activates only while both seams are composed.
+  // `view` reading the live service instead of the (null) state is sanctioned
+  // exactly for boot-constant units: the value cannot change within a process
+  // lifetime, so the fold stays observationally pure, and a stale persisted
+  // cache row re-viewing to the current config is the correct outcome.
+  ctx.inject(['sessionProjections', 'attachments'], (projectionCtx) => {
+    projectionCtx.sessionProjections.register<'imageLimits', null>({
+      key: 'imageLimits',
+      schema: imageLimitsProjectionSchema,
+      init: () => null,
+      apply: state => state,
+      view: () => projectionCtx.attachments.imageLimits,
+      stateVersion: 1,
     })
   })
 
@@ -871,11 +1335,11 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     })
   }
 
-  const disposeProvider = ctx.userInteraction.registerProvider({
+  const disposeProvider = ctx.userQuestions.registerProvider({
     ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer> {
       const sessionId = request.agent?.id
       if (sessionId === undefined) {
-        return Promise.reject(new UserInteractionError(
+        return Promise.reject(new UserQuestionError(
           'web user interaction requires an agent-owned session', 'ASK_MISSING_AGENT'))
       }
       return new Promise<AskUserQuestionAnswer>((resolve, reject) => {
@@ -886,7 +1350,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         }
         const onAbort = (): void => {
           claimQuestion(pending, 'cancelled')
-          reject(new UserInteractionError(
+          reject(new UserQuestionError(
             'ask_user_question was aborted before the user answered', 'ASK_ABORTED'))
         }
         pending.onAbort = onAbort
@@ -904,10 +1368,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     disposeProvider()
     for (const pending of [...pendingQuestions.values()]) {
       claimQuestion(pending, 'cancelled')
-      pending.reject(new UserInteractionError(
-        'web user-interaction provider was disposed', 'ASK_ABORTED'))
+      pending.reject(new UserQuestionError(
+        'web user-questions provider was disposed', 'ASK_ABORTED'))
     }
-  }, 'api-proxy: user-interaction provider')
+  }, 'api-proxy: user-questions provider')
 
   // --- Approval pending registry ------------------------------------------
   // The proxy is the approval channel for every agent this host owns: an ask
@@ -1015,7 +1479,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
   /** Resolve the Workspace inherited by a fork without making ordinary loose lineage grouped. */
   async function forkWorkspace(source: Pick<Session, 'id' | 'header'>): Promise<Workspace | undefined> {
-    const workspaces = ctx.workspace.list()
+    const workspaces = ctx.workspaceRegistry.list()
     const direct = workspaces.find(workspace => workspace.sessionIds.includes(source.id))
     if (direct !== undefined || source.header.origin !== 'subagent') return direct
 
@@ -1027,27 +1491,105 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     return undefined
   }
 
-  /** Read one transcript cut and optional projection baseline without acquiring an Agent owner. */
-  async function historyStateFor(
-    sessionId: SessionId,
-    includeProjections: boolean,
-  ): Promise<{ events: SessionEvent[]; projections?: SessionProjectionsBlock }> {
+  /**
+   * Resolve which session one transcript read is served from, without
+   * acquiring an Agent owner. This is the read's only asynchronous step
+   * besides ensuring the composition; {@link historyCutOf} takes the cut.
+   * @param sessionId - the transcript being read.
+   * @returns the attached session, or the inspected detached header and events.
+   * @throws {@link ApiRemoteSessionNotFound} when no project-backed session has that identity.
+   */
+  async function historySourceFor(sessionId: SessionId): Promise<HistorySource> {
     const attached = ctx.sessions.get(sessionId)
-    if (attached !== undefined) {
-      const events = [...attached.events]
-      const projections = includeProjections ? projectionsFor(ctx, attached) : undefined
-      return { events, ...projections === undefined ? {} : { projections } }
-    }
+    if (attached !== undefined) return { kind: 'attached', session: attached }
     const inspected = await inspectServable(sessionId)
-    const projections = includeProjections ? detachedProjectionsFor(ctx, inspected.events) : undefined
-    return {
-      events: inspected.events,
-      ...projections === undefined ? {} : { projections },
+    return { kind: 'detached', header: inspected.meta, events: inspected.events }
+  }
+
+  /**
+   * The header and events {@link presenterScopeFor} reads to decide which
+   * composition a transcript ran under.
+   * @param source - the live or detached session this read is served from.
+   * @returns that session's creation header and its events.
+   */
+  function sourceSession(source: HistorySource): PresetBearingSession {
+    if (source.kind === 'detached') return { header: source.header, events: source.events }
+    return { header: source.session.header, events: source.session.events }
+  }
+
+  /**
+   * One transcript cut: the events and the projection baseline that describe
+   * the SAME log position.
+   *
+   * Synchronous, and the two reads sit next to each other, because an attached
+   * session keeps appending: an `await` between them would serve events cut at
+   * N beside a baseline folded to N+1, which is one response describing two
+   * moments. The caller does its awaiting before this call.
+   * @param source - the live or detached session this read is served from.
+   * @param includeProjections - whether the caller asked for the baseline (a tail page does).
+   * @returns the events and, when asked, the baseline for that same position.
+   */
+  function historyCutOf(
+    source: HistorySource,
+    includeProjections: boolean,
+  ): { events: SessionEvent[]; projections?: SessionProjectionsBlock } {
+    if (source.kind === 'detached') {
+      const projections = includeProjections ? detachedProjectionsFor(ctx, source.events) : undefined
+      return { events: source.events, ...projections === undefined ? {} : { projections } }
+    }
+    const events = [...source.session.events]
+    const projections = includeProjections ? projectionsFor(ctx, source.session) : undefined
+    return { events, ...projections === undefined ? {} : { projections } }
+  }
+
+  /**
+   * The registry view scope a transcript's presenters resolve in.
+   *
+   * A live agent is that scope itself (its chain passes through its preset's
+   * standing layer). A cold session resolves its preset from the LOG, and the
+   * preset's STANDING key serves without resuming anything — ensuring the
+   * mount composes plugins but starts no agent, session, or turn. No roster,
+   * no recorded preset, or a preset the roster no longer supplies all fall
+   * back to the global layer: the transcript still serves, with the generic
+   * cards a viewless entry renders.
+   *
+   * Reading the header alone would render a session that switched while blank
+   * through the composition it was CREATED with. Every tool only the newer
+   * preset registers resolves to no presenter there, and the transcript
+   * silently degrades to generic cards for exactly the calls its history is
+   * made of.
+   * @param sessionId - the transcript being read.
+   * @param session - that session's header and log (attached or inspected).
+   * @returns the scope to pass to presenter lookups, or undefined for global.
+   */
+  async function presenterScopeFor(
+    sessionId: SessionId,
+    session: PresetBearingSession,
+  ): Promise<ScopeKey | undefined> {
+    const live = ctx.get('agents')?.get(sessionId)
+    if (live !== undefined) return live
+    const presets = ctx.get('agentPresets')
+    if (presets === undefined) return undefined
+    try {
+      // An unrecorded preset (a log from before the roster existed) renders
+      // through the DEFAULT preset's standing layer: that is the composition
+      // an unnamed session composes today, and presenters are pure display,
+      // so the worst a mismatch produces is the generic card it had anyway.
+      return await presets.standingKeyFor(resolveSessionPreset(session))
+    } catch {
+      // Swallows only the unknown/unusable-preset rejection from the roster:
+      // a deleted or broken preset must degrade this read, never fail it.
+      return undefined
     }
   }
 
   /** Resolve one requested identity to a live agent, creating or resuming it once. */
-  async function ensureSession(sessionId: SessionId, cwd: string, checkPersistedIdentity: boolean): Promise<Agent> {
+  async function ensureSession(
+    sessionId: SessionId,
+    cwd: string,
+    checkPersistedIdentity: boolean,
+    presetId?: string,
+  ): Promise<Agent> {
     let creation = sessionCreations.get(sessionId)
     if (creation === undefined) {
       creation = (async () => {
@@ -1073,10 +1615,18 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           if (inspected.meta.cwd !== cwd) {
             throw new SessionCwdConflict(sessionId, cwd, inspected.meta.cwd)
           }
+          // Resolved from the log, not the header: a session that switched
+          // while blank ran every turn under the newer composition.
+          const storedPreset = resolveSessionPreset({ header: inspected.meta, events: inspected.events })
+          assertPresetUnchanged(sessionId, presetId, storedPreset)
+          // The stored preset wins over anything the request names: a resumed
+          // session's history was produced under that composition, and
+          // rebuilding it differently would replay tool calls the model can no
+          // longer make.
           return (await ctx.agents.resume({
             resumeSessionId: sessionId,
             agentOptions: agentOptions(),
-            setup: installTarget,
+            setup: (await composeAgent(storedPreset)).setup,
           })).agent
         }
 
@@ -1085,11 +1635,15 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         } catch (error: unknown) {
           throw new Error(`failed to ensure project directory "${cwd}": ${String(error)}`, { cause: error })
         }
+        const composition = await composeAgent(presetId)
         return (await ctx.agents.create({
           sessionId,
           agentOptions: agentOptions(),
-          meta: { cwd },
-          setup: installTarget,
+          meta: {
+            cwd,
+            ...composition.agentPreset === undefined ? {} : { agentPreset: composition.agentPreset },
+          },
+          setup: composition.setup,
         })).agent
       })().catch((error: unknown) => {
         // Another Host entry path may have published the same identity while
@@ -1111,6 +1665,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     }
     const agent = await creation
     if (hasSubagentOwner(agent.session, agent)) throw new SubagentSessionOwnership(sessionId)
+    // Beside the cwd check for the same reason, and after the await so it
+    // covers every path that yields a live agent — freshly created, adopted
+    // live, resumed from disk, or recovered by the concurrent-creation catch.
+    assertPresetUnchanged(sessionId, presetId, resolveSessionPreset(agent.session))
     if (agent.session.header.cwd !== cwd) {
       throw new SessionCwdConflict(sessionId, cwd, agent.session.header.cwd)
     }
@@ -1118,29 +1676,11 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
   }
 
   /** Resolve or create one path while holding the Host's workspace-create chain. */
-  function ensureWorkspace(
-    path: string,
-    title: string | undefined,
-    rejectExistingName = false,
-    createDirectory = false,
-  ): Promise<{ workspace: Workspace; created: boolean }> {
+  function ensureWorkspace(path: string): Promise<{ workspace: Workspace; created: boolean }> {
     const operation = workspaceCreationChain.then(async () => {
-      if (rejectExistingName && title !== undefined
-        && ctx.workspace.list().some(workspace => workspace.title === title)) {
-        throw new WorkspaceNameConflictError(title)
-      }
-      if (createDirectory) {
-        try {
-          await mkdir(path, { recursive: true })
-        } catch (error: unknown) {
-          throw new WorkspaceDirectoryCreationError(
-            `failed to create workspace directory "${path}": ${String(error)}`,
-          )
-        }
-      }
-      const existing = await ctx.workspace.resolveByPath(path)
+      const existing = await ctx.workspaceRegistry.resolveByPath(path)
       if (existing !== undefined) return { workspace: existing, created: false }
-      return { workspace: await ctx.workspace.create(path, title), created: true }
+      return { workspace: await ctx.workspaceRegistry.create(path), created: true }
     })
     workspaceCreationChain = operation.then(() => undefined, () => undefined)
     return operation
@@ -1153,14 +1693,15 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
    */
   async function listVisibleSessionSummaries(signal?: AbortSignal): Promise<SessionSummary[]> {
     signal?.throwIfAborted()
-    const items = ctx.sessions.list().map((session) => {
+    const summarizeAttached = (session: Session): SessionSummary => {
       const agent = ctx.agents.get(session.id)
       const projections = listProjectionsFor(ctx, session.header, session)
       return {
         ...summarize(session, agent?.status === 'running'),
         ...projections === undefined ? {} : { projections },
       }
-    })
+    }
+    const items = ctx.sessions.list().map(summarizeAttached)
     signal?.throwIfAborted()
     const attached = new Set(items.map(item => item.sessionId))
     const persistence = ctx.get('sessionPersistence')
@@ -1173,11 +1714,21 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         const batch = cold.slice(offset, offset + COLD_SUMMARY_BATCH_SIZE)
         const settled = await Promise.allSettled(
           batch.map(async (meta) => {
-            // Cold rows read the persisted projection cache only — never a
-            // log load; a session without a cache row simply has no column.
+            // Projection hints remain optional. Blank verification may read
+            // this Session's artifact only when it passes the configured size check.
             const projections = listProjectionsFor(ctx, meta, undefined)
+            const summary = await summarizeCold(
+              ctx,
+              persistence,
+              meta,
+              projections?.values.sessionListMetadata,
+              coldBlankProbeMaxBytes,
+              signal,
+            )
+            const attachedSession = ctx.sessions.get(meta.id)
+            if (attachedSession !== undefined) return summarizeAttached(attachedSession)
             return {
-              ...await summarizeCold(persistence, meta, signal),
+              ...summary,
               ...projections === undefined ? {} : { projections },
             }
           }),
@@ -1202,11 +1753,20 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     return items
   }
 
-  /** Resolve the goal service; absent = the deployment did not compose @deepseek-ai/dsh-goal. */
-  function goalService(): NonNullable<ReturnType<typeof ctx.get<'goals'>>> | { error: RpcError } {
-    const goals = ctx.get('goals')
+  /**
+   * Resolve the goal service THIS agent runs.
+   *
+   * The service is per session: an agent preset mounts it behind an `isolate`
+   * realm, which no host context resolves. Reading it from the root would
+   * answer "absent" for a session whose composition mounts it — so the lookup
+   * is keyed by the agent, and only a deployment composing it nowhere is
+   * genuinely absent.
+   */
+  function goalServiceFor(agent: Agent): NonNullable<ReturnType<typeof ctx.get<'goals'>>> | { error: RpcError } {
+    const presets = ctx.get('agentPresets')
+    const goals = presets?.serviceFor(agent, 'goals') ?? ctx.get('goals')
     if (goals === undefined) {
-      return { error: { code: 'internal', message: 'goal service is absent: this deployment does not mount @deepseek-ai/dsh-goal in its composition (cordis.yml or explicit assembly)', details: {} } }
+      return { error: { code: 'internal', message: 'goal service is absent: neither this session\'s agent preset nor the host composition mounts @deepseek-ai/dsh-goal', details: {} } }
     }
     return goals
   }
@@ -1222,10 +1782,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     request: RpcRequest<{ sessionId: SessionId }>,
     mutation: (goals: NonNullable<ReturnType<typeof ctx.get<'goals'>>>, agent: Agent) => CoreGoalRef,
   ): Promise<RpcResponse<{ ref: GoalRef }>> {
-    const goals = goalService()
-    if ('error' in goals) return err(request, goals.error)
     const found = await agentFor(request.payload.sessionId)
     if ('error' in found) return err(request, found.error)
+    const goals = goalServiceFor(found.agent)
+    if ('error' in goals) return err(request, goals.error)
     try {
       const ref = mutation(goals, found.agent)
       return ok(request, { ref: { id: ref.id, revision: ref.revision } })
@@ -1235,10 +1795,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
   }
 
   /**
-   * Whether an adapter currently serves this route, and therefore whether a
-   * session pointed at it can start a turn. Catalog membership cannot answer
+   * Whether an adapter currently serves this provider, and therefore whether
+   * a session selecting it can start a turn. Catalog membership cannot answer
    * it: an adapter may serve a model its own catalog stopped advertising, so
-   * a route missing from the groups is not the same as one nothing serves.
+   * a provider missing from the groups is not the same as one nothing serves.
    * A composition with no llm registry at all cannot judge and says yes —
    * the dispatch it would have refused fails on its own terms.
    */
@@ -1249,7 +1809,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
   /**
    * Resolve the addressed agent for a turn-starting method and refuse when no
-   * adapter serves its current route: a route nothing serves cannot start a
+   * adapter serves its current selection: a provider nothing serves cannot start a
    * turn, and letting it try spends the whole pre-step path to fail inside
    * the adapter with a message about registration. Refusing here names the
    * model the session is pointed at while the draft is still in the composer.
@@ -1262,13 +1822,13 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     const found = await agentFor(sessionId)
     if ('error' in found) return { refused: err(request, found.error) }
     const agent = found.agent
-    const target = targetFor(agent).current
-    if (!routeServed(target.provider)) {
+    const selection = selectionFor(agent).current
+    if (!routeServed(selection.provider)) {
       return {
         refused: err(request, {
           code: 'model-unavailable',
-          message: `no adapter serves provider "${target.provider}"; select a model for this session`,
-          details: { provider: target.provider, model: target.model },
+          message: `no adapter serves provider "${selection.provider}"; select a model for this session`,
+          details: { provider: selection.provider, model: selection.model },
         }),
       }
     }
@@ -1277,7 +1837,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
   /** Missing-service report shared by the settings domain (skills-domain stance). */
   function settingsAbsent(): RpcError {
-    return { code: 'internal', message: 'settings service is absent: this deployment does not mount a settings provider (e.g. @deepseek-ai/dsh-settings-local) in its composition', details: {} }
+    return { code: 'internal', message: 'settings service is absent: this deployment does not mount a settings provider (e.g. @deepseek-ai/dsh-settings-file) in its composition', details: {} }
   }
 
   /** Open one Host-resolved target and map native failures onto the wire vocabulary. */
@@ -1322,12 +1882,19 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     return openTarget(request, path, signal, open)
   }
 
+  /** Whether this deployment can hand a path to a native opener at all. */
+  function canOpenPaths(): boolean {
+    if (defaults.canOpenPath !== undefined) return defaults.canOpenPath()
+    // An injected opener is by definition usable; otherwise ask the platform.
+    return defaults.openPath !== undefined || canOpenNativePath()
+  }
+
   /** Missing-service report shared by the credentials domain. */
   function credentialsAbsent(): RpcError {
     return { code: 'internal', message: 'credentials service is absent: this deployment does not mount a credential provider (e.g. @deepseek-ai/dsh-credentials-local) in its composition', details: {} }
   }
 
-  /** Map one redacted seam descriptor to its wire view. */
+  /** Map one redacted settings descriptor to its wire view. */
   function namespaceView(descriptor: SettingsDescriptor): SettingsNamespaceView {
     return {
       ns: String(descriptor.ns),
@@ -1341,39 +1908,11 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     }
   }
 
-  /** Settings namespaces whose changes can invalidate the model catalog. */
-  function modelProviderNamespaces(): Set<string> {
-    return new Set(ctx.llm.listConfigurableProviders().map(entry => entry.settingsNs))
-  }
-
-  /**
-   * The settings namespaces this proxy serves: configurable model providers
-   * plus the small explicit Web preference and product-owned allowlists. The
-   * settings seam remains general; a future registration does not become
-   * remotely readable or writable by default.
-   */
-  function exposedNamespaces(): Set<string> {
-    const exposed = modelProviderNamespaces()
-    for (const ns of WEB_SETTINGS_NAMESPACES) exposed.add(ns)
-    for (const ns of PRODUCT_SETTINGS_NAMESPACES) exposed.add(ns)
-    return exposed
-  }
-
-  /** Refuse a namespace outside the explicit configuration-client boundary. */
-  function notExposed(request: RpcRequest<unknown>, ns: string): RpcResponse<SettingsNamespaceView> {
-    return err(request, {
-      code: 'settings-not-exposed',
-      message: `settings namespace "${ns}" is not exposed to configuration clients`,
-      details: { ns },
-    })
-  }
-
   /**
    * Run one settings write (merge or wholesale replace) and acknowledge with
-   * the namespace's new redacted view. A namespace outside the configuration
-   * boundary is refused before the seam is touched; every seam refusal —
-   * unknown or invalid namespace, read-only provider, schema validation,
-   * storage — becomes one `settings-rejected` carrying the seam's own message.
+   * the namespace's new redacted view. Every seam refusal — unknown or invalid
+   * namespace, read-only provider, schema validation, storage — becomes one
+   * `settings-rejected` carrying the seam's own message.
    */
   async function settingsWrite(
     request: RpcRequest<unknown>,
@@ -1404,11 +1943,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     try {
       branded = settingsNamespace(ns)
     } catch (error: unknown) {
-      // A malformed name is a client bug, reported as such; it could never be
-      // in the exposed set either, so naming the real fault costs no ground.
+      // A malformed name can address no registration, so it fails exactly as
+      // an unregistered one does.
       return rejected(error)
     }
-    if (!exposedNamespaces().has(ns)) return notExposed(request, ns)
     try {
       if (mode === 'update') await settings.update(branded, section, expectedRevision)
       else if (mode === 'replace') await settings.replace(branded, section, expectedRevision)
@@ -1429,8 +1967,8 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     sessions: {
       // Attached sessions summarize from memory; persisted-but-unattached (cold)
       // sessions merge in from the persistence store so history survives restarts.
-      // Legacy logs without a cwd (pre-project stance) are not served — every
-      // session now records its project at create time.
+      // Logs without a cwd are not served; every session records its project
+      // at create time.
       async list(request) {
         return ok(request, { items: await listVisibleSessionSummaries() })
       },
@@ -1514,9 +2052,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
               )
             }
             // Host visibility is the authorization boundary. Consume the
-            // provider's globally ranked stream rather than binding every
-            // visible id into one SQLite statement, then re-check complete
-            // provenance before emitting any snippet.
+            // provider's globally ranked results rather than binding every
+            // visible id into one SQLite statement, then require each hit to
+            // name a visible session and a current message from that same
+            // session before emitting its snippet.
             for (const hit of page.items) {
               if (authorized.length > SESSION_SEARCH_RESULT_LIMIT) continue
               if (
@@ -1569,7 +2108,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         const sessionId = request.payload.sessionId ?? `session-${randomUUID()}` as SessionId
         let workspace: Workspace | undefined
         if (request.payload.workspaceId !== undefined) {
-          workspace = ctx.workspace.get(brandWorkspaceId(request.payload.workspaceId))
+          workspace = ctx.workspaceRegistry.get(brandWorkspaceId(request.payload.workspaceId))
           if (workspace === undefined) {
             return err(request, {
               code: 'workspace-not-found',
@@ -1579,9 +2118,23 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           }
         }
         const cwd = workspace?.path ?? request.payload.cwd ?? defaults.cwd
+        const requestedPreset = request.payload.agentPreset
         try {
-          await ensureSession(sessionId, cwd, request.payload.sessionId !== undefined)
+          await ensureSession(sessionId, cwd, request.payload.sessionId !== undefined, requestedPreset)
         } catch (error: unknown) {
+          if (error instanceof AgentPresetConflict) {
+            return err(request, {
+              code: 'agent-preset-conflict',
+              message: error.message,
+              details: {
+                sessionId: error.sessionId,
+                requestedPreset: error.requestedPreset,
+                ...error.existingPreset === undefined ? {} : { existingPreset: error.existingPreset },
+              },
+            })
+          }
+          const refused = presetFailure(request, error)
+          if (refused !== undefined) return refused
           if (error instanceof SessionCwdConflict) {
             return err(request, {
               code: 'session-conflict',
@@ -1613,14 +2166,37 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             })
           }
         }
-        return ok(request, { sessionId })
+        // Echo the composition the session RUNS so a client can label it
+        // without waiting for the next list refresh — the create is the commit
+        // point that knows it (a caller that named none gets the default).
+        // Resolved from the log for the same reason `sessionListFields()` is:
+        // this handler also adopts an already-live session, and one that
+        // switched while blank runs a preset its header no longer names, so
+        // echoing the header would contradict both the adoption this call just
+        // allowed and the row `session.list` serves for the same session.
+        const created = ctx.agents.get(sessionId)
+        const createdPreset = created === undefined ? undefined : resolveSessionPreset(created.session)
+        return ok(request, { sessionId, ...createdPreset === undefined ? {} : { agentPreset: createdPreset } })
       },
 
       async history(request) {
         const { sessionId, beforeSeq, maxMessages } = request.payload
-        let state: { events: SessionEvent[]; projections?: SessionProjectionsBlock }
         try {
-          state = await historyStateFor(sessionId, beforeSeq === undefined)
+          const source = await historySourceFor(sessionId)
+          // Both awaits happen BEFORE the cut. Ensuring the recorded
+          // composition's standing mount is what registers its projection
+          // units, so a first cold read would otherwise serve a baseline
+          // missing every preset-owned key; and an attached session keeps
+          // appending, so awaiting between the two reads would pair events cut
+          // at N with a baseline folded to N+1.
+          const scope = await presenterScopeFor(sessionId, sourceSession(source))
+          const cut = historyCutOf(source, beforeSeq === undefined)
+          const page = historyPage(ctx, cut.events, beforeSeq, maxMessages, scope)
+          return ok(request, {
+            events: page.events,
+            hasMore: page.hasMore,
+            ...cut.projections === undefined ? {} : { projections: cut.projections },
+          })
         } catch (error: unknown) {
           if (error instanceof SessionNotFound) {
             return err(request, { code: 'session-not-found', message: error.message, details: { sessionId } })
@@ -1631,19 +2207,13 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             details: {},
           })
         }
-        const page = historyPage(ctx, state.events, beforeSeq, maxMessages)
-        return ok(request, {
-          events: page.events,
-          hasMore: page.hasMore,
-          ...state.projections === undefined ? {} : { projections: state.projections },
-        })
       },
 
       async models(request) {
         const { sessionId } = request.payload
         const found = await agentFor(sessionId)
         if ('error' in found) return err(request, found.error)
-        const current = targetFor(found.agent).current
+        const current = selectionFor(found.agent).current
         const { groups, failures } = await buildModelCatalog(ctx)
         const routable = routeServed(current.provider)
         return ok(request, { current: { ...current }, routable, groups, failures })
@@ -1653,41 +2223,51 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         const { sessionId, provider, model, reasoningEffort } = request.payload
         const found = await agentFor(sessionId)
         if ('error' in found) return err(request, found.error)
-        try {
-          const resolved = await ctx.llm.resolveCallConfig({
-            provider,
-            model,
-            ...reasoningEffort === undefined
-              ? {}
-              : { reasoningEffort: ReasoningEffortId(reasoningEffort) },
-          })
-          const selected: AgentLlmTarget = {
-            provider: resolved.provider,
-            model: resolved.model,
-            ...resolved.reasoningEffort === undefined
-              ? {}
-              : { reasoningEffort: resolved.reasoningEffort },
-          }
-          targetFor(found.agent).current = selected
-          // A switch is also how this deployment's default is chosen: the next
-          // session created without one of its own starts here. Sessions that
-          // have already logged a route are unaffected — they derive from
-          // their own log (see targetFor).
+        return serializeImageAdmission(found.agent, async () => {
           try {
-            await defaults.persistDefaultTarget?.(selected)
+            const resolved = await ctx.llm.resolveCallConfig({
+              provider,
+              model,
+              ...reasoningEffort === undefined
+                ? {}
+                : { reasoningEffort: ReasoningEffortId(reasoningEffort) },
+            })
+            const pendingImage = [...found.agent.inbox.nextTurn, ...found.agent.inbox.nextStep]
+              .some(message => contentHasImage(message.content))
+            if (pendingImage || messagesHaveImage(found.agent.session.deriveMessages())) {
+              const info = await ctx.llm.resolveModelInfo(resolved.provider, resolved.model)
+              if (info.inputModalities !== undefined && !info.inputModalities.includes('image')) {
+                return err(request, {
+                  code: 'model-unavailable',
+                  message: `Model "${resolved.model}" does not accept image input, but this session already contains images; select an image-capable model.`,
+                  details: { provider, model },
+                })
+              }
+            }
+            const selected: ModelSelection = {
+              provider: resolved.provider,
+              model: resolved.model,
+              ...resolved.reasoningEffort === undefined
+                ? {}
+                : { reasoningEffort: resolved.reasoningEffort },
+            }
+            selectionFor(found.agent).current = selected
+            try {
+              await defaults.saveDefaultModelSelection?.(selected)
+            } catch (error: unknown) {
+              ctx.logger.warn(
+                `api-proxy: the model switch applies to this session but was not saved as the default: ${String(error)}`,
+              )
+            }
+            return ok(request, { selected: { ...selected } })
           } catch (error: unknown) {
-            ctx.logger.warn(
-              `api-proxy: the model switch applies to this session but was not saved as the default: ${String(error)}`,
-            )
+            return err(request, {
+              code: 'model-unavailable',
+              message: error instanceof Error ? error.message : String(error),
+              details: { provider, model },
+            })
           }
-          return ok(request, { selected: { ...selected } })
-        } catch (error: unknown) {
-          return err(request, {
-            code: 'model-unavailable',
-            message: error instanceof Error ? error.message : String(error),
-            details: { provider, model },
-          })
-        }
+        })
       },
 
       async rename(request) {
@@ -1773,6 +2353,12 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           })
         }
         const childId = `session-${randomUUID()}` as SessionId
+        // The child inherits the parent's composition for the same reason a
+        // resumed session keeps its own: the seeded history was produced under
+        // those tools, and composing anything else would strand the tool calls
+        // it already carries. Now that no model-facing row sits in the host
+        // plane, composing nothing would leave the child with no tools at all.
+        const forkComposition = await composeAgent(resolveSessionPreset(source))
         try {
           await ctx.agents.create({
             sessionId: childId,
@@ -1781,9 +2367,12 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
               ...source.header.cwd === undefined ? {} : { cwd: source.header.cwd },
               parentSession: source.id,
               seedLength: cut,
+              ...forkComposition.agentPreset === undefined
+                ? {}
+                : { agentPreset: forkComposition.agentPreset },
             },
             agentOptions: agentOptions(),
-            setup: installTarget,
+            setup: forkComposition.setup,
           })
         } catch (error: unknown) {
           return err(request, {
@@ -1810,25 +2399,121 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       },
 
       async prompt(request) {
-        const { sessionId, mode, content } = request.payload
+        const { sessionId, mode, content, clientTimeZone } = request.payload
+        const canonicalTimeZone = clientTimeZone === undefined
+          ? undefined
+          : canonicalClientTimeZone(clientTimeZone)
+        if (clientTimeZone !== undefined && canonicalTimeZone === undefined) {
+          return err(request, {
+            code: 'invalid-time-zone',
+            message: 'clientTimeZone must be UTC or a valid IANA Area/Location name',
+            details: { value: clientTimeZone },
+          })
+        }
         const resolved = await turnAgentFor<{ accepted: true }>(request, sessionId)
         if ('refused' in resolved) return resolved.refused
         const agent = resolved.agent
-        // The rpcId rides MessageSource into user/message (merge declaration in api/sessions.ts; provisional correlation).
-        const source: MessageSource = { kind: 'user', rpcId: request.rpcId }
-        try {
-          const message: UserMessage = createUserMessage({ content, source })
-          if (mode === 'steer') agent.steer(message)
-          else agent.followup(message)
-        } catch (error: unknown) {
-          // A synchronous throw from steer/followup means disposed or invalid input; surface as agent-busy with the reason attached.
-          return err(request, { code: 'agent-busy', message: 'prompt rejected', details: { reason: String(error) } })
+        // Request identity and optional browser zone ride the exact durable user message.
+        const source: MessageSource = {
+          kind: 'user',
+          rpcId: request.rpcId,
+          ...(canonicalTimeZone === undefined ? {} : { clientTimeZone: canonicalTimeZone }),
         }
-        return ok(request, { accepted: true as const })
+        const hasImage = content.some(part => part.type === 'image')
+        const admit = async (): Promise<RpcResponse<{ accepted: true }>> => {
+          try {
+            if (hasImage) {
+              const current = selectionFor(agent).current
+              const modelInfo = await ctx.llm.resolveModelInfo(current.provider, current.model)
+              if (modelInfo.inputModalities !== undefined && !modelInfo.inputModalities.includes('image')) {
+                return err(request, {
+                  code: 'attachment-error',
+                  message: `Model "${current.model}" does not support image input.`,
+                  details: { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' },
+                })
+              }
+            }
+            const durable = await durablePromptContent(ctx, content)
+            const message: UserMessage = createUserMessage({ content: durable, source })
+            if (mode === 'steer') agent.steer(message)
+            else agent.followup(message)
+          } catch (error: unknown) {
+            if (error instanceof AttachmentError) {
+              return err(request, {
+                code: 'attachment-error',
+                message: error.message,
+                details: { reason: error.code },
+              })
+            }
+            return err(request, {
+              code: 'agent-busy',
+              message: 'prompt rejected',
+              details: { reason: String(error) },
+            })
+          }
+          return ok(request, { accepted: true as const })
+        }
+        return hasImage ? serializeImageAdmission(agent, admit) : admit()
+      },
+
+      async attachment(request) {
+        const { sessionId, attachmentId } = request.payload
+        let state: SessionReadState
+        try {
+          state = await readSessionState(sessionId)
+        } catch (error: unknown) {
+          if (error instanceof SessionNotFound) {
+            return err(request, {
+              code: 'session-not-found',
+              message: error.message,
+              details: { sessionId },
+            })
+          }
+          return err(request, {
+            code: 'internal',
+            message: `attachment authorization unavailable for session "${sessionId}": ${String(error)}`,
+            details: {},
+          })
+        }
+        const ref = referencedImage(state.events, String(attachmentId))
+        if (ref === undefined) {
+          return err(request, {
+            code: 'attachment-error',
+            message: 'Image is not referenced by this session.',
+            details: { reason: 'ATTACHMENT_NOT_REFERENCED' },
+          })
+        }
+        try {
+          const stored = await ctx.attachments.readImage(ref)
+          return ok(request, {
+            attachment: stored.ref,
+            data: Buffer.from(stored.data).toString('base64'),
+          })
+        } catch (error: unknown) {
+          if (error instanceof AttachmentError) {
+            return err(request, {
+              code: 'attachment-error',
+              message: error.message,
+              details: { reason: error.code },
+            })
+          }
+          return err(request, {
+            code: 'internal',
+            message: 'Unable to read image attachment.',
+            details: {},
+          })
+        }
       },
 
       updateQueue(request) {
         const { sessionId, itemId, action } = request.payload
+        if (action.kind === 'edit' && action.content.some(block => block.type !== 'text')) {
+          return Promise.resolve(err(request, {
+            code: 'attachment-error',
+            message: 'queue edits accept text content only',
+            details: { reason: 'QUEUE_EDIT_NON_TEXT' },
+          }))
+        }
         const agent = ctx.agents.get(sessionId)
         if (agent !== undefined && hasSubagentOwner(agent.session, agent)) {
           return Promise.resolve(err(request, subagentOwnershipError(sessionId)))
@@ -1990,7 +2675,17 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       },
 
       async prompt(request, signal) {
-        const { parentSessionId, childSessionId, content } = request.payload
+        const { parentSessionId, childSessionId, content, clientTimeZone } = request.payload
+        const canonicalTimeZone = clientTimeZone === undefined
+          ? undefined
+          : canonicalClientTimeZone(clientTimeZone)
+        if (clientTimeZone !== undefined && canonicalTimeZone === undefined) {
+          return err(request, {
+            code: 'invalid-time-zone',
+            message: 'clientTimeZone must be UTC or a valid IANA Area/Location name',
+            details: { value: clientTimeZone },
+          })
+        }
         const parent = ctx.agents.get(parentSessionId)
         if (parent === undefined) {
           return err(request, {
@@ -2005,7 +2700,11 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         if (verified.error !== undefined) return err(request, verified.error)
         try {
           const messageId = await ctx.subagents.followup(parent, childSessionId, content, {
-            source: { kind: 'user', rpcId: request.rpcId },
+            source: {
+              kind: 'user',
+              rpcId: request.rpcId,
+              ...(canonicalTimeZone === undefined ? {} : { clientTimeZone: canonicalTimeZone }),
+            },
             signal,
           })
           return ok(request, { messageId })
@@ -2013,64 +2712,47 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           return subagentPromptError(request, error, signal)
         }
       },
+
+      // Deliberately no catalog, history, persistence, or parent Agent lookup:
+      // the core primitive alone authorizes the durable address against the
+      // live Activation, which is what keeps a live child interruptible while
+      // its parent Agent is offline. Absent targets are accepted no-ops there.
+      interrupt(request) {
+        const { parentSessionId, childSessionId } = request.payload
+        try {
+          ctx.subagents.interrupt(childSessionId, { kind: 'user', parentSessionId })
+        } catch (error: unknown) {
+          if (error instanceof SubagentError && error.code === 'UNAUTHORIZED') {
+            return Promise.resolve(err(request, {
+              code: 'subagent-unauthorized',
+              message: 'subagent does not belong to this parent',
+              details: { childSessionId },
+            }))
+          }
+          return Promise.resolve(err(request, {
+            code: 'internal',
+            message: 'subagent interrupt failed',
+            details: {},
+          }))
+        }
+        return Promise.resolve(ok(request, { accepted: true as const }))
+      },
     },
 
     workspace: {
       list(request) {
         return Promise.resolve(ok(request, {
-          items: ctx.workspace.list().map(workspaceView),
-          archivedSessionIds: [...ctx.workspace.archivedSessionIds],
+          items: ctx.workspaceRegistry.list().map(workspaceView),
+          archivedSessionIds: [...ctx.workspaceRegistry.archivedSessionIds],
         }))
       },
 
-      // Exactly one of path/name arrives (schema refine). Existing-folder
-      // adoption reuses its canonical path; create-by-name rejects a name
-      // already present in the registry.
-      // TODO: the create-by-name branch lost its last product consumer when
-      // the Web picker collapsed onto the directory flow
-      // (.agents/notes/implemented/simplification/2026-07-31-one-route-to-add-a-workspace.md).
-      // Delete it with the wire schema's `name` member, this
-      // `defaults.workspaceRoot`, the client seam that carried the name
-      // (`WorkspaceCreateInput`, `WorkspacesService.create`'s `{ name }` arm,
-      // `intentName`'s name branch, the manager's "name under workspaceRoot"
-      // contract), and the `dsh web --workspace-root` flag plus its apps/cli
-      // README lines, which exist only to feed it.
       async create(request) {
-        const { payload } = request
-        let path: string
-        if (payload.name !== undefined) {
-          const name = payload.name.trim()
-          if (name === '' || name === '.' || name === '..' || /[/\\]/.test(name)) {
-            return err(request, {
-              code: 'workspace-invalid-path',
-              message: `workspace name must be one non-empty path segment, got "${payload.name}"`,
-              details: { path: payload.name },
-            })
-          }
-          path = join(defaults.workspaceRoot, name)
-        } else {
-          path = payload.path as string
-        }
+        const { path } = request.payload
         try {
-          const name = payload.name?.trim()
-          const { workspace, created } = await ensureWorkspace(
-            path,
-            name,
-            name !== undefined,
-            name !== undefined,
-          )
+          const { workspace, created } = await ensureWorkspace(path)
           return ok(request, { workspace: workspaceView(workspace), created })
         } catch (error: unknown) {
-          if (error instanceof WorkspaceNameConflictError) {
-            return err(request, {
-              code: 'workspace-name-conflict',
-              message: error.message,
-              details: { name: error.workspaceName },
-            })
-          }
-          if (error instanceof WorkspaceDirectoryCreationError) {
-            return err(request, { code: 'internal', message: error.message, details: {} })
-          }
           // The registry rejects a path that does not resolve to an existing
           // directory (realpath ENOENT / not-a-directory) — the business
           // error of the typed-path flow, surfaced as a validation failure.
@@ -2084,7 +2766,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
       async rename(request) {
         const { payload } = request
-        const workspace = ctx.workspace.get(brandWorkspaceId(payload.workspaceId))
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(payload.workspaceId))
         if (workspace === undefined) return workspaceNotFound(request, payload.workspaceId)
         const title = payload.title.trim()
         // Uniqueness AND the same-title no-op both ride the create chain so
@@ -2093,7 +2775,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         // still lands afterwards.
         const operation = workspaceCreationChain.then(async () => {
           if (title === workspace.title) return
-          if (ctx.workspace.list().some(other => other.id !== workspace.id && other.title === title)) {
+          if (ctx.workspaceRegistry.list().some(other => other.id !== workspace.id && other.title === title)) {
             throw new WorkspaceNameConflictError(title)
           }
           await workspace.setTitle(title)
@@ -2117,15 +2799,29 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       async delete(request) {
         const { workspaceId } = request.payload
         const operation = workspaceCreationChain.then(() =>
-          ctx.workspace.delete(brandWorkspaceId(workspaceId)))
+          ctx.workspaceRegistry.delete(brandWorkspaceId(workspaceId)))
         workspaceCreationChain = operation.then(() => undefined, () => undefined)
         if (!await operation) return workspaceNotFound(request, workspaceId)
         return ok(request, { deleted: true as const })
       },
 
+      async insertBefore(request) {
+        const { workspaceId, beforeWorkspaceId } = request.payload
+        try {
+          const workspaceIds = await ctx.workspaceRegistry.insertBefore(
+            brandWorkspaceId(workspaceId),
+            beforeWorkspaceId === undefined ? undefined : brandWorkspaceId(beforeWorkspaceId),
+          )
+          return ok(request, { workspaceIds: [...workspaceIds] })
+        } catch (error: unknown) {
+          if (!(error instanceof WorkspaceOrderInvalidError)) throw error
+          return workspaceNotFound(request, error.workspaceId)
+        }
+      },
+
       async insertSessionBefore(request) {
         const { payload } = request
-        const workspace = ctx.workspace.get(brandWorkspaceId(payload.workspaceId))
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(payload.workspaceId))
         if (workspace === undefined) return workspaceNotFound(request, payload.workspaceId)
         try {
           await workspace.insertSessionBefore(payload.sessionId, payload.beforeSessionId)
@@ -2149,7 +2845,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       async archiveSession(request) {
         const { sessionId } = request.payload
         try {
-          await ctx.workspace.archiveSession(sessionId)
+          await ctx.workspaceRegistry.archiveSession(sessionId)
         } catch (error: unknown) {
           // Only the registry's unknown-session rejection is the business
           // code; storage/durability failures propagate as internal errors.
@@ -2160,14 +2856,14 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             details: { sessionId },
           })
         }
-        return ok(request, { archivedSessionIds: [...ctx.workspace.archivedSessionIds] })
+        return ok(request, { archivedSessionIds: [...ctx.workspaceRegistry.archivedSessionIds] })
       },
     },
 
     host: {
       describe(request) {
-        // TODO(step2): version should read apps/cli's package.json; placeholder for now.
-        const route = defaults.defaultTarget()
+        // TODO: version should read apps/cli's package.json; placeholder for now.
+        const selection = defaults.defaultModelSelection()
         return Promise.resolve(ok(request, {
           version: '0.0.1',
           // Same source as session.create's fallback: the UI's default project
@@ -2175,9 +2871,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           cwd: defaults.cwd,
           // Read live for the same reason: this is what the NEXT session will
           // start from, so a saved default has to be what it reports.
-          provider: route.provider,
-          model: route.model,
+          provider: selection.provider,
+          model: selection.model,
           attachedSessions: ctx.agents.list().length,
+          canOpenPath: canOpenPaths(),
         }))
       },
 
@@ -2253,49 +2950,6 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       },
     },
 
-    commands: {
-      // Both methods address one session's agent. agentFor resumes on miss
-      // and fences every subagent-owned identity with `agent-busy`; the
-      // api/commands.ts module contract owns that fence's wording, so this
-      // comment only notes the routing shape: clients send a sessionId for a
-      // published session, and resume restores an existing entity.
-      async list(request) {
-        // Missing service = the deployment omitted dsh-commands from its
-        // composition, not an empty catalog: fail loud instead of serving [].
-        const commands = ctx.get('commands')
-        if (commands === undefined) {
-          return err(request, { code: 'internal', message: 'command registry is absent: this deployment does not mount @deepseek-ai/dsh-commands in its composition (cordis.yml or explicit assembly)', details: {} })
-        }
-        const found = await agentFor(request.payload.sessionId)
-        if ('error' in found) return err(request, found.error)
-        return ok(request, { commands: commands.list(found.agent) })
-      },
-
-      async execute(request, signal) {
-        const commands = ctx.get('commands')
-        if (commands === undefined) {
-          return err(request, { code: 'internal', message: 'command registry is absent: this deployment does not mount @deepseek-ai/dsh-commands in its composition (cordis.yml or explicit assembly)', details: {} })
-        }
-        const { sessionId, line } = request.payload
-        const found = await agentFor(sessionId)
-        if ('error' in found) return err(request, found.error)
-        try {
-          // Pure admission: the executor's durable command/run + command/done
-          // pair (broadcast on the mux stream) carries the outcome; the
-          // response reports whether the line resolved to a handler, plus the
-          // minted pairing id so the issuing client can correlate its request
-          // with the flow node the lifecycle events produce.
-          const execution = await commands.execute(found.agent, line, signal)
-          return ok(request, execution === undefined
-            ? { matched: false }
-            : { matched: true, commandId: execution.commandId })
-        } catch (error: unknown) {
-          if (signal.aborted) return err(request, { code: 'cancelled', message: 'command execution was aborted', details: {} })
-          return err(request, { code: 'internal', message: `command failed: ${String(error)}`, details: {} })
-        }
-      },
-    },
-
     goals: {
       // Mutations only — the read side is the 'goal' session projection.
       // Every verb resolves the session's agent (agentFor: implicit cold
@@ -2331,10 +2985,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       },
 
       async clear(request) {
-        const goals = goalService()
-        if ('error' in goals) return err(request, goals.error)
         const found = await agentFor(request.payload.sessionId)
         if ('error' in found) return err(request, found.error)
+        const goals = goalServiceFor(found.agent)
+        if ('error' in goals) return err(request, goals.error)
         try {
           goals.clear(found.agent, request.payload.ref)
           return ok(request, { cleared: true as const })
@@ -2344,10 +2998,154 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       },
     },
 
+    agentPresets: {
+      // A deployment with no roster answers with an empty list rather than an
+      // error: composing no presets is a valid deployment, and the browser
+      // simply offers no choice.
+      async list(request) {
+        const presets = ctx.get('agentPresets')
+        if (presets === undefined) return ok(request, { presets: [], authorable: false, hasDocument: false })
+        const defaultId = presets.defaultId
+        return ok(request, {
+          presets: (await presets.list()).map(preset => ({
+            id: preset.id,
+            trust: preset.trust,
+            isDefault: preset.id === defaultId,
+            ...preset.name === undefined ? {} : { name: preset.name },
+            ...preset.description === undefined ? {} : { description: preset.description },
+            ...preset.broken === undefined ? {} : { broken: preset.broken },
+          })),
+          authorable: presets.authorable,
+          hasDocument: canOpenPaths(),
+        })
+      },
+
+      // Recomposing is limited to a blank session because a started
+      // conversation's history was produced under its preset's tools; the
+      // agent and the session survive, only the composition is swapped.
+      async select(request) {
+        const { sessionId, agentPreset } = request.payload
+        const presets = ctx.get('agentPresets')
+        if (presets === undefined) {
+          return err(request, {
+            code: 'agent-preset-not-found',
+            message: 'this deployment composes no agent presets',
+            details: { agentPreset, available: [] },
+          })
+        }
+        const found = await agentFor(sessionId)
+        if ('error' in found) return err(request, found.error)
+        const { agent } = found
+        const swap = async (): Promise<RpcResponse<{ agentPreset: string }>> => {
+          // Re-read inside the queue: an earlier switch may have run, and a
+          // conversation may have started, since this request arrived.
+          if (!sessionBlank(agent.session)) {
+            return err(request, {
+              code: 'agent-preset-locked',
+              message: `session "${sessionId}" has already started; its agent preset is fixed`,
+              details: { sessionId, agentPreset },
+            })
+          }
+          try {
+            const preset = await presets.recompose(agent.ctx, agentPreset)
+            // Recorded only after the swap committed: the log states what the
+            // agent runs, and a rejected mount leaves the previous composition.
+            agent.session.append('agent-preset/selected', { agentPreset: preset.id })
+            return ok(request, { agentPreset: preset.id })
+          } catch (error: unknown) {
+            const refused = presetFailure(request, error)
+            if (refused !== undefined) return refused
+            return err(request, {
+              code: 'internal',
+              message: `failed to select agent preset "${agentPreset}": ${String(error)}`,
+              details: {},
+            })
+          }
+        }
+        const queued = presetSwitches.get(sessionId) ?? Promise.resolve()
+        const turn = queued.then(swap)
+        presetSwitches.set(sessionId, turn.catch(() => undefined))
+        try {
+          return await turn
+        } finally {
+          if (presetSwitches.get(sessionId) === turn) presetSwitches.delete(sessionId)
+        }
+      },
+
+      // Authoring is privileged (see PRIVILEGED_METHODS in dsh-client-connection):
+      // a composition names the plugins a session runs, so reading one is
+      // reconnaissance, and copy/remove/openDocument manage the roster and
+      // drive the host desktop.
+      async read(request) {
+        const { agentPreset } = request.payload
+        const presets = ctx.get('agentPresets')
+        if (presets === undefined) return err(request, noRoster(agentPreset))
+        try {
+          const preset = await presets.resolve(agentPreset)
+          return ok(request, {
+            agentPreset: preset.id,
+            trust: preset.trust,
+            content: await presets.read(preset.id),
+            ...preset.name === undefined ? {} : { name: preset.name },
+            ...preset.description === undefined ? {} : { description: preset.description },
+          })
+        } catch (error: unknown) {
+          return err(request, presetError(agentPreset, error))
+        }
+      },
+
+      async copy(request) {
+        const { from, agentPreset, name } = request.payload
+        const presets = ctx.get('agentPresets')
+        if (presets === undefined) return err(request, noRoster(agentPreset))
+        try {
+          await presets.copy(from, agentPreset, name)
+          return ok(request, { agentPreset })
+        } catch (error: unknown) {
+          return err(request, presetError(agentPreset, error))
+        }
+      },
+
+      async openDocument(request, signal) {
+        const { agentPreset } = request.payload
+        const presets = ctx.get('agentPresets')
+        if (presets === undefined) return err(request, noRoster(agentPreset))
+        try {
+          const preset = await presets.resolve(agentPreset)
+          // Same line as copy/remove draw: the shipped install is not the
+          // user's to manage, and pointing an editor into it invites edits an
+          // upgrade will silently overwrite.
+          if (preset.trust !== 'user') {
+            throw new PresetNotWritableError(preset.id, 'it ships with the deployment')
+          }
+          // The id resolved against the Host's own roots is what selects the
+          // directory — no browser payload carries a path in either direction
+          // unless the deployment has no opener to hand it to.
+          const directory = dirname(preset.path)
+          if (!canOpenPaths()) return ok(request, { opened: false as const, path: directory })
+          return await openPath(request, directory, signal)
+        } catch (error: unknown) {
+          return err(request, presetError(agentPreset, error))
+        }
+      },
+
+      async remove(request) {
+        const { agentPreset } = request.payload
+        const presets = ctx.get('agentPresets')
+        if (presets === undefined) return err(request, noRoster(agentPreset))
+        try {
+          await presets.remove(agentPreset)
+          return ok(request, {})
+        } catch (error: unknown) {
+          return err(request, presetError(agentPreset, error))
+        }
+      },
+    },
+
     skills: {
-      // Skill lookup never touches the Agent registry: the session address
-      // resolves to a canonical cwd from the host-resident session header, so
-      // listing skills cannot create or resume an agent as a side effect.
+      // Skill lookup never creates or resumes an agent: the session address
+      // resolves to a canonical cwd from the host-resident session header, and
+      // the view scope is the live agent or the preset's standing key.
       async list(request) {
         const { sessionId } = request.payload
         const session = ctx.sessions.get(sessionId)
@@ -2364,17 +3162,27 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           return err(request, { code: 'internal', message: `session "${sessionId}" has no project cwd`, details: {} })
         }
         const cwd = session.header.cwd
-        // Same stance as the commands domain: a missing service means the
-        // deployment omitted dsh-skill from its composition, not an empty
-        // catalog. ctx.get also keeps this handler independent of the gateway
-        // plugin's inject list (an undeclared `ctx.skills` property read
-        // fails the reflect proxy).
-        const skillRegistry = ctx.get('skills')
+        // The host registry is layered per scope and serves every session. A
+        // composition may still realm-mount its own registry instead; that
+        // instance is invisible to host contexts, so address it through the
+        // live agent (`agents.get` keeps the no-side-effect stance above).
+        const live = ctx.agents.get(sessionId)
+        const presets = ctx.get('agentPresets')
+        const scoped = live === undefined ? undefined : presets?.serviceFor(live, 'skills')
+        // Same stance as the commands domain: a missing service means no
+        // composition mounts dsh-skill, not an empty catalog. `ctx.get` also
+        // keeps this handler independent of the gateway plugin's inject list
+        // (an undeclared `ctx.skills` property read fails the reflect proxy).
+        const skillRegistry = scoped ?? ctx.get('skills')
         if (skillRegistry === undefined) {
-          return err(request, { code: 'internal', message: 'skill registry is absent: this deployment does not mount @deepseek-ai/dsh-skill in its composition (cordis.yml or explicit assembly)', details: {} })
+          return err(request, { code: 'internal', message: 'skill registry is absent: neither this session\'s agent preset nor the host composition mounts @deepseek-ai/dsh-skill', details: {} })
         }
+        // The scope presenters resolve in — the live agent, else the recorded
+        // preset's standing key, else the global layer — so a cold session's
+        // '/' popup lists the catalog its composition actually serves.
+        const scope = await presenterScopeFor(sessionId, session)
         try {
-          const skills = (await skillRegistry.list({ cwd })).filter(isUserInvocable)
+          const skills = (await skillRegistry.list({ cwd, scope })).filter(isUserInvocable)
           return ok(request, {
             skills: skills.map(skill => ({
               name: skill.name,
@@ -2393,13 +3201,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       describe(request) {
         const settings = ctx.get('settings')
         if (settings === undefined) return Promise.resolve(err(request, settingsAbsent()))
-        const exposed = exposedNamespaces()
         return Promise.resolve(ok(request, {
           writable: settings.writable,
           hasDocument: settings.documentPath !== undefined,
-          namespaces: settings.describe({ redactSecrets: true })
-            .filter(descriptor => exposed.has(String(descriptor.ns)))
-            .map(namespaceView),
+          namespaces: settings.describe({ redactSecrets: true }).map(namespaceView),
         }))
       },
       async openDocument(request, signal) {
@@ -2586,6 +3391,19 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             queue.push(frame({ type: 'session/queue', sessionId: session.id, items: queueItems(agent) }))
           }
         }
+        // Background-task baseline. `ctx.agents.get` is the non-resuming read:
+        // a session with no live Agent owns no tasks, so it correctly sees only
+        // the unowned ones, and listing never revives a cold session. An empty
+        // set sends nothing — absence is how the client reads "no tasks".
+        const jobs = ctx.get('jobs')
+        if (jobs !== undefined) {
+          for (const session of ctx.sessions.list()) {
+            const views = jobViews(jobs.list(ctx.agents.get(session.id)))
+            if (views.length > 0) {
+              queue.push(frame({ type: 'session/jobs', sessionId: session.id, jobs: views }))
+            }
+          }
+        }
         // Per-session open-call table for result-view pairing. Bounded by the
         // per-turn call count: entries clear on turn/end; a table miss (stream
         // opened mid-turn) backscans the session's in-memory events instead.
@@ -2604,16 +3422,45 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             } else if (event.type === 'turn/end') {
               openCalls.delete(session.id)
             }
-            const view = viewFor(ctx, event, callId =>
-              openCalls.get(session.id)?.get(callId) ?? backscanArgs(session.events, callId))
+            const view = viewFor(
+              ctx, event,
+              callId => openCalls.get(session.id)?.get(callId) ?? backscanArgs(session.events, callId),
+              ctx.agents.get(session.id),
+            )
             queue.push(frame({ type: 'session/event', sessionId: session.id, event, ...view === undefined ? {} : { view } }))
           }),
           ctx.on('session/created', (session: Session) => {
             subscribeSession(queue, session)
+            // The subscribe frame clears the client's task mirror, and a
+            // session born after the stream opened missed the baseline loop.
+            // Unowned tasks are visible to it from birth, so without this it
+            // would show none until the next registry change.
+            const views = jobs === undefined ? [] : jobViews(jobs.list(ctx.agents.get(session.id)))
+            if (views.length > 0) {
+              queue.push(frame({ type: 'session/jobs', sessionId: session.id, jobs: views }))
+            }
           }),
           ctx.on('session/disposed', (session: Session) => {
             openCalls.delete(session.id)
           }),
+          ...jobs === undefined ? [] : [jobs.onJobsChanged((owner) => {
+            if (owner !== undefined) {
+              // The exact owner instance the fence compares against, so the
+              // push stays correct even while that Agent's scope is tearing
+              // down and a lookup by id would already miss.
+              queue.push(frame({ type: 'session/jobs', sessionId: owner.id, jobs: jobViews(jobs.list(owner)) }))
+              return
+            }
+            // An unowned task is visible to every caller, so every subscribed
+            // session's set changed with it.
+            for (const session of ctx.sessions.list()) {
+              queue.push(frame({
+                type: 'session/jobs',
+                sessionId: session.id,
+                jobs: jobViews(jobs.list(ctx.agents.get(session.id))),
+              }))
+            }
+          })],
         ]
         return queue.iterate(signal, () => {
           muxQueues.delete(queue)
@@ -2623,13 +3470,15 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
       host(_request, signal) {
         const queue = new FrameQueue<RpcRequest<HostFrame>>()
+        const committedWorkspaces = ctx.workspaceRegistry.list()
         const committedWorkspaceIds = new Set(
-          ctx.workspace.list().map(workspace => String(workspace.id)),
+          committedWorkspaces.map(workspace => String(workspace.id)),
         )
+        let committedWorkspaceOrder = committedWorkspaces.map(workspace => workspace.id)
         // Frame-dedup baseline, same posture as committedWorkspaceIds: the
         // stream opens against the current set; workspace.list re-baselines
         // reconnecting clients, so only later changes need frames.
-        let archivedSessionIds = ctx.workspace.archivedSessionIds
+        let archivedSessionIds = ctx.workspaceRegistry.archivedSessionIds
         const disposers = [
           ctx.on('session/created', (session: Session) => {
             queue.push(frame({
@@ -2639,7 +3488,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
               // has run no turn yet, so this is constantly true in practice.
               blank: sessionBlank(session),
               // Including cwd lets the client group the new session without refreshing the list.
-              ...sessionListFields(session.header),
+              ...sessionListFields(session.header, session.events),
             }))
           }),
           ctx.on('session/disposed', (session: Session) => {
@@ -2656,14 +3505,24 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             if (change.table === '') {
               if (change.operation !== 'put') return
               const state = workspaceDomainState.parse(change.value)
+              const orderChanged = state.workspaceIds.length === committedWorkspaceOrder.length
+                && state.workspaceIds.every(workspaceId => committedWorkspaceIds.has(String(workspaceId)))
+                && state.workspaceIds.some((workspaceId, index) => workspaceId !== committedWorkspaceOrder[index])
               for (const workspaceId of state.workspaceIds) {
                 if (committedWorkspaceIds.has(workspaceId)) continue
-                const workspace = ctx.workspace.get(workspaceId)
+                const workspace = ctx.workspaceRegistry.get(workspaceId)
                 if (workspace === undefined) {
                   throw new Error(`committed workspace registry references missing workspace "${workspaceId}"`)
                 }
                 committedWorkspaceIds.add(workspaceId)
                 queue.push(frame({ type: 'host/workspace-changed', workspace: workspaceView(workspace) }))
+              }
+              committedWorkspaceOrder = [...state.workspaceIds]
+              if (orderChanged) {
+                queue.push(frame({
+                  type: 'host/workspace-order-changed',
+                  workspaceIds: [...state.workspaceIds],
+                }))
               }
               if (state.archivedSessionIds.length !== archivedSessionIds.length
                 || state.archivedSessionIds.some((id, index) => id !== archivedSessionIds[index])) {
@@ -2692,35 +3551,82 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
               workspace: changedWorkspaceView(change.key, change.value),
             }))
           }),
-          ctx.on('commands/change', () => {
-            queue.push(frame({ type: 'host/commands-changed' }))
-          }),
-          ctx.on('settings/document-updated', (ns) => {
-            // The RAW-section event, not the resolved one: a field going from
-            // inherited to overridden leaves the resolved value equal, and a
-            // configuration client still has to re-read (its held revision is
-            // stale, and the field's meaning changed).
-            const name = String(ns)
-            queue.push(frame({ type: 'host/settings-changed', ns: name }))
-            // A provider's own settings carry its model catalog and endpoint,
-            // so a change there invalidates the model list even when the route
-            // set is untouched — `llm/adapters-updated` alone misses it. The
-            // gateway's own section is the other such source: it names the
-            // route every session with no logged one resolves to, so an
-            // externally edited default (another tab, a hand-edited
-            // settings.yaml) has to reach an open selector too.
-            if (modelProviderNamespaces().has(name) || name === String(API_GATEWAY_SETTINGS_NAMESPACE)) {
-              queue.push(frame({ type: 'host/models-changed' }))
-            }
-          }),
-          ctx.on('credentials/updated', (ref) => {
-            queue.push(frame({ type: 'host/credentials-changed', ref: String(ref) }))
-          }),
-          ctx.on('llm/adapters-updated', () => {
-            queue.push(frame({ type: 'host/models-changed' }))
-          }),
+          // Allowlisted host events ride one verbatim wrapper frame each. The
+          // allowlist is api-remotes', and `ctx.remote.$on` is the consumer
+          // face; nothing here projects, redacts, or renames.
+          ...API_REMOTE_FORWARDED_EVENTS.map(name => ctx.on(
+            name,
+            // The allowlist's shape assertion proves each name is a real,
+            // non-scoped, void-returning event, so the rest-parameter handler
+            // satisfies every member of the union `on` accepts here;
+            // assertJsonArgs proves the payload is JSON-safe before it queues.
+            ((...args: unknown[]) => {
+              queue.push(frame({
+                type: 'host/remote-event',
+                event: name,
+                args: assertJsonArgs(name, args),
+              }))
+            }),
+          )),
         ]
         return queue.iterate(signal, () => { for (const dispose of disposers) dispose() })
+      },
+    },
+
+    downloads: {
+      async sessionLog(request, signal) {
+        // Clean error path first: missing services answer 500 and a missing
+        // root artifact 404 before any zip byte is produced. The root content
+        // read here is reused as the first zip entry, so nothing is read twice.
+        const deps = sessionLogExportDeps(ctx)
+        if (deps.sessionQuery === undefined || deps.sessionPersistence === undefined || deps.attachments === undefined) {
+          return new Response(
+            'session log export is unavailable: missing session-query, session-persistence, or attachments service',
+            { status: 500 },
+          )
+        }
+        if (!deps.sessionPersistence.supportsRawArtifacts) {
+          return new Response(
+            'session log export is unavailable: the persistence backend does not expose per-session raw artifacts',
+            { status: 501 },
+          )
+        }
+        const ready: SessionLogExportReady = {
+          sessionQuery: deps.sessionQuery,
+          sessionPersistence: deps.sessionPersistence,
+          attachments: deps.attachments,
+          sessions: deps.sessions,
+        }
+        let root: SessionRawArtifact | undefined
+        try {
+          await flushLiveSessionLog(deps, request.sessionId, signal)
+          root = await deps.sessionPersistence.readRaw(request.sessionId, signal)
+          signal.throwIfAborted()
+        } catch {
+          signal.throwIfAborted()
+          // Root preparation failure: answer 500 without echoing the error,
+          // which may carry absolute host paths into the browser error bar.
+          return new Response('session log export failed to prepare the stored artifact', { status: 500 })
+        }
+        if (root === undefined) {
+          return new Response('session not found', { status: 404 })
+        }
+        return new Response(
+          streamSessionLogZip(
+            ready,
+            root,
+            request.sessionId,
+            request.includeDescendants === true,
+            sessionExportCompressionLevel,
+            signal,
+          ),
+          {
+            headers: {
+              'content-type': 'application/zip',
+              'content-disposition': `attachment; filename="${sessionLogZipFilename(request.sessionId)}"`,
+            },
+          },
+        )
       },
     },
 
@@ -2746,7 +3652,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           return Promise.resolve({ accepted: false, reason: 'bad-response' })
         }
         claimQuestion(pending, 'cancelled')
-        pending.reject(new UserInteractionError(
+        pending.reject(new UserQuestionError(
           'the user cancelled ask_user_question', 'ASK_CANCELLED'))
         return Promise.resolve({ accepted: true })
       }

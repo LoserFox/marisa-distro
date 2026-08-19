@@ -105,7 +105,7 @@ jobs:
           set -u +e -o pipefail
           out=$(pnpm exec vitest run --config vitest.e2e.config.ts \
             packages/sandbox/sandbox-local/tests/${{ matrix.runner }}.e2e.ts \
-            packages/bash/bash-sandbox/tests/${{ matrix.runner }}.e2e.ts 2>&1); status=$?
+            packages/shell/bash-sandbox/tests/${{ matrix.runner }}.e2e.ts 2>&1); status=$?
           echo "$out"
           [ "$status" -eq 0 ]
           # Both platform files must have RUN — a self-skip (runner missing on

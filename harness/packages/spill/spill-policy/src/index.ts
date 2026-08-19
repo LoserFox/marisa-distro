@@ -7,7 +7,7 @@
  * locator and retrieval guidance.
  *
  * It registers NO service and owns NO storage or preview mechanics: preview is
- * `@deepseek-ai/dsh-retention` (`TextRetainer`), storage is `ctx.spillStore`.
+ * `@deepseek-ai/dsh-output-retention` (`TextRetainer`), storage is `ctx.spillStore`.
  * The policy only decides WHEN to spill and composes the notice.
  *
  * A second arm applies the SAME cap to the durable log: the
@@ -43,11 +43,11 @@
  * @module @deepseek-ai/dsh-spill-policy
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import { TextRetainer, describeOmitted } from '@deepseek-ai/dsh-retention'
-import type { Omitted } from '@deepseek-ai/dsh-retention'
+import { TextRetainer, describeOmitted } from '@deepseek-ai/dsh-output-retention'
+import type { Omitted } from '@deepseek-ai/dsh-output-retention'
 import type { SaveTextSpill, SpillRef } from '@deepseek-ai/dsh-spill'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { CallId } from '@deepseek-ai/dsh-llm'
@@ -69,7 +69,7 @@ export interface Config {
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'spill-policy'
 
-/** Require the tool registry (its `tools/post-execute` waterfall is the seam we transform). */
+/** Require the tool registry (its `tools/post-execute` waterfall is the extension point we transform). */
 export const inject = ['tools']
 
 export const Config: z<Config> = z.object({
@@ -80,7 +80,7 @@ export const Config: z<Config> = z.object({
 function flattenPlainText(content: ContentBlock[]): string | undefined {
   let text = ''
   for (const block of content) {
-    if (block.type !== 'text') { return undefined }
+    if (block.type !== 'text') return undefined
     text += block.text
   }
   return text
@@ -204,7 +204,7 @@ export function apply(ctx: Context, config: Config): void {
 
     const replacedText = await spillReplacement(text, totalBytes, ownerSessionId(exec), exec.name, exec.callId, 'result')
     if (replacedText === undefined) return decision
-    const replaced: Array<ContentBlock> = [{ type: 'text', text: replacedText }]
+    const replaced: ContentBlock[] = [{ type: 'text', text: replacedText }]
     return { kind: 'accept', content: replaced, ...decision.additionalContexts ? { additionalContexts: decision.additionalContexts } : {} }
   }, { prepend: true })
 

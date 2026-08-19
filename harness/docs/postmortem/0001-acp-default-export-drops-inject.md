@@ -18,7 +18,7 @@ The ACP server could not create or load a single session — the two RPCs an edi
 
 ## Timeline
 
-- The bridge (RFC 010) landed with a full unit suite (codec, in-memory transport, property-based protocol-shape, failure paths, HMR), a key-gated real-API e2e, and a no-key stdout-purity e2e. All green, 100% coverage.
+- The bridge (RFC 010) landed with a full unit suite for the codec, in-memory transport, generated protocol messages, failure paths, and HMR; a key-gated real-API e2e; and a no-key stdout-purity e2e. All green, 100% coverage.
 - A real Zed session immediately failed on `session/new` with `cannot get property "agents" without inject`.
 - Investigation initially pursued a Cordis "traceable/shadow" theory (plausible, and the mechanism is real — see Bug #2), then instrumented the actual fiber walk in vendored `reflect.ts` and ran the real subprocess. The trace showed the throw at `apply()` line 179 *at plugin load time*, on the ROOT fiber with no shadow — falsifying the shadow theory for `session/new`.
 - Root cause #1 found: a stray `export default apply`. Removing it fixed `session/new`.
@@ -26,7 +26,7 @@ The ACP server could not create or load a single session — the two RPCs an edi
 
 ## Root cause #1 — `export default apply` drops the plugin's `inject` (broke `session/new`)
 
-`packages/acp/acp/src/index.ts` is a *namespace plugin*: it exports `name`, `inject`, `Config`, and `apply` as separate named exports — the same shape as every other plugin in the repo (`invariants`, `llm-deepseek`, `tool-bash`, `tui`, …). But it *also* ended with one extra line no other plugin had:
+`packages/acp/acp/src/index.ts` is a *namespace plugin*: it exports `name`, `inject`, `Config`, and `apply` as separate named exports, as every other plugin in the repo does (`invariants`, `llm-deepseek`, `tool-bash`, `tui`, …). But it *also* ended with one extra line no other plugin had:
 
 ```ts ignore-check
 export const name = 'acp'

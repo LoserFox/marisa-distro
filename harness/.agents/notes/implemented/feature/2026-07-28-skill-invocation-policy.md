@@ -12,7 +12,7 @@ The local parser also exposed an internal camel-case spelling as frontmatter. Su
 
 ## Decision
 
-`SkillSummary` carries a required typed `invocation: SkillInvocationPolicy` object whose `modelInvocable: boolean` and `userInvocable: boolean` fields are positive and symmetric. Omission exists only at explicit input seams: a runtime `SkillRegistration` without a policy and local frontmatter without either invocation key resolve to `{ modelInvocable: true, userInvocable: true }` before producing candidates or definitions. Future frontmatter keys remain outside the domain model until a consumer and enforcement contract exist; the local provider still parses frontmatter as an open `Record<string, unknown>`, then projects only recognized fields and their defaults into the normalized typed policy.
+`SkillSummary` carries a required typed `invocation: SkillInvocationPolicy` object whose `modelInvocable: boolean` and `userInvocable: boolean` fields are positive and symmetric. Omission exists only at explicit input boundaries: a runtime `SkillRegistration` without a policy and local frontmatter without either invocation key resolve to `{ modelInvocable: true, userInvocable: true }` before producing candidates or definitions. Future frontmatter keys remain outside the domain model until a consumer and enforcement contract exist; the local provider still parses frontmatter as an open `Record<string, unknown>`, then projects only recognized fields and their defaults into the normalized typed policy.
 
 `ctx.skills.list()` returns every winning summary and no longer chooses an invocation surface. `isModelInvocable(skill)` and `isUserInvocable(skill)` read the matching positive field directly. `ctx.skills.get()` remains policy-neutral because trusted internal callers may need any definition, while a public consumer must enforce its own predicate before advertising or loading a skill. The model tool and TUI check the invocation-neutral summary before calling `get()`, then recheck the loaded definition so a denied name never reaches definition loading and a policy change between discovery and load cannot expose its body.
 
@@ -22,7 +22,7 @@ The model-facing `dsh-tool-skill` catalog and loader enforce `isModelInvocable`.
 
 These rules permit all four combinations:
 
-| Policy | Model surface | User surface |
+| Policy | Model invocation | User invocation |
 |---|---|---|
 | `{ modelInvocable: true, userInvocable: true }` | included | included |
 | `{ modelInvocable: true, userInvocable: false }` | included | excluded |
@@ -33,7 +33,7 @@ This decision extends the [skill system](2026-07-05-skill-system.md) and superse
 
 ## Alternatives considered
 
-**Store all frontmatter in a generic `Map` and read string keys in `isModelInvocable` / `isUserInvocable`.** Rejected because misspelled keys, non-boolean values, and consumer-specific coercion would cross package seams without type checking. The parser boundary remains open; the domain model is deliberately typed and narrow.
+**Store all frontmatter in a generic `Map` and read string keys in `isModelInvocable` / `isUserInvocable`.** Rejected because misspelled keys, non-boolean values, and consumer-specific coercion would cross package boundaries without type checking. The parser boundary remains open; the domain model is deliberately typed and narrow.
 
 **Keep `ctx.skills.list()` model-filtered and add a second user list.** Rejected because discovery, duplicate resolution, caching, and ordering are surface-neutral work. One complete catalog plus explicit predicates prevents those mechanisms from drifting while making each consumer's policy visible at its boundary.
 

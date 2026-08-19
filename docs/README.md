@@ -5,6 +5,7 @@
 - [架构与仓库边界](architecture.md)
 - [版本、Testing 与 Stable/LTS](versioning.md)
 - [完整插件清单与状态](plugins.md)
+- [rc7 插件兼容评估清单](rc7-plugin-compatibility.md)
 - [维护清单与 upstream schema](../maintenance/README.md)
 - [DSH 上游差异](upstream-diff.md)
 - [上游与插件同步流程](upstream-sync.md)

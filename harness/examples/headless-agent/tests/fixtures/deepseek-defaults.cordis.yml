@@ -1,12 +1,14 @@
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ../../cordis.yml
     patches:
       - id: llm-deepseek
         config:
           baseURL: !!js process.env.DSH_SNAPSHOT_BASE_URL
-          thinking: disabled
+          thinking: enabled
+          reasoningEffort: low
+          streamIdleTimeoutMs: 150
       - id: agent-spine
         config:
           agents:

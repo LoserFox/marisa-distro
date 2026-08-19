@@ -15,11 +15,11 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
-import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
+import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import * as toolFsSearch from '@deepseek-ai/dsh-tool-fs-search'
 
 describe('dsh-tool-fs-search real-load-path guard', () => {
@@ -38,8 +38,8 @@ describe('dsh-tool-fs-search real-load-path guard', () => {
   it('boots over ctx.subprocess through the unwrapped module without an inject error', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(LocalSubprocessService)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(LocalSubprocessRuntime)
 
     const loader = Object.create(Loader.prototype) as Loader
     const unwrapped = loader.unwrapExports(toolFsSearch) as Parameters<Context['plugin']>[0]

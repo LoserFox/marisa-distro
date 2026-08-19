@@ -20,11 +20,11 @@ JSON-RPC 桥接层把两个端点都建模为对称的对等端，但实际协�
 
 ## 实施计划
 
-1. 在 `packages/ui/jsonrpc/src/server.ts` 中，用 `status: 'ok' | 'error' | 'aborted'` 和捕获的 `TurnEndReason` 替换 `SessionPromptResult.accepted`。`HarnessSdkServer.prompt()` 把 `completed` 映射为 `ok`，把 `aborted` 映射为 `aborted`，把其他当前已有或可通过声明合并扩展的原因映射为 `error`；进入空闲状态却没有 `turn/end` 仍视为不变量错误。只删除 `session.finished`，保持 `session.event`、`subagent.started` 和 `subagent.finished` 不变。
-2. 在 `packages/sdk/sdk-protocol/src/transport.ts` 中，把共享类收窄到有消费者的方向——入站请求/出站响应（服务端）与出站请求/入站响应及入站通知（TypeScript SDK 客户端）——只删除服务端发起的 `request()` 用法与客户端发起的通知分发，或把该类拆分为服务端与客户端两个传输。请求结果、方法不存在与处理器错误响应保持原有行为，并继续排在被等待处理器发出的通知之后。
+1. 在 `packages/sdk/server/src/server.ts` 中，用 `status: 'ok' | 'error' | 'aborted'` 和捕获的 `TurnEndReason` 替换 `SessionPromptResult.accepted`。`HarnessSdkJsonRpcServer.prompt()` 把 `completed` 映射为 `ok`，把 `aborted` 映射为 `aborted`，把其他当前已有或可通过声明合并扩展的原因映射为 `error`；进入空闲状态却没有 `turn/end` 仍视为不变量错误。只删除 `session.finished`，保持 `session.event`、`subagent.started` 和 `subagent.finished` 不变。
+2. 在 `packages/sdk/protocol/src/transport.ts` 中，把共享类收窄到有消费者的方向——入站请求/出站响应（服务端）与出站请求/入站响应及入站通知（TypeScript SDK 客户端）——只删除服务端发起的 `request()` 用法与客户端发起的通知分发，或把该类拆分为服务端与客户端两个传输。请求结果、方法不存在与处理器错误响应保持原有行为，并继续排在被等待处理器发出的通知之后。
 3. 在 `python/sdk/src/deepseek_harness/client.py`、`models.py` 和 `__init__.py` 中，删除 `IncomingRequest`、`_requests`、`notify()`、`next_request()`、`respond()` 和 `respond_error()`。新增公开且经过校验的 `SessionPromptResponse` 来携带状态与原因，由 `session_prompt()` 返回该对象，并保留明确的读取保护：忽略意外的服务端请求帧，避免它们命中响应等待器。
 4. 在 `python/sdk/src/deepseek_harness/api.py` 中，根据 `SessionPromptResponse` 构造 `TurnResult.status` 和新增的 `TurnResult.reason`，再删除 `session.finished` 分支与第二个完成循环。请求期间保持订阅打开，并保留 `_request_raw()` 最后的通知排空步骤，确保写在响应前的最后一条 `turn/end` 事件与任何 subagent 通知，都会在 `Session.run()` 重建最终助手消息之前被收集。
-5. 用按方向的覆盖替换 `packages/sdk/sdk-protocol/tests/transport.spec.ts` 中的对称传输对用例，并更新 `server.spec.ts`、`plugin-apply.spec.ts` 和 `built-scope-carrier.e2e.ts`，覆盖直接结果、顺序、重叠、关闭和收窄后的伪实现；同步更新 TypeScript SDK 客户端（`packages/sdk/sdk-client`）及其套件以采用基于响应的结束流程。更新 `python/sdk/tests/test_client.py`，覆盖基于响应的结束流程、意外请求帧处理、回调与并发行为，以及已删除的公开辅助方法。同步更新 JSON-RPC README、双语 Python SDK README、导出 JSDoc 与声明、`scripts/smoke-python-runtime.py` 和 Python 单可执行文件快照。
+5. 用按方向的覆盖替换 `packages/sdk/protocol/tests/transport.spec.ts` 中的对称传输对用例，并更新 `server.spec.ts`、`plugin-apply.spec.ts` 和 `built-scope-carrier.e2e.ts`，覆盖直接结果、顺序、重叠、关闭和收窄后的伪实现；同步更新 TypeScript SDK 客户端（`packages/sdk/client`）及其套件以采用基于响应的结束流程。更新 `python/sdk/tests/test_client.py`，覆盖基于响应的结束流程、意外请求帧处理、回调与并发行为，以及已删除的公开辅助方法。同步更新 JSON-RPC README、双语 Python SDK README、导出 JSDoc 与声明、`scripts/smoke-python-runtime.py` 和 Python 单可执行文件快照。
 
 ## 备选方案
 

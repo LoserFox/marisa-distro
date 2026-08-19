@@ -42,7 +42,7 @@ export function Modal({
   headless?: boolean
 }) {
   useEffect(() => {
-    if (!open) { return }
+    if (!open) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { createUserMessage, CallId, ReasoningEffortId  } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { createUserMessage, CallId, ReasoningEffortId  } from '@deepseek-ai/dsh-llm'
 import type { Message, ToolSchema } from '@deepseek-ai/dsh-llm'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import type { PiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -21,7 +21,7 @@ const contexts: Context[] = []
 async function harness(_model: string, config: Partial<PiAiProviderProfile> = {}) {
   const ctx = new Context()
   contexts.push(ctx)
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(LlmPiAi, {
     providers: {
       deepseek: {
@@ -148,7 +148,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('llm-pi-ai e2e (real API)', () =>
     // cross-implementation check that the StreamChunk design holds.
     const deepseekCtx = new Context()
     contexts.push(deepseekCtx)
-    await deepseekCtx.plugin(LlmService)
+    await deepseekCtx.plugin(LlmRuntime)
     await deepseekCtx.plugin(LlmDeepSeek, { thinking: 'disabled' })
 
     const piCtx = await harness(FLASH)

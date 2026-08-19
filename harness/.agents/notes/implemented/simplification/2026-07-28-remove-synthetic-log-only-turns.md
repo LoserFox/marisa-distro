@@ -10,7 +10,7 @@ The session store exposed `appendOutOfBand()` so a plugin could publish a late l
 
 That rule was introduced when persistence recovery treated the last `turn/end` as the only committed boundary. The persistence scanners now preserve every valid contiguous event, and crash repair reacts only to an actually open turn. Retaining synthetic turns for title updates therefore inflated turn counts, produced execution outcomes for work that never ran the model, and let a late metadata write consume the next turn number.
 
-The generic seam also duplicated domain policy. Its marker map said which plugin events were eligible, while the title capability already owned cancellation, liveness, and stale-result rules. Replacing it with another generic or title-specific append wrapper would preserve the same type indirection for two literal event types.
+The generic helper also duplicated domain policy. Its marker map said which plugin events were eligible, while the title capability already owned cancellation, liveness, and stale-result rules. Replacing it with another generic or title-specific append wrapper would preserve the same type indirection for two literal event types.
 
 ## Decision
 
@@ -18,7 +18,7 @@ The generic seam also duplicated domain policy. Its marker map said which plugin
 
 Core session invariants continue to enforce core-owned execution relations: turn and step numbering, enclosure of steering, assistant, tool, todo, and request-header events, and same-step tool call/result pairing. Core permits merge-extensible events between turns because only their declaring plugin knows whether they are execution-scoped or standalone. Plugin invariant companions remain responsible for their own event relations.
 
-The title service appends `session/title` directly after its existing service, revision, cancellation, and live-session checks. The bundled model helper appends its literal `session/title-llm-request` record before dispatch. Persistence admits both through the bounded `session/event` path and drains them at ordinary checkpoints and lifecycle teardown; neither append forces a flush merely because it is between turns. A fallback, auxiliary request record, or accepted provider title may therefore appear after `turn/end` and before the next `turn/start`. Manual compaction uses the same between-turn capability for a `compact/* { turn: null }` bracket, but explicitly flushes the closed attempt because `/compact` promises durability before releasing queued prompt admission.
+The title service appends `session/title` directly after its existing service, revision, cancellation, and live-session checks. The bundled model helper appends its literal `session/title-llm-request` record before dispatch. Persistence admits both through the bounded `session/event` path and drains them at ordinary checkpoints and lifecycle teardown; neither append forces a flush merely because it is between turns. A fallback, auxiliary request record, or accepted provider title may therefore appear after `turn/end` and before the next `turn/start`. Manual compaction uses the same between-turn capability for a `compaction/* { turn: null }` bracket, but explicitly flushes the closed attempt because `/compact` promises durability before releasing queued prompt admission.
 
 A session fork may end at any stable event position outside an open turn, not only at `turn/end`. This preserves standalone title and other plugin-owned log-only records in a default fork while still rejecting a prefix cut through active execution.
 

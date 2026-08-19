@@ -1,0 +1,9 @@
+// Read-only snapshot wire contract shared by the Node half and all clients.
+export const SNAPSHOT_API_VERSION = 1
+export const TURN_COMPLETED_MS = 4000
+
+/** A completion window is observable by every reader until its absolute deadline. */
+export function turnCompletionSnapshot(until, nowMs) {
+  const safeUntil = Number.isFinite(until) && until > 0 ? until : 0
+  return { turnCompleted: safeUntil > nowMs, turnCompletedUntil: safeUntil }
+}

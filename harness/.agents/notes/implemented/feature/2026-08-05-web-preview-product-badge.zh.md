@@ -1,6 +1,6 @@
-# Agent Note：Web 预览版产品徽标
+# Agent Note: Web 预览版产品徽标
 
-状态：已实现
+Status: implemented
 
 [English](2026-08-05-web-preview-product-badge.md) | 中文
 

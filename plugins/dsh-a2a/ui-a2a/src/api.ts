@@ -7,13 +7,26 @@ import type { A2aPeerView } from '@dpskh/a2a/view'
 /** Dedicated public Connection channel owned by this plugin. */
 export const A2A_RPC_CHANNEL = '/dpskh-a2a'
 
+/** Plugin-owned WebSocket downlink path (server push on change). */
+export const A2A_EVENTS_PATH = '/dpskh-a2a/events'
+
 export const A2A_RPC_ENDPOINTS = {
   snapshot: 'snapshot',
   connect: 'connect',
   projectCreate: 'project/create',
   disconnect: 'disconnect',
-  watch: 'watch',
 } as const
+
+/** One change frame pushed over the plugin's downlink WebSocket. */
+export interface A2aChangeFrame {
+  readonly type: 'changed'
+  /** `all` = every session invalidated; `session` = one session changed. */
+  readonly scope: 'all' | 'session'
+  /** The changed session when `scope` is `session`. */
+  readonly sessionId?: string
+  /** Monotonic revision after the change. */
+  readonly revision: number
+}
 
 /** One project projected to the browser. */
 export interface A2aProjectView {
@@ -57,8 +70,6 @@ export interface A2aSnapshotRequest { readonly sessionId: SessionId }
 export interface A2aConnectRequest { readonly sessionId: SessionId; readonly project: string; readonly name: string }
 export interface A2aProjectCreateRequest { readonly name: string; readonly displayName?: string; readonly description?: string }
 export interface A2aDisconnectRequest { readonly sessionId: SessionId }
-export interface A2aWatchRequest { readonly sessionId: SessionId; readonly revision: number }
-
 /** Structural subset of the public browser Connection RPC caller. */
 export interface A2aRpcTransport {
   call(channel: string, endpoint: string, payload: unknown, signal?: AbortSignal): Promise<RpcResult<unknown>>
@@ -70,7 +81,6 @@ export interface A2aApiClient {
   connect(request: A2aConnectRequest): Promise<A2aApiResult<{ connected: boolean; name?: string }>>
   projectCreate(request: A2aProjectCreateRequest): Promise<A2aApiResult<{ project: A2aProjectView }>>
   disconnect(request: A2aDisconnectRequest): Promise<A2aApiResult<{ removed: boolean }>>
-  watch(request: A2aWatchRequest, signal?: AbortSignal): Promise<A2aApiResult<{ revision: number }>>
 }
 
 const projectSchema: z.ZodType<A2aProjectView> = z.object({
@@ -117,7 +127,6 @@ export const a2aRequestSchemas = {
   connect: z.object({ sessionId: z.string(), project: z.string(), name: z.string() }),
   projectCreate: z.object({ name: z.string(), displayName: z.string().optional(), description: z.string().optional() }),
   disconnect: z.object({ sessionId: z.string() }),
-  watch: z.object({ sessionId: z.string(), revision: z.number().int().nonnegative() }),
 } as const
 const connectResultSchema: z.ZodType<{ connected: boolean; name?: string }> = z.object({
   connected: z.boolean(),
@@ -146,6 +155,5 @@ export function createA2aApiClient(rpc: A2aRpcTransport): A2aApiClient {
     connect: request => call(A2A_RPC_ENDPOINTS.connect, request, connectResultSchema),
     projectCreate: request => call(A2A_RPC_ENDPOINTS.projectCreate, request, z.object({ project: projectSchema })),
     disconnect: request => call(A2A_RPC_ENDPOINTS.disconnect, request, z.object({ removed: z.boolean() })),
-    watch: (request, signal) => call(A2A_RPC_ENDPOINTS.watch, request, z.object({ revision: z.number().int().nonnegative() }), signal),
   }
 }

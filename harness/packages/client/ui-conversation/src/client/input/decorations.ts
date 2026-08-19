@@ -1,5 +1,5 @@
 /**
- * Draft decoration pure core (design §9.1: chips render from the occurrence
+ * Draft decoration pure core (chips render from the occurrence
  * table at placeholder offsets; the claim token renders as a mirror-layer
  * highlight, the claim hint as ghost text). Zero React — the skeleton renders
  * the instructions; tests drive this directly.
@@ -24,7 +24,9 @@ export interface ChipRender {
 }
 
 /**
- * One plain-text reference range (decision 21): a `/name` or `@name` token
+ * One plain-text reference range (the plain-text-reference decision;
+ * see .agents/notes/implemented/architecture/2026-07-25-web-input-machine-and-slash-pipeline.md):
+ * a `/name` or `@name` token
  * whose name is on the trigger's lexicon. Pure derivation — editing the text
  * out of match shape simply drops the range next scan.
  */
@@ -50,8 +52,8 @@ export interface DraftDecorations {
 const TEXT_REF_RE = /(^|\s)([/@])([\w-]+)/g
 
 /**
- * Scan the draft for plain-text reference tokens against the hot lexicons
- * (decision 21). Word-boundary discipline: the trigger must sit at the draft
+ * Scan the draft for plain-text reference tokens against the hot lexicons.
+ * Word-boundary discipline: the trigger must sit at the draft
  * start or after whitespace ('x/name' never matches); the name must be an
  * exact lexicon member.
  * @param draft - draft text.
@@ -66,7 +68,7 @@ export function scanTextRefs(
   TEXT_REF_RE.lastIndex = 0
   let m: RegExpExecArray | null
   while ((m = TEXT_REF_RE.exec(draft)) !== null) {
-    const trigger: '/' | '@' = m[2] as '/' | '@'
+    const trigger = m[2] as '/' | '@'
     const name = m[3] ?? ''
     if (lexicon.get(trigger)?.includes(name)) {
       const start = m.index + (m[1]?.length ?? 0)
@@ -82,7 +84,7 @@ const EMPTY_LEXICON: ReadonlyMap<'/' | '@', readonly string[]> = new Map()
 /**
  * Derive the mirror-layer decorations from the input state.
  * @param state - published input state.
- * @param lexicon - optional per-trigger reference lexicons (decision 21 scan).
+ * @param lexicon - optional per-trigger reference lexicons (plain-text-reference scan).
  * @returns token range, chip instructions, text-ref ranges, and the ghost hint.
  */
 export function deriveDecorations(

@@ -27,10 +27,10 @@
       "path": "../../core/system-prompt"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
-      "path": "../../typert/type-meta"
+      "path": "../../typert/protocol"
     }
   ]
 }

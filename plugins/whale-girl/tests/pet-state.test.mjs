@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {
   INITIAL_STATE, MEMORY_MAX, TASK_XP, SESSION_XP, RESUME_XP, xpForLevel, levelFor,
   recordTaskCompleted, recordFailure, recordSession, recordSessionResume, recordActive, ACTIVE_CAP_MS, titleName,
-} from '../.dsh-plugin/src/pet-state.mjs'
+} from '../lib/src/pet-state.mjs'
 
 const NOW = 1_700_000_000_000
 

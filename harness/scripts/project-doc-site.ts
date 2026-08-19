@@ -15,9 +15,19 @@ import { gfm } from 'micromark-extension-gfm'
 import type { Nodes } from 'mdast'
 import { docsPages, type DocsLocale, type DocsPage } from '../website/docs.ts'
 
-const REPOSITORY_URL = 'https://github.com/deepseek-ai/deepseek-harness-sdk'
+const REPOSITORY_URL = 'https://github.com/deepseek-ai/deepseek-harness'
 const root = resolve(import.meta.dirname, '..')
 const generatedRoot = resolve(root, 'website/.generated')
+
+/**
+ * Resolve the public repository ref used by projected source links.
+ *
+ * @param environment Build environment containing an optional explicit public ref.
+ * @returns The configured public ref, or `master`.
+ */
+export function resolveRepositoryRef(environment: NodeJS.ProcessEnv): string {
+  return environment.DOCS_REPOSITORY_REF ?? 'master'
+}
 
 interface Replacement {
   start: number
@@ -131,6 +141,12 @@ function destinationRange(rawNode: string, type: 'link' | 'image' | 'definition'
   return { start, end: rawNode.length }
 }
 
+// `#fragment` suffixes pass through verbatim. Generated cordis-surface
+// headings carry explicit `<a id>` anchors with the GitHub slug, so those
+// fragments resolve on the published site too; hand-written headings rely on
+// VitePress's own slugger, which differs from GitHub's for punctuation-heavy
+// text — hand-authored cross-page fragments should prefer plain-text headings
+// or explicit anchors.
 function splitTarget(url: string): { path: string; suffix: string } {
   const boundary = url.search(/[?#]/)
   if (boundary === -1) return { path: url, suffix: '' }
@@ -203,7 +219,7 @@ function githubTarget(
   image: boolean,
 ): string {
   const path = repoPath(absPath, repoRoot)
-  if (image) return `https://raw.githubusercontent.com/deepseek-ai/deepseek-harness-sdk/${repositoryRef}/${path}${suffix}`
+  if (image) return `https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/${repositoryRef}/${path}${suffix}`
   const kind = lstatSync(absPath).isDirectory() ? 'tree' : 'blob'
   const lineSuffix = line === undefined ? suffix : `#L${line}`
   return `${REPOSITORY_URL}/${kind}/${repositoryRef}/${path}${lineSuffix}`
@@ -264,7 +280,7 @@ export function rewriteMarkdown(source: string, options: RewriteMarkdownOptions)
   visit(tree)
 
   let projected = source
-  for (const replacement of replacements.sort((a, b) => { return b.start - a.start })) {
+  for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
     projected = projected.slice(0, replacement.start) + replacement.value + projected.slice(replacement.end)
   }
   return projected
@@ -286,6 +302,37 @@ export function addProjectionFrontmatter(markdown: string, page: Pick<DocsPage, 
   return `---\n${fields}\n---\n\n${markdown}`
 }
 
+/** The switcher line a canonical page carries so its GitHub reader can reach the other language. */
+const LANGUAGE_SWITCHER = /^(?:English \| \[中文\]\([^)]*\)|\[English\]\([^)]*\) \| 中文)$/
+
+/** The repository badge a canonical page carries for its GitHub reader. */
+const REPOSITORY_BADGE = /^\[!\[[^\]]*\]\(https:\/\/img\.shields\.io\/[^)]*\)\]\([^)]*\)$/
+
+/**
+ * Drop the lines that address a canonical page's GitHub reader.
+ *
+ * The site carries a locale switcher in its navigation bar and links the
+ * repository from every page, so projecting these lines would repeat both — the
+ * switcher as the first element under each heading.
+ *
+ * @param markdown Rewritten canonical Markdown content.
+ * @returns The content without the switcher line or the repository badge.
+ */
+function withoutRepositoryChrome(markdown: string): string {
+  const lines = markdown.split('\n')
+  const switcher = lines.findIndex(line => LANGUAGE_SWITCHER.test(line))
+  // Only the switcher introducing the page qualifies; further down the same
+  // text is prose or a sample rather than the page's own header.
+  if (switcher !== -1 && switcher < 8) {
+    lines.splice(switcher, lines[switcher + 1] === '' ? 2 : 1)
+  }
+  const badge = lines.findLastIndex(line => REPOSITORY_BADGE.test(line))
+  if (badge !== -1) {
+    lines.splice(lines[badge - 1] === '' ? badge - 1 : badge, lines[badge - 1] === '' ? 2 : 1)
+  }
+  return lines.join('\n')
+}
+
 /**
  * Select the Markdown rendered for one published page.
  *
@@ -294,7 +341,7 @@ export function addProjectionFrontmatter(markdown: string, page: Pick<DocsPage, 
  * @returns Full Markdown for ordinary pages or frontmatter-only Markdown for a locale home page.
  */
 export function projectedPageContent(markdown: string, page: DocsPage): string {
-  if (page.sidebar !== null) return markdown
+  if (page.sidebar !== null) return withoutRepositoryChrome(markdown)
   if (!markdown.startsWith('---\n')) {
     throw new Error(`project-doc-site: locale home source ${JSON.stringify(page.source)} must start with YAML frontmatter.`)
   }
@@ -363,7 +410,7 @@ export function projectDocs(): void {
   const routes = new Set<string>()
   /** Projected path to the repository file that claimed it, pages and images alike. */
   const claimed = new Map<string, string>()
-  const repositoryRef = process.env.GITHUB_SHA ?? 'master'
+  const repositoryRef = resolveRepositoryRef(process.env)
   rmSync(generatedRoot, { recursive: true, force: true })
 
   /** Reserve one projected path, refusing a second source for it. */

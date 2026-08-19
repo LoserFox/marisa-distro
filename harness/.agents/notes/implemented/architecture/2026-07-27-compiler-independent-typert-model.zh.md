@@ -22,7 +22,7 @@ PackageModel 识别 Cordis service、event、`@typert object` 引用对象和 `@
 
 [`dsh-typert-registry`](../../../../packages/typert/registry/README.md) 提供 `ctx.typert`，且只负责运行时注册：一个 contribution 原子携带 package-face reflection 与可选 Zod schema，并随 Cordis effect 撤销。注册表不分析 TypeScript，也不合并两个 face。JSON Schema 是对已注册 Zod schema 的按需投影。
 
-包产物发布仍通过 package exports 采用显式 opt-in。`WorkspaceTypertGenerator` 仅在被调用时校验所请求 face 的根目录产物协议：host face 必须通过面向用户的 subpath `package/typert` 暴露 `package/lib/typert.host.{js,d.ts}`，client face 必须通过 `package/client/typert` 暴露 `package/lib/typert.client.{js,d.ts}`；它不会修改这些 exports。后续的 [TypeRT Remote 设计](2026-08-02-typert-remote-method-calls.md) 为根目录 build、typecheck、lint 与文档类型检查增加了全仓 Host 契约 pass。对于已 opt-in 的 Host 包，该 pass 会在消费方解析两者之前生成本地反射产物与严格的 Host-for-Client `/remote` 契约。生成的本地声明将 `TYPERT` 类型保持为 `unknown`，因此业务包不依赖注册表。
+包产物发布仍通过 package exports 采用显式 opt-in。`WorkspaceTypertGenerator` 仅在被调用时校验所请求 face 的根目录产物协议：host face 必须通过面向用户的 subpath `package/typert` 暴露 `package/lib/typert.host.{js,d.ts}`，client face 必须通过 `package/client/typert` 暴露 `package/lib/typert.client.{js,d.ts}`；它不会修改这些 exports。后续的 [Typert Remote 设计](2026-08-02-typert-remote-method-calls.md) 为根目录 build、typecheck、lint 与文档类型检查增加了全仓 Host 约定 pass。对于已 opt-in 的 Host 包，该 pass 会在消费方解析两者之前生成本地反射产物与严格的 Host-for-Client `/remote` 约定。生成的本地声明将 `TYPERT` 类型保持为 `unknown`，因此业务包不依赖注册表。
 
 构建期的 `CordisCatalogProjector` 一次消费分析后的 `FaceModel` 与 `TypeGraph`，生成 `docs/cordis-catalog/events.md`、`docs/cordis-catalog/services.md`，以及为 `tool-cordis` 提交的静态 `SERVICE_API`、`EVENT_API` 和 `TYPE_API` catalog。`tool-cordis` 读取该静态 catalog，运行时不依赖 `ctx.typert`。[`dsh-typert-loader`](../../../../packages/typert/loader/README.md) 与注册表仍是独立的运行时路径：loader 监听 Cordis Loader 配置项生命周期事件，导入显式发布的 `./typert` host 产物，并通过 `ctx.typert` 注册；两者都不是当前 `cordis_inspect` catalog 的数据源。
 
@@ -50,4 +50,4 @@ Zod emitter 对支持的节点和各类 literal 逐类执行成功与失败 pars
 
 新增生成目标或静态检查可复用同一 TypeGraph，业务类目也可在 PackageModel 上扩展，而无需再次解析 AST。保留计算前类型和独立 face 的代价是模型比打平后的 schema 更复杂，emitter 必须显式声明支持范围并对缺失能力失败。
 
-包级显式 opt-in 使产物发布与 exports 由各包自行管理。仓库编排仍可为每个已 opt-in 的包运行全仓 Host 契约 pass；该 pass 仍由后续 Remote Gateway Agent Note 负责说明。静态 Cordis catalog 可从标准模型复现，同时不把 `tool-cordis` 与运行时注册表状态耦合。`ctx.typert` 只反映当前运行时中已挂载的产物；对于消费方直接导入后仍持有的 Zod 实例，卸载流程无法控制。
+包级显式 opt-in 使产物发布与 exports 由各包自行管理。仓库编排仍可为每个已 opt-in 的包运行全仓 Host 约定 pass；该 pass 仍由后续 Remote Gateway Agent Note 负责说明。静态 Cordis catalog 可从标准模型复现，同时不把 `tool-cordis` 与运行时注册表状态耦合。`ctx.typert` 只反映当前运行时中已挂载的产物；对于消费方直接导入后仍持有的 Zod 实例，卸载流程无法控制。

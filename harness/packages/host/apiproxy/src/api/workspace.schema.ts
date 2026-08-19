@@ -31,14 +31,10 @@ export const workspaceListValueSchema = z.object({
   archivedSessionIds: z.array(sessionIdSchema),
 }) satisfies z.ZodType<Wire<ResponseValue<'workspace.list'>>>
 
-/** workspace.create request payload: exactly one of path/name (the contract's create spellings). */
+/** workspace.create request payload: the existing directory to adopt. */
 export const workspaceCreateRequestSchema = z.object({
-  path: z.string().optional(),
-  name: z.string().optional(),
-}).refine(
-  payload => (payload.path === undefined) !== (payload.name === undefined),
-  { message: 'workspace.create requires exactly one of path / name' },
-) satisfies z.ZodType<Wire<RequestPayload<'workspace.create'>>>
+  path: z.string(),
+}) satisfies z.ZodType<Wire<RequestPayload<'workspace.create'>>>
 
 /** workspace.create response value. */
 export const workspaceCreateValueSchema = z.object({
@@ -69,6 +65,17 @@ export const workspaceDeleteRequestSchema = z.object({
 export const workspaceDeleteValueSchema = z.object({
   deleted: z.literal(true),
 }) satisfies z.ZodType<Wire<ResponseValue<'workspace.delete'>>>
+
+/** workspace.insertBefore request payload (anchor omitted = append to end). */
+export const workspaceInsertBeforeRequestSchema = z.object({
+  workspaceId: workspaceIdSchema,
+  beforeWorkspaceId: workspaceIdSchema.optional(),
+}) satisfies z.ZodType<Wire<RequestPayload<'workspace.insertBefore'>>>
+
+/** workspace.insertBefore response value: the complete durable display order. */
+export const workspaceInsertBeforeValueSchema = z.object({
+  workspaceIds: z.array(workspaceIdSchema),
+}) satisfies z.ZodType<Wire<ResponseValue<'workspace.insertBefore'>>>
 
 /** workspace.insertSessionBefore request payload (anchor omitted = append to end). */
 export const workspaceInsertSessionBeforeRequestSchema = z.object({

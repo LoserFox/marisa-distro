@@ -1,6 +1,7 @@
 /**
- * Generic per-session projection value store (session-projection RFC, push
- * model): the host is the only computation site; the client holds finished
+ * Generic per-session projection value store (push model; see the
+ * session-projection subsystem page, docs/subsystems/session-projection.md):
+ * the host is the only computation site; the client holds finished
  * whole values per key — `key → { value, seq }` — seeded by the history tail
  * page's projections block and updated by `session/projection` push frames,
  * under the single rule **higher seq wins**. No client-side domain folding
@@ -12,15 +13,17 @@ import type { ObservableSnapshot } from '../contract/store.ts'
 import { Notifier } from './notifier.ts'
 
 // The single projection type table, typed end to end (host unit, wire block,
-// client store, React hook) — the interface package's pure-type outlet
+// client store, React hook) — the Service Definition package's pure-type outlet
 // (`/types`, zero imports), never the package root: the root's dsh-agent →
 // dsh-session chain would drag the host `Context.sessions` merge into the
 // client program (one program must not hold both sides). No second
-// client-side "views" table (user ruling, RFC Alternatives).
+// client-side "views" table (rejected in the Alternatives of
+// .agents/notes/proposed/architecture/2026-07-27-session-projection-and-command-log.md).
 export type { SessionProjectionMap } from '@deepseek-ai/dsh-session-projection/types'
 
 /**
- * The fifth framework hook seat (session-projection RFC): key-addressed
+ * The fifth framework hook seat (see the session-projection subsystem page,
+ * docs/subsystems/session-projection.md): key-addressed
  * projection reader delivered through the standard kit. `undefined` uniformly
  * means capability absent — host unit unmounted, or no baseline/frame has
  * carried the key yet. The selector overload mirrors useSession (per-key uSES
@@ -187,7 +190,7 @@ export class ProjectionValueStore {
       channel = {
         notifier,
         face: {
-          getSnapshot: () => { return this.rows.get(key)?.value },
+          getSnapshot: () => this.rows.get(key)?.value,
           subscribe: listener => notifier.subscribe(listener),
         },
       }

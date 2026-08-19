@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-04-web-slash-command-fuzzy-discovery.md
 2026-08-04-web-slash-command-fuzzy-discovery.md: 8d7fe88f8d19a6edc7b51e63578c468df085c238
-2026-08-04-web-slash-command-fuzzy-discovery.zh.md: d3efdc23351a1b50853ee76fb731aee046004750
+2026-08-04-web-slash-command-fuzzy-discovery.zh.md: a96f9c984e32dd777950b9f9d8594b3a9c8b7c17

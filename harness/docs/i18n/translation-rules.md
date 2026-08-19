@@ -2,7 +2,7 @@
 
 English | [中文](translation-rules.zh.md)
 
-How to translate between the two sides of a documentation pair in this repo. Both languages carry equal authority ([README.md](README.md)): a change is authored in either language, and that side is the source for that update — these rules govern producing or updating the counterpart. They bind humans and agents equally; the committed agent workflow that applies them is [.agents/skills/dsh-translate-docs](../../.agents/skills/dsh-translate-docs/SKILL.md). Rule levels follow RFC 2119 usage: **MUST** / **MUST NOT** are gate- or review-blocking; **SHOULD** needs a stated reason to deviate; **MAY** is discretionary.
+How to translate between the two sides of a documentation pair in this repo. Both languages carry equal authority ([README.md](README.md)): a change is authored in either language, and that side is the source for that update — these rules govern producing or updating the counterpart. They bind humans and agents equally. Routine agent work translates the changed content directly in one terminology-guided pass; the extended [.agents/skills/dsh-translate-docs](../../.agents/skills/dsh-translate-docs/SKILL.md) workflow runs only when the user explicitly invokes it. Rule levels follow RFC 2119 usage: **MUST** / **MUST NOT** are gate- or review-blocking; **SHOULD** needs a stated reason to deviate; **MAY** is discretionary.
 
 ## Faithfulness
 
@@ -13,7 +13,7 @@ How to translate between the two sides of a documentation pair in this repo. Bot
 ## Voice
 
 - The register is calibrated by [style-samples.md](style-samples.md) — human-approved gold pairs, one per document genre. The counterpart MUST match the target-language side of the nearest sample; where its voice and a prose voice rule disagree, the sample wins. Chinese targets use institutional technical Chinese; English targets use concise professional developer prose.
-- Write as a native technical author restating the content, not as a translator transposing sentences. Then verify against the source clause by clause: nothing added, nothing dropped — fluency never justifies losing a clause.
+- Write as a native technical author restating the content, not as a translator transposing sentences, while preserving every source clause: nothing added, nothing dropped — fluency never justifies losing a clause.
 - Give sentences an explicit actor when the target language would otherwise obscure it; for Chinese, replace vague passives or abstract subjects with the actual actor (系统、门禁、评审人).
 - Prefer established target-language engineering idiom over calques (误报／漏检 for false positive/negative, 执行红线 for enforcement frontier); localize metaphors instead of transplanting them, and unpack noun chains where the target language requires it.
 - Split long paragraphs by semantic unit — one idea per paragraph. Paragraph boundaries MAY differ from the source; the structural signature does not count paragraphs.
@@ -28,7 +28,7 @@ The pairing gate checks heading depths, fenced code blocks, table row and column
 - tables (same columns, same row order; header cells translated per terminology),
 - fenced code blocks — **byte-identical, including comments**; the pairing signature compares their info strings and contents, and ` ```ts ` blocks compile under `doc-typecheck`,
 - inline code spans (commands, flags, config keys, file paths, event names, API names, version numbers) — verbatim, never translated or reformatted,
-- links and anchors: every relative link MUST point at the same target in both files — by convention the `.md` path, not the `.zh.md` sibling — so links never dangle when one pair lands before its neighbors. The ONLY zh-specific link is the language switcher. Link TEXT is translated; the target is not.
+- links and anchors: every relative link MUST point at the same target in both files — by convention the `.md` path, not the `.zh.md` sibling — so links never dangle when one pair lands before its neighbors. The ONLY zh-specific link is the language switcher. A README rendered outside GitHub MAY use the canonical public repository URL to its exact counterpart as documented in [README.md](README.md). Link TEXT is translated; the target is not.
 
 The repo's Markdown conventions apply to `.zh.md` files unchanged: one physical line per paragraph (`verify-md-wrap`), resolving relative links (`verify-md-links`), exactly one trailing newline.
 
@@ -54,8 +54,7 @@ These rules govern the Chinese side; the English side follows the repo's normal 
 ## Quality bar
 
 - A pair is done when a bilingual engineer reading either file alone gets everything a reader of the other gets — same facts, same caveats, same tone — and nothing extra.
-- Before handing off, self-check the result against this file and re-read the counterpart ALONE, without the source side by side; awkward phrasing is easier to hear without the source anchoring you.
-- Run `pnpm run verify-translation-pairing` and the rest of `doc-sync` for records, switchers, heading depths, code blocks, table row and column counts, list kinds, ordered-list starts, list item counts, links, and repository Markdown rules. Manually verify list and table order, noncanonical list numbering, inline code, emphasis, meaning, terminology, and tone.
+- Run `pnpm run verify-translation-pairing` and the rest of `doc-sync` for records, switchers, heading depths, code blocks, table row and column counts, list kinds, ordered-list starts, list item counts, links, and repository Markdown rules. Human review owns list and table order, noncanonical list numbering, inline code, emphasis, meaning, terminology, and tone.
 
 ## References
 

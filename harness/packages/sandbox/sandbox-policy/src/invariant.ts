@@ -1,6 +1,6 @@
 /** Package-owned session-event invariants for sandbox policy. @module @deepseek-ai/dsh-sandbox-policy/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import { SANDBOX_MODES } from './session-mode.ts'
@@ -13,7 +13,7 @@ export const name = 'sandbox-policy-invariant'
 export const inject = ['invariants']
 
 /* jscpd:ignore-start -- package companions share replay and dispatch plumbing */
-/** Validate the package-owned event shape and ignore unrelated events. */
+/** Validate the package-owned event fields and ignore unrelated events. */
 function validateEvent(event: SessionEvent, fail: InvariantFailure): void {
   if (event.type === 'sandbox/mode' && !SANDBOX_MODES.includes(event.data.mode)) {
     fail(`sandbox/mode carries unknown mode ${JSON.stringify(event.data.mode)}`)

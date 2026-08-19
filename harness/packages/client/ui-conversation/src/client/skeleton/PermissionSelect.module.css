@@ -51,6 +51,9 @@
 }
 
 .chevron {
+  /* inline-flex, not inline: an inline seat reserves baseline descent under
+     the svg and floats the glyph off-center in the 28px trigger. */
+  display: inline-flex;
   flex: 0 0 auto;
   color: var(--dsw-alias-label-caption);
   transition: transform 120ms ease;

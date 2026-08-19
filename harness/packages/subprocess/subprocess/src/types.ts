@@ -1,5 +1,5 @@
 /**
- * Vocabulary for the subprocess seam: fully-specified spawn requests with
+ * Vocabulary for the subprocess Service Definition: fully-specified spawn requests with
  * Node-shaped per-stream stdio modes, bounded collected output with spill
  * recovery, raw piped streams, and tree-scoped termination. Command
  * defaulting, shell semantics, protocol framing, and presentation belong to
@@ -69,7 +69,7 @@ export interface SubprocessStdio {
 /**
  * A fully-specified spawn request. This seam applies no defaults: every
  * disposition, limit, and directory is explicit, so the caller's own config —
- * not a hidden subprocess-service default — decides them (the `dsh-bash`
+ * not a hidden subprocess-service default — decides them (the `dsh-shell`
  * request/spec split is the owning template).
  */
 export interface SubprocessSpawnSpec {
@@ -191,4 +191,74 @@ export interface SubprocessHandle {
    * @returns `true` when the tree exited, `false` when the signal aborted first.
    */
   waitForExit(signal?: AbortSignal): Promise<boolean>
+}
+
+/**
+ * Signals supported by the terminal-process primitive. Kept member-identical
+ * to `TerminalSignal` in `@deepseek-ai/dsh-terminal` without a cross-seam dependency;
+ * change both together.
+ */
+export type SubprocessTerminalSignal = 'SIGINT' | 'SIGTERM' | 'SIGKILL' | 'SIGTSTP' | 'SIGHUP'
+
+/** A fully specified terminal-process spawn. */
+export interface SubprocessTerminalSpawnSpec {
+  /** Executable and arguments; `argv[0]` is the program. */
+  argv: readonly string[]
+  /** Working directory in this subprocess provider's execution world. */
+  cwd: string
+  /** Explicit environment layered after the provider's ambient scrub. */
+  env?: Record<string, string> | undefined
+  /** Initial terminal row count. */
+  rows: number
+  /** Initial terminal column count. */
+  cols: number
+  /** TERM-to-KILL cleanup grace for the complete terminal session. */
+  graceMs: number
+  /** Cancellation of terminal allocation; a published handle owns its later lifetime. */
+  signal?: AbortSignal | undefined
+}
+
+/** Current foreground process-group facts for one terminal. */
+export interface SubprocessTerminalForeground {
+  /** Foreground process-group id published by the terminal driver. */
+  processGroupId: number
+  /** Whether the provider can currently prove that group is waiting on terminal input. */
+  inputWaiting: boolean
+}
+
+/**
+ * One live terminal process and its owned OS session. Terminal allocation,
+ * foreground-group inspection/signalling, and session-tree cleanup are one
+ * deep subprocess primitive because none can be reconstructed from ordinary
+ * piped stdio without substrate-specific process control.
+ */
+export interface SubprocessTerminalHandle {
+  /** Top-level terminal process id. */
+  readonly pid: number
+  /** UTF-8 terminal output bytes in delivery order; ends after queued output when the terminal exits. */
+  readonly output: Readable
+  /** Resolves when the top-level process exits; rejects only for a live transport failure. */
+  readonly done: Promise<SubprocessOutcome>
+  /**
+   * Write text to the terminal input.
+   * @param data - text to deliver without implicit newline conversion.
+   */
+  write(data: string): Promise<void>
+  /**
+   * Inspect the current foreground process group.
+   * @returns its id and input-wait fact, or undefined when no foreground group can be resolved.
+   */
+  inspectForeground(): Promise<SubprocessTerminalForeground | undefined>
+  /**
+   * Deliver a signal to the current foreground process group.
+   * @param signal - permitted terminal signal.
+   * @returns the exact group id that received it.
+   */
+  signalForeground(signal: SubprocessTerminalSignal): Promise<number>
+  /**
+   * Idempotently terminate every terminal-session member the provider can still observe and await quiescence.
+   * After settlement, no write, inspection, or signal call remains in flight.
+   * Providers document substrate-specific observability limits.
+   */
+  terminate(): Promise<void>
 }

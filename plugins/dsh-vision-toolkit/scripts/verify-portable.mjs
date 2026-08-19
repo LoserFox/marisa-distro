@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { access, readFile, readdir, stat } from 'node:fs/promises'
+import { access, cp, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -59,13 +60,74 @@ function pngDimensions(bytes) {
   }
 }
 
+function run(command, args, cwd) {
+  return spawnSync(command, args, { cwd, encoding: 'utf8' })
+}
+
+async function verifyWindowsCheckout() {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), 'dsh-vision-autocrlf-'))
+  const seed = join(temporaryRoot, 'seed')
+  const checkout = join(temporaryRoot, 'checkout')
+  try {
+    await mkdir(join(seed, 'scripts'), { recursive: true })
+    await mkdir(join(seed, 'vendor'), { recursive: true })
+    await mkdir(join(seed, 'assets'), { recursive: true })
+    await mkdir(join(seed, 'patches'), { recursive: true })
+    await cp(join(root, '.gitattributes'), join(seed, '.gitattributes'))
+    await cp(join(root, 'package.json'), join(seed, 'package.json'))
+    await cp(join(root, 'scripts', 'upstream-manifest.mjs'), join(seed, 'scripts', 'upstream-manifest.mjs'))
+    await cp(join(root, 'scripts', 'verify-skill.mjs'), join(seed, 'scripts', 'verify-skill.mjs'))
+    await cp(join(root, 'vendor', 'agent-vision-toolkit'), join(seed, 'vendor', 'agent-vision-toolkit'), { recursive: true })
+    await cp(join(root, 'assets', 'skill'), join(seed, 'assets', 'skill'), { recursive: true })
+    await cp(join(root, 'patches', 'vision-tools-dsh.patch'), join(seed, 'patches', 'vision-tools-dsh.patch'))
+    await writeFile(join(seed, 'autocrlf-probe.txt'), 'line one\nline two\n')
+
+    const setupCommands = [
+      ['init', '--quiet'],
+      ['config', 'user.name', 'DSH portable verification'],
+      ['config', 'user.email', 'portable@example.invalid'],
+      ['config', 'core.autocrlf', 'false'],
+      ['add', '.'],
+      ['commit', '--quiet', '-m', 'checkout fixture'],
+    ]
+    for (const args of setupCommands) {
+      const result = run('git', args, seed)
+      if (result.status !== 0) {
+        failures.push(`could not prepare Windows checkout fixture: ${(result.stderr || result.stdout).trim()}`)
+        return
+      }
+    }
+
+    const clone = run('git', ['-c', 'core.autocrlf=true', 'clone', '--no-local', '--quiet', seed, checkout], temporaryRoot)
+    if (clone.status !== 0) {
+      failures.push(`core.autocrlf=true checkout failed: ${(clone.stderr || clone.stdout).trim()}`)
+      return
+    }
+    const probe = await readFile(join(checkout, 'autocrlf-probe.txt'))
+    check(probe.includes(Buffer.from('\r\n')), 'core.autocrlf=true checkout fixture did not exercise CRLF conversion')
+
+    const manifest = run(process.execPath, ['scripts/upstream-manifest.mjs'], checkout)
+    if (manifest.status !== 0) {
+      failures.push(`vendored upstream is not byte-stable under core.autocrlf=true: ${(manifest.stderr || manifest.stdout).trim()}`)
+    }
+    const skill = run(process.execPath, ['scripts/verify-skill.mjs'], checkout)
+    if (skill.status !== 0) {
+      failures.push(`adapted Skill is not byte-stable under core.autocrlf=true: ${(skill.stderr || skill.stdout).trim()}`)
+    }
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true })
+  }
+}
+
 const packagePath = join(root, 'package.json')
 const pkg = JSON.parse(await readFile(packagePath, 'utf8'))
+const changelog = await readFile(join(root, 'CHANGELOG.md'), 'utf8')
+const latestRelease = changelog.match(/^## \[(\d+\.\d+\.\d+)\]/mu)?.[1]
 
 check(pkg.name === '@dsh-external/dsh-vision-toolkit', 'package name must stay @dsh-external/dsh-vision-toolkit')
-check(pkg.version === '0.1.2', 'package version and the latest release notes must stay aligned')
-check(pkg.repository?.url === 'git+https://github.com/dsh-external/dsh-vision-toolkit.git', 'repository URL is missing or mismatched')
-check(pkg.bugs?.url === 'https://github.com/dsh-external/dsh-vision-toolkit/issues', 'issue tracker URL is missing or mismatched')
+check(pkg.version === latestRelease, 'package version and the latest release notes must stay aligned')
+check(pkg.repository?.url === 'git+https://github.com/Anionex/dsh-vision-toolkit.git', 'repository URL is missing or mismatched')
+check(pkg.bugs?.url === 'https://github.com/Anionex/dsh-vision-toolkit/issues', 'issue tracker URL is missing or mismatched')
 check(pkg.homepage === 'https://agent-vision.anionex.me', 'homepage URL is missing or mismatched')
 check(pkg.funding === 'https://ifdian.net/a/anionex', 'funding metadata is missing or mismatched')
 check(pkg.engines?.node === '^22.19.0 || >=24.0.0', 'Node.js engine range must match DeepSeek Harness')
@@ -74,7 +136,11 @@ check(pkg.dsh?.client?.platform === 'web', 'dsh.client.platform must publish the
 check(pkg.dshClient === undefined, 'legacy top-level dshClient metadata must remain absent')
 check(pkg.exports?.['./client']?.default === './lib/client.js', 'the Web client export must resolve to lib/client.js')
 check(Array.isArray(pkg.files) && pkg.files.includes('assets'), 'package files must include README visual assets')
-check(pkg.scripts?.['verify:portable'] === 'node scripts/upstream-manifest.mjs && node scripts/verify-portable.mjs', 'verify:portable script is missing or changed')
+check(pkg.scripts?.['verify:portable'] === 'node scripts/python-bootstrap.mjs && node scripts/upstream-manifest.mjs && node scripts/verify-skill.mjs && node scripts/verify-portable.mjs', 'verify:portable script is missing or changed')
+check(pkg.peerDependencies?.['@deepseek-ai/schemastery'] === '^3.18.1', '@deepseek-ai/schemastery must be a host-provided peer dependency')
+check(pkg.peerDependencies?.schemastery === undefined, 'unscoped schemastery peer dependency must remain absent')
+check(pkg.peerDependencies?.['@deepseek-ai/cordis'] === '^4.0.1', '@deepseek-ai/cordis must be a host-provided peer dependency')
+check(pkg.peerDependencies?.cordis === undefined, 'unscoped cordis peer dependency must remain absent')
 
 const dependencyGroups = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']
 for (const group of dependencyGroups) {
@@ -87,6 +153,7 @@ for (const group of dependencyGroups) {
 }
 
 const requiredFiles = [
+  '.gitattributes',
   'LICENSE',
   'README.md',
   'README.zh.md',
@@ -102,20 +169,44 @@ const requiredFiles = [
   '.github/ISSUE_TEMPLATE/feature_request.yml',
   '.github/ISSUE_TEMPLATE/question.yml',
   '.github/workflows/ci.yml',
-  '.github/workflows/pages.yml',
   'index.html',
   'cordis.patch.yml',
+  'pnpm-lock.yaml',
+  'tsconfig.client.public.json',
   'lib/index.js',
   'lib/types/index.d.ts',
   'lib/client.js',
-  'assets/hero.png',
+  'assets/hero-v2.png',
   'assets/social-preview.png',
+  'assets/skill/SKILL.md',
+  'assets/skill/UPSTREAM.json',
+  'assets/skill/references/restore-ui.md',
+  'patches/vision-tools-dsh.patch',
   'runtime/requirements.lock',
   'vendor/agent-vision-toolkit/UPSTREAM_MANIFEST.json',
 ]
 for (const path of requiredFiles) {
   check(await exists(join(root, path)), `required file is missing: ${path}`)
 }
+
+const publicRepositoryFiles = [
+  '.github/ISSUE_TEMPLATE/config.yml',
+  'CHANGELOG.md',
+  'README.md',
+  'README.zh.md',
+  'SUPPORT.md',
+  'index.html',
+  'package.json',
+]
+for (const path of publicRepositoryFiles) {
+  const content = await readFile(join(root, path), 'utf8')
+  check(
+    !content.includes('https://github.com/dsh-external/dsh-vision-toolkit'),
+    `${path} still links to the retired dsh-external repository`,
+  )
+}
+
+await verifyWindowsCheckout()
 
 const declaredEntrypoints = [
   pkg.main,
@@ -139,7 +230,7 @@ for (const markdownPath of ['README.md', 'README.zh.md', 'CONTRIBUTING.md', 'SUP
 }
 
 const imageExpectations = new Map([
-  ['assets/hero.png', { width: 1600, height: 720 }],
+  ['assets/hero-v2.png', { width: 1672, height: 941 }],
   ['assets/social-preview.png', { width: 1280, height: 640 }],
 ])
 for (const [path, expected] of imageExpectations) {
@@ -170,17 +261,17 @@ check(upstreamAdapter.includes('--use-mock-keychain'), 'HTML screenshot adapter 
 check(upstreamAdapter.includes('--user-data-dir='), 'HTML screenshot adapter is missing an isolated --user-data-dir')
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-const pack = spawnSync(npm, ['pack', '--dry-run', '--ignore-scripts', '--json'], {
-  cwd: root,
-  encoding: 'utf8',
-})
+const packArgs = ['pack', '--dry-run', '--ignore-scripts', '--json']
+const pack = process.platform === 'win32'
+  ? spawnSync('cmd.exe', ['/d', '/s', '/c', npm, ...packArgs], { cwd: root, encoding: 'utf8' })
+  : spawnSync(npm, packArgs, { cwd: root, encoding: 'utf8' })
 if (pack.status !== 0) {
   failures.push(`npm pack --dry-run failed: ${(pack.stderr || pack.stdout).trim()}`)
 } else {
   try {
     const result = JSON.parse(pack.stdout)
     const packedFiles = new Set((result[0]?.files ?? []).map(file => file.path))
-    for (const path of ['lib/index.js', 'lib/types/index.d.ts', 'lib/client.js', 'cordis.patch.yml', 'assets/hero.png', 'assets/social-preview.png']) {
+    for (const path of ['lib/index.js', 'lib/types/index.d.ts', 'lib/client.js', 'cordis.patch.yml', 'assets/hero-v2.png', 'assets/social-preview.png', 'assets/skill/SKILL.md', 'assets/skill/UPSTREAM.json', 'assets/skill/references/restore-ui.md', 'patches/vision-tools-dsh.patch']) {
       check(packedFiles.has(path), `dry-run tarball is missing ${path}`)
     }
   } catch (error) {

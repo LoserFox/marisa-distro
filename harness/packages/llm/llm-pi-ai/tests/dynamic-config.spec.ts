@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import LlmService, { LlmAdapter } from '@deepseek-ai/dsh-llm'
+import LlmRuntime, { LlmAdapter } from '@deepseek-ai/dsh-llm'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { CredentialsLocal } from '@deepseek-ai/dsh-credentials-local'
+import { LocalCredentialProvider } from '@deepseek-ai/dsh-credentials-local'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
-import { SettingsLocal } from '@deepseek-ai/dsh-settings-local'
+import { FileSettingsProvider } from '@deepseek-ai/dsh-settings-file'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import { assemble } from './assemble.ts'
 import { closeMockServers, mockServer, textEvents } from './mock-server.ts'
@@ -42,9 +42,9 @@ async function boot(dir: string, config: LlmPiAi.Config): Promise<Context> {
   cleanups.push(async () => {
     await ctx.fiber.dispose()
   })
-  await ctx.plugin(LlmService)
-  await ctx.plugin(SettingsLocal, { path: join(dir, 'settings.yaml'), watch: false })
-  await ctx.plugin(CredentialsLocal, { path: join(dir, '.credentials.yaml'), watch: false })
+  await ctx.plugin(LlmRuntime)
+  await ctx.plugin(FileSettingsProvider, { path: join(dir, 'settings.yaml'), watch: false })
+  await ctx.plugin(LocalCredentialProvider, { path: join(dir, '.credentials.yaml'), watch: false })
   await ctx.plugin(LlmPiAi, config)
   return ctx
 }

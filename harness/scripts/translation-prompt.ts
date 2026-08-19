@@ -169,7 +169,7 @@ function unescapeResponseBody(value: string): string {
   }).join('\n')
 }
 
-/** Serialize a response in the exact escaped three-section shape the prompt requests. */
+/** Serialize a response in the exact escaped three-section format the prompt requests. */
 export function renderTranslationResponse(response: TranslationResponse): string {
   return RESPONSE_SECTIONS.map(section => `<${section}>\n${escapeResponseBody(response[section])}\n</${section}>`).join('\n\n')
 }
@@ -178,7 +178,7 @@ export function renderTranslationResponse(response: TranslationResponse): string
  * Parse the three-section response. Sections must each appear exactly once
  * and in order; escaped delimiter lines in Markdown bodies are restored.
  * A fenced ```xml wrapper around the whole response is tolerated, matching
- * the shape some models echo back from the prompt's own example.
+ * the wrapper some models copy from the prompt's own example.
  */
 export function parseTranslationResponse(text: string): TranslationResponse {
   let body = text.trim()

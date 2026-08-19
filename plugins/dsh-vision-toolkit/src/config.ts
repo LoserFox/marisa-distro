@@ -6,32 +6,69 @@
  * @module dsh-vision-toolkit/config
  */
 
-import z from 'schemastery'
-import type Schema from 'schemastery'
+import z from '@deepseek-ai/schemastery'
+import type Schema from '@deepseek-ai/schemastery'
 import { credentialRef, type CredentialRef } from '@deepseek-ai/dsh-credentials'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { VisionToolkitError } from './errors.ts'
+import {
+  BUILT_IN_FREE_VISION_BASE_URL,
+  BUILT_IN_FREE_VISION_CREDENTIAL,
+  BUILT_IN_FREE_VISION_MODEL,
+} from './defaults.ts'
+
+export {
+  BUILT_IN_FREE_VISION_BASE_URL,
+  BUILT_IN_FREE_VISION_CREDENTIAL,
+  BUILT_IN_FREE_VISION_KEY,
+  BUILT_IN_FREE_VISION_MODEL,
+} from './defaults.ts'
 
 /** Settings document namespace owned by this plugin. */
 export const VISION_TOOLKIT_SETTINGS_NAMESPACE = settingsNamespace('vision-toolkit')
 
+/** Browser-compatible default shared with the vendored Python client. */
+export const DEFAULT_VISION_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+
+const BUILT_IN_FREE_VISION_MODEL_ALIASES = new Set([
+  BUILT_IN_FREE_VISION_MODEL,
+  'gemini-3.7-flash',
+  'qwen/qwen3.6-27b',
+  'qwen3.6-27b',
+  'gemma-4-26b-a4b-it',
+  'gemma-4-26b',
+  '@cf/google/gemma-4-26b-a4b-it',
+  '@cf/moondream/moondream3.1-9B-A2B',
+  'moondream',
+  'moondream-3.1',
+  'moondream3.1-9B-A2B',
+])
+
 /** Full user-facing configuration; every field defaults at the schema boundary. */
 export interface VisionToolkitConfig {
   provider?: {
-    /** OpenAI-compatible chat/completions base URL. */
+    /** Provider API base URL. */
     baseUrl?: string
+    /** Whether the endpoint is anonymous or uses a DSH Credential. */
+    authMode?: 'none' | 'credential'
     /** DSH Credential reference holding the API key (an environment-style name). */
     credential?: string
     /** Multimodal model name. */
     model?: string
+    /** Vision request protocol: OpenAI Chat Completions or Anthropic Messages. */
+    protocol?: 'openai' | 'anthropic'
+    /** Anthropic thinking field behavior; `omit` leaves model defaults untouched. */
+    anthropicThinking?: 'omit' | 'disabled' | 'adaptive'
+    /** Outbound User-Agent for provider requests and connection tests. */
+    userAgent?: string
   }
   /** Vision output language (`zh` or `en`). */
   language?: 'zh' | 'en'
   /** Single remote/upstream call budget in milliseconds. */
   timeoutMs?: number
-  /** Maximum accepted input image size in bytes. */
+  /** Maximum input image size in bytes; larger images are auto-compressed (lossless first). */
   maxImageBytes?: number
-  /** Maximum decoded pixel count per input image. */
+  /** Maximum decoded pixel count per input image; larger images are auto-downscaled to fit. */
   maxImagePixels?: number
   /** In-flight tool execution cap per session. */
   concurrency?: number
@@ -45,19 +82,44 @@ export interface VisionToolkitConfig {
   }
   /** Extra directories (besides the workspace) inputs may come from. */
   allowedDirs?: string[]
+  /**
+   * Image-input variants: sibling model-selector entries for every model the
+   * host positively declares text-only. A variant declares image input, so
+   * pasted images keep the native attachment flow (composer thumbnail and
+   * durable session image), and the plugin rewrites image blocks into Vision
+   * Toolkit descriptions only on the wire to the model.
+   */
+  imageInputVariants?: {
+    /** Whether variant routes are registered at all (default true). */
+    enabled?: boolean
+    /** Restrict wrapped upstream routes by provider id; empty wraps every eligible route. */
+    providers?: string[]
+    /**
+     * Whether the browser paste integration automatically switches the Session
+     * to the image-input variant of a text-only model before the paste, so
+     * pasted images keep the native attachment flow with no manual model
+     * change. The variant still exposes a workspace path to the model; off
+     * keeps the path-only takeover instead (default true).
+     */
+    autoSwitch?: boolean
+  }
 }
 
 /** Configuration schema with the documented P0 defaults. */
 export const Config: Schema<VisionToolkitConfig> = z.object({
   provider: z.object({
-    baseUrl: z.string().default('https://api.inferera.com/v1'),
-    credential: z.string().default('VISION_API_KEY'),
-    model: z.string().default('gemini-3.6-flash'),
+    baseUrl: z.string().default(BUILT_IN_FREE_VISION_BASE_URL),
+    authMode: z.union(['none', 'credential'] as const).default('credential'),
+    credential: z.string().default(BUILT_IN_FREE_VISION_CREDENTIAL),
+    model: z.string().default(BUILT_IN_FREE_VISION_MODEL),
+    protocol: z.union(['openai', 'anthropic'] as const).default('openai'),
+    anthropicThinking: z.union(['omit', 'disabled', 'adaptive'] as const).default('omit'),
+    userAgent: z.string().default(DEFAULT_VISION_USER_AGENT),
   }),
   language: z.union(['zh', 'en'] as const).default('zh'),
-  timeoutMs: z.number().default(60000),
-  maxImageBytes: z.number().default(10485760),
-  maxImagePixels: z.number().default(40000000),
+  timeoutMs: z.number().default(30000),
+  maxImageBytes: z.number().default(4194304),
+  maxImagePixels: z.number().default(20000000),
   concurrency: z.number().default(4),
   runtime: z.object({
     mode: z.union(['managed', 'external'] as const).default('managed'),
@@ -65,14 +127,23 @@ export const Config: Schema<VisionToolkitConfig> = z.object({
     python: z.string(),
   }),
   allowedDirs: z.array(z.string()).default([]),
+  imageInputVariants: z.object({
+    enabled: z.boolean().default(true),
+    providers: z.array(z.string()).default([]),
+    autoSwitch: z.boolean().default(true),
+  }),
 })
 
 /** Configuration after static validation, with every default materialized. */
 export interface ResolvedVisionToolkitConfig {
   provider: {
     baseUrl: string
+    authMode: 'none' | 'credential'
     credential: CredentialRef
     model: string
+    protocol: 'openai' | 'anthropic'
+    anthropicThinking: 'omit' | 'disabled' | 'adaptive'
+    userAgent: string
   }
   language: 'zh' | 'en'
   timeoutMs: number
@@ -85,6 +156,11 @@ export interface ResolvedVisionToolkitConfig {
     python?: string
   }
   allowedDirs: string[]
+  imageInputVariants: {
+    enabled: boolean
+    providers: string[]
+    autoSwitch: boolean
+  }
 }
 
 const MAX_TIMEOUT_MS = 600000
@@ -103,37 +179,53 @@ const MAX_CONCURRENCY = 16
 export function resolveConfig(config: VisionToolkitConfig = {}): ResolvedVisionToolkitConfig {
   const provider = config.provider ?? {}
   const runtime = config.runtime ?? {}
-  const baseUrl = (provider.baseUrl ?? 'https://api.inferera.com/v1').trim().replace(/\/+$/, '')
+  const baseUrl = (provider.baseUrl ?? BUILT_IN_FREE_VISION_BASE_URL).trim().replace(/\/+$/, '')
   if (!/^https?:\/\//i.test(baseUrl) || baseUrl.length <= 'https://'.length) {
     throw new VisionToolkitError('config', 'provider.baseUrl must be an http(s) URL')
   }
+  const authMode = provider.authMode ?? 'credential'
+  if (authMode !== 'none' && authMode !== 'credential') {
+    throw new VisionToolkitError('config', 'provider.authMode must be "none" or "credential"')
+  }
   let credential: CredentialRef
   try {
-    credential = credentialRef((provider.credential ?? 'VISION_API_KEY').trim())
+    credential = credentialRef((provider.credential ?? BUILT_IN_FREE_VISION_CREDENTIAL).trim())
   } catch (error) {
     throw new VisionToolkitError(
       'config',
-      `provider.credential "${provider.credential ?? 'VISION_API_KEY'}" is not a valid credential reference`,
+      `provider.credential "${provider.credential ?? BUILT_IN_FREE_VISION_CREDENTIAL}" is not a valid credential reference`,
       { cause: error },
     )
   }
-  const model = (provider.model ?? 'gemini-3.6-flash').trim()
+  const model = (provider.model ?? BUILT_IN_FREE_VISION_MODEL).trim()
   if (model.length === 0) {
     throw new VisionToolkitError('config', 'provider.model must not be empty')
+  }
+  const protocol = provider.protocol ?? 'openai'
+  if (protocol !== 'openai' && protocol !== 'anthropic') {
+    throw new VisionToolkitError('config', 'provider.protocol must be "openai" or "anthropic"')
+  }
+  const anthropicThinking = provider.anthropicThinking ?? 'omit'
+  if (anthropicThinking !== 'omit' && anthropicThinking !== 'disabled' && anthropicThinking !== 'adaptive') {
+    throw new VisionToolkitError('config', 'provider.anthropicThinking must be "omit", "disabled", or "adaptive"')
+  }
+  const userAgent = (provider.userAgent ?? DEFAULT_VISION_USER_AGENT).trim()
+  if (userAgent.length === 0) {
+    throw new VisionToolkitError('config', 'provider.userAgent must not be empty')
   }
   const language = config.language ?? 'zh'
   if (language !== 'zh' && language !== 'en') {
     throw new VisionToolkitError('config', 'language must be "zh" or "en"')
   }
-  const timeoutMs = config.timeoutMs ?? 60000
+  const timeoutMs = config.timeoutMs ?? 30000
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > MAX_TIMEOUT_MS) {
     throw new VisionToolkitError('config', `timeoutMs must be an integer between 1000 and ${MAX_TIMEOUT_MS}`)
   }
-  const maxImageBytes = config.maxImageBytes ?? 10485760
+  const maxImageBytes = config.maxImageBytes ?? 4194304
   if (!Number.isInteger(maxImageBytes) || maxImageBytes < 1024 || maxImageBytes > MAX_IMAGE_BYTES) {
     throw new VisionToolkitError('config', `maxImageBytes must be an integer between 1024 and ${MAX_IMAGE_BYTES}`)
   }
-  const maxImagePixels = config.maxImagePixels ?? 40000000
+  const maxImagePixels = config.maxImagePixels ?? 20000000
   if (!Number.isInteger(maxImagePixels) || maxImagePixels < 1 || maxImagePixels > MAX_IMAGE_PIXELS) {
     throw new VisionToolkitError('config', `maxImagePixels must be an integer between 1 and ${MAX_IMAGE_PIXELS}`)
   }
@@ -160,8 +252,12 @@ export function resolveConfig(config: VisionToolkitConfig = {}): ResolvedVisionT
     throw new VisionToolkitError('config', 'runtime.python must not be empty')
   }
   const allowedDirs = (config.allowedDirs ?? []).map(dir => dir.trim()).filter(dir => dir.length > 0)
+  const imageInputVariants = config.imageInputVariants ?? {}
+  const variantProviders = (imageInputVariants.providers ?? [])
+    .map(provider => provider.trim())
+    .filter(provider => provider.length > 0)
   return {
-    provider: { baseUrl, credential, model },
+    provider: { baseUrl, authMode, credential, model, protocol, anthropicThinking, userAgent },
     language,
     timeoutMs,
     maxImageBytes,
@@ -173,5 +269,23 @@ export function resolveConfig(config: VisionToolkitConfig = {}): ResolvedVisionT
       ...(python !== undefined ? { python } : {}),
     },
     allowedDirs,
+    imageInputVariants: {
+      enabled: imageInputVariants.enabled ?? true,
+      providers: variantProviders,
+      autoSwitch: imageInputVariants.autoSwitch ?? true,
+    },
   }
+}
+
+/** Whether a resolved provider should use the bundled public key instead of DSH credentials. */
+export function isBuiltInFreeVisionProvider(provider: ResolvedVisionToolkitConfig['provider']): boolean {
+  return String(provider.credential) === BUILT_IN_FREE_VISION_CREDENTIAL
+    && provider.baseUrl === BUILT_IN_FREE_VISION_BASE_URL
+    && BUILT_IN_FREE_VISION_MODEL_ALIASES.has(provider.model)
+    && provider.protocol === 'openai'
+}
+
+/** Whether a resolved provider runs anonymously: no DSH credential is read, saved, or sent. */
+export function isAnonymousProvider(provider: ResolvedVisionToolkitConfig['provider']): boolean {
+  return provider.authMode === 'none'
 }

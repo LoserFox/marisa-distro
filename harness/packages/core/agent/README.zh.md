@@ -4,7 +4,7 @@
 
 Agent 接口、注册表、进程本地发起方作用域，以及 `agent/*` 事件词汇。每个插件（UI、钩子、编排器）都面向此处定义的 `Agent` handle 编程；它不依赖循环，因此循环可以替换。
 
-可选配套包`@deepseek-ai/dsh-agent/invariant`会向 `ctx.invariants` 注册此包的 agent（智能体）状态转换检查。根 agent 服务不会隐式加载诊断。
+可选配套包 `@deepseek-ai/dsh-agent/invariant` 会向 `ctx.invariants` 注册此包的 agent（智能体）状态转换检查。根 agent 服务不会隐式加载诊断。
 
 ## 服务：`AgentRegistry`（ctx 键：`agents`）
 
@@ -32,9 +32,9 @@ Agent 接口、注册表、进程本地发起方作用域，以及 `agent/*` 事
 - `ctx.agents.withInitiator(agent, operation)`：使用一个确切 Agent 运行，并保留操作的确切同步值或 Promise。
 - `ctx.agents.withoutInitiator(operation)`：对无关的进程本地工作隐藏继承的发起方。
 
-该作用域携带 `Agent` 本身，并且只在进程内有效。环境中的身份既不是存活证明，也不是授权；在服务、worker、进程、持久化和 wire 边界，显式 Agent 字段仍是权威来源。Teardown 会拒绝新边界，允许注入的依赖方和返回 Promise 的边界 drain，然后禁用底层 `AsyncLocalStorage`；未返回的工作仍归将其分离的子系统所有。如果某个边界继承的异步链开始卸载一个拥有它的 Cordis fiber，该嵌套边界链会从 drain 中释放，使卸载不会等待自身；其 continuation 会在 teardown 后观察到已 dispose 的服务。详细边界与 teardown 契约由[发起方作用域决策](../../../.agents/notes/implemented/architecture/2026-07-15-agent-initiator-scope.md)拥有。
+该作用域携带 `Agent` 本身，并且只在进程内有效。环境中的身份既不是存活证明，也不是授权；在服务、worker、进程、持久化和 wire 边界，显式 Agent 字段仍是权威来源。Teardown 会拒绝新边界，允许注入的依赖方和返回 Promise 的边界 drain，然后禁用底层 `AsyncLocalStorage`；未返回的工作仍归将其分离的子系统所有。如果某个边界继承的异步链开始卸载一个拥有它的 Cordis fiber，该嵌套边界链会从 drain 中释放，使卸载不会等待自身；其 continuation 会在 teardown 后观察到已 dispose 的服务。详细边界与 teardown 约定由[发起方作用域决策](../../../.agents/notes/implemented/architecture/2026-07-15-agent-initiator-scope.md)拥有。
 
-#### 工厂 seam（创建）
+#### 工厂 API（创建）
 
 Agent *创建* 由实现 `AgentFactory` 的插件（`dsh-agent-loop`）提供，并通过 `setFactory` 注册。这样，创建功能留在 `dsh-agent` 接口上，消费方（UI、ACP（Agent Client Protocol）桥接层）可以面向 `ctx.agents` 编程，而不依赖具体循环包。注册表会把已经 traced 的 Service 规范化为具体目标，并通过调用方上下文重新 trace 每次调用；这既避免嵌套 Cordis shadow，也会把显式、绑定调用方的 `ownerCtx` 传给普通工厂。
 
@@ -46,17 +46,19 @@ Agent *创建* 由实现 `AgentFactory` 的插件（`dsh-agent-loop`）提供，
 
 ### 实时事件
 
-`dsh-agent` 声明实时 `agent/*` 协调词汇，使插件不必依赖具体循环。确切签名、分发 mode、作用域筛选规则与 payload 契约位于生成的 [Cordis 事件目录](../../../docs/cordis-catalog/events.md)；[架构轮次流](../../../docs/architecture.md#turn-flow) 展示它们与持久会话事件的相对顺序。
+`dsh-agent` 声明实时 `agent/*` 协调词汇，使插件不必依赖具体循环。确切签名、分发 mode、作用域筛选规则与 payload 约定位于 [core.md](../../../docs/subsystems/core.md#cordis-surface) 的生成区块；[架构轮次流](../../../docs/architecture.md#turn-flow) 展示它们与持久会话事件的相对顺序。
 
-生命周期边有两个重要的本地注意事项。`agent/created` 在作用域 setup 之后、会话与 agent 注册表条目都存在之后运行。Setup 是受信任、仅用于组合的代码；紧随其后且不可 veto 的 `agent/session-start` 通知是第一个受支持的启动注入点。`agent/disposed` 始终表示确切 agent 已离开注册表。AgentLoop 在其驱动器完全停稳后发出该事件，而有序 teardown 此时可能仍在分离会话并撤销作用域；直接注册的自定义 agent 自行拥有任何更强的驱动器顺序契约。
+生命周期边有两个重要的本地注意事项。`agent/created` 在作用域 setup 之后、会话与 agent 注册表条目都存在之后运行。Setup 是受信任、仅用于组合的代码；紧随其后且不可 veto 的 `agent/session-start` 通知是第一个受支持的启动注入点。`agent/disposed` 始终表示确切 agent 已离开注册表。AgentLoop 在其驱动器完全停稳后发出该事件，而有序 teardown 此时可能仍在分离会话并撤销作用域；直接注册的自定义 agent 自行拥有任何更强的驱动器顺序约定。
 
-大多数拦截点都是协作式 waterfall（瀑布式事件）。`agent/pre-step` 接收一个 payload，携带主体 `agent`、独占的已领取 `UserMessage[]` 以及拟进入的 `turn`、`step` 与取消 `signal`；当工具已经要求继续请求时，该批次可以为空。agent 作用域轮次 seam 在 payload 中携带显式 `AbortSignal`；其余轮次作用域 seam 通过其请求值接收它。监听器可以配合信号，但不得将它保留为控制另一轮次的权限。`agent/request-error` 是失败模型请求的恢复 waterfall：它接收请求坐标、规范化失败事实、可用时提供服务的注册项重试策略以及信号。拥有恢复权的监听器返回 `{ kind: 'retry' }` 且不调用 `next()`。`agent/turn-stopping` 在本可完成的轮次关闭前运行。信号生命周期由[显式取消决策](../../../.agents/notes/implemented/architecture/2026-07-16-explicit-turn-cancellation.md)拥有；作用域分发与终止结算由 [agent 作用域 runtime 设计 Agent Note（agent 决策记录）](../../../.agents/notes/implemented/architecture/2026-07-12-agent-scope-runtime-design.md#three-execution-boundaries-are-deliberately-one-way)拥有。
+大多数拦截点都是协作式 waterfall（瀑布式事件）。`agent/pre-step` 接收一个 payload，携带主体 `agent`、独占的已领取 `UserMessage[]` 以及拟进入的 `turn`、`step` 与取消 `signal`；当工具已经要求继续请求时，该批次可以为空。agent 作用域轮次扩展点在 payload 中携带显式 `AbortSignal`；其余轮次作用域扩展点通过其请求值接收它。监听器可以配合信号，但不得将它保留为控制另一轮次的权限。`agent/request-error` 是失败模型请求的恢复 waterfall：它接收请求坐标、规范化失败事实、可用时提供服务的注册项重试策略以及信号。拥有恢复权的监听器返回 `{ kind: 'retry' }` 且不调用 `next()`。`agent/turn-stopping` 在本可完成的轮次关闭前运行。信号生命周期由[显式取消决策](../../../.agents/notes/implemented/architecture/2026-07-16-explicit-turn-cancellation.md)拥有；作用域分发与终止结算由 [agent 作用域 runtime 设计 Agent Note](../../../.agents/notes/implemented/architecture/2026-07-12-agent-scope-runtime-design.md#three-execution-boundaries-are-deliberately-one-way)拥有。
 
 `PreStepDecision` 要么是 `{ kind: 'reject' }`，要么是 `{ kind: 'enter', messages }`。enter 分支是拟进入步骤的完整、带标识且冻结的批次。包装下游 enter 的监听器会保留该批次，除非有意替换它；新增消息遵循 waterfall 的自然返回顺序。领取操作已经把候选消息从 inbox 删除，因此 reject 不会保留它们；领取后插入的消息仍等待后续边界。
 
 inbox 的实时通知刻意采用逐消息的最小载荷：`agent/inbox/inserted { message }`、`agent/inbox/claimed { message, turn }` 与 `agent/inbox/discarded { message }`。它们补充持久 `agent/inbox/spliced` 投影，但不引入另一层生命周期封套。
 
 轮次和步骤边界以及模型 token 流是持久 `session/event` 事实，而不是镜像的 `agent/*` 通知。消费方从会话事件流读取 `turn/*`、`step/*` 和 `assistant/chunk`；工具策略与结果观测属于 [`dsh-tools`](../tools/README.md) 记录的完整流水线。
+
+`foldConsumedWork(events)` 把这条事件流读回来，回答仅凭轮次序列无法回答的那个问题：一份日志消费掉的工作最终怎样了。它返回能够为已消费工作作出交代的最新 `turn/end`——即进入过模型 step 的轮次，或者认领了 inbox 输入、但在进入 step 之前失败、被停下或被拒绝的轮次——并额外给出「已接受的工作此后是否被从 inbox 中取消且从未运行」。两项事实都来自日志，因此无论由哪个所有者发起取消，读出来都一样。没有取走任何输入、或认领批次被改写清空后正常结束的无 step 轮次不描述工作，会被跳过；认领过输入、以 `blocked` 结束的轮次则是一份交代，因为拒绝把这些输入一并丢弃了。
 
 ### Agent 接口（`types.ts`）
 
@@ -76,7 +78,7 @@ inbox 的实时通知刻意采用逐消息的最小载荷：`agent/inbox/inserte
 
 - Agent 创建：`AgentLoop.create()` 是具体配置路径实现（位于 `dsh-agent-loop`），程序化消费方则通过 `ctx.agents.create()`/`ctx.agents.resume()` 创建或恢复有所有权的 agent。替换循环时，应实现 `Agent` 并通过 `ctx.agents.register()` 注册。
 - 事件监听器：全部 `agent/*` 事件都在此处声明，不需要依赖循环包。
-- subagent 委派不是 `Agent` 方法；提供方通过工厂 seam 创建或驱动普通 handle，因此委派传输留在核心 agent 接口之外。
+- subagent 委派不是 `Agent` 方法；提供方通过工厂 API 创建或驱动普通 handle，因此委派传输留在核心 agent 接口之外。
 
 ## 模型体验
 
@@ -111,9 +113,9 @@ inbox 的实时通知刻意采用逐消息的最小载荷：`agent/inbox/inserte
 ## 已知限制与暂缓事项
 
 - **发起方作用域只存在于进程内**：worker、子进程、HTTP、持久队列和重启必须显式传递所需身份。
-- **环境身份可能比存活状态更久**：消费方在生命周期敏感工作前，仍要检查 `agent.status`、取消状态和所属能力契约。
+- **环境身份可能比存活状态更久**：消费方在生命周期敏感工作前，仍要检查 `agent.status`、取消状态和所属能力约定。
 - **委派以外的 agent 间通道**：共享状态、流式子输出和后台／轮询语义仍在当前同步 `ctx.subagents` seam 之外。
 - **`agent/session-start` 不能为启动设置门禁**：它仍是同步且不可 veto 的通知；必须在发布前完成的异步组合属于工厂的 `setup(agentCtx)` 事务。
-- **`cancel()` 默认清空 inbox**：它会中止正在处理的轮次以及排队和 steering 工作；`cancel(cause, { keepInbox: true })` 只中止轮次并保留待处理项。仍不存在只中止步骤、同时让正在处理的轮次继续运行的操作（[关于停止操作接口的 Agent Note](../../../.agents/notes/implemented/simplification/2026-06-20-public-agent-stop-surface.md)）。
-- **每条附加 `UserMessage` 恰好携带一个 `MessageSource`**：多个插件合并到一次工具调用上的贡献会归入一个来源；无法表示混合来源。
+- **`cancel()` 默认清空 inbox**：它会中止正在处理的轮次以及排队和 steering 工作；`cancel(cause, { keepInbox: true })` 只中止轮次并保留待处理项。仍不存在只中止步骤、同时让正在处理的轮次继续运行的操作（[停止 API Agent Note](../../../.agents/notes/implemented/simplification/2026-06-20-public-agent-stop-api.md)）。
+- **每条附加 `UserMessage` 恰好携带一个 `MessageSource`**：多个插件合并到一次工具调用上的贡献会归入同一来源，因此该消息无法列出多个生产者。
 - **`SessionStartSource` 预留 `'clear'`/`'compact'`，但还没有发出方**：在驱动子系统落地前，只会出现 `'startup'`/`'resume'`（`TODO(compaction)`）。

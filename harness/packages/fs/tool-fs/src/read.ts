@@ -4,14 +4,13 @@
  * @module @deepseek-ai/dsh-tool-fs/src/read
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView, ReadResultView, ToolResult } from '@deepseek-ai/dsh-tools'
-import { FsError } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import { buildWindow, formatReadOutput, langFromPath, readMetaFromMeta } from './read-render.ts'
-import { sessionResolveOptions } from './session-cwd.ts'
+import { resolveRegularReadTarget } from './read-target.ts'
 
 /** Default and maximum number of lines returned by one `read` call (the `readLimit` config). */
 export const READ_LIMIT = 2000
@@ -57,7 +56,7 @@ function parsePositiveInteger(value: number, name: string): number {
 export function parseReadArgs(args: { file_path: string; offset?: number; limit?: number }, maxLimit: number): ReadInput {
   if (args.file_path.trim().length === 0) throw new Error('file_path must be a non-empty string')
   const offset = args.offset === undefined ? 1 : parsePositiveInteger(args.offset, 'offset')
-  const limit = args.limit !== undefined ? parsePositiveInteger(args.limit, 'limit') : maxLimit
+  const limit = args.limit === undefined ? maxLimit : parsePositiveInteger(args.limit, 'limit')
   if (limit > maxLimit) throw new Error(`limit must be less than or equal to ${maxLimit}`)
   return { filePath: args.file_path, offset, limit }
 }
@@ -136,13 +135,9 @@ export function applyReadTool(ctx: Context, caps: ReadToolCaps): void {
     isConcurrencySafe: () => true,
     async execute(args, exec) {
       const input = parseReadArgs(args, caps.limit)
-      const target = await ctx.fs.resolve(input.filePath, sessionResolveOptions(exec, input.filePath))
-
-      // One stat: type check + size routing + the version recorded as observed.
+      // One stat: absence observation OR type check + size routing + present version.
       // A concurrent write can only make a later guarded mutation fail stale and require reread.
-      const info = await ctx.fs.stat(target, exec.signal)
-      if (!info) throw new FsError(`cannot read "${target.displayPath}": not found`, 'FS_NOT_FOUND')
-      if (info.type !== 'file') throw new FsError(`cannot read "${target.displayPath}": not a regular file`, 'FS_NOT_REGULAR_FILE')
+      const { target, info } = await resolveRegularReadTarget(ctx, exec, input.filePath)
 
       // Stream when the file is large OR size is unknown, so a size-less backend
       // never buffers an arbitrarily large file.
@@ -161,10 +156,10 @@ export function applyReadTool(ctx: Context, caps: ReadToolCaps): void {
         lines: window.lines,
         totalLines: window.totalLines,
       }
-      // Record the observed version (a no-op when no policy plugin listens). The
+      // Record the present observation (a no-op when no policy plugin listens). The
       // read already succeeded; an fs/observed listener is contractually a
       // synchronous, side-effect-only recorder.
-      ctx.emit('fs/observed', target, info.version, exec)
+      ctx.emit('fs/observed', target, { kind: 'present', version: info.version }, exec)
       return outcome
     },
     // Result-time display: a `read` card carrying the structured line window a
@@ -179,7 +174,7 @@ export function applyReadTool(ctx: Context, caps: ReadToolCaps): void {
       const meta = readMetaFromMeta(result.meta)
       if (meta === undefined) return undefined
       const only = result.content.length === 1 ? result.content[0] : undefined
-      const text = only?.type !== 'text' ? undefined : only.text
+      const text = only?.type === 'text' ? only.text : undefined
       if (text === undefined) return undefined
       // Group 1 always captures (possibly empty) when the envelope matches.
       const body = /^<path>[^\n]*<\/path>\n<type>file<\/type>\n<content>\n([\s\S]*)\n<\/content>$/u.exec(text)?.[1]

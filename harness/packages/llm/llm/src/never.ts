@@ -17,5 +17,5 @@ export function assertNever(value: never, context?: string): never {
   // JSON.stringify is typed string but returns undefined for undefined input;
   // String() covers that and other non-serializable escapes.
   const rendered = (JSON.stringify(value) as string | undefined) ?? String(value)
-  throw new Error(`unreachable variant${!context ? '' : ` in ${context}`}: ${rendered}`)
+  throw new Error(`unreachable variant${context ? ` in ${context}` : ''}: ${rendered}`)
 }

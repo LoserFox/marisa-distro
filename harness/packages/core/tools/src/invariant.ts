@@ -1,6 +1,6 @@
 /** Package-owned tool-pipeline invariants. @module @deepseek-ai/dsh-tools/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { ToolExecution, ToolExecutionResult } from './index.ts'
@@ -33,9 +33,34 @@ function validateResult(
 const install: InvariantInstaller = Object.assign((ctx: Context, fail: InvariantFailure) => {
   const stages = new WeakMap<object, ToolStage>()
   const openTurns = new WeakMap<Session, number | null>()
+  const dispatchRoots = new WeakMap<Session, Map<string, string>>()
+  const validateDispatch = (session: Session, event: SessionEvent): void => {
+    if (event.type !== 'tool/code-dispatch-start' && event.type !== 'tool/code-dispatch') return
+    const root = String(event.data.rootCallId)
+    const parent = String(event.data.parentCallId)
+    const child = String(event.data.subCallId)
+    if (root.length === 0 || parent.length === 0 || child.length === 0) {
+      fail(`${event.type} must carry non-empty rootCallId, parentCallId, and subCallId`)
+      return
+    }
+    const roots = dispatchRoots.get(session)
+    const known = roots?.get(child)
+    if (known !== undefined && known !== root) fail(`${event.type} changed rootCallId for subCallId ${child}`)
+    if (parent !== root && roots?.get(parent) !== root) {
+      fail(`${event.type} parentCallId ${parent} does not belong to rootCallId ${root}`)
+    }
+  }
+  const commitDispatch = (session: Session, event: SessionEvent): void => {
+    if (event.type !== 'tool/code-dispatch-start' && event.type !== 'tool/code-dispatch') return
+    const roots = dispatchRoots.get(session) as Map<string, string>
+    roots.set(String(event.data.subCallId), String(event.data.rootCallId))
+  }
   const seed = (session: Session): number | null => {
     let openTurn: number | null = null
+    dispatchRoots.set(session, new Map())
     for (const event of session.events) {
+      validateDispatch(session, event)
+      commitDispatch(session, event)
       if (event.type === 'turn/start') openTurn = event.data.turn
       else if (event.type === 'turn/end') openTurn = null
       else if ((event.type === 'tool/code-dispatch-start' || event.type === 'tool/code-dispatch')
@@ -46,17 +71,20 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     openTurns.set(session, openTurn)
     return openTurn
   }
-  const openTurnFor = (session: Session): number | null => { return openTurns.get(session) ?? seed(session) }
+  const openTurnFor = (session: Session): number | null => openTurns.get(session) ?? seed(session)
 
   for (const session of ctx.sessions.list()) seed(session)
   ctx.on('session/created', (session) => { seed(session) }, { global: true })
   ctx.on('session/event', (session, event) => {
+    validateDispatch(session, event)
+    commitDispatch(session, event)
     if (event.type === 'turn/start') openTurns.set(session, event.data.turn)
     else if (event.type === 'turn/end') openTurns.set(session, null)
   }, { global: true })
   ctx.on('internal/dispatch', (_mode, eventName, args) => {
     if (eventName === 'session/event') {
       const [session, event] = args as [Session, SessionEvent]
+      validateDispatch(session, event)
       if ((event.type === 'tool/code-dispatch-start' || event.type === 'tool/code-dispatch')
         && openTurnFor(session) === null) {
         fail(`${event.type} appended outside any open turn`)

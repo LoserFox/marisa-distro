@@ -8,11 +8,11 @@ English | [中文](2026-08-01-ask-user-delegated-caller-guard.zh.md)
 
 A one-shot subagent that calls `ask_user_question` can block indefinitely. The call waits for a human answer, but the child has no independently owned human channel, so the child's completion and the parent waiting on that completion both stall.
 
-Durable session lineage cannot decide whether an answerer exists. A child session may later be resumed as a new top-level runtime root, while a live runtime-owned child may carry a zero or absent durable delegation depth. Error guidance at the shared seam must also fit every consumer: `exit_plan_mode` uses `ctx.userInteraction.ask()` without calling `ask_user_question`.
+Durable session lineage cannot decide whether an answerer exists. A child session may later be resumed as a new top-level runtime root, while a live runtime-owned child may carry a zero or absent durable delegation depth. Error guidance at the shared seam must also fit every consumer: `exit_plan_mode` uses `ctx.userQuestions.ask()` without calling `ask_user_question`.
 
 ## Decision
 
-When `AskUserQuestionRequest.agent` is present, `UserInteractionService.ask()` authenticates the exact live agent through `ctx.agents` and admits it only when `ctx.agents.roots()` contains that instance. A missing registry or stale same-id object fails with `CALLER_NOT_LIVE`; a live agent owned by another live agent fails with `DELEGATED_CALLER`. The check runs after the existing aborted and empty-batch guards and before intent validation or provider dispatch, so an owned child never creates a UI wait.
+When `AskUserQuestionRequest.agent` is present, `UserQuestionService.ask()` authenticates the exact live agent through `ctx.agents` and admits it only when `ctx.agents.roots()` contains that instance. A missing registry or stale same-id object fails with `CALLER_NOT_LIVE`; a live agent owned by another live agent fails with `DELEGATED_CALLER`. The check runs after the existing aborted and empty-batch guards and before intent validation or provider dispatch, so an owned child never creates a UI wait.
 
 Runtime ownership is the authority. A lineage-bearing session resumed without an owner is a runtime root and may ask; a live child remains ineligible even when its durable `delegationDepth` is zero. Agentless programmatic calls retain the existing provider path.
 
@@ -24,7 +24,7 @@ This safety boundary is independent of the browser's composer election. The prop
 
 **Use `session.header.delegationDepth > 0`.** Rejected because durable lineage survives resume and does not attest the current process-local owner. It rejects valid resumed roots and can admit a live child whose durable header is incomplete.
 
-**Reject only inside `dsh-tool-ask-user`.** Rejected because `exit_plan_mode` and direct callers share `ctx.userInteraction.ask()`. The service is the narrow operation boundary common to every human-interaction consumer.
+**Reject only inside `dsh-tool-ask-user`.** Rejected because `exit_plan_mode` and direct callers share `ctx.userQuestions.ask()`. The service is the narrow operation boundary common to every human-interaction consumer.
 
 **Tell the child to delegate upward or wait for forwarding.** Rejected because one-shot delegation exposes no child-to-parent request channel and no answer-forwarding protocol. The only guaranteed return path is the child's final result.
 

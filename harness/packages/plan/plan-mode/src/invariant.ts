@@ -1,6 +1,6 @@
 /** Package-owned durable plan-mode invariants. @module @deepseek-ai/dsh-plan-mode/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
@@ -18,7 +18,7 @@ export const inject = ['invariants']
  * no turn-enclosure relation exists — only the payload shape is checkable.
  */
 function validateEvent(event: SessionEvent, fail: InvariantFailure): void {
-  if (event.type !== 'plan/mode') { return }
+  if (event.type !== 'plan/mode') return
   const active = (event.data as { active?: unknown }).active
   if (typeof active !== 'boolean') {
     fail(`plan/mode carries invalid active state ${JSON.stringify(active)}; expected a boolean`)

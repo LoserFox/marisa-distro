@@ -4,7 +4,7 @@
 
 ## 仓库边界
 
-- `harness/`、`plugins/`、`desktop/` 全部由本仓库直接拥有。不得创建或恢复嵌套 `.git`。
+- `plugins/`、`desktop/` 由本仓库直接拥有；`harness/` 跟踪上游 rc pin，转换为 submodule 后不得在其中维护发行版源码修改。不得创建其他嵌套 `.git`。
 - 根 `pnpm-lock.yaml` 是唯一依赖图；`harness/` 内的 lockfile/workspace 文件不参与构建。
 - `release/`、`node_modules/`、`*.log`、`*.tsbuildinfo` 不得提交。
 

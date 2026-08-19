@@ -20,10 +20,10 @@ export interface Columns { sidebar: number; center: number; details: number }
 /** Center column floor; only the final fallback may go below it. */
 export const CENTER_MIN = 640
 /** Sidebar drag clamp floor. */
-export const SIDEBAR_MIN = 280
+export const SIDEBAR_MIN = 264
 /** Sidebar drag clamp ceiling. */
 export const SIDEBAR_MAX = 420
-/** Sidebar width before any user drag (= the drag floor). */
+/** Sidebar width before any user drag. */
 export const SIDEBAR_DEFAULT = 280
 /** Closed-sidebar rail: a 24px icon column between 16px horizontal paddings. */
 export const SIDEBAR_COLLAPSED = 56
@@ -62,7 +62,7 @@ export function clampWidth(px: number, min: number, max: number): number {
 export function computeColumns(viewport: number, sidebar: number, details: number): Columns {
   // The sidebar is fixed at its preference (or the rail) — it never concedes.
   const s = sidebar === 0 ? SIDEBAR_COLLAPSED : clampWidth(sidebar, SIDEBAR_MIN, SIDEBAR_MAX)
-  const d0 = details !== 0 ? clampWidth(details, DETAILS_MIN, DETAILS_MAX) : 0
+  const d0 = details === 0 ? 0 : clampWidth(details, DETAILS_MIN, DETAILS_MAX)
 
   // Step 1: everything fits at preferred widths.
   if (s + d0 + CENTER_MIN <= viewport) return { sidebar: s, center: viewport - s - d0, details: d0 }

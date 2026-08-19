@@ -27,7 +27,7 @@ function leafPropArb(): fc.Arbitrary<ParameterPropertySpec> {
     fc.record({ required: fc.boolean() }).map(({ required }): ParameterPropertySpec => ({ type: 'null', ...required ? { required: true } : {} })),
     fc.record({ required: fc.boolean() }).map(({ required }): ParameterPropertySpec => ({ type: 'json', ...required ? { required: true } : {} })),
     fc.record({ values: fc.uniqueArray(fc.string({ minLength: 1 }), { minLength: 1, maxLength: 3 }), required: fc.boolean() })
-      .map(({ values, required }): ParameterPropertySpec => ({ type: 'string', enum: values, ...!required ? {} : { required: true } })),
+      .map(({ values, required }): ParameterPropertySpec => ({ type: 'string', enum: values, ...required ? { required: true } : {} })),
     fc.record({ value: fc.string(), required: fc.boolean() })
       .map(({ value, required }): ParameterPropertySpec => ({ type: 'string', const: value, ...required ? { required: true } : {} })),
     fc.record({ required: fc.boolean() })

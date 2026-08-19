@@ -24,7 +24,7 @@
       "path": "../registry"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

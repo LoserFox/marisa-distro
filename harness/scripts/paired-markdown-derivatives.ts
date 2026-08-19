@@ -32,7 +32,7 @@ export function partitionPairedMarkdownDerivatives<T>(
   docOf: (block: T) => string,
   fingerprintOf: (block: T) => string,
 ): MarkdownDerivativePartition<T> {
-  const byDoc = new Map<string, Array<T>>()
+  const byDoc = new Map<string, T[]>()
   for (const block of blocks) {
     const doc = docOf(block)
     const group = byDoc.get(doc)

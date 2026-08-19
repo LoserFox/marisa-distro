@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-根 `engines.node` 范围中的 Node 22 分支是对安装后工作区的契约，而不仅仅是 harness 源码直接调用的运行时 API 的契约。它不得低于工作区在该分支上安装的依赖包所声明的 `engines.node`；否则 `pnpm install --engine-strict` 会在一个已宣传的 LTS 版本上失败，而非严格模式下的安装结果则会在依赖所支持的运行时范围之外运行。
+根 `engines.node` 范围中的 Node 22 分支是对安装后工作区的约定，而不仅仅是 harness 源码直接调用的运行时 API 的约定。它不得低于工作区在该分支上安装的依赖包所声明的 `engines.node`；否则 `pnpm install --engine-strict` 会在一个已宣传的 LTS 版本上失败，而非严格模式下的安装结果则会在依赖所支持的运行时范围之外运行。
 
 ## 决策
 
@@ -14,12 +14,12 @@ Status: implemented
 
 两个 Node 特性决定了源码运行时的门槛：
 
-- **`node:sqlite`**：`packages/session-persistence/session-persistence-sqlite` 在顶层执行 `import { DatabaseSync } from 'node:sqlite'`。该模块在 **22.13**（LTS）和 **23.4**（Current）取消了 `--experimental-sqlite` 标志要求；在此之前，导入它会在加载时抛出异常。
+- **`node:sqlite`**：`packages/session/session-persistence-sqlite` 在顶层执行 `import { DatabaseSync } from 'node:sqlite'`。该模块在 **22.13**（LTS）和 **23.4**（Current）取消了 `--experimental-sqlite` 标志要求；在此之前，导入它会在加载时抛出异常。
 - **原生 TypeScript 类型剥离**——构建模式的 `examples/headless-agent/tests/keyless-smoke.e2e.ts` 冒烟测试使用纯 `node`（无 tsx）启动该示例未导出的 `.ts` driver，并加载示例的 `.ts` 测试适配器（`cli-mock-llm.ts`）。类型剥离从 **22.18**（LTS）和 **23.6**（Current）起成为默认行为；更早版本需要 `--experimental-strip-types`。
 
 这些源码特性在 22.x 线上于 **22.18** 全部就绪，但已安装的 Pi 适配器依赖将宣传的 LTS 下限进一步提高。`@deepseek-ai/dsh-llm-pi-ai` 依赖 `@earendil-works/pi-ai@0.79.3`，后者的包声明 `engines.node >=22.19.0`，因此 LTS 下限为 **22.19**。24.x 分支保持 `>=24.0.0`。该不相交范围完全排除了 Node 23：Node 23.0–23.5 至少还有一个源码特性需要标志，而 23 线是非 LTS/已 EOL 的，宣传 `>=23.6` 会增加一条已终止的发布线和一条 CI 分支，而没有任何部署应当使用它。
 
-`@types/node` 继续固定在 22.x 线（`^22.20.0`），以匹配 LTS 支持线：使用 Node 23+/24+/25+ 的 API 会在所有机器和类型检查门禁中导致 `tsc` 失败，而不是先编译通过，直到下限矩阵分支运行时才暴露错误。目前整个代码树针对 Node 22 类型接口的类型检查全部通过，因此固定该版本不产生任何代价。
+`@types/node` 继续固定在 22.x 线（`^22.20.0`），以匹配 LTS 支持线：使用 Node 23+/24+/25+ 的 API 会在所有机器和类型检查门禁中导致 `tsc` 失败，而不是先编译通过，直到下限矩阵分支运行时才暴露错误。目前整个代码树针对 Node 22 类型 API 的类型检查全部通过，因此固定该版本不产生任何代价。
 
 ## 后果
 

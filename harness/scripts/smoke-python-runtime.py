@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from deepseek_harness import TurnResult
+    from deepseek_harness import RunResult
 
 
 EXPECTED_TEXT = "runtime smoke ok"
@@ -25,10 +25,13 @@ CODE_PROMPT = "Use run_code to compute the packaged worker smoke value."
 CODE_WORKER_TEXT = "code worker smoke ok"
 WORKFLOW_PROMPT = "Use workflow to compute the packaged worker smoke value without agents."
 WORKFLOW_WORKER_TEXT = "workflow worker smoke ok"
-PERSISTENT_TOOLS_PROMPT = "Exercise the packaged persistent Bash and string-replacement editor."
-PERSISTENT_TOOLS_TEXT = "persistent tools smoke ok"
-PERSISTENT_EDITOR_PATH_PREFIX = "Editor path: "
-PERSISTENT_BASH_COMMAND = (
+MINIMAL_PROMPT = "Exercise the packaged minimal agent's persistent Bash and string-replacement editor."
+MINIMAL_TEXT = "minimal agent smoke ok"
+MINIMAL_EDITOR_PATH_PREFIX = "Editor path: "
+MINIMAL_CORDIS = (
+    Path(__file__).resolve().parent.parent / "examples" / "jsonrpc-agent" / "minimal.cordis.yml"
+)
+MINIMAL_BASH_COMMAND = (
     "counter=$(( ${counter:-0} + 1 )); export counter; "
     "printf 'COUNT=%s CWD=%s\\n' \"$counter\" \"$PWD\"; "
     "if [ \"$counter\" -eq 1 ]; then cd /tmp; fi"
@@ -38,7 +41,7 @@ SNAPSHOT_SESSION_ID = "advanced-executable"
 SNAPSHOT_DIRECT_CHILD_PROMPT = "Reply with exactly DIRECT_CHILD_OK and nothing else."
 SNAPSHOT_WORKFLOW_CHILD_PROMPT = "Reply with exactly WORKFLOW_CHILD_OK and nothing else."
 SNAPSHOT_FINAL_TEXT = "ADVANCED_EXECUTABLE_OK"
-SNAPSHOT_MOUNT_CODE = """\
+SNAPSHOT_PLUGIN_CODE = """\
 return (ctx) => {
   harness.registerTool(ctx, harness.defineTool({
     name: 'snapshot_double',
@@ -61,13 +64,21 @@ SNAPSHOT_WORKFLOW_SCRIPT = (
     f"const reply = await agent('{SNAPSHOT_WORKFLOW_CHILD_PROMPT}', {{ label: 'workflow-child' }})\n"
     "return { reply }"
 )
-SNAPSHOT_DIRECTORY = (
+ADVANCED_SNAPSHOT_DIRECTORY = (
     Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "advanced"
 )
-SNAPSHOT_FILENAMES = ("result.json", "session.jsonl", "session.1.jsonl", "session.2.jsonl")
+ADVANCED_SNAPSHOT_FILENAMES = ("result.json", "session.jsonl", "session.1.jsonl", "session.2.jsonl")
+MINIMAL_SNAPSHOT_DIRECTORY = (
+    Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "minimal"
+)
+MINIMAL_SNAPSHOT_FILENAMES = ("model-visible.json",)
+# The agent loop's dynamic runtime-context snapshot is the one model-visible message this
+# expected output cannot carry: the same composition emits it on macOS and not on Linux
+# (deepseek-harness#2488), and the file must replay on both. Everything else is compared.
+RUNTIME_CONTEXT_PREFIX = "Current runtime context"
 CUSTOM_CORDIS = """\
-- id: jsonrpc
-  name: '@deepseek-ai/dsh-jsonrpc'
+- id: sdk-jsonrpc-server
+  name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
 - id: agent-core
   name: '@deepseek-ai/dsh-agent-spine-demo'
   config:
@@ -83,11 +94,11 @@ CUSTOM_CORDIS = """\
     root: !!js process.env.DSH_SESSION_ROOT
     compression: 'none'
 - id: code-runtime
-  name: '@deepseek-ai/dsh-code-runtime-worker'
+  name: '@deepseek-ai/dsh-code-runtime-worker-thread'
 - id: subagents
   name: '@deepseek-ai/dsh-subagent'
-- id: subagent-spawn
-  name: '@deepseek-ai/dsh-subagent-spawn'
+- id: subagent-spawn-in-process
+  name: '@deepseek-ai/dsh-subagent-spawn-in-process'
   config:
     providerName: spawn
 - id: subagent-tool
@@ -95,59 +106,16 @@ CUSTOM_CORDIS = """\
   config:
     provider: spawn
 - id: workflow-engine
-  name: '@deepseek-ai/dsh-workflow-workerthread'
+  name: '@deepseek-ai/dsh-workflow-worker-thread'
   config:
     provider: spawn
 - id: workflow-tool
   name: '@deepseek-ai/dsh-tool-workflow'
+- id: cordis-host-runner
+  name: '@deepseek-ai/dsh-cordis-host-runner'
 - id: cordis-tool
   name: '@deepseek-ai/dsh-tool-cordis'
 """
-PERSISTENT_TOOLS_CORDIS = """\
-- id: jsonrpc
-  name: '@deepseek-ai/dsh-jsonrpc'
-- id: llm
-  name: '@deepseek-ai/dsh-llm-deepseek'
-  config:
-    apiKey: !!js process.env.DEEPSEEK_API_KEY
-    baseURL: !!js process.env.DEEPSEEK_BASE_URL
-- id: sandbox
-  name: '@deepseek-ai/dsh-sandbox-local'
-- id: sandbox-policy
-  name: '@deepseek-ai/dsh-sandbox-policy'
-  config:
-    mode: danger-full-access
-    workspaceRoot: !!js process.env.DSH_CWD
-- id: pty
-  name: '@deepseek-ai/dsh-pty'
-- id: pty-local
-  name: '@deepseek-ai/dsh-pty-local'
-- id: fs
-  name: '@deepseek-ai/dsh-fs-local'
-  config:
-    cwd: !!js process.env.DSH_CWD
-- id: agent-core
-  name: '@deepseek-ai/dsh-agent-spine-demo'
-  config:
-    includeHarnessIdentity: false
-    persona: 'You are a helpful software engineer assistant.'
-    workspaceContext: false
-    skills:
-      enabled: false
-    toolBash: false
-    toolTasks: false
-- id: sessions
-  name: '@deepseek-ai/dsh-session-persistence-jsonl'
-  config:
-    root: !!js process.env.DSH_SESSION_ROOT
-    compression: 'none'
-- id: persistent-bash
-  name: '@deepseek-ai/dsh-tool-bash-persistent'
-- id: str-replace-editor
-  name: '@deepseek-ai/dsh-tool-str-replace-editor'
-"""
-
-
 class MockModelHandler(BaseHTTPRequestHandler):
     """Return deterministic text, worker, and orchestration completions."""
 
@@ -182,9 +150,9 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
     if latest.get("role") == "tool":
         call_id, tool_name = latest_tool_call(messages)
         tool_text = message_text(latest.get("content"))
-        persistent = persistent_tool_followup(body, call_id, tool_name, tool_text)
-        if persistent is not None:
-            return persistent
+        minimal = minimal_tool_followup(body, call_id, tool_name, tool_text)
+        if minimal is not None:
+            return minimal
         advanced = advanced_tool_followup(body, call_id, tool_name, tool_text)
         if advanced is not None:
             return advanced
@@ -196,26 +164,53 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
             return text_chunks(WORKFLOW_WORKER_TEXT)
         raise AssertionError(f"unexpected tool follow-up: {tool_name}")
 
-    prompt = message_text(latest.get("content"))
-    if prompt.startswith(f"{PERSISTENT_TOOLS_PROMPT}\n{PERSISTENT_EDITOR_PATH_PREFIX}"):
-        names = advertised_tool_names(body)
-        if names != {"bash", "str_replace_editor"}:
-            raise AssertionError(f"persistent tools smoke advertised unexpected tools: {names}")
+    user_prompts = [
+        message_text(message.get("content"))
+        for message in reversed(messages)
+        if isinstance(message, dict) and message.get("role") == "user"
+    ]
+    minimal_prompt = next(
+        (
+            prompt
+            for prompt in user_prompts
+            if prompt.startswith(f"{MINIMAL_PROMPT}\n{MINIMAL_EDITOR_PATH_PREFIX}")
+        ),
+        None,
+    )
+    # The minimal composition's assembled system prompt, advertised tool schemas, and
+    # model-visible messages are pinned by its snapshot, not asserted here.
+    if minimal_prompt is not None:
         return tool_call_chunks(
-            "persistent-bash-1",
+            "minimal-bash-1",
             "bash",
-            {"command": PERSISTENT_BASH_COMMAND},
+            {"command": MINIMAL_BASH_COMMAND},
         )
+    scenario_prompts = {
+        SNAPSHOT_DIRECT_CHILD_PROMPT,
+        SNAPSHOT_WORKFLOW_CHILD_PROMPT,
+        SNAPSHOT_PROMPT,
+        CODE_PROMPT,
+        WORKFLOW_PROMPT,
+    }
+    prompt = next(
+        (candidate for candidate in user_prompts if candidate in scenario_prompts),
+        message_text(latest.get("content")),
+    )
     if prompt == SNAPSHOT_DIRECT_CHILD_PROMPT:
         return text_chunks("DIRECT_CHILD_OK")
     if prompt == SNAPSHOT_WORKFLOW_CHILD_PROMPT:
         return text_chunks("WORKFLOW_CHILD_OK")
     if prompt == SNAPSHOT_PROMPT:
-        assert_advertised_tool(body, "cordis_mount")
+        assert_advertised_tool(body, "cordis_define")
         return tool_call_chunks(
-            "advanced-mount",
-            "cordis_mount",
-            {"code": SNAPSHOT_MOUNT_CODE},
+            "advanced-define",
+            "cordis_define",
+            {
+                "plugin": {"kind": "new", "idPrefix": "snap"},
+                "name": "Snapshot Double",
+                "purpose": "Expose a deterministic doubling tool for executable snapshot verification.",
+                "code": {"host": SNAPSHOT_PLUGIN_CODE},
+            },
         )
     if prompt == CODE_PROMPT:
         assert_advertised_tool(body, "run_code")
@@ -240,24 +235,24 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
     return text_chunks(EXPECTED_TEXT)
 
 
-def persistent_tool_followup(
+def minimal_tool_followup(
     body: dict[str, object],
     call_id: str,
     tool_name: str,
     tool_text: str,
 ) -> list[dict[str, object]] | None:
-    """Verify packaged PTY persistence, then invoke the packaged editor."""
-    if not call_id.startswith("persistent-"):
+    """Verify the checked-in minimal composition's PTY and editor."""
+    if not call_id.startswith("minimal-"):
         return None
-    if call_id == "persistent-bash-1" and tool_name == "bash":
+    if call_id == "minimal-bash-1" and tool_name == "bash":
         if "COUNT=1" not in tool_text:
             raise AssertionError(f"first persistent bash call lost its output: {tool_text}")
         return tool_call_chunks(
-            "persistent-bash-2",
+            "minimal-bash-2",
             "bash",
-            {"command": PERSISTENT_BASH_COMMAND},
+            {"command": MINIMAL_BASH_COMMAND},
         )
-    if call_id == "persistent-bash-2" and tool_name == "bash":
+    if call_id == "minimal-bash-2" and tool_name == "bash":
         if "COUNT=2 CWD=/tmp" not in tool_text:
             raise AssertionError(f"persistent bash did not retain state: {tool_text}")
         messages = body.get("messages")
@@ -265,18 +260,18 @@ def persistent_tool_followup(
             raise AssertionError("persistent editor smoke request has no messages")
         editor_path = next(
             (
-                text.split(PERSISTENT_EDITOR_PATH_PREFIX, 1)[1].strip()
+                text.split(MINIMAL_EDITOR_PATH_PREFIX, 1)[1].strip()
                 for message in messages
                 if isinstance(message, dict) and message.get("role") == "user"
                 for text in [message_text(message.get("content"))]
-                if PERSISTENT_EDITOR_PATH_PREFIX in text
+                if MINIMAL_EDITOR_PATH_PREFIX in text
             ),
             None,
         )
         if editor_path is None:
             raise AssertionError("persistent editor smoke prompt has no editor path")
         return tool_call_chunks(
-            "persistent-editor",
+            "minimal-editor",
             "str_replace_editor",
             {
                 "command": "create",
@@ -284,11 +279,11 @@ def persistent_tool_followup(
                 "file_text": "created by packaged editor\n",
             },
         )
-    if call_id == "persistent-editor" and tool_name == "str_replace_editor":
+    if call_id == "minimal-editor" and tool_name == "str_replace_editor":
         if "New file created successfully" not in tool_text:
             raise AssertionError(f"packaged editor did not create its file: {tool_text}")
-        return text_chunks(PERSISTENT_TOOLS_TEXT)
-    raise AssertionError(f"unexpected persistent-tools follow-up: {call_id} {tool_name}: {tool_text}")
+        return text_chunks(MINIMAL_TEXT)
+    raise AssertionError(f"unexpected minimal-agent follow-up: {call_id} {tool_name}: {tool_text}")
 
 
 def advanced_tool_followup(
@@ -300,9 +295,20 @@ def advanced_tool_followup(
     """Advance the executable snapshot's deterministic parent tool chain."""
     if not call_id.startswith("advanced-"):
         return None
-    if call_id == "advanced-mount" and tool_name == "cordis_mount":
-        if "Temporary Plugin dyn-1 is running" not in tool_text:
-            raise AssertionError(f"cordis_mount returned no temporary Plugin id: {tool_text}")
+    if call_id == "advanced-define" and tool_name == "cordis_define":
+        if "Defined snap-1/pkg-1 (Snapshot Double)" not in tool_text:
+            raise AssertionError(f"cordis_define returned no dynamic Package ids: {tool_text}")
+        if "snapshot_double" in advertised_tool_names(body):
+            raise AssertionError("snapshot_double was advertised before cordis_run")
+        assert_advertised_tool(body, "cordis_run")
+        return tool_call_chunks(
+            "advanced-run",
+            "cordis_run",
+            {"pluginId": "snap-1", "packageId": "pkg-1", "mode": "run"},
+        )
+    if call_id == "advanced-run" and tool_name == "cordis_run":
+        if "snap-1/pkg-1 is running (run-1)" not in tool_text:
+            raise AssertionError(f"cordis_run returned no running Package ids: {tool_text}")
         assert_advertised_tool(body, "run_code")
         assert_advertised_tool(body, "snapshot_double")
         return tool_call_chunks(
@@ -343,17 +349,17 @@ def advanced_tool_followup(
     if call_id == "advanced-workflow" and tool_name == "workflow":
         if "WORKFLOW_CHILD_OK" not in tool_text:
             raise AssertionError(f"workflow returned no expected child value: {tool_text}")
-        assert_advertised_tool(body, "cordis_unmount")
+        assert_advertised_tool(body, "cordis_undefine")
         return tool_call_chunks(
-            "advanced-unmount",
-            "cordis_unmount",
-            {"id": "dyn-1"},
+            "advanced-undefine",
+            "cordis_undefine",
+            {"pluginId": "snap-1"},
         )
-    if call_id == "advanced-unmount" and tool_name == "cordis_unmount":
-        if "Temporary Plugin dyn-1 was unmounted and removed." not in tool_text:
-            raise AssertionError(f"cordis_unmount returned no unmount result: {tool_text}")
+    if call_id == "advanced-undefine" and tool_name == "cordis_undefine":
+        if "Removed dynamic Plugin snap-1 and all of its Packages." not in tool_text:
+            raise AssertionError(f"cordis_undefine returned no removal result: {tool_text}")
         if "snapshot_double" in advertised_tool_names(body):
-            raise AssertionError("snapshot_double remained advertised after cordis_unmount")
+            raise AssertionError("snapshot_double remained advertised after cordis_undefine")
         return text_chunks(SNAPSHOT_FINAL_TEXT)
     raise AssertionError(f"unexpected advanced tool follow-up: {call_id} {tool_name}: {tool_text}")
 
@@ -470,16 +476,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scenario",
-        choices=("all", "sdk-default", "sdk-custom", "sdk-persistent", "sdk-snapshot", "direct"),
+        choices=("all", "sdk-default", "sdk-custom", "sdk-minimal", "sdk-snapshot", "direct"),
         default="all",
     )
     parser.add_argument("--exe", type=Path)
     parser.add_argument("--update-snapshots", action="store_true")
     args = parser.parse_args()
-    if args.scenario in {"all", "sdk-custom", "sdk-persistent", "sdk-snapshot", "direct"} and args.exe is None:
-        parser.error("--exe is required for custom, persistent, snapshot, and direct scenarios")
-    if args.update_snapshots and args.scenario not in {"all", "sdk-snapshot"}:
-        parser.error("--update-snapshots requires --scenario sdk-snapshot or all")
+    if args.scenario in {"all", "sdk-custom", "sdk-minimal", "sdk-snapshot", "direct"} and args.exe is None:
+        parser.error("--exe is required for custom, minimal, snapshot, and direct scenarios")
+    if args.update_snapshots and args.scenario not in {"all", "sdk-minimal", "sdk-snapshot"}:
+        parser.error("--update-snapshots requires --scenario sdk-minimal, sdk-snapshot, or all")
     if args.exe is not None and not args.exe.is_file():
         parser.error(f"runtime executable does not exist: {args.exe}")
 
@@ -489,9 +495,9 @@ def main() -> None:
         if args.scenario in {"all", "sdk-custom"}:
             assert args.exe is not None
             smoke_sdk_custom(model.url, args.exe.resolve())
-        if args.scenario in {"all", "sdk-persistent"}:
+        if args.scenario in {"all", "sdk-minimal"}:
             assert args.exe is not None
-            smoke_sdk_persistent_tools(model.url, args.exe.resolve())
+            smoke_sdk_minimal(model.url, args.exe.resolve(), args.update_snapshots)
         if args.scenario in {"all", "sdk-snapshot"}:
             assert args.exe is not None
             smoke_sdk_snapshot(model.url, args.exe.resolve(), args.update_snapshots)
@@ -519,7 +525,6 @@ def smoke_sdk_default(base_url: str) -> None:
             request_timeout_seconds=60,
         ) as harness:
             result = harness.run("reply with the smoke text", session_id="default-smoke")
-        assert result.status == "ok", result
         assert result.final_response == EXPECTED_TEXT, result.final_response
         assert_zstd_session_log(sessions)
 
@@ -546,46 +551,47 @@ def smoke_sdk_custom(base_url: str, executable: Path) -> None:
             text_result = harness.run("reply with the smoke text", session_id="custom-smoke")
             code_result = harness.run(CODE_PROMPT, session_id="custom-smoke")
             workflow_result = harness.run(WORKFLOW_PROMPT, session_id="custom-smoke")
-        assert text_result.status == "ok", text_result
         assert text_result.final_response == EXPECTED_TEXT, text_result.final_response
-        assert code_result.status == "ok", code_result
         assert code_result.final_response == CODE_WORKER_TEXT, code_result.final_response
-        assert workflow_result.status == "ok", workflow_result
         assert workflow_result.final_response == WORKFLOW_WORKER_TEXT, workflow_result.final_response
         assert_session_log(sessions, root, EXPECTED_TEXT, CODE_WORKER_TEXT, WORKFLOW_WORKER_TEXT)
 
 
-def smoke_sdk_persistent_tools(base_url: str, executable: Path) -> None:
-    """Exercise native PTY state and the editor through the packaged executable."""
+def smoke_sdk_minimal(base_url: str, executable: Path, update_snapshots: bool) -> None:
+    """Exercise the checked-in minimal composition through the packaged executable."""
     from deepseek_harness import DeepSeekHarness
 
-    with tempfile.TemporaryDirectory(prefix="dsh-sdk-persistent-tools-") as temporary:
+    # One mock model serves every scenario of a run, so the snapshot takes this turn's slice.
+    first_request = len(MockModelHandler.requests)
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-minimal-") as temporary:
         root = Path(temporary).resolve()
         editor_path = root / "created.txt"
-        prompt = f"{PERSISTENT_TOOLS_PROMPT}\n{PERSISTENT_EDITOR_PATH_PREFIX}{editor_path}"
+        prompt = f"{MINIMAL_PROMPT}\n{MINIMAL_EDITOR_PATH_PREFIX}{editor_path}"
         sessions = root / "sessions"
-        cordis = root / "cordis.yml"
-        cordis.write_text(PERSISTENT_TOOLS_CORDIS)
         with DeepSeekHarness(
-            provider="deepseek",
+            provider="deepseek-official",
             model="smoke-model",
             cwd=str(root),
             session_root=str(sessions),
-            cordis=str(cordis),
+            cordis=str(MINIMAL_CORDIS),
             runtime_bin=str(executable),
             api_key="sk-keyless-smoke",
             base_url=base_url,
             request_timeout_seconds=60,
         ) as harness:
-            result = harness.run(prompt, session_id="persistent-tools-smoke")
+            result = harness.run(prompt, session_id="minimal-agent-smoke")
 
-        assert result.status == "ok", result
         event_text = json.dumps(result.events)
-        if PERSISTENT_TOOLS_TEXT not in event_text:
-            raise AssertionError(f"packaged tools run emitted no final response: {result.events}")
+        if MINIMAL_TEXT not in event_text:
+            raise AssertionError(f"minimal agent run emitted no final response: {result.events}")
         if editor_path.read_text() != "created by packaged editor\n":
             raise AssertionError(f"packaged editor wrote unexpected content: {editor_path.read_text()!r}")
-        assert_session_log(sessions, root, PERSISTENT_TOOLS_TEXT, "COUNT=1", "COUNT=2 CWD=/tmp")
+        assert_session_log(sessions, root, MINIMAL_TEXT, "COUNT=1", "COUNT=2 CWD=/tmp")
+
+        files = build_minimal_snapshot_files(MockModelHandler.requests[first_request:], root)
+        compare_snapshot_files(
+            files, update_snapshots, MINIMAL_SNAPSHOT_DIRECTORY, MINIMAL_SNAPSHOT_FILENAMES,
+        )
 
 
 def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) -> None:
@@ -610,7 +616,6 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
         ) as harness:
             result = harness.run(SNAPSHOT_PROMPT, session_id=SNAPSHOT_SESSION_ID)
 
-        assert result.status == "ok", result
         assert result.final_response == SNAPSHOT_FINAL_TEXT, result.final_response
         methods = [notification.method for notification in result.notifications]
         if methods.count("subagent.started") != 2 or methods.count("subagent.finished") != 2:
@@ -629,7 +634,9 @@ def smoke_sdk_snapshot(base_url: str, executable: Path, update_snapshots: bool) 
             raise AssertionError("second advanced child log has no workflow-subagent result")
 
         files = build_snapshot_files(result, logs, child_ids, root)
-        compare_snapshot_files(files, update_snapshots)
+        compare_snapshot_files(
+            files, update_snapshots, ADVANCED_SNAPSHOT_DIRECTORY, ADVANCED_SNAPSHOT_FILENAMES,
+        )
 
 
 def smoke_direct(base_url: str, executable: Path) -> None:
@@ -657,8 +664,8 @@ def smoke_direct(base_url: str, executable: Path) -> None:
                 "params": {"sessionId": "direct-smoke", "contentBlocks": [{"type": "text", "text": "reply with the smoke text"}]},
             })
             messages = peer.read_until(lambda message: message.get("id") == "prompt")
-            if not any(message.get("method") == "session.finished" and message.get("params", {}).get("status") == "ok" for message in messages):
-                messages.extend(peer.read_until(lambda message: message.get("method") == "session.finished"))
+            if not any(is_idle_notification(message) for message in messages):
+                messages.extend(peer.read_until(is_idle_notification))
             event_text = json.dumps(messages)
             if EXPECTED_TEXT not in event_text:
                 raise AssertionError(f"direct runtime emitted no final response: {messages}")
@@ -667,6 +674,16 @@ def smoke_direct(base_url: str, executable: Path) -> None:
         finally:
             peer.close()
         assert_session_log(sessions, root, EXPECTED_TEXT)
+
+
+def is_idle_notification(message: dict[str, object]) -> bool:
+    """Return whether a JSON-RPC notification marks a session idle."""
+    params = message.get("params")
+    return (
+        message.get("method") == "session.status"
+        and isinstance(params, dict)
+        and params.get("status") == "idle"
+    )
 
 
 class RuntimePeer:
@@ -776,7 +793,7 @@ def read_session_logs(sessions: Path) -> dict[str, list[dict[str, object]]]:
     return logs
 
 
-def snapshot_child_ids(result: "TurnResult") -> list[str]:
+def snapshot_child_ids(result: "RunResult") -> list[str]:
     """Return the two child session ids in their SDK notification order."""
     child_ids: list[str] = []
     for notification in result.notifications:
@@ -793,14 +810,88 @@ def snapshot_child_ids(result: "TurnResult") -> list[str]:
     return child_ids
 
 
+def build_minimal_snapshot_files(
+    requests: list[dict[str, object]],
+    cwd: Path,
+) -> dict[str, str]:
+    """Render the minimal composition's model-visible surface as expected output.
+
+    Every assembled system prompt, advertised tool schema, and system or user message is
+    kept verbatim: they carry what the deployment actually shows the model, so a plugin
+    that contributes an unintended system section or user message cannot pass unnoticed.
+    Assistant and tool payloads keep only their call identity, and the dynamic
+    runtime-context snapshot is dropped, because their text differs across the platforms
+    this expected output must replay on.
+    """
+    snapshot = []
+    for body in requests:
+        messages = body.get("messages")
+        if not isinstance(messages, list):
+            raise AssertionError(f"minimal model request has no messages: {body}")
+        snapshot.append({
+            "tools": minimal_snapshot_text(body.get("tools"), cwd),
+            "messages": [
+                minimal_snapshot_message(message, cwd)
+                for message in messages
+                if not is_runtime_context_message(message)
+            ],
+        })
+    return {"model-visible.json": json.dumps(snapshot, indent=2, ensure_ascii=False) + "\n"}
+
+
+def is_runtime_context_message(message: object) -> bool:
+    """Identify the agent loop's dynamic runtime-context snapshot, current or cleared."""
+    return (
+        isinstance(message, dict)
+        and message.get("role") == "user"
+        and message_text(message.get("content")).startswith(RUNTIME_CONTEXT_PREFIX)
+    )
+
+
+def minimal_snapshot_message(message: object, cwd: Path) -> dict[str, object]:
+    """Reduce one model-visible message to its stable, behavior-carrying parts."""
+    if not isinstance(message, dict):
+        raise AssertionError(f"minimal model request has an invalid message: {message}")
+    role = message.get("role")
+    if role in ("system", "user"):
+        return {"role": role, "text": minimal_snapshot_text(message_text(message.get("content")), cwd)}
+    if role == "assistant":
+        calls = message.get("tool_calls")
+        if not isinstance(calls, list):
+            raise AssertionError(f"minimal assistant message has no tool calls: {message}")
+        return {
+            "role": role,
+            "toolCalls": [
+                {"id": call.get("id"), "name": (call.get("function") or {}).get("name")}
+                for call in calls
+                if isinstance(call, dict)
+            ],
+        }
+    if role == "tool":
+        return {"role": role, "toolCallId": message.get("tool_call_id"), "text": "{{tool-result}}"}
+    raise AssertionError(f"minimal model request has an unexpected message role: {message}")
+
+
+def minimal_snapshot_text(value: object, cwd: Path) -> object:
+    """Replace the scenario's temporary working directory everywhere it appears."""
+    if isinstance(value, str):
+        return value.replace(str(cwd), "{{cwd}}")
+    if isinstance(value, list):
+        return [minimal_snapshot_text(item, cwd) for item in value]
+    if isinstance(value, dict):
+        return {key: minimal_snapshot_text(item, cwd) for key, item in value.items()}
+    return value
+
+
 def build_snapshot_files(
-    result: "TurnResult",
+    result: "RunResult",
     logs: dict[str, list[dict[str, object]]],
     child_ids: list[str],
     cwd: Path,
 ) -> dict[str, str]:
     """Render the SDK result and three persisted logs into stable expected outputs."""
     replacements = [(str(cwd), "{{cwd}}"), (SNAPSHOT_SESSION_ID, "{{parent}}")]
+    replacements.append((snapshot_workflow_run_id(result), "{{workflow-run}}"))
     for index, child_id in enumerate(child_ids, start=1):
         replacements.append((child_id, f"{{{{child-{index}}}}}"))
         agent_id = snapshot_agent_id(result, child_id)
@@ -809,7 +900,6 @@ def build_snapshot_files(
 
     result_value = {
         "session_id": result.session_id,
-        "status": result.status,
         "final_response": result.final_response,
         "events": result.events,
         "notifications": [
@@ -829,12 +919,25 @@ def build_snapshot_files(
         files[f"session.{index}.jsonl"] = render_jsonl(
             [normalize_snapshot_value(record, replacements) for record in logs[child_id]]
         )
-    if tuple(files) != SNAPSHOT_FILENAMES:
-        raise AssertionError(f"advanced snapshot file set drifted: {tuple(files)}")
     return files
 
 
-def snapshot_agent_id(result: "TurnResult", child_id: str) -> str:
+def snapshot_workflow_run_id(result: "RunResult") -> str:
+    """Return the one workflow run id emitted by the advanced scenario."""
+    run_ids: set[str] = set()
+    for event in result.events:
+        event_type = event.get("type")
+        data = event.get("data")
+        if not isinstance(event_type, str) or not event_type.startswith("tool-workflow/"):
+            continue
+        if isinstance(data, dict) and isinstance(data.get("runId"), str):
+            run_ids.add(data["runId"])
+    if len(run_ids) != 1:
+        raise AssertionError(f"advanced snapshot expected one workflow run id: {sorted(run_ids)}")
+    return next(iter(run_ids))
+
+
+def snapshot_agent_id(result: "RunResult", child_id: str) -> str:
     """Find the successful subagent id paired with one child session."""
     for notification in result.notifications:
         if notification.method != "subagent.finished":
@@ -906,27 +1009,35 @@ def render_jsonl(records: list[object]) -> str:
     )
 
 
-def compare_snapshot_files(files: dict[str, str], update: bool) -> None:
-    """Write or exactly compare the advanced executable snapshot files."""
+def compare_snapshot_files(
+    files: dict[str, str],
+    update: bool,
+    directory: Path,
+    filenames: tuple[str, ...],
+) -> None:
+    """Write or exactly compare one scenario's expected snapshot files."""
+    scenario = directory.name
+    if tuple(files) != filenames:
+        raise AssertionError(f"{scenario} snapshot builder produced {tuple(files)}, expected {filenames}")
     if update:
-        SNAPSHOT_DIRECTORY.mkdir(parents=True, exist_ok=True)
+        directory.mkdir(parents=True, exist_ok=True)
         for name, content in files.items():
-            (SNAPSHOT_DIRECTORY / name).write_text(content, encoding="utf-8")
-        print(f"smoke-python-runtime: updated snapshots in {SNAPSHOT_DIRECTORY}")
+            (directory / name).write_text(content, encoding="utf-8")
+        print(f"smoke-python-runtime: updated snapshots in {directory}")
 
     existing = {
         path.name
-        for path in SNAPSHOT_DIRECTORY.iterdir()
+        for path in directory.iterdir()
         if path.is_file()
-    } if SNAPSHOT_DIRECTORY.is_dir() else set()
-    expected = set(SNAPSHOT_FILENAMES)
+    } if directory.is_dir() else set()
+    expected = set(filenames)
     if existing != expected:
         raise AssertionError(
-            "advanced snapshot files differ: "
+            f"{scenario} snapshot files differ: "
             f"missing={sorted(expected - existing)}, unexpected={sorted(existing - expected)}"
         )
     for name, actual in files.items():
-        expected_text = (SNAPSHOT_DIRECTORY / name).read_text(encoding="utf-8")
+        expected_text = (directory / name).read_text(encoding="utf-8")
         if actual == expected_text:
             continue
         diff = "".join(difflib.unified_diff(
@@ -936,7 +1047,7 @@ def compare_snapshot_files(files: dict[str, str], update: bool) -> None:
             tofile=f"actual/{name}",
         ))
         raise AssertionError(
-            f"advanced executable snapshot mismatch in {name}; "
+            f"{scenario} executable snapshot mismatch in {name}; "
             "rerun with --update-snapshots after reviewing the behavior\n"
             f"{diff}"
         )

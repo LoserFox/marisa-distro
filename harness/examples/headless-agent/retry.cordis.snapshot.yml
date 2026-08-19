@@ -1,6 +1,6 @@
 # Keyless provider-retry composition for the headless stream-json snapshot.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:

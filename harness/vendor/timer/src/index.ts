@@ -1,6 +1,6 @@
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context extends Pick<TimerService, 'interval' | 'timeout' | 'throttle' | 'debounce' | 'setTimeout' | 'setInterval'> {
     timer: TimerService
   }

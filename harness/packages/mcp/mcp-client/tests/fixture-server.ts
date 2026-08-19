@@ -46,10 +46,21 @@ server.registerTool('image', {
 }, async () => ({
   content: [
     { type: 'text', text: 'Here is an image:' },
-    { type: 'image', data: 'iVBORw0KGgo=', mimeType: 'image/png' },
+    { type: 'image', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC', mimeType: 'image/png' },
     { type: 'text', text: 'End of image.' },
   ],
 }))
+
+server.registerTool('crash', {
+  title: 'Crash Tool',
+  description: 'Replies, then exits the server process (crash-recovery test).',
+  inputSchema: {},
+}, async () => {
+  // Exit AFTER the response flushes so the caller observes a clean result
+  // followed by a transport close, like a real post-reply crash.
+  setTimeout(() => process.exit(7), 25)
+  return { content: [{ type: 'text', text: 'crashing' }] }
+})
 
 // Dotted name: legal in MCP, illegal in the DeepSeek function-name contract.
 // Exercises the bridge's normalize-and-hash public-name path end to end.

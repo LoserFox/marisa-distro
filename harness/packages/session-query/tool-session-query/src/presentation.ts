@@ -157,7 +157,7 @@ function formatEventTrace(
     `Replaced by: ${trace.replacedBy ?? 'none'}`,
     `Replacement chain: ${seqList(trace.replacementChain)}`,
     `Events replaced by target: ${seqList(trace.replacedEventSeqs)}`,
-    `Direct provenance sources: ${seqList(trace.sourceEventSeqs)}`,
+    `Events cited directly as sources: ${seqList(trace.sourceEventSeqs)}`,
     `Direct derived events: ${seqList(trace.derivedEventSeqs)}`,
   ].join('\n')
 }
@@ -221,7 +221,7 @@ function presentSessionTraceCall(args: SessionTargetCallArgs): GenericCallView {
     card: 'generic',
     kind: 'read',
     title: args.session_id === undefined ? 'Trace current session' : `Trace session ${args.session_id}`,
-    ...args.session_id !== undefined ? { rawInput: args.session_id } : {},
+    ...args.session_id === undefined ? {} : { rawInput: args.session_id },
   }
 }
 

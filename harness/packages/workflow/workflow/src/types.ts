@@ -1,14 +1,13 @@
 /**
  * Workflow seam vocabulary: the request/run/result types a workflow engine
- * consumes and produces, plus the payload shapes of the `workflow/*` events.
+ * consumes and produces, plus the fields in the `workflow/*` event payloads.
  * Types only (plus the id-brand factory), per the package convention.
  *
  * @module @deepseek-ai/dsh-workflow/types
  */
 
 import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Identifies one workflow run. */
 export type WorkflowRunId = Branded<'WorkflowRunId'>
@@ -56,38 +55,6 @@ export interface WorkflowMeta {
 }
 
 /**
- * What a caller asks for when starting a workflow run. `meta` and `args` are
- * plain JSON DATA by the seam contract (the tool builds both from the model's
- * schema-validated call; the engine validates `meta`'s shape and rejects loud
- * before anything runs) — an engine never evaluates script text to obtain
- * them. `parent` is REQUIRED — every `agent()` the script spawns is
- * attributed to it (cwd, lineage, depth flow through the subagent seam).
- */
-export interface WorkflowStartRequest {
-  /** The plain-JS script body (top-level await allowed; ends with `return <json-value>`). */
-  script: string
-  /** The workflow's identity block, as plain JSON data (shape-validated by the engine). */
-  meta: WorkflowMeta
-  /** Optional input exposed verbatim to the script as the `args` global. */
-  args?: unknown
-  /**
-   * Optional engine-wide child-provider override for this run. The workflow
-   * script cannot observe or replace it; omission uses the engine's configured
-   * provider.
-   */
-  subagentProvider?: string
-  /**
-   * Optional per-run total-child ceiling. Implementations reject values above
-   * their deployment ceiling before publishing the run.
-   */
-  maxTotalAgents?: number
-  /** The agent on whose behalf the run executes (parent of every child). */
-  parent: Agent
-  /** Cancels the run when aborted (the tool's `exec.signal`). */
-  signal?: AbortSignal
-}
-
-/**
  * Why a run settled. CLOSED union (engine-owned, consumers may exhaust):
  * `completed` = the script ran to its final `return`; `cancelled` = the run
  * was cancelled (caller `cancel()`/signal); `error` = the script threw, a
@@ -96,7 +63,7 @@ export interface WorkflowStartRequest {
 export type WorkflowStopReason = 'completed' | 'cancelled' | 'error'
 
 /**
- * The outcome of one run, resolved by {@link WorkflowRun.result}. `value` is
+ * The outcome resolved by a live workflow run. `value` is
  * the script's materialized return value (plain host-realm JSON data; `null`
  * when the script returned `undefined`) — meaningful only for `completed`.
  * A non-`completed` reason carries the failure in `error`; the consumer maps
@@ -117,23 +84,6 @@ export interface WorkflowResult {
    * inside a terminated script are unknowable then.
    */
   agentsStarted: number
-}
-
-/**
- * Holder-owned live workflow. `result` never rejects and settles within the
- * engine's cancellation grace; failures resolve through `stopReason`. Consumers
- * may cancel and must call idempotent `dispose()` on every path to await bounded
- * script settlement and child quiescence.
- */
-export interface WorkflowRun {
-  readonly id: WorkflowRunId
-  /** The validated meta block (available before the body runs). */
-  readonly meta: WorkflowMeta
-  readonly result: Promise<WorkflowResult>
-  /** Cancel the run: children abort, pending hooks reject, the script dies at its next await (or is force-settled at the grace). */
-  cancel(reason?: string): void
-  /** Cancel + bounded-grace settle; safe to call on every path (idempotent). */
-  dispose(): Promise<void>
 }
 
 /** Identifying detail for a run, carried by every `workflow/*` event as borrowed immutable data, never the live run. */

@@ -21,7 +21,7 @@ function countWords(text: string): number {
 const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as Record<string, number>
 
 const listOnly = process.argv.includes('--list')
-const failures: Array<string> = []
+const failures: string[] = []
 const rows: string[] = []
 
 for (const [path, ceiling] of Object.entries(manifest)) {

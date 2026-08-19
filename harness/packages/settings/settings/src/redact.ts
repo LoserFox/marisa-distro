@@ -7,7 +7,7 @@
  * @module @deepseek-ai/dsh-settings/redact
  */
 
-import type z from 'schemastery'
+import type z from '@deepseek-ai/schemastery'
 
 /**
  * Minimal structural view of a live schemastery node. Only the relations the
@@ -103,7 +103,7 @@ function walk(node: SchemaNode | undefined, value: unknown, path: string[], secr
  * @returns the stripped detached value and the ordered secret positions.
  */
 export function redactSecrets(schema: z<never>, value: unknown): RedactedValue {
-  const secrets: Array<RedactedSecret> = []
+  const secrets: RedactedSecret[] = []
   const stripped = walk(schema, value, [], secrets)
   return { value: stripped, secrets }
 }

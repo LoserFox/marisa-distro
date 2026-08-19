@@ -32,7 +32,6 @@ test('backend command selects the Marisa profile, HMR, overlay, and requested po
   const layout = resolveLayout({ root: 'C:\\repo', home: 'C:\\Users\\dev', platform: 'win32' })
   assert.deepEqual(buildBackendArgs(layout, { port: '{port}' }), [
     layout.cli,
-    'web',
     '--profile', 'marisa',
     '--patch', layout.overlay,
     '--dev',

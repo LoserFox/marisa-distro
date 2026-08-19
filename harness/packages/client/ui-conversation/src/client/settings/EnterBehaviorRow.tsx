@@ -39,7 +39,7 @@ const OPTIONS: readonly {
 export function EnterBehaviorRow({ useBusyEnter, setBusyEnter, t }: EnterBehaviorRowProps) {
   const behavior = useBusyEnter(value => value)
   const [open, setOpen] = useState(false)
-  const selectedLabel = behavior !== 'queue' ? 'settings.enter.steer' : 'settings.enter.queue'
+  const selectedLabel = behavior === 'queue' ? 'settings.enter.queue' : 'settings.enter.steer'
 
   return (
     <div className={css.row}>

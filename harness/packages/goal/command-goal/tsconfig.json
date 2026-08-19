@@ -15,13 +15,13 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../../ui/commands"
+      "path": "../../interaction/commands"
     },
     {
       "path": "../goal"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

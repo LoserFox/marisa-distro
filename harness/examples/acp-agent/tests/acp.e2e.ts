@@ -104,7 +104,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('acp-agent e2e: real prompt over 
     const { client, updates } = spawned
 
     await client.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} })
-    // Any absolute cwd is honored now; use the temp `workdir` as this session's
+    // Any absolute cwd is honored; use the temp `workdir` as this session's
     // workspace (the bash tool will run there) — it need not equal the launch dir.
     const { sessionId } = await client.newSession({ cwd: workdir, mcpServers: [] })
 

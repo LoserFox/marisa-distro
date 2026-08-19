@@ -4,8 +4,8 @@
  * @module @deepseek-ai/dsh-tool-goal
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { GoalId } from '@deepseek-ai/dsh-goal'
 import type { GoalRef, GoalView } from '@deepseek-ai/dsh-goal'
 import { boundContextSummary, createUserMessage, HarnessError } from '@deepseek-ai/dsh-llm'
@@ -201,7 +201,7 @@ export function apply(ctx: Context, config: Config): void {
       const execution = goalToolExecution(ctx, exec)
       return Promise.resolve(goalValue(ctx.goals.get(execution.agent)))
     },
-    presentCall: () => { return present('Read current goal', 'read') },
+    presentCall: () => present('Read current goal', 'read'),
   }))
 
   ctx.tools.register(defineTool({
@@ -258,7 +258,7 @@ export function apply(ctx: Context, config: Config): void {
       const execution = goalToolExecution(ctx, exec)
       const ref = goalRef(args.goal_id, args.revision)
       const replacements = {
-        ...!hasText(args.objective) ? {} : { objective: args.objective },
+        ...hasText(args.objective) ? { objective: args.objective } : {},
         ...hasRoundCap(args.max_goal_rounds) ? { maxGoalRounds: args.max_goal_rounds } : {},
       }
       if (args.action === 'edit') {

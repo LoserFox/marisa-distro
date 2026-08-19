@@ -7,12 +7,12 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import SubagentService from '@deepseek-ai/dsh-subagent'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import * as sdk from '../src/index.ts'
 import {
@@ -24,7 +24,7 @@ import {
   type SdkRunSpec,
 } from '../src/run.ts'
 
-const fakeRuntime = fileURLToPath(new URL('../../../sdk/sdk-client/tests/fake-runtime.ts', import.meta.url))
+const fakeRuntime = fileURLToPath(new URL('../../../sdk/client/tests/fake-runtime.ts', import.meta.url))
 
 /** A parent Agent stub. The SDK backend reads exactly one thing off it: the session header's cwd (the workspace its child inherits). */
 const fakeParent = { id: 'parent', session: { header: { cwd: process.cwd() } } } as unknown as Agent
@@ -36,7 +36,7 @@ function request(text = 'p', signal = new AbortController().signal) {
 /** Mount the SDK backend pointed at the fake runtime, scripted by `fakeEnv`. */
 async function setup(fakeEnv: Record<string, string> = {}, config: Partial<sdk.Config> = {}) {
   const ctx = new Context()
-  await ctx.plugin(SubagentService)
+  await ctx.plugin(SubagentRuntime)
   // The Config type models the post-validation shape, so the default registry
   // name is stated here; the Loader-composition fixture omits providerName and
   // exercises the schemastery default end to end.
@@ -64,7 +64,7 @@ function text(blocks: { type: string; text?: string }[]): string {
 async function waitForFile(file: string, timeoutMs = 5000): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (!existsSync(file)) {
-    if (Date.now() > deadline) { throw new Error(`fake runtime never became ready (${file})`) }
+    if (Date.now() > deadline) throw new Error(`fake runtime never became ready (${file})`)
     await new Promise(r => setTimeout(r, 10))
   }
 }
@@ -172,6 +172,20 @@ describe('dsh-subagent-dsh-sdk provider', () => {
 
     expect(result.stopReason).toBe('error')
     expect(text(result.output)).toBe('stream-only answer')
+    await run.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('keeps streamed text when the terminal message is an empty usage-only step', async () => {
+    // The child streams its answer, then emits an empty-content
+    // assistant/message (the harness loop appends one to host usage on a
+    // max-tokens step that assembled no text blocks). The empty message is
+    // not assistant output and must not erase the streamed answer.
+    const ctx = await setup({ FAKE_EMPTY_MESSAGE: '1', FAKE_REASON_KIND: 'max-tokens' })
+    const run = await ctx.subagents.start('dsh-sdk', request())
+    const result = await run.result
+    expect(result.stopReason).toBe('max-tokens')
+    expect(text(result.output)).toBe('hello from fake runtime')
     await run.dispose()
     await ctx.fiber.dispose()
   })
@@ -347,7 +361,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
 
   it('registers under the configured provider name and unregisters on fiber dispose (HMR safety)', async () => {
     const ctx = new Context()
-    await ctx.plugin(SubagentService)
+    await ctx.plugin(SubagentRuntime)
     const fiber = await ctx.plugin(sdk, {
       providerName: 'sdk-hmr',
       command: process.execPath,
@@ -371,7 +385,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
 
   it('rejects non-positive timing bounds at load', async () => {
     const ctx = new Context()
-    await ctx.plugin(SubagentService)
+    await ctx.plugin(SubagentRuntime)
     const base = { providerName: 'sdk', command: 'true', args: [], provider: 'p', model: 'm', env: {} }
     await expect(ctx.plugin(sdk, { ...base, shutdownTimeoutMs: 0 })).rejects.toThrow('shutdownTimeoutMs must be a positive finite number')
     await expect(ctx.plugin(sdk, { ...base, disposeEofGraceMs: -1 })).rejects.toThrow('disposeEofGraceMs must be a positive finite number')
@@ -383,7 +397,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
     'rejects invalid maxTokens %s at load',
     async (maxTokens) => {
       const ctx = new Context()
-      await ctx.plugin(SubagentService)
+      await ctx.plugin(SubagentRuntime)
       await expect(ctx.plugin(sdk, {
         providerName: 'sdk',
         command: 'true',
@@ -401,7 +415,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
     'defensively rejects invalid maxTokens %s when apply is called directly',
     async (maxTokens) => {
       const ctx = new Context()
-      await ctx.plugin(SubagentService)
+      await ctx.plugin(SubagentRuntime)
       expect(() => { sdk.apply(ctx, {
         providerName: 'sdk',
         command: 'true',
@@ -420,7 +434,7 @@ describe('dsh-subagent-dsh-sdk provider', () => {
 
   it('rejects an empty config cwd at load', async () => {
     const ctx = new Context()
-    await ctx.plugin(SubagentService)
+    await ctx.plugin(SubagentRuntime)
     await expect(ctx.plugin(sdk, {
       providerName: 'sdk',
       command: 'true',

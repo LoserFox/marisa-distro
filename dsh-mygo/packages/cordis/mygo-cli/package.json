@@ -1,0 +1,104 @@
+{
+  "name": "@r05en1cu/dsh-mygo-cli",
+  "description": "mygo managed-plugin CLI: pack/restore/init as a dsh app plugin (design-r5)",
+  "version": "0.2.0-rc.7",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omdsh-dev/dsh-mygo.git"
+  },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts",
+    "src",
+    "assets/plugin-template"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -b && tsdown",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "verify:self-contained": "node scripts/verify-self-contained.mjs",
+    "prepare": "node scripts/prepare.mjs",
+    "prepack": "node -e \"const fs=require('fs'); if(!fs.existsSync('lib/index.js')||!fs.existsSync('lib/types/index.d.ts')){console.error('lib 缺失：请先在仓库内构建（pnpm run build：tsc -b + tsdown）'); process.exit(1)}\""
+  },
+  "dependencies": {
+    "@r05en1cu/dsh-mygo": "workspace:^",
+    "@r05en1cu/dsh-mygo-loader-profile": "workspace:^",
+    "@deepseek-ai/dsh-app-boot": "^0.1.0-rc.2",
+    "@r05en1cu/dsh-mygo-loader-hub": "workspace:^",
+    "js-yaml": "^4.2.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@r05en1cu/dsh-mygo": "workspace:^",
+    "@r05en1cu/dsh-mygo-api": "workspace:^",
+    "@r05en1cu/dsh-mygo-loader-profile": "workspace:^",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "@deepseek-ai/cordis-plugin-loader": "^1.0.2",
+    "@deepseek-ai/cordis-plugin-include": "^1.0.6",
+    "@deepseek-ai/dsh-storage": "^0.0.1-rc.1",
+    "@deepseek-ai/dsh-storage-domain": "^0.0.1-rc.1",
+    "@deepseek-ai/dsh-storage-json": "^0.0.1-rc.1",
+    "@deepseek-ai/dsh-storage-sqlite": "^0.0.1-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "^0.0.1-rc.1",
+    "@deepseek-ai/dsh-tools": "^0.0.1-rc.1",
+    "@deepseek-ai/schemastery": "3.18.1-rc.1",
+    "@r05en1cu/dsh-mygo-loader-hub": "workspace:^",
+    "@types/js-yaml": "^4.0.9"
+  },
+  "dsh": {
+    "mygo": {
+      "formatVersion": 1,
+      "id": "dsh-mygo-cli",
+      "version": "0.2.0-rc.7",
+      "entry": "lib/index.js",
+      "requires": {},
+      "core": "^0.0.1-rc.1",
+      "loader": {
+        "id": "standard",
+        "range": "^1.0.0"
+      },
+      "environment": {
+        "platform": "cli"
+      }
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "author": "r05En1cU",
+  "maintainers": [
+    "r05En1cU"
+  ]
+}

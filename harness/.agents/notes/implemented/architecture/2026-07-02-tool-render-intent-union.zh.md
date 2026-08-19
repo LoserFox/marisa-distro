@@ -47,7 +47,7 @@ interface TerminalResultView { card: 'terminal'; title?: string; output?: string
 ### 生产者映射
 
 - `dsh-tool-fs` read → `generic`（`kind:'read'`，附带一个 follow-along `location`）；write → `diff`（`oldText:null`）；edit → `diff`（`oldText:old_string || null`，`newText:new_string ?? ''`）。这与 `claude-agent-acp` 的 `toolInfoFromToolUse` 中 Read/Write/Edit 各分支逐字段对应。
-- `dsh-tool-bash` 前台运行 → `terminal` 调用 + `terminal` 结果；`run_in_background` → `generic`。通用 `task_*` 控制工具拥有各自的 generic 卡片。
+- `dsh-tool-bash` 前台运行 → `terminal` 调用 + `terminal` 结果；`run_in_background` → `generic`。通用 `job_*` 控制工具拥有各自的 generic 卡片。
 - `dsh-tool-todo` → `generic`。
 
 ### 终端回退的归属
@@ -63,7 +63,7 @@ terminal 意图只用于展示。harness 仍通过自身的 bash 服务执行命
 ## 曾考虑的替代方案
 
 - **完全删除工具自有的展示**：即本 Agent Note 所取代的那个被否决的 collapse 提案；其自身的结论正是推迟到两个真实工具和两个真实消费方存在后再做此联合类型，该条件现已满足。
-- **让 UI 执行 terminal 意图**：否决。这样会绕过 harness 的 bash 策略与归属契约，并把命令执行分裂到不同后端。terminal 卡片描述的是 harness 拥有的执行，绝不授权客户端侧执行。
+- **让 UI 执行 terminal 意图**：否决。这样会绕过 harness 的 bash 策略与归属约定，并把命令执行分裂到不同后端。terminal 卡片描述的是 harness 拥有的执行，绝不授权客户端侧执行。
 - **可合并扩展的联合类型**（`ContentBlockMap` 模式）：否决。新的渲染意图无论如何需要新的 bridge 代码来渲染，因此一个被 bridge 静默丢弃的插件添加变体，比封闭联合类型在 bridge 的 `assertNever` switch 处引发的编译错误更糟糕。
 - **保留可选字段集合**：即「问题」一节所剖析的现状：无效状态可表达、字段交互无文档、且完全无法请求 diff 卡片。
 
@@ -78,5 +78,5 @@ terminal 意图只用于展示。harness 仍通过自身的 bash 服务执行命
 ## 相关
 
 - 取代早先被否决的折叠工具自有呈现提案（已否决——「等两个真实工具和两个真实消费方，然后做带标签 render-intent 联合类型」）中的推迟决定。该条件现已满足；本 Agent Note 即为那个联合类型。
-- 被[结果时已应用 hunk 差异](../../archived/architecture/2026-07-02-result-time-applied-hunk-diffs.md)（已归档）扩展：后者添加了一个持久化的 `meta` 通道，使 write/edit 在结果时输出 `DiffResultView`（应用后的变更：带上下文行的 contextual hunk / 每个 `replace_all` 位点一个，或创建时的整文件 diff）——值/呈现拆分与持久化的 `presentationMeta` 通道现由[规范工具输出契约](2026-07-20-canonical-tool-output-contract.md)拥有。
+- 被[结果时已应用 hunk 差异](../../archived/architecture/2026-07-02-result-time-applied-hunk-diffs.md)（已归档）扩展：后者添加了一个持久化的 `meta` 通道，使 write/edit 在结果时输出 `DiffResultView`（应用后的变更：带上下文行的 contextual hunk / 每个 `replace_all` 位点一个，或创建时的整文件 diff）——值/呈现拆分与持久化的 `presentationMeta` 通道现由[规范工具输出约定](2026-07-20-canonical-tool-output-contract.md)拥有。
 - 将 `ToolTerminal` 折入当前 UI 传输层使用的带标签 `terminal` 视图。

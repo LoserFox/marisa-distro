@@ -3,7 +3,7 @@
  * graph and shell registry; there is no npm package behind it.
  */
 import type { ReactNode } from 'react'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { createSlotRenderer } from '@deepseek-ai/dsh-client-web-react'
 import { buildRenderApp } from './app.tsx'
 
@@ -16,7 +16,7 @@ export interface AppShellService {
   renderApp: () => ReactNode
 }
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     /** The shell assembly face, provided by the app-shell entry once its inject set is active. */
     appShell: AppShellService

@@ -19,7 +19,7 @@ import type { KvFacet } from '@deepseek-ai/dsh-storage'
 // Type-only: pulls the ctx.webServer Context merge from dsh-host-webserver.
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import { TrackStore, makeId } from './store.ts'
-import type { Capture, Decision, EvidenceRef, Issue, IssueState, LlmUsageRecord } from './types.ts'
+import type { Capture, Decision, EvidenceRef, Issue, IssueState, Link, LlmUsageRecord, TrackConfig } from './types.ts'
 import { runSync } from './sync/run.ts'
 import { createAutoCapture, type CaptureSignalsConfig } from './capture/observe.ts'
 import { backfillCaptureContext } from './capture/backfill.ts'
@@ -29,6 +29,15 @@ import { createUsageRecorder, formatUsageReport, summarizeUsage } from './usage.
 import { createLifecycleObserver } from './lifecycle/observe.ts'
 import { evidenceWeight, describeEvidence } from './lifecycle/state-machine.ts'
 import type { SyncOptions, SyncReport, SyncDeps as SyncReportDeps } from './sync/run.ts'
+import { ensureSessionGraph, buildWorkspaceGraphs, type GraphServiceDeps } from './graph/service.ts'
+import { renderGraphSummary, renderGraphText } from './graph/render.ts'
+import { writeSemanticLinks, type LinkPassResult } from './graph/links.ts'
+import { induceProjects, attributeIssuesBySpan, type ProjectInductionResult } from './graph/projects.ts'
+import { scanProjectCommits, type CommitScanResult } from './graph/commits.ts'
+import { buildLineage } from './graph/lineage.ts'
+import { relatedSessions, projectGraphView } from './graph/service.ts'
+import { buildEvolutionBrief } from './graph/brief.ts'
+import { buildCalendar } from './graph/calendar.ts'
 
 export const name = '@fakechris/dsh-track'
 export const inject = ['tools', 'storage']
@@ -123,7 +132,7 @@ export function apply(ctx: Context, config?: Config) {
   // Observability: one audit row per model-facing tool call so funnel
   // questions are answered by the store, not by session-log archaeology.
   // Fire-and-forget: audit must never break the tool's real work.
-  const audit = (tool: 'capture_thought' | 'report_decision_point' | 'track_create_issue' | 'track_sync_history' | 'track_usage' | 'track_backfill_captures' | 'track_respond_decision' | 'track_list_decisions' | 'track_attach_issue' | 'track_update_issue_state' | 'track_issue_evidence', exec: { agent?: { id?: string } }, ok: boolean, detail?: string): void => {
+  const audit = (tool: 'capture_thought' | 'report_decision_point' | 'track_create_issue' | 'track_sync_history' | 'track_usage' | 'track_backfill_captures' | 'track_respond_decision' | 'track_list_decisions' | 'track_attach_issue' | 'track_update_issue_state' | 'track_issue_evidence' | 'track_session_graph' | 'track_genealogy' | 'track_git_artifacts' | 'track_evolution_brief', exec: { agent?: { id?: string } }, ok: boolean, detail?: string): void => {
     void ensureStoreOpen()
       .then(() => store.appendAudit({
         id: makeId('audit'),
@@ -138,6 +147,7 @@ export function apply(ctx: Context, config?: Config) {
 
   // Open the KV unit once a kv-capable backend lands (see resolveKv).
   let sweepTimer: ReturnType<typeof setInterval> | undefined
+  let syncTicker: ReturnType<typeof setInterval> | undefined
   ctx.effect(async () => {
     try {
       const kv = await resolveKv(ctx)
@@ -150,29 +160,73 @@ export function apply(ctx: Context, config?: Config) {
       // Wire the lifecycle evidence observer (Part B): converts the structured
       // tool stream into evidence for the attached issue of each session.
       lifecycle = createLifecycleObserver(ctx, { store })
-      // Periodic lifecycle sweep (Part B2): the observer only fires for the
-      // attached session, so sync-created issues never accumulate evidence and
-      // their done/canceled proposals would never surface. The sweep re-runs
-      // the state machine over EVERY in_progress issue and persists
-      // `pendingConfirm` for the panel to show. Confirmation stays user-gated.
+      // Auto-maintenance loop (every SWEEP_INTERVAL_MS): five deterministic
+      // passes — (1) lifecycle sweep (done/canceled/review proposals); (2)
+      // auto-confirm canceled past the config grace (default 14d); (3) capture
+      // triage (auto-promote title-matched captures, count stale); (4) near-dup
+      // auto-merge (token similarity ≥ config threshold); (5) scheduled sync
+      // (separate ticker, config interval/cap/engine — see below). Zero LLM.
       const runSweep = (): void => {
         void ensureStoreOpen()
-          .then(() => store.sweepLifecycle())
-          .then((s) => {
+          .then(async () => {
+            const s = await store.sweepLifecycle()
             if (s.proposed > 0) {
               console.log(`[dsh-track] sweep: ${s.proposed}/${s.evaluated} in_progress → pending confirmation`)
             }
+            const ac = await store.autoConfirmPendingCanceled()
+            if (ac.confirmed > 0) {
+              console.log(`[dsh-track] auto-confirm: ${ac.confirmed} abandoned issue(s) canceled`)
+            }
+            const c = await store.triageCaptures()
+            if (c.promoted > 0 || c.stale > 0) {
+              console.log(`[dsh-track] capture triage: ${c.promoted} promoted, ${c.stale} stale of ${c.open} open`)
+            }
+            const m = await store.autoMergeDuplicates()
+            if (m.merged > 0) {
+              console.log(`[dsh-track] dup-merge: ${m.merged} issues merged into ${m.groups} canonical(s)`)
+            }
           })
-          .catch((e) => console.error('[dsh-track] sweep failed:', e))
+          .catch((e) => console.error('[dsh-track] maintenance loop failed:', e))
       }
       runSweep() // first pass right after boot so existing zombies surface
       sweepTimer = setInterval(runSweep, SWEEP_INTERVAL_MS)
+      // Scheduled sync ticker: a 1h heartbeat checks the config interval
+      // (default 7d) and last-run time, so a config change takes effect within
+      // an hour without a restart. Scans ONLY the workspaces that were synced
+      // before (lastSync keys — the incremental cursor keeps it idempotent),
+      // bounded by syncMaxSessions (memory guard: the v2 LLM passes previously
+      // killed the web under this machine's swap pressure).
+      let lastAutoSync = Date.now()
+      const runScheduledSync = async (): Promise<void> => {
+        const cfg = await store.readConfig()
+        if (!cfg.syncIntervalDays) return
+        if (Date.now() - lastAutoSync < cfg.syncIntervalDays * 86_400_000) return
+        const sessionQuery = getSessionQuery(ctx)
+        if (!sessionQuery) return
+        const global = await store.readGlobal()
+        const workspaces = Object.keys(global?.lastSync ?? {})
+        if (workspaces.length === 0) return
+        lastAutoSync = Date.now()
+        for (const ws of workspaces) {
+          try {
+            const report = await runSync(
+              { sessionQuery: sessionQuery as SyncReportDeps['sessionQuery'], store, ctx },
+              { cwd: ws, dryRun: false, maxSessions: cfg.syncMaxSessions, engine: cfg.syncEngine },
+            )
+            console.log(`[dsh-track] scheduled sync ${ws}: ${report.created} create / ${report.updated} update / ${report.promotedCaptures} promoted`)
+          } catch (e) {
+            console.error(`[dsh-track] scheduled sync ${ws} failed:`, e)
+          }
+        }
+      }
+      syncTicker = setInterval(() => void runScheduledSync().catch((e) => console.error('[dsh-track] sync ticker failed:', e)), 3600_000)
     } catch (e) {
       console.error('[dsh-track] store open failed:', e)
       throw e
     }
     return () => {
       if (sweepTimer !== undefined) clearInterval(sweepTimer)
+      if (syncTicker !== undefined) clearInterval(syncTicker)
       lifecycle?.dispose()
       store.close()
     }
@@ -236,6 +290,7 @@ export function apply(ctx: Context, config?: Config) {
       my_preference: { type: 'string', required: true, description: 'Your preferred option.' },
       rationale: { type: 'string', required: true, description: 'Why you prefer it.' },
       impact: { type: 'string', description: 'What choosing your preference means.' },
+      criteria: { type: 'array', items: { type: 'string' }, description: 'QOC evaluation criteria — the yardsticks used to pick the option (cost, complexity, privacy, coupling...).' },
       need: { type: 'string', enum: ['confirm', 'choose', 'supplement'], description: 'confirm: approve my preference; choose: pick an option; supplement: give me more info.' },
     },
     output: {
@@ -256,6 +311,7 @@ export function apply(ctx: Context, config?: Config) {
         aiPreference: args.my_preference,
         aiRationale: args.rationale,
         impact: args.impact ?? '',
+        criteria: args.criteria,
         need: args.need ?? 'confirm',
         status: 'pending',
         context: prompt?.text,
@@ -719,6 +775,195 @@ export function apply(ctx: Context, config?: Config) {
     presentCall: () => ({ card: 'generic', title: 'Backfill capture contexts', kind: 'other', rawInput: 'all legacy open captures' }),
   }))
 
+  // ---- track_session_graph: build/read the execution graph of a session ----
+  // M1 of the genealogy vision (docs/genealogy-vision.md): the deterministic
+  // session→turn→step→tool tree with seq citations, persisted in the graph
+  // table. Reads raw logs through the session-query service (web profile).
+  ctx.tools.register(defineTool({
+    name: 'track_session_graph',
+    description:
+      'Build and read the execution graph (会话结构图) of a session: the deterministic '
+      + 'tree of turns, steps and tool calls with seq citations, plus header facts '
+      + '(parent session / subagent origin). With workspace= it batch-builds graphs '
+      + 'for that workspace\'s sessions (bounded by max_sessions) and reports counts. '
+      + 'Every node and edge carries a (sessionId, seq) citation back into the raw '
+      + 'session log. Use when the user asks to expand a session\'s execution tree, '
+      + 'see what a session did, or turn past sessions into a graph.',
+    parameters: {
+      session_id: { type: 'string', description: 'Session id to build/read. Required unless workspace= is given.' },
+      workspace: { type: 'string', description: 'Workspace cwd to batch-build graphs for (bounded by max_sessions).' },
+      max_sessions: { type: 'integer', description: 'Cap for workspace batch builds (default 200).' },
+      rebuild: { type: 'boolean', description: 'Force a rebuild even when a fresh graph exists (default false).' },
+    },
+    output: {
+      schema: { type: 'string' },
+      render: (_args, value) => [{ type: 'text', text: value }],
+    },
+    async execute(args, exec) {
+      if (!exec.agent) {
+        throw new Error('track_session_graph requires an owning agent session')
+      }
+      const sessionQuery = getSessionQuery(ctx)
+      if (!sessionQuery) {
+        throw new Error('track_session_graph requires the session-query service (mounted by the web profile)')
+      }
+      await ensureStoreOpen()
+      const deps = { sessionQuery: sessionQuery as GraphServiceDeps['sessionQuery'], store }
+      if (args.workspace !== undefined) {
+        const result = await buildWorkspaceGraphs(deps, args.workspace, args.max_sessions)
+        audit('track_session_graph', exec, true, 'workspace build: ' + result.built + ' built / ' + result.skipped + ' fresh / ' + result.failed + ' failed')
+        return 'Session graph build for ' + args.workspace + ' — ' + result.total + ' session(s) scanned: '
+          + result.built + ' built, ' + result.skipped + ' already fresh, ' + result.failed + ' failed.'
+      }
+      if (typeof args.session_id !== 'string' || args.session_id === '') {
+        throw new Error('track_session_graph needs session_id= or workspace=')
+      }
+      const graph = await ensureSessionGraph(deps, args.session_id, args.rebuild ?? false)
+      audit('track_session_graph', exec, true, graph.sessionId)
+      return renderGraphSummary(graph) + '\n\n' + renderGraphText(graph)
+    },
+    presentCall: (args) => ({ card: 'generic', title: 'Session graph', kind: 'other', rawInput: args.session_id ?? args.workspace ?? '' }),
+  }))
+
+  // ---- track_genealogy: build the semantic layer (links + projects) ----
+  // M2 of the genealogy vision: after session graphs exist, write the
+  // semantic edges (fork lineage / issue↔session / capture→issue derives /
+  // decision→session / issue parent derives) and induct projects (sessions
+  // grouped by cwd + git remote). Deterministic + idempotent; dry-run by
+  // default reports counts without writing.
+  ctx.tools.register(defineTool({
+    name: 'track_genealogy',
+    description:
+      'Build the genealogy semantic layer: ensure session graphs (with workspace=), write semantic '
+      + 'links (fork lineage / issue↔session executed-in / capture→issue derives / decision→session '
+      + 'raised-in / issue parent derives), and induct projects (sessions grouped by cwd + git remote). '
+      + 'Defaults to a dry-run preview; set dry_run=false to write. Idempotent — re-runs never duplicate. '
+      + 'Use when the user asks to "归纳项目", "把需求串成图", or "看工作区怎么分组".',
+    parameters: {
+      workspace: { type: 'string', description: 'Workspace cwd to build graphs for first (optional).' },
+      dry_run: { type: 'boolean', description: 'Preview only — list counts without writing. Default true.' },
+    },
+    output: {
+      schema: { type: 'string' },
+      render: (_args, value) => [{ type: 'text', text: value }],
+    },
+    async execute(args, exec) {
+      if (!exec.agent) throw new Error('track_genealogy requires an owning agent session')
+      await ensureStoreOpen()
+      const dryRun = args.dry_run ?? true
+      const sessionQuery = getSessionQuery(ctx)
+      const deps = sessionQuery ? { sessionQuery: sessionQuery as GraphServiceDeps['sessionQuery'], store } : undefined
+      let graphs = ''
+      if (args.workspace !== undefined) {
+        if (!deps) throw new Error('track_genealogy with workspace= requires the session-query service (web profile)')
+        const built = await buildWorkspaceGraphs(deps, args.workspace, 200)
+        graphs = ` graphs: ${built.built} built / ${built.skipped} fresh / ${built.failed} failed;`
+      }
+      const links = await writeSemanticLinks(store, dryRun)
+      const projects = await induceProjects(store, dryRun)
+      const kindLine = Object.entries(links.byKind).map(([k, n]) => `${k}=${n}`).join(' ') || 'none'
+      audit('track_genealogy', exec, true, `${dryRun ? 'dry' : 'written'} links=${links.links} projects=${projects.projects}`)
+      return (`Genealogy semantic layer — ${dryRun ? 'DRY RUN (no writes)' : 'WRITTEN'}.`
+        + `${graphs}`
+        + ` Links: ${links.links} (${kindLine}) across ${links.sessions} session(s), ${links.issues} issue(s), ${links.captures} capture(s), ${links.decisions} decision(s).`
+        + ` Projects: ${projects.projects} (${projects.sessionsMapped} session(s) mapped, ${projects.issuesAssigned} issue(s) assigned).`
+        + (dryRun ? ' Run with dry_run=false to write.' : ''))
+    },
+    presentCall: (args) => ({ card: 'generic', title: 'Build genealogy layer', kind: 'other', rawInput: args.workspace ?? 'whole store' }),
+  }))
+
+  // ---- track_git_artifacts: scan a repo's commits and align with the graph ----
+  // M3 of the genealogy vision: commits are the Layer-0 code anchor. Each
+  // scanned commit links to the session whose activity window it falls in
+  // (landed-in) and to issues it implements (title overlap / session window).
+  ctx.tools.register(defineTool({
+    name: 'track_git_artifacts',
+    description:
+      'Scan a repository\'s git commits into the Track store and align them with the genealogy graph: '
+      + 'each commit links to the session whose activity window it falls in (landed-in) and to issues it '
+      + 'implements (title token overlap or same-session window). Workspace defaults to the current '
+      + 'session\'s cwd; use project-level to scan every inducted project. Dry-run by default. '
+      + 'Use when the user asks "这个需求落到哪个 commit", "代码落地在哪儿", or wants git history linked.',
+    parameters: {
+      workspace: { type: 'string', description: 'Repo cwd to scan. Defaults to the current session\'s cwd.' },
+      project_level: { type: 'boolean', description: 'Scan every inducted project (overrides workspace=).' },
+      dry_run: { type: 'boolean', description: 'Preview only — list counts without writing. Default true.' },
+      limit: { type: 'integer', description: 'Max commits per repo (default 200).' },
+    },
+    output: {
+      schema: { type: 'string' },
+      render: (_args, value) => [{ type: 'text', text: value }],
+    },
+    async execute(args, exec) {
+      if (!exec.agent) throw new Error('track_git_artifacts requires an owning agent session')
+      await ensureStoreOpen()
+      const dryRun = args.dry_run ?? true
+      const limit = args.limit ?? 200
+      const targets: string[] = []
+      if (args.project_level === true) {
+        targets.push(...(await store.listProjects()).map((p) => p.path))
+      } else {
+        const cwd = args.workspace ?? exec.agent.session.header.cwd
+        if (!cwd) throw new Error('track_git_artifacts needs workspace= or a session cwd')
+        targets.push(cwd)
+      }
+      const lines: string[] = [`Git artifact scan — ${dryRun ? 'DRY RUN (no writes)' : 'WRITTEN'}.`]
+      let totalCommits = 0, totalSessions = 0, totalIssues = 0
+      for (const cwd of targets) {
+        const result = await scanProjectCommits(store, cwd, { dryRun, limit })
+        if (result.error) { lines.push(`  ! ${cwd}: ${result.error.slice(0, 120)}`); continue }
+        totalCommits += result.commits; totalSessions += result.sessionsLinked; totalIssues += result.issuesLinked
+        const kinds = Object.entries(result.byKind).map(([k, n]) => `${k}=${n}`).join(' ') || 'none'
+        lines.push(`  ${cwd}: ${result.commits} commit(s), ${result.sessionsLinked} session link(s), ${result.issuesLinked} issue link(s) [${kinds}]`)
+      }
+      audit('track_git_artifacts', exec, true, `${dryRun ? 'dry' : 'written'} ${targets.length} repo(s), ${totalCommits} commits`)
+      lines.push(`Total: ${totalCommits} commit(s) / ${totalSessions} session link(s) / ${totalIssues} issue link(s) across ${targets.length} repo(s).`
+        + (dryRun ? ' Run with dry_run=false to write.' : ''))
+      return lines.join('\n')
+    },
+    presentCall: (args) => ({ card: 'generic', title: 'Scan git artifacts', kind: 'other', rawInput: args.workspace ?? args.project_level ? 'all projects' : '' }),
+  }))
+
+  // ---- track_evolution_brief: deterministic project-intent brief (M7) ----
+  ctx.tools.register(defineTool({
+    name: 'track_evolution_brief',
+    description:
+      'Generate the deterministic Evolution Brief for a project (or the whole store): current issue '
+      + 'stats by state/semantic kind, recent activity, open decisions, recent commits, supersede chains, '
+      + 'and proposed gaps (issues without implementing commits, stale in_progress, unresolved questions). '
+      + 'Zero LLM — every line is store fact; gaps are proposed findings, never auto-confirmed. '
+      + 'Use before planning to answer "这个项目现在什么状态", "有哪些缺口", or "下一步该做什么".',
+    parameters: {
+      project_id: { type: 'string', description: 'Project id (track_project_...) to scope the brief to. Defaults to all.' },
+    },
+    output: {
+      schema: { type: 'string' },
+      render: (_args, value) => [{ type: 'text', text: value }],
+    },
+    async execute(args, exec) {
+      if (!exec.agent) throw new Error('track_evolution_brief requires an owning agent session')
+      await ensureStoreOpen()
+      const brief = await buildEvolutionBrief(store, args.project_id)
+      audit('track_evolution_brief', exec, true, (args.project_id ?? 'all') + ', gaps=' + brief.gaps.length)
+      const lines: string[] = []
+      if (brief.project) lines.push('项目: ' + brief.project.name + ' (' + brief.project.path + ')' + (brief.project.repoUrl ? ' · ' + brief.project.repoUrl : ''))
+      const states = Object.entries(brief.issues.byState).map(([k, v]) => k + '=' + v).join(' ') || 'none'
+      lines.push('Issue 统计: ' + brief.issues.total + ' 条 [' + states + ']')
+      if (Object.keys(brief.issues.bySemantic).length > 0) lines.push('语义分布: ' + Object.entries(brief.issues.bySemantic).map(([k, v]) => k + '=' + v).join(' '))
+      if (brief.recentCommits.length > 0) lines.push('最近 commit: ' + brief.recentCommits.map((c) => c.sha.slice(0, 8)).join(', '))
+      if (brief.openDecisions.length > 0) lines.push('待确认决策 (' + brief.openDecisions.length + '): ' + brief.openDecisions.map((d) => d.question.slice(0, 40)).join(' | '))
+      if (brief.superseded.length > 0) lines.push('supersede 链 (' + brief.superseded.length + '): ' + brief.superseded.map((s) => s.newer + ' -> ' + s.older.slice(0, 16)).join(' | '))
+      lines.push('')
+      lines.push('Proposed gaps (' + brief.gaps.length + '):')
+      if (brief.gaps.length === 0) lines.push('  (无)')
+      for (const g of brief.gaps.slice(0, 20)) {
+        lines.push('  [' + g.type + '] ' + (g.issue ? g.issue.identifier + ' ' + g.issue.title.slice(0, 50) : (g.question ?? '').slice(0, 50)) + ' — ' + g.detail)
+      }
+      return lines.join('\n')
+    },
+    presentCall: (args) => ({ card: 'generic', title: 'Evolution brief', kind: 'other', rawInput: args.project_id ?? 'all' }),
+  }))
+
   // ---- rule-based auto-capture: todo_write + git branch signals ----
   // Zero-cost determinism (no LLM): the capture_thought tool almost never
   // fires on its own (~1/148 measured), so the store also listens to the
@@ -794,9 +1039,31 @@ export function apply(ctx: Context, config?: Config) {
       if (req.method === 'GET') { json(res, { captures: await store.listCaptures() }); return }
       json(res, { error: 'method not allowed' }, 405)
     })
-    registerRoute('/issues', async (_req, res) => {
+    registerRoute('/issues', async (req, res) => {
       await ensureStoreOpen()
-      json(res, { issues: await store.listIssues() })
+      const url = new URL(req.url ?? '/', 'http://x')
+      const includeDeleted = url.searchParams.get('includeDeleted') === '1'
+      const issues = await store.listIssues(undefined, undefined, { includeDeleted })
+      // P0 (Output-first): annotate each issue with its best commit evidence
+      // so the panel can mark done-without-commit work instead of hiding it.
+      if (!includeDeleted) {
+        const links = await store.listLinks()
+        const implByIssue = new Map<string, { best: Link['evidenceKind'] | undefined; confidence: number; count: number; limitations?: string[] }>()
+        for (const l of links) {
+          if (l.kind !== 'implements') continue
+          const cur = implByIssue.get(l.fromId) ?? { best: undefined, confidence: 0, count: 0, limitations: undefined }
+          cur.count += 1
+          const conf = l.confidence ?? 0
+          if (conf > cur.confidence) { cur.confidence = conf; cur.best = l.evidenceKind ?? 'candidate'; cur.limitations = l.limitations }
+          implByIssue.set(l.fromId, cur)
+        }
+        const annotated = issues.map((i) => {
+          const ev = implByIssue.get(i.id)
+          return ev !== undefined ? { ...i, commitEvidence: ev } : { ...i, commitEvidence: null }
+        })
+        json(res, { issues: annotated }); return
+      }
+      json(res, { issues }); return
     })
     registerRoute('/funnel', async (_req, res) => {
       await ensureStoreOpen()
@@ -833,6 +1100,30 @@ export function apply(ctx: Context, config?: Config) {
       }
       json(res, { decisions: await store.listDecisions(state ?? undefined, since, sessionId ?? undefined) })
     })
+    // GET /api/track/config — effective auto-maintenance config; POST with a
+    // partial body persists a patch (missing fields keep their current value).
+    registerRoute('/config', async (req, res) => {
+      await ensureStoreOpen()
+      if (req.method === 'GET') { json(res, { config: await store.readConfig() }); return }
+      if (req.method === 'POST') {
+        const body = await readBody(req)
+        const patch: Partial<TrackConfig> = {}
+        const num = (k: string): number | undefined => typeof body[k] === 'number' && Number.isFinite(body[k]) ? body[k] as number : undefined
+        const d = num('autoCancelPendingDays')
+        const i = num('syncIntervalDays')
+        const m = num('syncMaxSessions')
+        const t = num('nearDupThreshold')
+        if (d !== undefined && d >= 0) patch.autoCancelPendingDays = d
+        if (i !== undefined && i >= 0) patch.syncIntervalDays = i
+        if (m !== undefined && m >= 1) patch.syncMaxSessions = m
+        if (t !== undefined && t >= 0 && t <= 1) patch.nearDupThreshold = t
+        if (body.syncEngine === 'v1' || body.syncEngine === 'v2') patch.syncEngine = body.syncEngine
+        if (Object.keys(patch).length === 0) { json(res, { error: 'no valid config fields' }, 400); return }
+        const config = await store.writeConfig(patch)
+        json(res, { ok: true, config }); return
+      }
+      json(res, { error: 'method not allowed' }, 405)
+    })
 
     // ---- action routes (prefix kind: exact wins for the base path, so
     // GET/POST /captures and GET /issues keep their handlers above) ----
@@ -860,7 +1151,11 @@ export function apply(ctx: Context, config?: Config) {
       const id = idFromUrl(req, '/api/track/captures')
       if (id === null) { json(res, { error: 'capture id required' }, 400); return }
       if (req.method === 'DELETE') {
-        await store.deleteCapture(id)
+        const body = await readBody(req).catch((): Record<string, unknown> => ({}))
+        await store.deleteCapture(id, {
+          by: 'user',
+          reason: typeof body.reason === 'string' && body.reason !== '' ? body.reason.slice(0, 200) : undefined,
+        })
         json(res, { ok: true }); return
       }
       if (req.method === 'POST' && new URL(req.url ?? '/', 'http://x').pathname.endsWith('/promote')) {
@@ -910,14 +1205,64 @@ export function apply(ctx: Context, config?: Config) {
         await store.dismissPending(found.id)
         json(res, { ok: true, issue: { id: found.id, identifier: found.identifier, state: found.state } }); return
       }
+      // POST /api/track/issues/:id/merge — merge a duplicate task into its
+      // canonical ({ into: <issue id or identifier> }): union sessions,
+      // cancel the source. User-confirmed (by='user') — the auto loop only
+      // merges EXACT-title duplicates on its own.
+      if (req.method === 'POST' && pathname.endsWith('/merge')) {
+        const body = await readBody(req)
+        const into = typeof body.into === 'string' ? body.into : ''
+        if (!into) { json(res, { error: 'into (canonical issue id/identifier) required' }, 400); return }
+        const source = await store.getIssueByInput(id)
+        const canonical = await store.getIssueByInput(into)
+        if (!source || !canonical) { json(res, { error: 'issue not found' }, 404); return }
+        const merged = await store.mergeIntoCanonical(source.id, canonical.id, 'user')
+        json(res, { ok: true, canonical: { id: merged?.id ?? canonical.id, identifier: merged?.identifier ?? canonical.identifier, state: merged?.state ?? canonical.state } }); return
+      }
       if (req.method === 'DELETE') {
-        await store.deleteIssue(id)
-        json(res, { ok: true }); return
+        // Soft delete (2026-08-18): the row is tombstoned, the `user-delete`
+        // negation is recorded in the issue's ledger, and an audit entry is
+        // appended — deletion never removes the record. Optional `reason`
+        // body carries the user's stated reason.
+        const body = await readBody(req).catch((): Record<string, unknown> => ({}))
+        const deleted = await store.deleteIssue(id, {
+          by: 'user',
+          reason: typeof body.reason === 'string' && body.reason !== '' ? body.reason.slice(0, 200) : undefined,
+        })
+        json(res, { ok: true, deleted: deleted !== undefined }); return
       }
       json(res, { error: 'method not allowed' }, 405)
     })
-    registerRoute('/sync', async (req, res) => {
-      await ensureStoreOpen()
+    // POST /api/track/issues/batch — batch state change: mark many issues
+    // done/canceled in ONE request ({ ids: [...], to }). Each id resolves by
+    // store id OR Linear identifier; results are per-id so partial failures
+    // surface instead of aborting the batch. The panel batch mode and scripts
+    // use this instead of looping the per-id confirm endpoint.
+    registerRoute('/issues/batch', async (req, res) => {
+      if (req.method !== 'POST') { json(res, { error: 'method not allowed' }, 405); return }
+      const body = await readBody(req)
+      const raw = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === 'string') : []
+      const to = body.to
+      if (raw.length === 0) { json(res, { error: 'ids (non-empty array) required' }, 400); return }
+      if (to !== 'done' && to !== 'canceled') { json(res, { error: 'to must be "done" or "canceled"' }, 400); return }
+      const results: Array<Record<string, unknown>> = []
+      for (const id of raw) {
+        const found = await store.getIssueByInput(id)
+        if (!found) {
+          results.push({ id, status: 'failed', error: 'issue not found' })
+          continue
+        }
+        const updated = await store.confirmIssueState(found.id, to, 'user')
+        results.push({
+          id,
+          identifier: found.identifier,
+          state: updated?.state ?? found.state,
+          status: 'done',
+        })
+      }
+      json(res, { ok: true, results })
+    })
+    registerRoute('/sync', async (req, res) => {      await ensureStoreOpen()
       if (req.method !== 'POST') { json(res, { error: 'method not allowed' }, 405); return }
       const sessionQuery = getSessionQuery(ctx)
       if (!sessionQuery) {
@@ -938,6 +1283,179 @@ export function apply(ctx: Context, config?: Config) {
       } catch (e) {
         json(res, { ok: false, error: e instanceof Error ? e.message : String(e) }, 500)
       }
+    })
+    // ---- session execution graphs (M1 genealogy floor) ----
+    // GET  /api/track/graph?sessionId= — the stored graph (doc null when not built).
+    // POST /api/track/graph { sessionId, rebuild? } — build and return it.
+    // POST /api/track/graph/build-all { cwd, max_sessions? } — batch build a workspace.
+    registerRoute('/graph', async (req, res) => {
+      await ensureStoreOpen()
+      const url = new URL(req.url ?? '/', 'http://x')
+      if (req.method === 'GET') {
+        const sessionId = url.searchParams.get('sessionId')
+        if (!sessionId) { json(res, { error: 'sessionId required' }, 400); return }
+        const doc = await store.getGraph(sessionId)
+        json(res, { ok: true, doc: doc ?? null })
+        return
+      }
+      if (req.method === 'POST') {
+        const body = await readBody(req)
+        const sessionId = typeof body.sessionId === 'string' ? body.sessionId : url.searchParams.get('sessionId')
+        if (!sessionId) { json(res, { error: 'sessionId required' }, 400); return }
+        const sessionQuery = getSessionQuery(ctx)
+        if (!sessionQuery) { json(res, { error: 'session-query service unavailable (web profile only)' }, 503); return }
+        const graph = await ensureSessionGraph(
+          { sessionQuery: sessionQuery as GraphServiceDeps['sessionQuery'], store },
+          sessionId,
+          body.rebuild === true,
+        )
+        json(res, { ok: true, doc: graph })
+        return
+      }
+      json(res, { error: 'method not allowed' }, 405)
+    })
+    registerRoute('/graph/build-all', async (req, res) => {
+      await ensureStoreOpen()
+      if (req.method !== 'POST') { json(res, { error: 'method not allowed' }, 405); return }
+      const sessionQuery = getSessionQuery(ctx)
+      if (!sessionQuery) { json(res, { error: 'session-query service unavailable (web profile only)' }, 503); return }
+      const body = await readBody(req)
+      const cwd = typeof body.cwd === 'string' ? body.cwd : ''
+      if (!cwd) { json(res, { error: 'cwd required' }, 400); return }
+      const max = typeof body.max_sessions === 'number' ? body.max_sessions : 200
+      const result = await buildWorkspaceGraphs(
+        { sessionQuery: sessionQuery as GraphServiceDeps['sessionQuery'], store },
+        cwd,
+        max,
+      )
+      json(res, { ok: true, result })
+    })
+    // POST /api/track/graph/link-all { cwd?, dry_run? } — semantic links + projects.
+    registerRoute('/graph/link-all', async (req, res) => {
+      await ensureStoreOpen()
+      if (req.method !== 'POST') { json(res, { error: 'method not allowed' }, 405); return }
+      const body = await readBody(req)
+      const dryRun = body.dry_run === true
+      const sessionQuery = getSessionQuery(ctx)
+      let graphs: { total: number; built: number; skipped: number; failed: number } | undefined
+      if (typeof body.cwd === 'string' && body.cwd !== '') {
+        if (!sessionQuery) { json(res, { error: 'session-query service unavailable (web profile only)' }, 503); return }
+        graphs = await buildWorkspaceGraphs(
+          { sessionQuery: sessionQuery as GraphServiceDeps['sessionQuery'], store },
+          body.cwd,
+          typeof body.max_sessions === 'number' ? body.max_sessions : 200,
+        )
+      } else if (sessionQuery) {
+        // No cwd → build EVERY workspace's graphs (distinct cwds across the corpus),
+        // so the calendar/matrix see ALL projects (dsh-track, harness-ops, harness…).
+        const sq = sessionQuery as { listSessions(): Promise<Array<{ header: { cwd?: string } }>> }
+        const all = await sq.listSessions()
+        const cwds = [...new Set(all.map((s) => s.header.cwd).filter((c): c is string => typeof c === 'string' && c !== ''))]
+        const totals = { total: 0, built: 0, skipped: 0, failed: 0 }
+        for (const cwd of cwds) {
+          const r = await buildWorkspaceGraphs(
+            { sessionQuery: sessionQuery as GraphServiceDeps['sessionQuery'], store },
+            cwd,
+            typeof body.max_sessions === 'number' ? body.max_sessions : 200,
+          )
+          totals.total += r.total; totals.built += r.built; totals.skipped += r.skipped; totals.failed += r.failed
+        }
+        graphs = totals
+      }
+      const links = await writeSemanticLinks(store, dryRun)
+      // Requirement-level project attribution: an issue belongs to the repo its
+      // own span's work touched, not the session's first repo. Needs events.
+      let attributed = 0
+      if (!dryRun) {
+        try {
+          attributed = await attributeIssuesBySpan(store, false)
+        } catch { /* attribution is best-effort */ }
+      }
+      const projects = await induceProjects(store, dryRun)
+      json(res, { ok: true, dryRun, graphs, links, projects, attributed })
+    })
+    // GET /api/track/projects — inducted projects (project dimension).
+    registerRoute('/projects', async (_req, res) => {
+      await ensureStoreOpen()
+      json(res, { projects: await store.listProjects() })
+    })
+    // POST /api/track/git/scan { cwd?, project_level?, dry_run?, limit? } — commit scan.
+    registerRoute('/git/scan', async (req, res) => {
+      await ensureStoreOpen()
+      if (req.method !== 'POST') { json(res, { error: 'method not allowed' }, 405); return }
+      const body = await readBody(req)
+      const dryRun = body.dry_run === true
+      const limit = typeof body.limit === 'number' ? body.limit : 200
+      const targets: string[] = []
+      if (body.project_level === true) {
+        targets.push(...(await store.listProjects()).map((p) => p.path))
+      } else if (typeof body.cwd === 'string' && body.cwd !== '') {
+        targets.push(body.cwd)
+      } else {
+        json(res, { error: 'cwd or project_level required' }, 400); return
+      }
+      const results: Array<{ cwd: string; result: CommitScanResult }> = []
+      for (const cwd of targets) {
+        results.push({ cwd, result: await scanProjectCommits(store, cwd, { dryRun, limit }) })
+      }
+      json(res, { ok: true, dryRun, results })
+    })
+    // GET /api/track/calendar — calendar-yarn dataset over ALL projects.
+    registerRoute('/calendar', async (_req, res) => {
+      await ensureStoreOpen()
+      json(res, { ok: true, calendar: await buildCalendar(store) })
+    })
+    // GET /api/track/graph/view[?projectId= | ?cwd=] — project-level graph for the visual tab.
+    registerRoute('/graph/view', async (req, res) => {
+      await ensureStoreOpen()
+      const url = new URL(req.url ?? '/', 'http://x')
+      let pid = url.searchParams.get('projectId') ?? undefined
+      const cwd = url.searchParams.get('cwd')
+      if (pid === undefined && cwd !== null && cwd !== '') {
+        const proj = (await store.listProjects()).find((p) => p.path === cwd)
+        pid = proj?.id
+      }
+      json(res, { ok: true, view: await projectGraphView(store, pid) })
+    })
+    // GET /api/track/lineage?entity=<id|identifier> — the Why/lineage view.
+    registerRoute('/lineage', async (req, res) => {
+      await ensureStoreOpen()
+      const url = new URL(req.url ?? '/', 'http://x')
+      const entity = url.searchParams.get('entity')
+      if (!entity) { json(res, { error: 'entity required' }, 400); return }
+      const view = await buildLineage(store, entity)
+      if (!view) { json(res, { error: 'entity not found' }, 404); return }
+      json(res, { ok: true, view })
+    })
+    // GET /api/track/graph/related?sessionId= — parent/children sessions (M6).
+    registerRoute('/graph/related', async (req, res) => {
+      await ensureStoreOpen()
+      const url = new URL(req.url ?? '/', 'http://x')
+      const sessionId = url.searchParams.get('sessionId')
+      if (!sessionId) { json(res, { error: 'sessionId required' }, 400); return }
+      json(res, { ok: true, related: await relatedSessions(store, sessionId) })
+    })
+    // GET /api/track/brief[?projectId=] — evolution brief (M7).
+    registerRoute('/brief', async (req, res) => {
+      await ensureStoreOpen()
+      const url = new URL(req.url ?? '/', 'http://x')
+      const projectId = url.searchParams.get('projectId') ?? undefined
+      json(res, { ok: true, brief: await buildEvolutionBrief(store, projectId) })
+    })
+    // GET /api/track/extractions[?limit=] — durable extraction runs.
+    registerRoute('/extractions', async (req, res) => {
+      await ensureStoreOpen()
+      const url = new URL(req.url ?? '/', 'http://x')
+      const limitRaw = url.searchParams.get('limit')
+      const limit = limitRaw !== null && /^\d+$/.test(limitRaw) ? Number(limitRaw) : 20
+      json(res, { extractions: await store.listExtractions(limit) })
+    })
+    // GET /api/track/commits?projectId= — scanned commit artifacts.
+    registerRoute('/commits', async (req, res) => {
+      await ensureStoreOpen()
+      const url = new URL(req.url ?? '/', 'http://x')
+      const projectId = url.searchParams.get('projectId') ?? undefined
+      json(res, { commits: await store.listCommits(projectId) })
     })
   })
 }

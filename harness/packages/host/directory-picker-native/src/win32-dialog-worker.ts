@@ -35,7 +35,7 @@ const post = (message: Win32DialogWorkerMessage): void => {
 
 // A settled driver (or a dead parent) must not orphan a dialog still on screen.
 /* v8 ignore next 3 -- the handler exits(0), which would kill the unit lane; built-worker.e2e.ts owns the real disconnect lifecycle. */
-process.on('disconnect', () => { return process.exit(0) })
+process.on('disconnect', () => process.exit(0))
 
 // No top-level await: the built worker ships as CJS, which cannot carry TLA.
 void (async () => {

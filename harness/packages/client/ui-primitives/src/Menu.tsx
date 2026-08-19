@@ -62,6 +62,7 @@ const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
  * @param props.anchor - the trigger element (rendered in place).
  * @param props.items - selectable rows and optional separators.
  * @param props.selectedId - row shown as selected.
+ * @param props.selectedIds - rows shown as selected when a menu contains independent option groups.
  * @param props.onSelect - row click callback (not called for disabled rows or submenu parents that only open children).
  * @param props.onClose - invoked on outside click or Escape.
  * @param props.align - list alignment against the anchor (default 'start').
@@ -74,6 +75,7 @@ const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
  * both trigger and list for the pointer grace (default false keeps it open
  * until outside click/Escape/selection). The grace makes the 4px trigger->list
  * gap and a brief overshoot survivable; coming back cancels the close.
+ * @param props.dense - reduce vertical row spacing without changing the standard typography or card width.
  * @param props.compact - use reduced menu typography and spacing.
  * @param props.getAnchorRect - portal mode only: supply the anchor rect
  * directly (e.g. from a host-owned trigger button) instead of measuring the
@@ -85,18 +87,20 @@ const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
  * by a hairline; they stay visible while the items above scroll.
  * @returns anchor wrapper with the conditional list.
  */
-export function Menu({ open, anchor, items, selectedId, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, compact = false, getAnchorRect, footer, className }: {
+export function Menu({ open, anchor, items, selectedId, selectedIds, onSelect, onClose, align = 'start', side = 'bottom', portal = false, closeOnPointerLeave = false, dense = false, compact = false, getAnchorRect, footer, className }: {
   open: boolean
   anchor: ReactNode
   items: readonly MenuEntry[]
   footer?: readonly MenuEntry[]
   selectedId?: string | undefined
+  selectedIds?: readonly string[] | undefined
   onSelect: (id: string) => void
   onClose: () => void
   align?: 'start' | 'end'
   side?: 'bottom' | 'top' | 'right'
   portal?: boolean
   closeOnPointerLeave?: boolean
+  dense?: boolean
   compact?: boolean
   getAnchorRect?: () => DOMRect | null
   className?: string
@@ -204,17 +208,18 @@ export function Menu({ open, anchor, items, selectedId, onSelect, onClose, align
     }
     const hasSub = entry.submenu !== undefined && entry.submenu.length > 0
     const subOpen = hasSub && openSubmenuId === entry.id
+    const selected = entry.id === selectedId || selectedIds?.includes(entry.id) === true
     return (
       <div
         key={entry.id}
         className={css.itemWrap}
-        onMouseEnter={() => { setOpenSubmenuId(!hasSub ? null : entry.id) }}
+        onMouseEnter={() => { setOpenSubmenuId(hasSub ? entry.id : null) }}
         onMouseLeave={() => { setOpenSubmenuId(null) }}
       >
         <button
           type="button"
           role="menuitem"
-          className={clsx(css.item, entry.id === selectedId && css.selected, entry.danger === true && css.danger)}
+          className={clsx(css.item, selected && css.selected, entry.danger === true && css.danger)}
           disabled={entry.disabled}
           aria-haspopup={hasSub ? 'menu' : undefined}
           aria-expanded={hasSub ? subOpen : undefined}
@@ -230,7 +235,7 @@ export function Menu({ open, anchor, items, selectedId, onSelect, onClose, align
           {entry.icon !== undefined && <span className={css.itemIcon}>{entry.icon}</span>}
           <span className={css.itemLabel}>{entry.label}</span>
           {/* Selection marker is a trailing check (figma .Menu_cell), not a fill. */}
-          {entry.id === selectedId && <IconCheckOutline16 className={css.check} />}
+          {selected && <IconCheckOutline16 className={css.check} />}
         </button>
         {subOpen && entry.submenu !== undefined && (
           <div className={clsx(css.submenu, compact && css.compactList)} role="menu">
@@ -260,7 +265,7 @@ export function Menu({ open, anchor, items, selectedId, onSelect, onClose, align
   const list = open && (
     <div
       ref={listRef}
-      className={clsx(css.list, compact && css.compactList, scrollable && css.scrollable, portal && css.portal, side === 'top' && !portal && css.sideTop, align === 'end' && !portal && css.alignEnd)}
+      className={clsx(css.list, dense && css.denseList, compact && css.compactList, scrollable && css.scrollable, portal && css.portal, side === 'top' && !portal && css.sideTop, align === 'end' && !portal && css.alignEnd)}
       style={portal ? fixedPos ?? MEASURE_STYLE : undefined}
       role="menu"
       // React portals bubble synthetic events through the REACT tree: without

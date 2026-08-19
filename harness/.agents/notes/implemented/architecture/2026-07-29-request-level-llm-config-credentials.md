@@ -4,7 +4,7 @@ Status: implemented
 
 English | [中文](2026-07-29-request-level-llm-config-credentials.zh.md)
 
-> Scope: the first production consumers of `ctx.settings` (the two LLM adapter plugins), the new `packages/credentials/` capability family, and the `packages/util/atomic-write` extraction. The follow-up wire surface (`settings.*`/`credentials.*` RPC, secret-role masking, the web settings form) is a separate PR and not part of this note's shipped scope.
+> Scope: the first production consumers of `ctx.settings` (the two LLM adapter plugins), the new `packages/credentials/` capability family, and the `packages/util/atomic-write` extraction. The follow-up wire surface (`settings.*`/`credentials.*` RPC, secret-role masking, the web settings form) is separate work outside this note's scope.
 
 ## Problem
 
@@ -26,4 +26,4 @@ The [settings seam](2026-07-28-user-settings-seam.md) shipped without a producti
 
 ## Consequences
 
-Onboarding is restart-free end to end (pinned by the `missing-credential` headless snapshot and the credentials-rotation composition tests): boot keyless, browse the catalog, store the key, prompt again. The demos mount `settings-local` + `credentials-local` by default and inline no `!!js` key plumbing. `runLoaderSmoke` gained `expectedExitCode` so a designed failure surface can be pinned rather than masked. Deferred: the wire/UI surface must redact `role('secret')` fields before any RPC exposes `describe()`, settings-layer arrays still replace wholesale (the deepseek `models` list), and a settings section cannot remove a composition-provided pi-ai route (only override or extend). Review of this seam later reworked where the store lives and who may read it, made one request resolve one configuration generation, and made route replacement atomic ([credential boundaries note](2026-07-30-credential-boundaries-and-atomic-registration.md)).
+Onboarding is restart-free end to end (pinned by the `missing-credential` headless snapshot and the credentials-rotation composition tests): boot keyless, browse the catalog, store the key, prompt again. The demos mount `settings-file` + `credentials-local` by default and inline no `!!js` key plumbing. `runLoaderSmoke` gained `expectedExitCode` so a designed failure surface can be pinned rather than masked. Deferred: the wire/UI surface must redact `role('secret')` fields before any RPC exposes `describe()`, settings-layer arrays still replace wholesale (the deepseek `models` list), and a settings section cannot remove a composition-provided pi-ai route (only override or extend). A later decision reworked where the store lives and who may read it, made one request resolve one configuration generation, and made route replacement atomic ([credential boundaries note](2026-07-30-credential-boundaries-and-atomic-registration.md)).

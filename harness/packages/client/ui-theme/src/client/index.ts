@@ -1,24 +1,33 @@
 /**
  * Browser theme registry over the `--dsw-*` token stylesheets. The service
- * owns the theme preference (light/dark/system), resolves `system` through
+ * owns the live theme preference (light/dark/system), resolves `system` through
  * `prefers-color-scheme`, and publishes immutable snapshots; it never touches
- * the DOM — ui-layout's presenter consumes the resolved snapshot. The plugin
- * also registers the Appearance preference row into the settings General
- * section — the theme feature owns its own settings surface.
+ * the DOM — ui-layout's presenter consumes the resolved snapshot. The Host
+ * settings scope loads and stores the preference in the user-settings
+ * document. The plugin also registers the Appearance preference row into the
+ * settings General section — the theme feature owns its own settings surface.
  */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ClientContext, SettingsScope } from '@deepseek-ai/dsh-client-runtime/client'
+// Type-only: the ctx.settingsScope Context merge. Cross-plugin collaboration
+// goes through the service, never a value import (client bundle purity gate).
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { AppearanceRowInjected } from './AppearanceRow.tsx'
 import { AppearanceRow } from './AppearanceRow.tsx'
 import { createAppearanceRowStore } from './settings-store.ts'
 import { en, zh, type ThemeKey } from './locales.ts'
+import {
+  DEFAULT_PREFERENCE, isThemePreference, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
+  type ThemePreference, type ThemeSettings,
+} from '../theme-settings.ts'
 
 export type { AppearanceRowComponentProps, AppearanceRowInjected } from './AppearanceRow.tsx'
 export type { AppearanceRowState } from './settings-store.ts'
 export type { ThemeKey } from './locales.ts'
+export type { ThemePreference, ThemeSettings } from '../theme-settings.ts'
 
 /** Namespace owning this feature's settings-row copy. */
 export const SETTINGS_NS = 'settings.theme'
@@ -33,8 +42,20 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Theme token dictionary: --dsw-alias-* overrides keyed by variable name. */
 export type ThemeTokens = Record<string, string>
 
-/** Theme preference: a concrete theme id or follow-the-OS. */
-export type ThemePreference = 'light' | 'dark' | 'system'
+/**
+ * One override-layer token value: both palette modes are mandatory (repeat
+ * the same value when the token is scheme-invariant) so an override never
+ * goes illegible when the user switches to the other scheme.
+ */
+export interface ThemeTokenModes {
+  /** Value applied while the light base palette is active. */
+  light: string
+  /** Value applied while the dark base palette is active. */
+  dark: string
+}
+
+/** Override-layer dictionary: token names to per-mode value pairs. */
+export type ThemeTokenOverrides = Record<string, ThemeTokenModes>
 
 /** One selectable theme: id, dark/light semantics, and alias-token overrides. */
 export interface ThemeDefinition {
@@ -53,7 +74,11 @@ export interface ThemeDefinition {
 export interface ThemeSnapshot {
   /** The persisted preference (may be `system`). */
   preference: ThemePreference
-  /** The resolved active theme (`system` resolved via prefers-color-scheme). */
+  /**
+   * The resolved active theme (`system` resolved via prefers-color-scheme)
+   * with override layers folded into its tokens (seq order, later layers win
+   * per-token; each value picked for the active color scheme).
+   */
   active: ThemeDefinition
   /** Registered themes in registration order. */
   themes: readonly ThemeDefinition[]
@@ -61,9 +86,23 @@ export interface ThemeSnapshot {
   revision: number
 }
 
-declare module 'cordis' {
+/** One theme token exposed to pre-definition Cordis inspection. */
+export interface ThemeTokenInspection {
+  /** Token name accepted by {@link ThemeService.overrideTokens}. */
+  name: string
+  /** Intended visual role. */
+  description: string
+  /** CSS value category. */
+  valueType: string
+  /** Whether override layers must supply both palette modes. */
+  requiresLightAndDark: boolean
+  /** CSS custom property consumed by UI styles. */
+  cssVariable?: string
+}
+
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    theme: ThemeService
+    theme: ThemeRuntime
   }
   interface Events {
     /**
@@ -76,48 +115,66 @@ declare module 'cordis' {
   }
 }
 
-/** localStorage key holding the persisted theme preference. */
-export const STORAGE_KEY = 'dsh.theme'
-
-/** Default preference when nothing (or garbage) is persisted. */
-export const DEFAULT_PREFERENCE: ThemePreference = 'system'
-
 const BUILTIN_THEMES: readonly ThemeDefinition[] = Object.freeze([
   Object.freeze({ id: 'light', colorScheme: 'light' as const, tokens: Object.freeze({}) }),
   Object.freeze({ id: 'dark', colorScheme: 'dark' as const, tokens: Object.freeze({}) }),
 ])
 
+const BUILTIN_INSPECT_TOKENS: readonly ThemeTokenInspection[] = Object.freeze([
+  { name: '--dsw-alias-bg-base', description: 'Application base background.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-bg-base' },
+  { name: '--dsw-alias-bg-layer-1', description: 'Primary raised surface background.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-bg-layer-1' },
+  { name: '--dsw-alias-bg-layer-2', description: 'Secondary nested surface background.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-bg-layer-2' },
+  { name: '--dsw-alias-bg-overlay', description: 'Overlay and popover background.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-bg-overlay' },
+  { name: '--dsw-alias-border-l1', description: 'Primary subtle border.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-border-l1' },
+  { name: '--dsw-alias-border-l2', description: 'Secondary stronger border.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-border-l2' },
+  { name: '--dsw-alias-brand-primary', description: 'Primary brand accent.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-brand-primary' },
+  { name: '--dsw-alias-label-primary', description: 'Primary text color.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-label-primary' },
+  { name: '--dsw-alias-label-secondary', description: 'Secondary text color.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-label-secondary' },
+  { name: '--dsw-alias-state-error-primary', description: 'Primary error state color.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-state-error-primary' },
+  { name: '--dsw-alias-state-success-primary', description: 'Primary success state color.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-state-success-primary' },
+  { name: '--dsw-alias-state-warn-primary', description: 'Primary warning state color.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-alias-state-warn-primary' },
+  { name: '--dsw-specific-sidebar-fill', description: 'Sidebar column and title-row background.', valueType: 'CSS color', requiresLightAndDark: true, cssVariable: '--dsw-specific-sidebar-fill' },
+])
+
 /**
  * Theme registry and preference owner. `light`/`dark` are built in (the base
  * stylesheets carry both palettes); third-party themes register alias-layer
- * overrides. Reads go through {@link getTheme}; writes only through
- * {@link setTheme}; continuous sync only through the `theme/change` event.
+ * overrides. Reads go through {@link getTheme}; preference writes only
+ * through {@link setTheme}; continuous sync only through the `theme/change`
+ * event. {@link overrideTokens} stacks partial token layers over the active
+ * theme without touching the registry.
  * The service holds the `prefers-color-scheme` media query (environment
  * sensing, not presentation) and re-emits when the OS scheme flips while the
  * preference is `system`.
  */
-export class ThemeService {
+export class ThemeRuntime {
   private readonly ctx: Context
+  private readonly host: SettingsScope<ThemeSettings>
   private themes: ThemeDefinition[] = [...BUILTIN_THEMES]
   private preference: ThemePreference
   private revision = 0
   private snapshot: ThemeSnapshot
   private readonly media: MediaQueryList | undefined
+  /** Override layers by source; seq (monotonic) is the stacking order. */
+  private readonly overrides = new Map<string, { seq: number; tokens: ThemeTokenOverrides }>()
+  private overrideSeq = 0
 
   /**
    * @param ctx - owning context (change events are emitted on it; the
-   * media-query listener is released through ctx.effect on dispose).
+   * media-query and scope listeners are released through ctx.effect on dispose).
+   * @param host - durable preference scope owned by the same plugin.
    */
-  constructor(ctx: Context) {
+  constructor(ctx: Context, host: SettingsScope<ThemeSettings>) {
     this.ctx = ctx
-    this.preference = restorePreference()
+    this.host = host
+    this.preference = DEFAULT_PREFERENCE
     // Non-browser runs (node e2e booting the client tree) have no matchMedia.
     this.media = typeof matchMedia === 'undefined' ? undefined : matchMedia('(prefers-color-scheme: dark)')
     this.snapshot = this.buildSnapshot()
     if (this.media !== undefined) {
       const media = this.media
       const onChange = (): void => {
-        if (this.preference !== 'system') { return }
+        if (this.preference !== 'system') return
         this.publish()
       }
       ctx.effect(() => {
@@ -125,6 +182,8 @@ export class ThemeService {
         return () => { media.removeEventListener('change', onChange) }
       }, 'ui-theme: prefers-color-scheme listener')
     }
+    ctx.effect(() => host.subscribe(() => { this.adopt() }), 'ui-theme: settings scope adoption')
+    this.adopt()
   }
 
   /**
@@ -136,8 +195,28 @@ export class ThemeService {
   }
 
   /**
-   * Switch the theme preference — the only preference write entry. Persists
-   * the preference and emits `theme/change`.
+   * Export the current token directory without reading DOM or computed styles.
+   * @returns stable JSON-safe token descriptions, including registered and override-only names.
+   */
+  exportInspectTokens(): ThemeTokenInspection[] {
+    const tokens = new Map(BUILTIN_INSPECT_TOKENS.map(token => [token.name, token]))
+    for (const theme of this.themes) {
+      for (const name of Object.keys(theme.tokens)) {
+        if (!tokens.has(name)) tokens.set(name, dynamicToken(name))
+      }
+    }
+    for (const layer of this.overrides.values()) {
+      for (const name of Object.keys(layer.tokens)) {
+        if (!tokens.has(name)) tokens.set(name, dynamicToken(name))
+      }
+    }
+    return [...tokens.values()].map(token => ({ ...token })).sort((left, right) => left.name.localeCompare(right.name))
+  }
+
+  /**
+   * Switch the theme preference — the only user preference write entry.
+   * Built-in preferences are written through the settings scope and every
+   * accepted value emits `theme/change`.
    * @param id - a registered theme id or `system`; unknown ids throw.
    */
   setTheme(id: string): void {
@@ -146,7 +225,15 @@ export class ThemeService {
     }
     if (this.preference === id) return
     this.preference = id as ThemePreference
-    persistPreference(this.preference)
+    if (isThemePreference(id)) void this.host.set(THEME_PREFERENCE_FIELD, id)
+    this.publish()
+  }
+
+  /** Adopt the scope's accepted durable preference without writing it back. */
+  private adopt(): void {
+    const section = this.host.getSnapshot().value
+    if (section === undefined || this.preference === section.preference) return
+    this.preference = section.preference
     this.publish()
   }
 
@@ -170,8 +257,34 @@ export class ThemeService {
       this.themes = this.themes.filter(t => t.id !== definition.id)
       if (this.preference === definition.id) {
         this.preference = DEFAULT_PREFERENCE
-        persistPreference(this.preference)
       }
+      this.publish()
+    }
+  }
+
+  /**
+   * Stack a token override layer on top of the active theme — the token-level
+   * analogue of slot shading: the base theme stays untouched, layers compose
+   * in seq order with later layers winning per-token, and removing a layer
+   * restores whatever it covered. Calling again with the same source replaces
+   * that source's whole layer and restacks it on top (effect re-registration
+   * semantics). Emits `theme/change` with the recomposed snapshot.
+   * @param source - layer identity; one layer per source (dynamic packages
+   * pass their package id — the façade pins it, so it also names the layer's
+   * origin for inspection).
+   * @param tokens - token-name → `{ light, dark }` value pairs. Validated at
+   * runtime (model-authored callers reach this boundary with untyped JS);
+   * a bare string value throws a teaching error.
+   * @returns disposer removing exactly the layer this call created; a no-op
+   * once the source has re-overridden (the newer layer is not torn down).
+   */
+  overrideTokens(source: string, tokens: ThemeTokenOverrides): () => void {
+    const layer = { seq: this.overrideSeq++, tokens: validateOverrides(source, tokens) }
+    this.overrides.set(source, layer)
+    this.publish()
+    return () => {
+      if (this.overrides.get(source) !== layer) return
+      this.overrides.delete(source)
       this.publish()
     }
   }
@@ -187,10 +300,27 @@ export class ThemeService {
     if (active === undefined) throw new Error(`theme registry lost "${resolvedId}"`)
     return Object.freeze({
       preference: this.preference,
-      active,
+      active: this.composeActive(active),
       themes: Object.freeze([...this.themes]),
       revision: this.revision,
     })
+  }
+
+  /**
+   * Fold the override layers into the active definition: seq order, later
+   * layers win per-token, each value picked for the active color scheme (the
+   * presenter consumes the composed snapshot and needs no override awareness).
+   * Without layers the registered definition passes through by identity.
+   */
+  private composeActive(active: ThemeDefinition): ThemeDefinition {
+    if (this.overrides.size === 0) return active
+    const tokens: ThemeTokens = { ...active.tokens }
+    for (const layer of [...this.overrides.values()].sort((a, b) => a.seq - b.seq)) {
+      for (const [name, modes] of Object.entries(layer.tokens)) {
+        tokens[name] = modes[active.colorScheme]
+      }
+    }
+    return Object.freeze({ ...active, tokens: Object.freeze(tokens) })
   }
 
   private publish(): void {
@@ -200,32 +330,50 @@ export class ThemeService {
   }
 }
 
-/** Read the persisted preference; unknown or unreadable values fall back to the default. */
-function restorePreference(): ThemePreference {
-  // Non-browser runs (node e2e booting the client tree) have no localStorage.
-  if (typeof localStorage === 'undefined') return DEFAULT_PREFERENCE
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
-  } catch {
-    // Storage access can throw (privacy mode); the default below covers it.
+/**
+ * Runtime shape check for one override layer (model-authored callers pass
+ * untyped JS through the dynamic-package façade, so the static type cannot
+ * enforce the pair shape there). Returns a defensive per-token copy so later
+ * caller mutation cannot reach the stored layer.
+ */
+function validateOverrides(source: string, tokens: ThemeTokenOverrides): ThemeTokenOverrides {
+  const validated: ThemeTokenOverrides = {}
+  for (const [name, value] of Object.entries<unknown>(tokens)) {
+    if (typeof value === 'string') {
+      throw new TypeError(
+        `theme override "${name}" from "${source}" is a bare string — pass { light: ${JSON.stringify(value)}, dark: ${JSON.stringify(value)} } `
+        + '(repeat the value when it is the same in both palettes); a single value goes illegible when the user switches color scheme',
+      )
+    }
+    if (typeof value !== 'object' || value === null
+      || typeof (value as { light?: unknown }).light !== 'string'
+      || typeof (value as { dark?: unknown }).dark !== 'string') {
+      throw new TypeError(
+        `theme override "${name}" from "${source}" must map to a { light, dark } pair of strings — one value per color scheme`,
+      )
+    }
+    const modes = value as ThemeTokenModes
+    validated[name] = { light: modes.light, dark: modes.dark }
   }
-  return DEFAULT_PREFERENCE
+  return validated
 }
 
-/** Persist the preference; storage failures are non-fatal (preference resets next boot). */
-function persistPreference(preference: ThemePreference): void {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(STORAGE_KEY, preference)
-  } catch {
-    // Storage access can throw (privacy mode / quota); the preference simply
-    // does not survive the session.
+function dynamicToken(name: string): ThemeTokenInspection {
+  return {
+    name,
+    description: 'Theme token registered by the current Client composition.',
+    valueType: 'CSS value',
+    requiresLightAndDark: true,
+    ...(name.startsWith('--') ? { cssVariable: name } : {}),
   }
 }
 
-/** Required services: slots + locale (the feature registers its own settings row with localized copy). */
-export const inject = ['slots', 'locale']
+/**
+ * Required services: settings transport plus slots/locale for the Appearance
+ * row. `remote` carries the forwarded settings invalidation that
+ * `bindSettingsScope` subscribes to on this context.
+ */
+export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
 
 /**
  * Client plugin body: provide the theme service and register the
@@ -234,7 +382,8 @@ export const inject = ['slots', 'locale']
  * @param ctx - client cordis context.
  */
 export function apply(ctx: ClientContext): void {
-  const theme = new ThemeService(ctx)
+  const host = ctx.settingsScope.bind<ThemeSettings>({ namespace: THEME_SETTINGS_NAMESPACE })
+  const theme = new ThemeRuntime(ctx, host)
   ctx.provide('theme', theme)
 
   ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), 'ui-theme: settings row dictionaries')

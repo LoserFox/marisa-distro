@@ -88,7 +88,7 @@ export function deriveEventMessage(event: SessionEvent): Message | null {
     // Ordinary prompts and injected context project in user role: the event's
     // model-facing content stays verbatim. Do NOT re-add per-type framing
     // (e.g. `<context>`) here: framing is caller-owned — a producer bakes it
-    // into `content`, as workspace-context does with `<system-reminder>` — or,
+    // into `content`, as agent-instructions does with `<system-reminder>` — or,
     // if reintroduced, must be driven by the event `meta` map and a dedicated
     // renderer, keeping this projection a verbatim pass-through. See the
     // deferred design note in
@@ -207,7 +207,7 @@ function surfaceOpOf(event: SessionEvent): SurfaceOp | undefined {
   return op
 }
 
-/** Validate provenance against prior log entries and the replacement range. */
+/** Validate cited source-event seqs against prior log entries and the replacement range. */
 function assertProvenance(
   event: SessionEvent,
   shadowedSeqs: readonly number[],
@@ -274,7 +274,7 @@ function isDeepEqualJson(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
-    return a.every((item, i) => { return isDeepEqualJson(item, b[i]) })
+    return a.every((item, i) => isDeepEqualJson(item, b[i]))
   }
   if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false
   const aKeys = Object.keys(a)
@@ -382,7 +382,7 @@ function applySurfacePlan(
  * Replay a complete session log through the canonical surface fold.
  * @param events - session events in contiguous seq order.
  * @returns detached current sequences and replacement history.
- * @throws when an event violates surface metadata, provenance, range, or tool-result rewrite rules.
+ * @throws when an event violates surface metadata, source-event references, range, or tool-result rewrite rules.
  */
 export function foldSurface(events: readonly SessionEvent[]): SurfaceFoldResult {
   const state = createFoldState()

@@ -8,7 +8,7 @@ English | [中文](2026-08-08-bounded-session-persistence-write-batching.zh.md)
 
 Streaming responses can emit many `assistant/chunk` events in a short interval. The persistence coordinator previously scheduled a backend append as soon as an idle queue received one event. Events arriving while that append was active shared a follow-up batch, but a fast backend could still produce many small durable appends. Each JSONL append creates and syncs a Zstandard frame or raw suffix, while each SQLite append opens and commits a transaction and increments the session revision.
 
-Dropping chunk events or replacing them with assembled messages would reduce logical storage, but it would also change the event log, replay, sequence numbers, timestamps, and provenance. The write-amplification problem does not require that larger semantic change.
+Dropping chunk events or replacing them with assembled messages would reduce logical storage, but it would also change the event log, replay, sequence numbers, timestamps, and the chunk seqs cited by assistant messages. The write-amplification problem does not require that larger semantic change.
 
 ### Quantified baseline
 
@@ -36,7 +36,7 @@ This decision supersedes only the immediate scheduling cadence in [Collapse live
 
 ## Alternatives considered
 
-**Do not persist streaming chunk events.** Rejected here: it changes the event-sourced authority and recovery semantics rather than only physical write cadence. The existing [assembled-message rejection](../../rejected/simplification/2026-06-20-assembled-assistant-messages-only.md) remains the guardrail until a no-information-loss replacement defines replay, fork, provenance, sequence, and crash behavior independently. The [packed-row decision](2026-07-26-packed-chunk-rows-by-default.md) remains the complementary JSONL storage-size optimization.
+**Do not persist streaming chunk events.** Rejected here: it changes the event-sourced authority and recovery semantics rather than only physical write cadence. The existing [assembled-message rejection](../../rejected/simplification/2026-06-20-assembled-assistant-messages-only.md) remains the guardrail until a no-information-loss replacement defines replay, fork, cited source-event links, sequence, and crash behavior independently. The [packed-row decision](2026-07-26-packed-chunk-rows-by-default.md) remains the complementary JSONL storage-size optimization.
 
 **Write only at semantic checkpoints.** Rejected: it maximizes batching but makes the ordinary crash-loss window depend on a separately mounted policy. Bounded background writes preserve progress between checkpoints while mandatory flushes keep their stronger ordering contract.
 

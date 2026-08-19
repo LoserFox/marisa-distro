@@ -1,4 +1,4 @@
-import { GatewayService, Remote, RemoteScope } from '@deepseek-ai/dsh-type-meta'
+import { TypertRemoteService, Remote, RemoteScope } from '@deepseek-ai/dsh-typert-protocol'
 import type { Agent } from '@fixture/domain'
 import type {
   CreateGoalRequest,
@@ -8,7 +8,7 @@ import type {
 } from './types.ts'
 
 /** Remote-only business Service with no Cordis declaration merge. */
-export class GoalService extends GatewayService {
+export class GoalService extends TypertRemoteService {
   constructor() {
     super(undefined, 'goals')
   }

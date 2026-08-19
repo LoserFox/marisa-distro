@@ -19,6 +19,8 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { GoalProjection, GoalRef } from '@deepseek-ai/dsh-goal/client'
 import type { GoalActionResult, GoalBarActions } from './slots.ts'
 import { GoalDock } from './GoalBar.tsx'
+import { GoalCommandInputView } from './GoalCommandInputView.tsx'
+import { goalCommandInputDefinition } from './goal-command-input.ts'
 import { en, zh, type GoalKey } from './locales.ts'
 
 export { GoalBar, GoalDock } from './GoalBar.tsx'
@@ -35,40 +37,22 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Dictionary namespace owned by this plugin. */
 const NS = 'goal'
 
-/** Required services: slots for the dock entry, sessions for the projected ref, API for Remote mutations, locale for the copy. */
-export const inject = ['slots', 'sessions', 'remote', 'remote.goals', 'locale']
-
-/** Map one generated Remote call, including synchronous namespace lookup failures, onto the strip's inline-render shape. */
-async function settle(invoke: () => Promise<unknown>): Promise<GoalActionResult> {
-  try {
-    await invoke()
-    return { ok: true }
-  } catch (error) {
-    const cause = error instanceof Error ? error.cause : undefined
-    if (isRemoteError(cause)) return { ok: false, error: { code: cause.code, message: cause.message } }
-    return {
-      ok: false,
-      error: {
-        code: 'internal',
-        message: error instanceof Error ? error.message : 'goal mutation failed',
-      },
-    }
-  }
-}
-
-function isRemoteError(value: unknown): value is { readonly code: string; readonly message: string } {
-  return value !== null
-    && typeof value === 'object'
-    && typeof (value as { code?: unknown }).code === 'string'
-    && typeof (value as { message?: unknown }).message === 'string'
-}
+/** Required services for the Goal dock, command-input projection, Remote mutations, and copy. */
+export const inject = ['slots', 'sessions', 'remote', 'remote.goals', 'locale', 'conversationEvents']
 
 /**
  * Client plugin body: the GoalBar dock entry with its mutation verbs.
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
+  ctx.conversationEvents.register(goalCommandInputDefinition)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-goal: dictionaries')
+
+  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
+    name: 'conversation.chat.node',
+    key: 'command-input',
+    locale: NS,
+  }, GoalCommandInputView))
 
   const sessions = ctx.sessions
 
@@ -82,7 +66,7 @@ export function apply(ctx: ClientContext): void {
 
   const noCurrentGoal: GoalActionResult = {
     ok: false,
-    error: { code: 'no-current-goal', message: 'no current goal to mutate' },
+    error: { code: 'no-current-goal', message: 'no current goal to mutate', details: {} },
   }
 
   ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
@@ -94,22 +78,22 @@ export function apply(ctx: ClientContext): void {
       onEdit: async (objective) => {
         const ref = refOf(sessionId)
         if (ref === undefined) return noCurrentGoal
-        return settle(() => ctx.remote.goals.edit(sessionId, ref, { objective }))
+        return await ctx.remote.goals.edit(sessionId, ref, { objective })
       },
       onPause: async () => {
         const ref = refOf(sessionId)
-        if (ref === undefined) { return noCurrentGoal }
-        return settle(() => ctx.remote.goals.pause(sessionId, ref))
+        if (ref === undefined) return noCurrentGoal
+        return await ctx.remote.goals.pause(sessionId, ref)
       },
       onResume: async () => {
         const ref = refOf(sessionId)
         if (ref === undefined) return noCurrentGoal
-        return settle(() => ctx.remote.goals.resume(sessionId, ref))
+        return await ctx.remote.goals.resume(sessionId, ref)
       },
       onClear: async () => {
         const ref = refOf(sessionId)
         if (ref === undefined) return noCurrentGoal
-        return settle(() => ctx.remote.goals.clear(sessionId, ref))
+        return await ctx.remote.goals.clear(sessionId, ref)
       },
     }),
   }, GoalDock))

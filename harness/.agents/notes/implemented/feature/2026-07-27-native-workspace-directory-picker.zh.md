@@ -10,11 +10,11 @@ Status: implemented
 
 ## 决策
 
-新增一个用于选择单个文件夹的 `host.pickDirectory` RPC，并通过 `WorkspacesService` 暴露该 RPC。工作区菜单提供平铺操作 **添加工作区…**（本决策做出时是两个操作：**打开本地文件夹…** 与一个按名称创建的入口，后者已被[单一路径 Note](../simplification/2026-07-31-one-route-to-add-a-workspace.md)删除）。选定文件夹后，系统复用现有的 `workspace.create({ path })` 流程，选中返回的工作区，并启动一个空白会话。
+新增一个用于选择单个文件夹的 `host.pickDirectory` RPC，并通过 `WorkspaceRuntime` 暴露该 RPC。工作区菜单提供平铺操作 **添加工作区…**（本决策做出时是两个操作：**打开本地文件夹…** 与一个按名称创建的入口，后者已被[单一路径 Note](../simplification/2026-07-31-one-route-to-add-a-workspace.md)删除）。选定文件夹后，系统复用现有的 `workspace.create({ path })` 流程，选中返回的工作区，并启动一个空白会话。
 
 工作区管理器必须在选择回调运行前插入或更新返回的工作区。因此，新纳入的目录会立即显示其 basename。再次打开已注册的路径时，则保留该工作区现有的标题。
 
-## 交互契约
+## 交互约定
 
 - 在 macOS、Windows 和 Linux 上，选择器一次只允许选择一个目录。
 - 取消系统对话框不会显示提示，并返回 `null`。
@@ -27,7 +27,7 @@ Status: implemented
 
 只有来自回环套接字、且携带同源浏览器元数据的请求才能调用原生对话框 RPC。该 RPC 不使用默认的 30 秒请求超时，因为系统对话框可能无限期保持打开；调用方中止或连接中止仍会传递至平台进程。
 
-平台适配器不经 shell 打开对话框——POSIX 上 spawn 原生工具，Windows 上是子进程 COM 会话：
+平台适配器不经 shell 打开对话框——POSIX 上 spawn 原生工具，Windows 上进行进程内 COM 交互：
 
 - macOS：`osascript` 和系统文件夹选择器。
 - Windows：koffi `IFileOpenDialog` 子进程，使用宿主接受的最佳线程 DPI 感知（可用时为 per-monitor-v2；不支持 PMv2 的主机级联到 per-monitor 或 system-aware）（见[进程内对话框 Note](2026-08-02-win32-in-process-folder-dialog.md)）；该层无回退——失败原样上报（见[PowerShell 链删除](../simplification/2026-08-04-drop-windows-powershell-picker-fallback.md)）。

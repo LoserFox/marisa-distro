@@ -1,15 +1,15 @@
-import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import Storage, { storageBackendServiceKey } from '@deepseek-ai/dsh-storage'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import { runKvBackendContract } from '../../storage/tests/contract.ts'
 import { Config, JsonStorageBackend, apply } from '../src/index.ts'
 import * as InvariantCompanion from '../src/invariant.ts'
 
-const roots: Array<string> = []
+const roots: string[] = []
 
 async function freshRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-storage-json-'))
@@ -25,7 +25,7 @@ runKvBackendContract('json', async () => {
   const root = await freshRoot()
   return {
     backend: new JsonStorageBackend(root),
-    reopen: async () => { return new JsonStorageBackend(root) },
+    reopen: async () => new JsonStorageBackend(root),
   }
 })
 
@@ -88,19 +88,23 @@ describe('json backend specifics', () => {
     const unit = await backend.kv.open(descriptor)
     await unit.putRecord('t', 'k', { v: 'committed' })
     await unit.setGlobal({ g: 'committed' })
-    // Make every publish fail: revoke write permission on the root.
-    await chmod(root, 0o500)
+    const path = join(root, 'shape.json')
+    const backup = join(root, 'shape.committed.json')
+    // A directory at the publish target rejects atomic replacement on every host.
+    await rename(path, backup)
+    await mkdir(path)
     await expect(unit.putRecord('t', 'k', { v: 'rejected' })).rejects.toThrow()
     await expect(unit.putRecord('t', 'k2', { v: 'also rejected' })).rejects.toThrow()
     await expect(unit.deleteRecord('t', 'k')).rejects.toThrow()
     await expect(unit.setGlobal({ g: 'rejected' })).rejects.toThrow()
-    await chmod(root, 0o700)
+    await rm(path, { recursive: true })
+    await rename(backup, path)
     const snapshot = await unit.loadAll()
     expect(snapshot.tables['t']).toEqual({ k: { v: 'committed' } })
     expect(snapshot.global).toEqual({ g: 'committed' })
     // The next successful publish must not carry rejected writes to disk.
     await unit.putRecord('t', 'k3', { v: 'later' })
-    const text = await readFile(join(root, 'shape.json'), 'utf8')
+    const text = await readFile(path, 'utf8')
     expect(text).not.toContain('rejected')
     await backend.close()
   })
@@ -196,7 +200,7 @@ describe('json backend specifics', () => {
 
   it('registers the invariant companion and disposes cleanly', async () => {
     const ctx = new Context()
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     const fiber = await ctx.plugin(InvariantCompanion)
     // Disposal releases the reservation: a fresh mount succeeds.
     await fiber.dispose()

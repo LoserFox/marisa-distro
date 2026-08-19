@@ -269,7 +269,11 @@ class HarnessClient:
                     if remaining <= 0:
                         with self._lock:
                             self._responses.pop(request_id, None)
-                        raise TimeoutError(f"{method} timed out waiting for DeepSeek Harness runtime")
+                        diagnostics = self._runtime_diagnostics()
+                        suffix = f"\n{diagnostics}" if diagnostics else ""
+                        raise TimeoutError(
+                            f"{method} timed out waiting for DeepSeek Harness runtime{suffix}"
+                        )
                     wait_timeout = remaining if wait_timeout is None else min(wait_timeout, remaining)
                 try:
                     item = waiter.get(timeout=wait_timeout)
@@ -393,6 +397,11 @@ class HarnessClient:
         self._requests.put(exc)
 
     def _runtime_closed_error(self, reason: str) -> TransportClosedError:
+        diagnostics = self._runtime_diagnostics()
+        return TransportClosedError(f"{reason}\n{diagnostics}" if diagnostics else reason)
+
+    def _runtime_diagnostics(self) -> str:
+        """Return available subprocess state for transport failures and timeouts."""
         proc = self._proc
         if (
             proc is not None
@@ -403,14 +412,14 @@ class HarnessClient:
         ):
             self._stderr_thread.join(timeout=0.1)
 
-        parts = [reason]
+        parts: list[str] = []
         if proc is not None:
             exit_code = proc.poll()
             if exit_code is not None:
                 parts.append(f"exit code: {exit_code}")
         if self._stderr_lines:
             parts.append("stderr tail:\n" + "\n".join(self._stderr_lines))
-        return TransportClosedError("\n".join(parts))
+        return "\n".join(parts)
 
     def _default_launch_args(self) -> tuple[str, ...]:
         if self.config.runtime_bin is not None:

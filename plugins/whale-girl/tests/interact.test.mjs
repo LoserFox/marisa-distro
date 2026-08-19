@@ -2,8 +2,8 @@
 // v2：投喂/玩耍是纯乐趣互动——状态不变，只回话（零负反馈，无数值影响）。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { applyAction, isCrossOrigin } from '../.dsh-plugin/src/interact.mjs'
-import { INITIAL_STATE } from '../.dsh-plugin/src/pet-state.mjs'
+import { applyAction, isCrossOrigin } from '../lib/src/interact.mjs'
+import { INITIAL_STATE } from '../lib/src/pet-state.mjs'
 
 const base = { ...INITIAL_STATE, updatedAt: 0 }
 

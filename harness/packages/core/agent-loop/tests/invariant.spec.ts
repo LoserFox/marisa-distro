@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import * as AgentLoopInvariant from '@deepseek-ai/dsh-agent-loop/invariant'
 import { createUserMessage, markAgentLoopRequest, type GenerateOptions  } from '@deepseek-ai/dsh-llm'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(AgentLoopInvariant)
   return ctx
 }
@@ -123,7 +123,7 @@ describe('request-reconstruction invariant', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     ctx.on('llm/stream', () => (async function* () {})() as never)
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     await ctx.plugin(AgentLoopInvariant)
     const session = ctx.sessions.create(SessionId('prepend-check'))
     session.append('turn/start', { turn: 1 })

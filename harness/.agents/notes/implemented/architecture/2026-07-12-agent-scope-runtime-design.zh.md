@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-[agent 作用域契约](2026-07-08-agent-scope-contexts.md)对贡献者而言很简单：通过 `agent.ctx` 注册，解析出一个全局加单 agent 的视图，仅在 setup 完成后发布，并保持作用域直到工作停止。运行时必须在协作式插件框架、异步创建、可重入监听器、持久化会话提交以及 worker 或进程故障等场景下维护这份契约。
+[agent（智能体）作用域约定](2026-07-08-agent-scope-contexts.md)对贡献者而言很简单：通过 `agent.ctx` 注册，解析出一个全局加单 agent 的视图，仅在 setup 完成后发布，并保持作用域直到工作停止。运行时必须在协作式插件框架、异步创建、可重入监听器、持久化会话提交以及 worker 或进程故障等场景下维护这份约定。
 
 主要的设计风险是为每个竞态条件引入第二套机制。独立的预留、就绪哨兵、取消中继、快照层和保护注册表可能镜像同一个事实，直到没有读者能分辨哪个才是权威的。这些机制还会诱使运行时把可信的类型化调用当作敌对的序列化边界来处理。
 
@@ -24,21 +24,21 @@ Status: implemented
 | 拥有一个活跃的 agent 或会话 | 由其 disposer 捕获的单条注册表条目 |
 | 协调创建/恢复 | 单个 `AgentCreationTransaction` |
 | 保护持久化、队列、模型或协议格式数据 | 在该边界处一次性物化 |
-| 在同一进程内传递类型化值 | Readonly 借用契约 |
-| 组合模型可见的提示词与工具表面 | 单个共享工具视图加权威的 assembly-waterfall 结果 |
+| 在同一进程内传递类型化值 | Readonly 借用约定 |
+| 组合模型可见的提示词与工具集 | 单个共享工具视图加权威的 assembly-waterfall（瀑布式事件）结果 |
 | 协调 subagent、worker 和进程关闭 | 单个取消信号加该边界独立的终止态/完全停稳态事实 |
 
 本 Agent Note 余下部分按依赖顺序展开这些选择：Cordis 机制、作用域路由、创建与会话提交、工具与提示词、subagent 与工作流，最后是可执行检查。
 
-[7 月 8 日 Agent Note](2026-07-08-agent-scope-contexts.md)仍然是贡献者契约。独立的 [subagent 组合控制 Agent Note](../feature/2026-07-12-subagent-persona-tool-filter-and-depth.md)拥有 `persona`、`toolFilter` 和 `maxDepth`；本文仅讨论它们的 setup 如何融入生命周期。
+[7 月 8 日 Agent Note](2026-07-08-agent-scope-contexts.md) 仍然是贡献者约定。独立的 [subagent 组合控制 Agent Note](../feature/2026-07-12-subagent-persona-tool-filter-and-depth.md) 拥有 `persona`、`toolFilter` 和 `maxDepth`；本文仅讨论它们的 setup 如何融入生命周期。
 
 ## Cordis 模型：上下文、fiber、effect、receiver 与 waterfall
 
-理解实现需要五个 Cordis 概念。上下文选择服务和注册所有权；fiber 是一个活跃的插件或子生命周期；effect 将清理逻辑附加到 fiber；事件接收器选择监听器；waterfall（瀑布式事件）让监听器按顺序变换或否决一个操作。
+理解实现需要五个 Cordis 概念。上下文选择服务和注册所有权；fiber 是一个活跃的插件或子生命周期；effect 将清理逻辑附加到 fiber；事件接收器选择监听器；waterfall 让监听器按顺序变换或短路一个操作。
 
 ### 上下文是贯穿单个服务图的所有权路径
 
-所有 agent 共享一个 Cordis 服务图。派生的上下文不会克隆 `ToolRegistry`、`SystemPrompt`、持久化或模型适配器；它改变的是：通过该上下文进行的注册如何被标记，以及哪些 effect 拥有其清理逻辑。
+所有 agent 共享一个 Cordis 服务图。派生的上下文不会克隆 `ToolRuntime`、`SystemPrompt`、持久化或模型适配器；它改变的是：通过该上下文进行的注册如何被标记，以及哪些 effect 拥有其清理逻辑。
 
 `agent.ctx` 就是这样一个派生上下文。服务调用仍然到达共享实例，而注册操作可以检查其调用上下文并将贡献存储在最近的作用域键下。普通的插件上下文不携带作用域键，因此注册到全局。
 
@@ -48,7 +48,7 @@ Cordis fiber 是插件或子上下文被激活时创建的活跃实例。其状�
 
 vendor 中的 Cordis fiber 实现在任意 setup 或 `internal/plugin` 观察者运行之前就建立了所有权。可重入的卸载可以看到已启动的子 fiber 或 effect，拒绝卸载开始后添加的 effect，并通过一个公开的一次性 disposer 加入已启动的清理。拆除观察者被逐个隔离，因此一个回调无法阻止结构性清理。
 
-这些是框架生命周期保证，而非 agent 特有的策略。Agent 创建依赖它们，因为 setup 可以激活任意插件并同步重入所有者的 dispose。
+这些是框架生命周期保证，而非 agent 特有的策略。Agent 创建依赖它们，因为 setup 可以激活任意插件并同步重入所有者的 dispose（资源释放）。
 
 ### Receiver 路由监听器；waterfall 组合决策
 
@@ -56,7 +56,7 @@ Cordis 使用 dispatch receiver（`this`）过滤监听器，而 harness 的监�
 
 因此，产品辅助函数构造载体并单独传递领域主体。这防止监听器路由变成另一套对象模型，并使事件签名在不了解载体内部的情况下也可理解。
 
-Cordis waterfall 是中间件风格的 dispatch。每个监听器接收 `next()`：调用它则委托给剩余监听器和基础操作，不调用则否决或替换下游结果。Waterfall 驱动提示词组装和工具策略；普通 emit 事件同步通知，parallel 事件等待所有监听器但没有否决结果。
+Cordis waterfall 是中间件风格的 dispatch。每个监听器接收 `next()`：调用它则委托给剩余监听器和基础操作，不调用则短路或替换下游结果。Waterfall 驱动提示词组装和工具策略；普通 emit 事件同步通知，parallel 事件等待所有监听器但没有否决结果。
 
 ## 作用域路由：一个不透明键选择一层
 
@@ -64,7 +64,7 @@ scope 包实现了 Cordis 路由所需的最小对象。其载体仅持有一个
 
 ### 作用域标识使用对象标识
 
-`ScopeKey` 是一个按标识比较的不透明对象。Harness 使用活跃的 `Agent` 作为自身的键，但该原语与领域无关，支持其他作用域所有者。
+`ScopeKey` 是一个按标识比较的不透明对象。harness 使用活跃的 `Agent` 作为自身的键，但该原语与领域无关，支持其他作用域所有者。
 
 `createScope(parent, key)` 返回一个作用域，其 `ctx` 共享父级的服务，其 effect 被标记为该键。`scopeOf(ctx)` 读取最近的注册键。`scopeTarget(base, key)` 创建事件接收器，其过滤器保留 base receiver 的 Cordis 服务过滤器，然后接纳无作用域的监听器和具有该确切键的监听器。
 
@@ -104,7 +104,7 @@ detach 闭包捕获其确切注册表条目。它仅在映射仍指向该注册�
 
 ### Setup 是私有世界内的可信组合
 
-Setup 接收完整的子上下文，可以等待插件激活。它可以注册工具、提示词段、限制、监听器和其他 effect，但公开契约不支持通过强制转换或内部注册表调用来驱动或发布正在创建中的 agent。
+Setup 接收完整的子上下文，可以等待插件激活。它可以注册工具、提示词段、限制、监听器和其他 effect，但公开约定不支持通过强制转换或内部注册表调用来驱动或发布正在创建中的 agent。
 
 事务将异步加载和 setup 与停用进行竞争，而非无限等待外部代码拥有的 promise。如果取消或所有者卸载获胜，即使外部 promise 永不结算，公开创建也会在事务拥有的清理之后拒绝。
 
@@ -153,7 +153,7 @@ sequenceDiagram
 2. 停止并排空 driver，丢弃仍处于待处理状态的注入。
 3. 分离 agent。
 4. 分离会话。
-5. Dispose agent 作用域。
+5. dispose agent 作用域。
 6. 退役事务所有权追踪。
 
 此顺序让最终的 agent 和会话事件能使用匹配的作用域监听器，并使持久化观察者在最终刷新完成前保持附加。作用域 dispose 放在最后，因为注册撤销是外部可见的生命期边界。
@@ -172,7 +172,7 @@ Session 头部、种子和追加的事件是无损 JSON 数据。Session 构造�
 
 追加遵循一个序列：
 
-1. 物化持久化事件和表面意图。
+1. 物化持久化事件和表层意图。
 2. 取得 SessionEntry 的独占所有权，并拒绝该注册表条目上的重入追加。
 3. 解析作用域回调并运行内部不变式验证。
 4. 恰好推送一次；这是提交点。
@@ -185,7 +185,7 @@ Session 头部、种子和追加的事件是无损 JSON 数据。Session 构造�
 
 ## 信任边界：仅在所有权真正变更时复制
 
-运行时区分类型化的进程内契约与序列化及持久化边界。这是值和回调的主要简化规则。
+运行时区分类型化的进程内约定与序列化及持久化边界。这是值和回调的主要简化规则。
 
 | 边界 | 所有权规则 |
 |---|---|
@@ -196,9 +196,9 @@ Session 头部、种子和追加的事件是无损 JSON 数据。Session 构造�
 | 持久化会话或持久化数据 | 在提交前物化并验证 |
 | Worker、进程或协议格式消息 | 序列化、验证并拥有解码后的值 |
 
-测试中构造恶意 getter、在交接后替换类型化回调、或强制转换伪造服务对象的做法本身不定义生产契约。运行时在数据跨越解析器、队列、模型、持久化、文件、worker、进程或协议格式（wire format）边界时保留检查，并在可信进程内依赖 readonly 类型加插件纪律。
+测试中构造恶意 getter、在交接后替换类型化回调、或强制转换伪造服务对象的做法本身不定义生产约定。运行时在数据跨越解析器、队列、模型、持久化、文件、worker、进程或协议格式（wire format）边界时保留检查，并在可信进程内依赖 readonly 类型加插件纪律。
 
-回调隔离与数据所有权是分开的。监听器是任意扩展代码，即使其参数是可信的也可能抛出异常；发布和提交后路径仍按其事件契约隔离失败。
+回调隔离与数据所有权是分开的。监听器是任意扩展代码，即使其参数是可信的也可能抛出异常；发布和提交后路径仍按其事件约定隔离失败。
 
 ## 工具与提示词：单一视图、权威组装、已提交的结果
 
@@ -208,7 +208,7 @@ Session 头部、种子和追加的事件是无损 JSON 数据。Session 构造�
 
 私有解析器应用当前展示模式、活跃的全局限制、精确的局部叠加和局部遮蔽。Schema、查找、执行、Code Mode SDK 生成和限制验证都使用该解析器或其限制前的全局名称视图。
 
-[subagent 组合控制 Agent Note](../feature/2026-07-12-subagent-persona-tool-filter-and-depth.md#tool-filtering-is-one-live-global-view-rule)拥有用户可见的 allow/deny 语义。实现要求是一致性：被过滤掉的全局工具不能通过另一条查找路径仍可执行，局部遮蔽的定义就是被展示和执行的同一个定义。
+[subagent 组合控制 Agent Note](../feature/2026-07-12-subagent-persona-tool-filter-and-depth.md#tool-filtering-is-one-live-global-view-rule) 拥有用户可见的 allow/deny 语义。实现要求是一致性：被过滤掉的全局工具不能通过另一条查找路径仍可执行，局部遮蔽的定义就是被展示和执行的同一个定义。
 
 `ToolRestriction` 接受 readonly 的 allow/deny 名称并将其编译为内部集合。多个限制取交集。公开的 `visible()` 和 `knownNames()` 方法是不必要的，因为只有注册表需要中间视图。
 
@@ -216,7 +216,7 @@ Session 头部、种子和追加的事件是无损 JSON 数据。Session 构造�
 
 注册表为每次执行分配一个新的带品牌的 `Symbol` token。嵌套的 Code Mode 调用将外层 token 作为 `parent` 携带，因此结构化输出可以通过标识将内层捕获与其外层 `run_code` 结果关联。
 
-注册表分配的新 Symbol 提供无碰撞的执行标识，无需 WeakSet 成员注册表。调用方无法通过 `ToolExecutionInput` 提供执行自身的 token；它们仅在注册表创建后接收流水线拥有的 `ToolExecution`。这是一个可信的类型化契约，而非针对任意强制转换或 JavaScript 调用方的运行时防御。
+注册表分配的新 Symbol 提供无碰撞的执行标识，无需 WeakSet 成员注册表。调用方无法通过 `ToolExecutionInput` 提供执行自身的 token；它们仅在注册表创建后接收流水线拥有的 `ToolExecution`。这是一个可信的类型化约定，而非针对任意强制转换或 JavaScript 调用方的运行时防御。
 
 参数在模型/工具 JSON 进入流水线时一次性物化。Pre-、around- 和 post-execute 监听器操作类型化的 execution 和决策。Call ID 关联、审批、单调守卫和 Code Mode 嵌套仍然是显式的关系检查。
 
@@ -226,7 +226,7 @@ Session 头部、种子和追加的事件是无损 JSON 数据。Session 构造�
 
 SystemPrompt 首先将全局加 agent 的段、变量和工具提供方解析为确定性的注册表贡献。作用域过滤的 `system-prompt/assemble` waterfall 随后可以重排、替换、添加或移除任何段、变量或 schema。其返回的组装结果即为权威；没有后续的恢复步骤，普通提示词段、工具定义或提供方结果上也没有终态元数据。
 
-这是一个可信的同进程扩展 seam，而非权限边界。修改 Code Mode 的 `run_code` schema 或 `tools:sdk` 指令，或结构化子级的捕获 schema 或指令的监听器，有责任在其返回的组装中保持协议的一致性。ToolRegistry 仍然保留 `run_code` 不受普通工具注册和限制影响，因为那些是注册表不变式，但 assembly 中间件仍然可以自由变换最终的模型可见表面。
+这是一个可信的同进程扩展点，而非权限边界。修改 Code Mode 的 `run_code` schema 或 `tools:sdk` 指令，或结构化子级的捕获 schema 或指令的监听器，有责任在其返回的组装中保持协议的一致性。ToolRuntime 仍然保留 `run_code` 不受普通工具注册和限制影响，因为那些是注册表不变式，但 assembly 中间件仍然可以自由变换最终的模型可见表面。
 
 Scope 直接解决了真正的隔离问题。结构化输出贡献注册在子级的精确作用域中，而 Code Mode 从同一个已解析的工具视图派生其传输和 SDK。第二套命名保护系统需要另一套所有权和碰撞规则来覆盖任意 schema 提供方（包括有意贡献重复名称的提供方），却不创建新的信任边界。
 
@@ -254,19 +254,19 @@ Scope 直接解决了真正的隔离问题。结构化输出贡献注册在子�
 
 `ToolGuard` 是单调策略注册表。已提交的工具观察是上述被隔离的 `tools/result` 点。终端结构化输出在自身执行上标记 `concludesTurn`，因此终止性成为权威结果上的数据，而不是独立 hook 决策。
 
-### Skill 和 approval 服务信任类型化调用方
+### skill（技能）和 approval 服务信任类型化调用方
 
-Skill 注册表定义和 approval 策略是 readonly 的同进程契约。它们的服务不克隆回调对象，也不防御交接后的回调替换。
+Skill 注册表定义和 approval 策略是 readonly 的同进程约定。它们的服务不克隆回调对象，也不防御交接后的回调替换。
 
 Skill 仍然验证外部 skill 文件和解析的提供方输出，通过调用 agent 的工具视图路由目录，并精确 dispose 注册。Approval 仍然解析策略、观察取消、按 `request.agent` 路由 `approval/request`、记录持久化审计对，并隔离应答者和提交后观察者的失败。
 
-## Subagent：发布即 start promise
+## subagent：发布即 start promise
 
-Subagent 启动有一次所有权转移。提供方拥有未发布资源，直到其 start promise 以一个已发布 run 兑现；调用方拥有返回的 run 并必须 dispose 它。
+subagent 启动有一次所有权转移。提供方拥有未发布资源，直到其 start promise 以一个已发布 run 兑现；调用方拥有返回的 run 并必须 dispose 它。
 
-### 服务契约有一个取消通道
+### 服务约定有一个取消通道
 
-`SubagentProvider.start()` 和 `SubagentService.start()` 返回 `Promise<SubagentRun>`。Promise 会在后端跨过发布边界后兑现，因此调用方和 `subagent/start` 观察者从不需要第二个 `run.started` promise。提供方工作如果在发布前失败，`start()` 就会被拒绝；发布后的提示词、轮次、取消与基础设施结果会通过 `SubagentRun.result` 结算，且不会隐藏 child id，这也是[持久化目录决策](../feature/2026-07-22-durable-subagent-catalog-and-list-agents.md)所要求的契约。
+`SubagentProvider.start()` 和 `SubagentRuntime.start()` 返回 `Promise<SubagentRun>`。Promise 会在后端跨过发布边界后兑现，因此调用方和 `subagent/start` 观察者从不需要第二个 `run.started` promise。提供方工作如果在发布前失败，`start()` 就会被拒绝；发布后的提示词、轮次、取消与基础设施结果会通过 `SubagentRun.result` 结算，且不会隐藏 child id，这也是[持久化目录决策](../feature/2026-07-22-durable-subagent-catalog-and-list-agents.md)所要求的约定。
 
 `SubagentStartRequest.signal` 是必需的。中止它会在启动期间，以及已发布 run 的剩余就绪或轮次工作中请求取消。`SubagentRun.dispose()` 也请求取消并等待完全停稳。没有单独的公开 `run.cancel()` 通道。
 
@@ -276,13 +276,13 @@ Subagent 启动有一次所有权转移。提供方拥有未发布资源，直�
 
 ### 进程内提供方复用核心事务
 
-Spawn 和 fork 共享一个进程内 driver。它通过 `parent.ctx` 创建子级，将必需的 signal 传入核心创建事务，并在未发布的 setup 期间安装 persona、工具限制和结构化输出贡献。
+spawn 和 fork 共享一个进程内 driver。它通过 `parent.ctx` 创建子级，将必需的 signal 传入核心创建事务，并在未发布的 setup 期间安装 persona、工具限制和结构化输出贡献。
 
-提供方等待创建并仅返回已发布的 run。在交接时，核心创建分离其仅用于创建的 abort 监听器；提供方在安装活跃 run 监听器之前立即重新检查 signal，因此在那个窄窗口中的 abort 会 dispose 新句柄而非逃脱取消。父级拆除跟随子级，因为操作属于 `parent.ctx`；提供方卸载阻止新 start 但不成为已接受 run 的第二个撤销所有者。Run disposer 取消子级并等待 AgentHandle 的有序拆除。
+提供方等待创建并仅返回已发布的 run。在交接时，核心创建分离其仅用于创建的 abort 监听器；提供方在安装活跃 run 监听器之前立即重新检查 signal，因此在那个窄窗口中的 abort 会 dispose 新句柄而非逃脱取消。父级拆除会一并拆除子级，因为操作属于 `parent.ctx`；提供方卸载阻止新 start 但不成为已接受 run 的第二个撤销所有者。Run disposer 取消子级并等待 AgentHandle 的有序拆除。
 
-Spawn 使用空会话种子。Fork 使用经验证的已完成轮次前缀。对话种子仅改变历史，不导入作用域、工具、服务或权限。
+spawn 使用空会话种子。fork 使用经验证的已完成轮次前缀。对话种子仅改变历史，不导入作用域、工具、服务或权限。
 
-### ACP 提供方拥有进程直到就绪或清理
+### ACP（Agent Client Protocol）提供方拥有进程直到就绪或清理
 
 ACP 提供方跨越真实的进程和协议格式边界，因此它保留验证、环境清洗、消息序列化、abort/进程竞争，以及从 kill 到进程退出并完全停稳的过程。
 
@@ -294,7 +294,7 @@ Worker 和子进程桥接比同进程注册表需要更多状态，因为消息�
 
 ### 工作流子级是待定 start 或已发布记录
 
-工作流宿主保持待定的提供方 start promise 和已发布的子级记录。子级仅在异步 `SubagentService.start()` 兑现时才从待定变为已发布；被拒绝的 start 清理其部分提供方工作且不产生子级生命周期对。
+工作流宿主保持待定的提供方 start promise 和已发布的子级记录。子级仅在异步 `SubagentRuntime.start()` 兑现时才从待定变为已发布；被拒绝的 start 清理其部分提供方工作且不产生子级生命周期对。
 
 一个宿主拥有的 AbortController 向待定和活跃子级提供必需的 signal。关闭工作流准入中止该 signal，因此没有重复的 `ChildCancel` worker RPC 或显式的宿主侧 `run.cancel()` 扇出。完全停稳需要等待待定 start 和已发布子级 dispose 两者。
 
@@ -314,11 +314,11 @@ Worker 边界仍然序列化请求和结果。宿主保留首个终端结果仲�
 
 ## 正确性强制
 
-该设计通过类型、运行时逃逸点、生成的契约和行为测试来强制执行。没有哪一层被要求证明它无法观察到的东西。
+该设计通过类型、运行时逃逸点、生成的约定和行为测试来强制执行。没有哪一层被要求证明它无法观察到的东西。
 
 ### 类型使常规路径难以误用
 
-Readonly 契约描述借用的同进程值。`Scoped<T>` 标记事件接收器，`agentEvents()` 融合载体和主体，工具输入省略注册表拥有的 token，subagent 异步返回类型直接暴露发布与结算。
+Readonly 约定描述借用的同进程值。`Scoped<T>` 标记事件接收器，`agentEvents()` 融合载体和主体，工具输入省略注册表拥有的 token，subagent 异步返回类型直接暴露发布与结算。
 
 TypeScript 无法管控 JavaScript 强制转换、直接 Cordis dispatch、进程消息或持久化文件，因此运行时强制保留在这些逃逸点。
 
@@ -326,17 +326,17 @@ TypeScript 无法管控 JavaScript 强制转换、直接 Cordis dispatch、进�
 
 `dsh-scope/invariant` 配套插件在被选用时验证每个声明的作用域事件使用带标记的载体，以及暴露主体的事件族使用匹配的键。独立的 `dsh-session/invariant` 贡献在追加提交前暂存 trace 验证，并在同一事件提交后推进；二者都通过 `ctx.invariants` 注册。
 
-该插件不通过扫描注册表来管控可信 setup，也不拒绝通过强制转换构造的提示词 assembly 对象。这些检查会将组合契约变成推测性的运行时机制，却不保护真实的外部边界。
+该插件不通过扫描注册表来管控可信 setup，也不拒绝通过强制转换构造的提示词 assembly 对象。这些检查会将组合约定变成推测性的运行时机制，却不保护真实的外部边界。
 
-### 生成的产物使公开契约保持对齐
+### 生成的产物使公开约定保持对齐
 
-事件目录、服务目录、生产者/消费方矩阵、配置目录、模块图、工具目录、type-equiv 块和作用域事件解析器映射都是从源码生成或受新鲜度门禁约束的。[TypeScript 语义门禁 Agent Note](../process/2026-07-14-typescript-program-backed-semantic-gates.md)拥有 Program 构造、语义事件发现和解析器生成规则。
+事件目录、服务目录、生产者/消费方矩阵、配置目录、模块图、工具目录、type-equiv 块和作用域事件解析器映射都是从源码生成或受新鲜度门禁约束的。[TypeScript 语义门禁 Agent Note](../process/2026-07-14-typescript-program-backed-semantic-gates.md) 拥有 Program 构造、语义事件发现和解析器生成规则。
 
 行为测试固定了作用域路由和 dispose、最终写入注册表时的碰撞清理、发布回滚、有序完全停稳、持久化前/后提交行为、跨展示和执行的活跃工具过滤、协作式提示词组装、原生和 Code Mode 中的结构化输出提交、异步 subagent 启动和信号取消、worker 终端仲裁、ACP 结算和进程拆除。
 
 ## 曾考虑的替代方案
 
-[7 月 8 日 Agent Note](2026-07-08-agent-scope-contexts.md#alternatives-considered)拥有公开扁平作用域契约的替代方案。此处的替代方案关注实现形态。
+[7 月 8 日 Agent Note](2026-07-08-agent-scope-contexts.md#alternatives-considered) 拥有公开扁平作用域约定的替代方案。此处的替代方案关注实现形态。
 
 ### 使用透明代理作为作用域载体
 
@@ -348,7 +348,7 @@ TypeScript 无法管控 JavaScript 强制转换、直接 Cordis dispatch、进�
 
 ### 对每个类型化的同进程参数做快照
 
-通用复制防御有状态 getter 和违反 readonly 契约的调用方，但增加分配、重复验证器和可能遗忘复制的路径。物化属于解析器、队列、模型、持久化、worker、进程和协议格式边界——即所有权真正变更的地方。
+通用复制防御有状态 getter 和违反 readonly 约定的调用方，但增加分配、重复验证器和可能遗忘复制的路径。物化属于解析器、队列、模型、持久化、worker、进程和协议格式边界——即所有权真正变更的地方。
 
 ### 为就绪、取消和 dispose 提供独立控制器
 
@@ -360,7 +360,7 @@ TypeScript 无法管控 JavaScript 强制转换、直接 Cordis dispatch、进�
 
 ### 在 assembly 之后恢复选定的提示词或工具贡献
 
-Waterfall 之后的恢复步骤会在文档化的协作式 seam 之后创建第二套组合规则。正确分配规范的存在或缺失还需要为任意工具 schema 提供方制定所有权和碰撞规则，而这些提供方的普通输出可能包含重复名称。作用域注册已经提供了所需的按 agent 隔离，可信的 assembly 监听器拥有其返回内容的协议一致性，因此命名恢复增加了机制却不建立独立边界。
+Waterfall 之后的恢复步骤会在文档化的协作式 waterfall 之后创建第二套组合规则。正确分配规范的存在或缺失还需要为任意工具 schema 提供方制定所有权和碰撞规则，而这些提供方的普通输出可能包含重复名称。作用域注册已经提供了所需的按 agent 隔离，可信的 assembly 监听器拥有其返回内容的协议一致性，因此命名恢复增加了机制却不建立独立边界。
 
 ### 用同进程加固替代 worker/进程生命周期守卫
 
@@ -374,11 +374,11 @@ Worker 消息、进程死亡和持久化输入确实跨越所有权和序列化�
 
 - 作用域贡献仅在其精确的 agent 视图中可见，并随该作用域一起 dispose。
 - 创建和恢复不暴露部分配置的句柄；最终写入注册表时的失败者和发布失败清理每个已准备的资源。
-- Dispose 在 driver 排空和最终会话工作期间保留作用域监听器和持久化，然后撤销作用域。
-- 持久化、队列、模型、worker、进程和协议格式的值在其真实边界处被拥有；类型化的同进程值遵循 readonly 契约。
-- ToolRegistry 的展示、查找和执行在专家 assembly 变换之前解析相同的活跃视图，已提交的结果有一个不可变的观察点。
+- dispose 在 driver 排空和最终会话工作期间保留作用域监听器和持久化，然后撤销作用域。
+- 持久化、队列、模型、worker、进程和协议格式的值在其真实边界处被拥有；类型化的同进程值遵循 readonly 约定。
+- ToolRuntime 的展示、查找和执行在专家 assembly 变换之前解析相同的活跃视图，已提交的结果有一个不可变的观察点。
 - 注册表贡献是确定性输入，而可信的 assembly waterfall 拥有最终的模型可见组合。
-- Subagent start 仅返回已发布的 run，必需的 signal 取消待定或活跃的工作，dispose 到达后端的完全停稳契约。
+- subagent start 仅返回已发布的 run，必需的 signal 取消待定或活跃的工作，dispose 到达后端的完全停稳约定。
 - Worker/进程结果优先级和清理在死亡、迟到消息和有界拆除下保持正确。
 
 ### 代价与局限
@@ -387,6 +387,6 @@ Worker 消息、进程死亡和持久化输入确实跨越所有权和序列化�
 
 可信的 `system-prompt/assemble` 监听器可以移除或替换 Code Mode 和结构化输出协议片段。这是有意为之：监听器拥有最终组合，必须保持部署期望仍可用的任何协议。
 
-该设计信任同进程中的类型化插件。它不防御任意强制转换、有状态 getter、违反 readonly 契约的修改，或插件有意在支持的组合 API 之外使用环境服务访问。
+该设计信任同进程中的类型化插件。它不防御任意强制转换、有状态 getter、违反 readonly 约定的修改，或插件有意在支持的组合 API 之外使用环境服务访问。
 
 [安全与权限非目标](2026-07-08-agent-scope-contexts.md#security-and-authority-are-non-goals)仍然是根本性的。这些机制证明注册组合、发布和生命期所有权；它们不证明隔离或父到子的非升权。

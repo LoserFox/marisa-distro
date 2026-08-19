@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-`ImageBlock`（`packages/llm/llm/src/types.ts`）没有任何生产环境的生产者，而每条路径上的每个消费方都将其丢弃：DeepSeek 适配器的序列化器跳过 image 块（这是文档中注明的 MVP 限制）；pi-ai 转换器因无法表示而跳过；压缩（compaction）估算器为其按固定常量计入 token 用量，并将其渲染为 `[image]`。ACP（Agent Client Protocol）独立地拒绝图像提示词内容。此时构造的 `ImageBlock` 会在提供方协议格式（wire format）上静默消失——词汇宣告了一种没有任何路径兑现的能力，这正是 AGENTS.md 防御性模式所警告的静默数据丢失形态。唯一的构造调用出现在测试中，用于覆盖 skip/drop/estimate 分支。
+`ImageBlock`（`packages/llm/llm/src/types.ts`）没有任何生产环境的生产者，而每条路径上的每个消费方都将其丢弃：DeepSeek 适配器的序列化器跳过 image 块（这是文档中注明的 MVP 限制）；pi-ai 转换器因无法表示而跳过；压缩（compaction）估算器为其按固定常量计入 token 用量，并将其渲染为 `[image]`。ACP（Agent Client Protocol）独立地拒绝图像提示词内容。此时构造的 `ImageBlock` 会从提供方协议格式（wire format）中静默消失——词汇宣告了一种没有任何路径兑现的能力，这正是 AGENTS.md 防御性模式所警告的静默数据丢失形态。唯一的构造调用出现在测试中，用于覆盖 skip/drop/estimate 分支。
 
 ## 决策
 
@@ -18,7 +18,7 @@ Status: implemented
 
 当适配器和压缩支持 image 时，`ContentBlockMap` 可以重新引入 image 内容块。ACP 可以继续作为纯文本的自动化协议。保留一个唯一实现就是拒绝的核心类型，等于宣告一个不可用的对外服务接口；移除后，生产者会立即得到编译期错误。
 
-评审中记录的回退方案（假如评审决定保留该槽位）：保留 `ImageBlock`，但将所有静默跳过替换为显式拒绝，并在词汇文档中记录该策略——静默丢弃是唯一没有辩护者的状态。评审最终决定移除；此回退方案作为文档化的替代方案保留，以备该槽位在完整功能就绪之前回归。
+文档化的回退方案（以备该词汇项在完整功能就绪之前回归）：保留 `ImageBlock`，但将所有静默跳过替换为显式拒绝，并在词汇文档中记录该策略——静默丢弃是唯一无人主张保留的状态。
 
 ## 验证
 

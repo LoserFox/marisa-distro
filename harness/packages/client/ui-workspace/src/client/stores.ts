@@ -7,18 +7,42 @@
  */
 import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-runtime/client'
 
-/** Session-list grouping mode: workspace sections or one flat recency list. */
-export type WorkspaceGroupBy = 'workspace' | 'flat'
+/** Browser-local order account for the hierarchy-free flat Session list. */
+export const FLAT_SESSION_ORDER_KEY = '__flat_session_order__'
 
-/** Workspace browser viewing state (grouping mode only; transient UI facts stay component-local). */
-type WorkspaceViewState = { groupBy: WorkspaceGroupBy }
+/** Session-list grouping mode: workspace sections or one flat recency list. */
+export type SessionGroupBy = 'workspace' | 'flat'
+/** Session order: user-arranged only, or user-arranged plus activity promotion. */
+export type SessionOrderBy = 'manual' | 'updated'
+
+/** Workspace browser viewing state persisted across surface remounts and reloads. */
+type WorkspaceViewState = {
+  groupBy: SessionGroupBy
+  orderBy: SessionOrderBy
+  /** Explicit zero-or-five-session state keyed by Workspace group identity. */
+  groupExpansion: Record<string, boolean>
+  /** Shared editable order per Workspace group plus the browser-local flat-list account. */
+  sessionOrderByAccount: Record<string, string[]>
+  /** Last observed update timestamps per order account for one-time promotion events. */
+  sessionUpdatedAtByAccount: Record<string, Record<string, number>>
+}
 
 /**
  * Annotation twin of the actions literal below (the export needs a declared
  * return type); drift fails assignability at the defineStore call.
  */
 type WorkspaceViewActions = {
-  setGroupBy: (draft: WorkspaceViewState, mode: WorkspaceGroupBy) => void
+  setGroupBy: (draft: WorkspaceViewState, mode: SessionGroupBy) => void
+  setOrderBy: (draft: WorkspaceViewState, mode: SessionOrderBy) => void
+  setGroupExpanded: (draft: WorkspaceViewState, key: string, expanded: boolean) => void
+  retainAccountKeys: (draft: WorkspaceViewState, workspaceKeys: readonly string[]) => void
+  syncSessionOrderAccount: (
+    draft: WorkspaceViewState,
+    accountKey: string,
+    order: string[],
+    updatedAt: Record<string, number>,
+  ) => void
+  setSessionOrder: (draft: WorkspaceViewState, accountKey: string, order: string[]) => void
 }
 
 /**
@@ -27,10 +51,37 @@ type WorkspaceViewActions = {
  */
 export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState, WorkspaceViewActions> {
   return defineStore({
-    init: (): WorkspaceViewState => { return ({ groupBy: 'workspace' }) },
-    persist: 'dsh.workspace.view',
+    init: (): WorkspaceViewState => ({
+      groupBy: 'workspace',
+      orderBy: 'updated',
+      groupExpansion: {},
+      sessionOrderByAccount: {},
+      sessionUpdatedAtByAccount: {},
+    }),
+    persist: 'dsh.workspace.view.v5',
     actions: {
-      setGroupBy: (d, mode: WorkspaceGroupBy) => { d.groupBy = mode },
+      setGroupBy: (d, mode: SessionGroupBy) => { d.groupBy = mode },
+      setOrderBy: (d, mode: SessionOrderBy) => { d.orderBy = mode },
+      setGroupExpanded: (d, key: string, expanded: boolean) => { d.groupExpansion[key] = expanded },
+      retainAccountKeys: (d, workspaceKeys: readonly string[]) => {
+        const retained = new Set(workspaceKeys)
+        d.groupExpansion = Object.fromEntries(
+          Object.entries(d.groupExpansion).filter(([key]) => retained.has(key)),
+        )
+        d.sessionOrderByAccount = Object.fromEntries(
+          Object.entries(d.sessionOrderByAccount).filter(([key]) => retained.has(key)),
+        )
+        d.sessionUpdatedAtByAccount = Object.fromEntries(
+          Object.entries(d.sessionUpdatedAtByAccount).filter(([key]) => retained.has(key)),
+        )
+      },
+      syncSessionOrderAccount: (d, accountKey: string, order: string[], updatedAt: Record<string, number>) => {
+        d.sessionOrderByAccount[accountKey] = order
+        d.sessionUpdatedAtByAccount[accountKey] = updatedAt
+      },
+      setSessionOrder: (d, accountKey: string, order: string[]) => {
+        d.sessionOrderByAccount[accountKey] = order
+      },
     },
   })
 }

@@ -20,7 +20,7 @@ import css from './AppFrame.module.css'
 /** Full composed props: runtime share + child-slot render share + store share. */
 export type AppFrameProps =
   & PropsRuntime<'root'>
-  & PropsRenderSlots<'sidebar' | 'conversation' | 'details'>
+  & PropsRenderSlots<'sidebar' | 'conversation' | 'details' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createLayoutStore>>
 
 /** Center column grid item (session-body building block). */
@@ -96,7 +96,7 @@ export function AppFrame({
     return current !== undefined && s.byId[current]?.blank === false ? current : undefined
   })
   const frameRef = useRef<HTMLDivElement | null>(null)
-  const [viewport, setViewport] = useState(() => { return window.innerWidth })
+  const [viewport, setViewport] = useState(() => window.innerWidth)
 
   const lastSession = useRef(detailsSession)
   useLayoutEffect(() => {
@@ -111,7 +111,7 @@ export function AppFrame({
   useEffect(() => {
     const el = frameRef.current
     /* v8 ignore next -- the ref is always attached by effect time: the frame div renders unconditionally. */
-    if (el === null) { return }
+    if (el === null) return
     let raf: number | null = null
     const observer = new ResizeObserver(() => {
       raf ??= requestAnimationFrame(() => {
@@ -183,13 +183,16 @@ export function AppFrame({
       </div>
       <>
         {/* Both column occupants stay at fixed tree positions from first
-            paint — no loading gate (user ruling: the bare status line looked
-            worse than the shell's own pending rendering). The conversation
+            paint — no loading gate: a bare status line reads worse than
+            the shell's own pending rendering. The conversation
             is session-maybe; the strict details entry naturally renders
             empty while no session is current. */}
         <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
         <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
       </>
+      <div className={css.overlayLayer} data-shell-overlay>
+        {renderSlot('shell.overlay', {})}
+      </div>
       {/* The collapsed rail is fixed-width: no resize handle while closed. */}
       {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
       {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}

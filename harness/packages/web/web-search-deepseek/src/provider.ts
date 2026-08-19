@@ -27,7 +27,7 @@ import type {
 export const DEEPSEEK_PROVIDER_ID = 'deepseek-official'
 
 /**
- * Default endpoint: DeepSeek's Anthropic-compatible surface, `/v1` included
+ * Default endpoint: DeepSeek's Anthropic-compatible API, `/v1` included
  * (`/messages` is appended). This is NOT the chat-completions base
  * (`https://api.deepseek.com`) `@deepseek-ai/dsh-llm-deepseek` uses, so this
  * provider does NOT reuse `$DEEPSEEK_BASE_URL` — only the API key is shared.
@@ -77,7 +77,7 @@ export interface DeepSeekSearchLlmRequest {
   }
 }
 
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /** Secret-free auxiliary DeepSeek search request recorded before dispatch. */
     'web/deepseek-search-llm-request': DeepSeekSearchLlmRequest
@@ -111,7 +111,7 @@ export interface DeepSeekSearchProviderOptions {
 
 /**
  * Build a `url → cited_text` map from every `text` block's `citations[]`. This
- * is the snippet surface: Anthropic `web_search_result` items carry
+ * is the snippet source: Anthropic `web_search_result` items carry
  * `url`/`title`/`page_age` but typically NO inline snippet — the excerpt lives
  * in a separate `text` block's citation, keyed by `url` (first occurrence wins).
  *
@@ -135,7 +135,7 @@ export function citationSnippets(blocks: readonly ContentBlock[]): Map<string, s
  * Map a DeepSeek Anthropic Messages response to a normalized search result. Walks
  * `web_search_tool_result` blocks for citeable `web_search_result` items, joins each to its
  * citation excerpt as `snippet`, and dedupes by `url` (a `max_uses > 1` request can surface
- * the same URL across searches). The seam owns the final `maxResults` truncation, so
+ * the same URL across searches). The web service owns the final `maxResults` truncation, so
  * `truncated` is always `false` here.
  *
  * @param response - the parsed Messages response body.
@@ -177,31 +177,43 @@ export function mapAnthropicResponse(response: AnthropicResponse): WebSearchResu
 export class DeepSeekSearchProvider implements WebSearchProvider {
   readonly id = DEEPSEEK_PROVIDER_ID
 
-  constructor(private readonly options: DeepSeekSearchProviderOptions) {}
+  /**
+   * @param resolveOptions - the options for the NEXT operation, snapshotted
+   * once at each operation's entry so one search never mixes two sections. A
+   * thunk rather than a value because the plugin's settings section can change
+   * between searches, and re-registering the provider to carry a new endpoint
+   * would make the seam's selection observable to the user as a flicker.
+   */
+  constructor(private readonly resolveOptions: () => DeepSeekSearchProviderOptions) {}
 
   available(): boolean {
-    return ((this.options.apiKey?.length ?? 0) > 0 || this.options.resolveApiKey !== undefined)
-      && URL.canParse(this.options.baseURL)
-      && isPositiveInteger(this.options.maxTokens)
-      && isPositiveInteger(this.options.maxUses)
+    const options = this.resolveOptions()
+    return ((options.apiKey?.length ?? 0) > 0 || options.resolveApiKey !== undefined)
+      && URL.canParse(options.baseURL)
+      && isPositiveInteger(options.maxTokens)
+      && isPositiveInteger(options.maxUses)
   }
 
   async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
-    const apiKey = await this.apiKey(signal)
+    // One snapshot for the whole operation: credential resolution awaits, and a
+    // settings write landing inside that await must not send the key resolved
+    // from the old section to the endpoint named by the new one.
+    const options = this.resolveOptions()
+    const apiKey = await this.apiKey(options, signal)
     throwIfSearchAborted(signal)
-    const endpoint = `${this.options.baseURL}/messages`
+    const endpoint = `${options.baseURL}/messages`
     const body: DeepSeekSearchLlmRequest['body'] = {
-      model: this.options.model,
-      max_tokens: this.options.maxTokens,
+      model: options.model,
+      max_tokens: options.maxTokens,
       messages: [{
         role: 'user',
         content: [{ type: 'text', text: `Perform a web search for the query: ${request.query}` }],
       }],
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: this.options.maxUses }],
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: options.maxUses }],
     }
-    this.options.recordRequest?.({
+    options.recordRequest?.({
       endpoint,
-      apiVersion: this.options.apiVersion,
+      apiVersion: options.apiVersion,
       body,
     })
     throwIfSearchAborted(signal)
@@ -215,7 +227,7 @@ export class DeepSeekSearchProvider implements WebSearchProvider {
           // may expect `Authorization: Bearer` — send both so either resolves.
           'x-api-key': apiKey,
           'authorization': `Bearer ${apiKey}`,
-          'anthropic-version': this.options.apiVersion,
+          'anthropic-version': options.apiVersion,
           'content-type': 'application/json',
           'accept': 'application/json',
           'user-agent': USER_AGENT,
@@ -232,7 +244,7 @@ export class DeepSeekSearchProvider implements WebSearchProvider {
       const status = response.status
       let message = `DeepSeek API error (HTTP ${status})`
       try {
-        const parsed: AnthropicError = await response.json() as AnthropicError
+        const parsed = await response.json() as AnthropicError
         const detail = typeof parsed.error === 'string' ? parsed.error : parsed.error?.message ?? parsed.message
         if (detail !== undefined && detail.length > 0) message = detail
       } catch (error: unknown) {
@@ -248,7 +260,7 @@ export class DeepSeekSearchProvider implements WebSearchProvider {
     }
 
     try {
-      const payload: AnthropicResponse = await response.json() as AnthropicResponse
+      const payload = await response.json() as AnthropicResponse
       return mapAnthropicResponse(payload)
     } catch (error: unknown) {
       if (signal?.aborted === true || isAbortError(error)) throw searchAborted(signal, error)
@@ -257,13 +269,18 @@ export class DeepSeekSearchProvider implements WebSearchProvider {
     }
   }
 
-  /** Resolve one operation's credential without retaining it on the provider. */
-  private async apiKey(signal?: AbortSignal): Promise<string> {
+  /**
+   * Resolve one operation's credential without retaining it on the provider.
+   * @param options - the caller's snapshot, so the key and the endpoint it is sent to come from one section.
+   * @param signal - abort signal for the surrounding search.
+   * @returns the resolved key.
+   */
+  private async apiKey(options: DeepSeekSearchProviderOptions, signal?: AbortSignal): Promise<string> {
     throwIfSearchAborted(signal)
-    if (this.options.apiKey !== undefined && this.options.apiKey.length > 0) return this.options.apiKey
+    if (options.apiKey !== undefined && options.apiKey.length > 0) return options.apiKey
     let resolved: string | undefined
     try {
-      resolved = await abortable(this.options.resolveApiKey?.() ?? Promise.resolve(undefined), signal)
+      resolved = await abortable(options.resolveApiKey?.() ?? Promise.resolve(undefined), signal)
     } catch (error: unknown) {
       if (signal?.aborted === true || isAbortError(error)) throw searchAborted(signal, error)
       throw new WebError(
@@ -273,7 +290,7 @@ export class DeepSeekSearchProvider implements WebSearchProvider {
       )
     }
     if (resolved !== undefined && resolved.length > 0) return resolved
-    const ref = this.options.apiKeyEnv ?? 'DEEPSEEK_API_KEY'
+    const ref = options.apiKeyEnv ?? 'DEEPSEEK_API_KEY'
     throw new WebError(
       `DeepSeek search has no API key for "${ref}"; store it through the credentials service`
       + ' (the web Models page writes it), export it in the launching environment, or set a literal'

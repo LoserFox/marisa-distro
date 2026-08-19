@@ -23,6 +23,6 @@ export function SessionId(id: string): SessionId {
 
 ## 策略：为跨包边界的 id 添加品牌
 
-包为自己拥有的 id 添加品牌：`CallId` 位于 `dsh-llm`，共享的 agent/会话 `SessionId` 位于 `dsh-session`，`TaskId` 位于 `dsh-tasks`。为可能被混淆的跨包 id 添加品牌，但无需为每个字符串都添加。
+包为自己拥有的 id 添加品牌：`CallId` 位于 `dsh-llm`，共享的 agent/会话 `SessionId` 位于 `dsh-session`，`JobId` 位于 `dsh-jobs`。为可能被混淆的跨包 id 添加品牌，但无需为每个字符串都添加。
 
-该包只负责这一原语。保持无依赖意味着，例如 `dsh-tasks` 可以为 `TaskId` 使用品牌类型，而无需仅为使用 `Branded` 而导入不相关的功能包。
+该包只负责这一原语。保持无依赖意味着，例如 `dsh-jobs` 可以为 `JobId` 使用品牌类型，而无需仅为使用 `Branded` 而导入不相关的功能包。

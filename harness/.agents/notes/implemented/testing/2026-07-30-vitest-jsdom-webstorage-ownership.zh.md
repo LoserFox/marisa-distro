@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-受支持的 Node 版本范围包含会预留进程级 `globalThis.localStorage` 的版本。未设置 `--localstorage-file` 时，Node 26 将该属性暴露为 `undefined`；Vitest 检测到这个预留键后，不会用 jsdom 的隔离 `Storage` 对象覆盖该属性。因此，组件测试套件尚未验证产品行为便会失败，而主要的 Node 24 覆盖率分支仍能通过，因为该运行时默认不会预留此键。
+受支持的 Node 版本范围包含会预留进程级 `globalThis.localStorage` 的版本。未设置 `--localstorage-file` 时，Node 26 将该属性暴露为 `undefined`；Vitest 检测到这个预留键后，不会用 jsdom 的隔离 `Storage` 对象覆盖该属性。因此，组件测试套件尚未验证产品行为便会失败，而主要的 Node 24 覆盖率通道仍能通过，因为该运行时默认不会预留此键。
 
 ## 决策
 
@@ -23,4 +23,4 @@ Node 兼容性汇总任务会在每条声明支持的兼容版本线上运行专
 
 ## 后果
 
-同一条 `pnpm test` 命令在有无内置 Web Storage 的 Node 版本上均可运行。测试 worker 被有意禁止使用 Node 的进程级 Web Storage；未来若产品需要该 API，必须使用独立且显式的测试配置，而不能削弱 jsdom 隔离。兼容性分支只增加一个专项 Vitest 进程，无需在每个 Node 版本上重复整套单元测试。
+同一条 `pnpm test` 命令在有无内置 Web Storage 的 Node 版本上均可运行。测试 worker 被有意禁止使用 Node 的进程级 Web Storage；未来若产品需要该 API，必须使用独立且显式的测试配置，而不能削弱 jsdom 隔离。兼容性通道只增加一个专项 Vitest 进程，无需在每个 Node 版本上重复整套单元测试。

@@ -152,7 +152,7 @@ function deriveTimedTimeline(
   }
 
   const spans: TrajectoryTimelineSpan[] = []
-  const turnBoundaries: Array<TrajectoryTimelineTurnBoundary> = []
+  const turnBoundaries: TrajectoryTimelineTurnBoundary[] = []
   for (const turn of timedTurns) {
     const projected = turn.rawSpans.map((span): TrajectoryTimelineSpan => {
       const offset = removedIdleBySpan.get(span) ?? 0

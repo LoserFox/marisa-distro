@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Callable
 
 from .client import HarnessClient, HarnessConfig
+from .errors import SdkProtocolError
 from .models import JsonObject, Notification
 
 
@@ -38,6 +39,7 @@ class DeepSeekHarnessConfig:
 class RunResult:
     session_id: str
     final_response: str
+    finish_reason: str | None
     events: list[JsonObject]
     notifications: list[Notification]
     session_root: str | None = None
@@ -174,6 +176,7 @@ class Session:
         return RunResult(
             session_id=self.id,
             final_response=final_response(events),
+            finish_reason=finish_reason(events),
             events=events,
             notifications=notifications,
             session_root=self.harness.config.session_root,
@@ -217,3 +220,23 @@ def final_response(events: list[JsonObject]) -> str:
                 parts.append(str(block.get("text") or ""))
         return "".join(parts)
     return ""
+
+
+def finish_reason(events: list[JsonObject]) -> str | None:
+    """Return the last turn-ending kind.
+
+    The input must contain root-session events from one owned run interval.
+
+    Raises:
+        SdkProtocolError: The last ``turn/end`` has no string reason kind.
+    """
+    for event in reversed(events):
+        if event.get("type") != "turn/end":
+            continue
+        data = event.get("data")
+        reason = data.get("reason") if isinstance(data, dict) else None
+        kind = reason.get("kind") if isinstance(reason, dict) else None
+        if not isinstance(kind, str):
+            raise SdkProtocolError("turn/end event requires a string data.reason.kind")
+        return kind
+    return None

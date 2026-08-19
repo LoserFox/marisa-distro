@@ -2,7 +2,7 @@
  * Web shell library entry. The shell's product is {@link AppWebEntry} —
  * apps/web's vite entry runs it against #root; everything else (AppRoot
  * gate, app-shell assembly entry, module-table staticModules, platform constants) is
- * internal to the boot chain. PLATFORM_MODULES is re-exported as the C1
+ * internal to the boot chain. PLATFORM_MODULES is re-exported as the
  * single source of truth for the tsdown client externals projection.
  * @module @deepseek-ai/dsh-client-web
  */

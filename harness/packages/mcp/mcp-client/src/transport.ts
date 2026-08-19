@@ -40,9 +40,8 @@ export function createTransport(config: Config): Transport {
     case 'streamable-http':
       // The MCP SDK's StreamableHTTPClientTransport has optional callback
       // properties typed without `| undefined` (exactOptionalPropertyTypes
-      // mismatch with the Transport interface). The cast is safe — the SDK
-      // constructed the object, it simply doesn't declare the optionals
-      // strictly enough for our tsconfig.
+      // mismatch with the Transport interface); the SDK constructed the
+      // object, so the cast records only that widening.
       return new StreamableHTTPClientTransport(
         new URL(config.url),
         { requestInit: { headers: config.headers } },

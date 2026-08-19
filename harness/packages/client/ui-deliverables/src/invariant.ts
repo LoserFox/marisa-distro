@@ -4,7 +4,7 @@
  */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-client-ui-deliverables'
@@ -15,10 +15,9 @@ export const name = 'client-ui-deliverables-invariant'
 export const inject = ['invariants']
 
 /**
- * No runtime invariant: one slot registration and one dictionary
- * registration, both effect-owned with disposal proven by the HMR-safety
- * spec — the plugin emits no cordis events and owns no cross-plugin mutable
- * state.
+ * No runtime invariant: the prompt section, slot, dictionary, event
+ * definition, and optional service registrations are effect-owned with
+ * disposal proven by their plugin specs; this package owns no mutable state.
  */
 const install: InvariantInstaller = () => {}
 

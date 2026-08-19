@@ -36,13 +36,13 @@ function isMissingCommand(error: unknown): boolean {
 }
 
 function rethrowIfAborted(signal: AbortSignal, error: unknown): void {
-  if (signal.aborted) { throw error }
+  if (signal.aborted) throw error
 }
 
 /**
  * Open the platform directory picker.
  * @param signal - caller/connection lifetime; abort terminates the native command.
- * @param internals - platform and runner seam for deterministic tests.
+ * @param internals - Platform and runner hooks for deterministic tests.
  * @returns the selected path, or null when the user cancels.
  */
 export async function pickNativeDirectory(
@@ -70,8 +70,8 @@ export async function pickNativeDirectory(
     // The koffi-backed IFileOpenDialog child process — the modern picker with
     // per-monitor-v2 DPI and abort support. koffi is a packaged dependency
     // whose availability the install guarantees, so there is no fallback
-    // tier: any failure surfaces as-is (the former PowerShell chain was
-    // removed — see the simplification Agent Note).
+    // tier: any failure surfaces as-is (no PowerShell fallback tier; see
+    // .agents/notes/implemented/simplification/2026-08-04-drop-windows-powershell-picker-fallback.md).
     const pickDialog = internals.pickWin32Dialog ?? pickWin32Directory
     return await pickDialog(signal)
   }

@@ -1,52 +1,30 @@
-# 介绍
+# 使用 Web UI
 
 [English](index.md) | 中文
 
-DeepSeek Harness 是一个**插件化的 Agent 开发框架**，基于 [Cordis](https://github.com/cordiverse/cordis) 微内核构建。它的核心理念是：**一切皆插件**。
+请先按照[根目录 README](../../../README.md#run) 中的说明启动 Web UI；命令会打印其访问地址。本指南从服务器已经运行的状态开始。`dsh` 进程会把启动时所在的目录作为默认文件系统位置；全新的 Web UI 则不会选中任何工作区，你需要添加一个工作区。
 
-## 它是什么
+## 配置模型
 
-Harness 将一个 AI Agent（智能体） 所需要的所有能力——LLM 调用、工具执行、会话管理、子任务分配——全部构建为可组合的插件。你通过一个 `cordis.yml` 配置文件来声明加载哪些插件、使用什么参数，就能组装出一个完整的 Agent。
+打开**设置 → 模型**，输入 [DeepSeek API 密钥](https://platform.deepseek.com/)并保存。模型路由会立即可用，不需要重启服务器。
 
-```yaml
-# Select the LLM backend
-- name: '@deepseek-ai/dsh-llm-deepseek'
+[模型配置指南](./providers.md)介绍其他提供方和自定义 OpenAI 兼容端点。
 
-# Compose one configured agent
-- id: agent-spine
-  name: '@deepseek-ai/dsh-agent-spine-demo'
-  config:
-    agents:
-      - id: main
-        provider: deepseek-official
-        model: deepseek-v4-flash
-    workspaceContext: false
-```
+## 选择工作区
 
-## 适合谁
+点击**选择工作区**，添加启动 `dsh` 时所在的项目目录，然后选中它。选中工作区前，会话输入框不可用。
 
-### 应用使用者
+## 运行任务
 
-如果你只是想用一个现成的 Agent 应用（如编程助手、对话代理），你需要的全部操作就是：
+启动一个会话并发送：
 
-1. 复制一个 example 模板
-2. 填写 API key
-3. 运行
+> Summarize this repository and identify its main packages.
 
-不需要写任何代码。详见 [快速开始](./quickstart.md)。
+Agent（智能体）可以读取和编辑工作区文件、运行命令、委派工作并维护计划。如果根据当前权限策略，某项操作需要审批，Web UI 会先询问你。
 
-### 插件开发者
+## 继续使用
 
-如果你想为 Agent 添加新能力——一个自定义 tool、一个新的 LLM 适配器、一个新的执行后端——你需要编写一个插件。Harness 提供了清晰的扩展接口和类型安全的开发体验。详见 [开发](../develop/basic/)。
-
-## 核心特性
-
-- **只需要配置** — `cordis.yml` 决定能力集合，换模型、加工具只需改一行
-- **随时替换 (HMR)** — 开发时修改插件代码，无需重启进程
-
-## 技术栈
-
-- **运行时**: Node.js ^22.19 或 >= 24
-- **语言**: TypeScript (ESM)
-- **框架**: Cordis
-- **包管理**: pnpm workspaces（仓库固定使用 pnpm 11）
+- [配置模型](./providers.md)
+- [使用 Python SDK](./python-sdk.md)
+- [使用其他 CLI 模式](../../../apps/cli/README.md)
+- [开发插件](../develop/basic/)

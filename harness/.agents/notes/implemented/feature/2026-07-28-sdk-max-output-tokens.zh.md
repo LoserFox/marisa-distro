@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-Python 与 TypeScript SDK 可以选择提供方和模型，却无法限制对话模型输出。即使评测宿主要求固定输出预算，运行时仍会省略 `GenerateOptions.maxTokens`，由提供方默认值控制。`compact-basic.maxTokens` 只限制压缩摘要调用，不能承担这一职责。
+Python 与 TypeScript SDK 可以选择提供方和模型，却无法限制对话模型输出。即使评测宿主要求固定输出预算，运行时仍会省略 `GenerateOptions.maxTokens`，由提供方默认值控制。`compaction-basic.maxTokens` 只限制压缩摘要调用，不能承担这一职责。
 
 ## 决策
 
@@ -24,10 +24,10 @@ Python 与 TypeScript SDK 可以选择提供方和模型，却无法限制对话
 
 **在每个 `session/prompt` 上增加 `maxTokens`。** 按轮次修改会扩充协议格式，并引入当前评测用例不需要的请求配置转换。运行时初始化选项可让一个 SDK 进程中的每个会话拥有相同、可重现的预算。
 
-**复用 `compact-basic.maxTokens`。** 压缩值控制摘要生成，而非普通对话请求。共用会耦合两类不同 token 预算，调整一方时会静默改变另一方。
+**复用 `compaction-basic.maxTokens`。** 压缩值控制摘要生成，而非普通对话请求。共用会耦合两类不同 token 预算，调整一方时会静默改变另一方。
 
 ## 后果
 
-SDK 调用方无需修改 Cordis 组合即可限制模型输出，直接创建 Agent 也使用同一套经过校验的 `AgentOptions` 契约。该上限在持久化请求 header 中可见，并以 `GenerateOptions.maxTokens` 到达提供方适配器；DeepSeek 序列化会将其映射为 `max_tokens`。
+SDK 调用方无需修改 Cordis 组合即可限制模型输出，直接创建 Agent 也使用同一套经过校验的 `AgentOptions` 约定。该上限在持久化请求 header 中可见，并以 `GenerateOptions.maxTokens` 到达提供方适配器；DeepSeek 序列化会将其映射为 `max_tokens`。
 
 一个 SDK 运行时只有一个默认上限。需要不同上限的调用方应运行独立的运行时实例，或通过 agent options 显式覆盖某个进程内子级。达到上限时仍产生现有的 `max-tokens` 停止原因；将其映射为 `ok` 还是 `error` 仍由部署策略决定。

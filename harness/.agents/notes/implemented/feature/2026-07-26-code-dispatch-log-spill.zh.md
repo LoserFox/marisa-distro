@@ -4,28 +4,28 @@ Status: implemented
 
 [English](2026-07-26-code-dispatch-log-spill.md) | 中文
 
-> 范围：Code Mode UI 堆叠 PR（Pull Request）链的第四个 PR，即用既有的 spill 机制为 `tool/code-dispatch` 事件的内容施加边界。[宿主侧基础 Agent Note](2026-07-26-code-dispatch-ui-foundation.md)当初有意接受了不设上限的日志，并指明本 PR 就是兑现点；[实时并行 Agent Note](2026-07-26-code-mode-live-parallel-dispatch.md)敲定了本次整形所挂接的事件对。
+> 范围：用既有的 spill 实现限制 `tool/code-dispatch` 事件的内容。[宿主侧基础 Agent Note](2026-07-26-code-dispatch-ui-foundation.md) 有意接受了不设上限的日志，并把 spill 支持留到本次更改；[实时并行 Agent Note](2026-07-26-code-mode-live-parallel-dispatch.md) 定义了该监听器处理的事件对。
 
 ## 问题
 
-自携带完整内容的分发日志落地以来，读取大文件的 `run_code` 程序过去会把完整的渲染文本写进会话日志，不设上限、位于 spill 策略之外；而原生结果在记录之前就已被限制在 `maxInlineBytes` 以内。这种不对称的方向完全反了：子调用（本就为批量数据工作而设计）恰恰是最可能携带巨大结果的调用，而每个这样的轮次都会让 JSONL 增长数 MB。
+加入完整内容的分发日志后，读取大文件的 `run_code` 程序会把完整的渲染文本写进会话日志，既没有上限，也不经过 spill 策略；原生结果则会在记录之前限制在 `maxInlineBytes` 以内。两类结果受到不同处理，而为批量数据工作设计的子调用最可能产生巨大结果；每个受影响的轮次都会让 JSONL 增长数 MB。
 
 ## 决策
 
-**在注册表上增设一个日志整形 waterfall（瀑布式事件），spill 策略作为其第一个监听器。**
+**在注册表上增设 `tools/code-dispatch-log` waterfall（瀑布式事件），spill 策略作为其第一个监听器。**
 
-- **seam**：`tools/code-dispatch-log`，一个按作用域过滤的 waterfall，由桥接层在追加 `tool/code-dispatch` 之前对每个已结算的子分发运行（经由注册表的私有 `shapeDispatchLog` 调用器——作为能力闭包经 `RunCodeBridgeOptions` 交给桥接层；waterfall 才是公开 seam，调用器绝不扩大服务接口。故障被兜住：监听器抛出异常时回退到未整形的内容，并用可处理任意抛出值的错误格式化，确保恶意抛出值无法逃出兜底）。载荷（`CodeDispatchLog`）携带外层执行、提升出来的 `agent` 路由键、子调用标识与默认内容——即原生 `tool/result` 所载的渲染后结果投影（程序本身收到的是结构化 `value`）。可整形的只有持久副本；模型两者都看不到。整形作为被跟踪的旁路工作在程序路径之外运行，但有界：待处理日志任务超过 `maxParallelSubCalls` 时有序提交通道会暂停，因此慢速 spill 后端会对整个 run 施加背压，而不是无限累积待完成 I/O；run 结算仍会在开放轮次内排空全部任务。
-- **策略**：`dsh-spill-policy` 在新 seam 上注册第二个分支，与其面向模型的分支共用一模一样的替换流水线（同样的 `maxInlineBytes` 上限、同样的预览 + 定位符 + 不超上限不变式、同样的尽力而为回退），产物以 `dispatch` 为标签，记在子调用 id 名下。UI 与回放通过 spill 产物读取全文，方式与读取被 spill 的原生结果完全相同，因此与原生同等保真的渲染在施加边界之后依然成立。
-- **一处有意的不对称**：面向模型的分支跳过 `read`（避免 `read → spill → read again` 循环）；分发日志分支则连 `read` 子调用也施加边界：日志副本不是模型上下文，该循环因此不可能发生，而 `read` 恰恰是会产生巨大日志的那个工具。
+- **扩展点**：`tools/code-dispatch-log` 是一个按作用域过滤的 waterfall，桥接层会在追加 `tool/code-dispatch` 之前，对每个已结算的子分发运行它。桥接层通过 `RunCodeBridgeOptions` 以能力闭包形式接收注册表私有的 `shapeDispatchLog` 调用器；waterfall 是公开约定，该调用器不会增加服务方法。监听器抛出异常时，调用器会安全地报告任意抛出值，并使用原始的已结算内容。`CodeDispatchLog` 载荷包含外层执行、`agent` 路由键、子调用标识和默认内容；默认内容是原生 `tool/result` 会携带的渲染后结果投影，而程序收到结构化 `value`。监听器只能替换持久化副本，模型不会看到这份副本。监听器作为受跟踪任务在程序的返回路径之外运行。待处理日志任务超过 `maxParallelSubCalls` 时，有序提交循环会等待，因此慢速 spill 后端会限制后续子调用启动，而不会无限累积待完成 I/O。run 结算仍会等待开放轮次内的全部任务完成。
+- **策略**：`dsh-spill-policy` 为该事件注册监听器，并复用面向模型结果的监听器所用的替换代码：相同的 `maxInlineBytes` 上限、预览和定位符、不超上限不变式，以及尽力而为回退。spill 产物以 `dispatch` 为标签，记录在子调用 id 名下。UI 与回放通过被 spill 的原生结果所用的同一路径读取全文，因此两类结果会渲染出相同的信息。
+- **一处有意差异**：面向模型结果的监听器跳过 `read`，以防出现 `read → spill → read again` 循环。分发日志监听器也会替换过大的 `read` 子调用内容，因为日志副本不是模型上下文，该循环不会发生，而 `read` 最可能产生巨大的日志条目。
 
 ## 曾考虑的替代方案
 
-**在桥接层内部用普通上限施加边界（不做 spill）。** 否决：没有定位符的截断会丢失回放与 UI 可能需要的数据，还会重新引入本堆叠 PR 链已经移除的「截断摘要」降级渲染路径。
+**在桥接层内部使用普通字节数上限，不存入 spill。** 否决：没有定位符的截断会丢失回放或 UI 可能需要的数据，还会恢复之前更改已经移除的、信息较少的「截断摘要」渲染。
 
-**直接在桥接层内做 spill（从 code-mode.ts 调用 `ctx.spillStore`）。** 否决：注册表会因此对 spill 能力产生硬依赖；waterfall 则把策略留在所有其他 spill 决策所在的地方，既可组合也可禁用（省略 `maxInlineBytes` 依然意味着真正的 no-op）。
+**直接在桥接层内做 spill，即从 `code-mode.ts` 调用 `ctx.spillStore`。** 否决：注册表会要求提供 spill 能力。waterfall 把该策略与其他 spill 决策放在一起，并允许组合不加载它；省略 `maxInlineBytes` 时，该监听器仍不执行任何操作。
 
-**让嵌套调用复用 `tools/post-execute`，而不是新增一个事件。** 否决：post-execute 整形的是面向程序的那份结果（嵌套调用有意跳过它，好让程序拿到完整数据）；持久副本需要一个属于自己的决策点，位于程序取得其值之后。
+**让嵌套调用复用 `tools/post-execute`，而不是新增一个事件。** 否决：post-execute 可以修改面向程序的结果，因此嵌套调用有意跳过它，让程序取得完整数据。持久化副本需要一个单独的监听器，在程序取得其值之后运行。
 
 ## 后果
 
-对 Code Mode 轮次而言，会话日志重新有了边界：README 中关于分发日志不设上限的 「已知限制」条目已经解决，现在指向本篇。携带超大分发内容的旧日志仍可回放（事件形状未变；只有今后的追加才会变小）。Web UI 经由与原生完全相同的路径，把被 spill 的子调用输出渲染为预览 + 定位符文本，没有任何特殊处理。
+会话日志中的 Code Mode 分发条目现在遵守已配置的字节数上限，README 中关于分发日志不设上限的「已知限制」条目现在指向本篇。携带超大分发内容的旧日志仍可回放，因为事件字段没有变化；只有今后的追加包含更少文本。Web UI 经由与原生结果相同的路径，把被 spill 的子调用输出渲染为预览和定位符文本，不需要特殊处理。

@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { normalizeSessionLog, scrubRequestHeaders, type NormalizeContext } from '@deepseek-ai/dsh-acp-snapshot'
 import { LOADER_SMOKE_TEST_TIMEOUT_MS, runLoaderSmoke } from '@deepseek-ai/dsh-loader-smoke'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
@@ -17,9 +17,9 @@ import SessionStore, {
   type SessionEvent,
   type SessionHeader,
 } from '@deepseek-ai/dsh-session'
-import SessionPersistenceJsonl from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { renderWorkspaceContext } from '@deepseek-ai/dsh-workspace-context'
-import { resolveConfig, workspaceBaselineIdentity } from '@deepseek-ai/dsh-workspace-context/src/config.ts'
+import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { renderWorkspaceContext } from '@deepseek-ai/dsh-agent-instructions'
+import { resolveConfig, workspaceBaselineIdentity } from '@deepseek-ai/dsh-agent-instructions/src/config.ts'
 import { describe, expect, it } from 'vitest'
 
 const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), 'workspace-context-resume-snapshots/offline-edit')
@@ -47,7 +47,7 @@ async function seedVisibleBaseline(
 ): Promise<string> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(SessionPersistenceJsonl, { root, compression: 'none' })
+  await ctx.plugin(JsonlSessionPersistence, { root, compression: 'none' })
   const meta: SessionHeader = {
     version: SESSION_FORMAT_VERSION,
     id: sessionId,
@@ -84,7 +84,7 @@ async function seedVisibleBaseline(
       data: createUserMessage({
         content: [{ type: 'text', text: baseline.text }],
         source: {
-          kind: 'workspace-instructions',
+          kind: 'agent-instructions',
           form: 'instructions',
           baseline: true,
           baselineIdentity: workspaceBaselineIdentity(config, cwd, cwd),
@@ -111,12 +111,12 @@ async function seedVisibleBaseline(
   }
 }
 
-describe('workspace-context resume snapshot', () => {
+describe('agent-instructions resume snapshot', () => {
   it('appends an offline replacement without duplicating the visible baseline', async () => {
     let cwd = ''
     let sessionPath = ''
     const result = await runLoaderSmoke({
-      label: 'workspace-context resume headless stream-json snapshot',
+      label: 'agent-instructions resume headless stream-json snapshot',
       tempDirPrefix: 'dsh-workspace-context-resume-',
       binScript,
       libBinScript: binScript,
@@ -147,7 +147,7 @@ describe('workspace-context resume snapshot', () => {
           }
         })
         const workspaceEvents = records.filter(record => record.type === 'user/message'
-          && record.data?.source?.kind === 'workspace-instructions')
+          && record.data?.source?.kind === 'agent-instructions')
         expect(workspaceEvents.filter(record => record.data?.source?.baseline === true)).toHaveLength(1)
         expect(workspaceEvents.filter(record => record.data?.source?.baseline !== true)).toHaveLength(1)
         expect(workspaceEvents.at(-1)?.data?.source?.changes).toMatchObject([{
@@ -173,7 +173,7 @@ describe('workspace-context resume snapshot', () => {
     let cwd = ''
     let sessionPath = ''
     const result = await runLoaderSmoke({
-      label: 'workspace-context precedence-change resume snapshot',
+      label: 'agent-instructions precedence-change resume snapshot',
       tempDirPrefix: 'dsh-workspace-context-precedence-',
       binScript,
       libBinScript: binScript,
@@ -214,7 +214,7 @@ describe('workspace-context resume snapshot', () => {
           }
         })
         const baselines = records.filter(record => record.type === 'user/message'
-          && record.data?.source?.kind === 'workspace-instructions'
+          && record.data?.source?.kind === 'agent-instructions'
           && record.data.source.baseline === true)
         expect(baselines).toHaveLength(2)
         const replacement = JSON.stringify(baselines.at(-1)?.data?.content)

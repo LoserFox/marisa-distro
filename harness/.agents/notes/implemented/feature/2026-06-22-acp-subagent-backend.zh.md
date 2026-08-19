@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-subagent seam（[seam Agent Note](2026-06-21-subagent-capability-seam.md)）的设计使多个后端可以按名称共存于 `ctx.subagents`。进程内后端（`-spawn`/`-fork`）将子 agent（智能体）作为第二个 `Agent` 运行在同一个 Cordis 上下文上：开销低，但子 agent 与父 agent 共享进程、模型客户端和工具。seam 的核心意义在于同时支持通过协议到达的进程外子 agent，以证明该抽象能跨越进程边界泛化。本 Agent Note 添加第一个此类后端：一个 ACP（Agent Client Protocol）客户端。
+subagent seam（[seam Agent Note](2026-06-21-subagent-capability-seam.md)）的设计使多个后端可以按名称共存于 `ctx.subagents`。进程内后端（`-spawn`/`-fork`）将子 agent（智能体）作为第二个 `Agent` 运行在同一个 Cordis 上下文中：开销低，但子 agent 与父 agent 共享进程、模型客户端和工具。seam 的核心意义在于同时支持通过协议到达的进程外子 agent，以证明该抽象可跨进程边界适用。本 Agent Note 添加第一个此类后端：一个 ACP（Agent Client Protocol）客户端。
 
 ## 决策
 
@@ -18,7 +18,7 @@ subagent seam（[seam Agent Note](2026-06-21-subagent-capability-seam.md)）的�
 
 ### 最小化客户端桩
 
-客户端不声明任何可选能力（无 `fs`、无 `terminal`）：子 agent 在自己的进程中自行处理文件/终端访问。`session/update` 通知被消费：后端将 `agent_message_chunk` 文本累积为结果输出，在本阶段忽略其余内容（思考、工具调用卡片），仅暴露子 agent 的最终回答。`session/request_permission` 由配置的策略自动应答（`reject` 拒绝所有提示，`allow` 通过第一个表示允许的选项批准）——本阶段不向人类暴露任何权限提示。将 `fs`/`terminal` 代理回父进程（共享工作区模式）仍为后续工作，如 seam Agent Note 所述。
+客户端不声明任何可选能力（无 `fs`、无 `terminal`）：子 agent 在自己的进程中自行处理文件/终端访问。`session/update` 通知被消费：后端将 `agent_message_chunk` 文本累积为结果输出，忽略其余内容（思考、工具调用卡片），因此仅暴露子 agent 的最终回答。`session/request_permission` 由配置的策略自动应答（`reject` 拒绝所有提示，`allow` 通过第一个表示允许的选项批准）——不向人类暴露任何权限提示。将 `fs`/`terminal` 代理回父进程（共享工作区模式）仍为后续工作，如 seam Agent Note 所述。
 
 ### 无启动时能力
 
@@ -26,11 +26,11 @@ subagent seam（[seam Agent Note](2026-06-21-subagent-capability-seam.md)）的�
 
 ### 工作区 cwd 解析
 
-子进程工作目录来自显式解析，绝不使用 harness 进程的 cwd：若已配置部署 `cwd` 覆盖，则相对于启动目录将其转为绝对路径并在加载时验证；否则使用父会话 header 的 cwd 并在启动时验证；如果两者都不存在，则在 spawn 任何进程前明确拒绝。一个 ACP 服务端进程会服务来自多个工作区的会话，因此 `process.cwd()` 不能代替会话工作区——旧的隐式回退会让子进程在服务端启动目录中运行。候选路径必须是 harness 可以进入的绝对目录（要求 `X_OK`；仅 `statSync().isDirectory()` 会接受 mode-600 的目录，而 spawn 会因 EACCES 失败）；解析出的同一路径同时用作子进程 cwd 与 ACP `session/new` 工作区。
+子进程工作目录来自显式解析，绝不使用 harness 进程的 cwd：若已配置部署 `cwd` 覆盖，则相对于启动目录将其转为绝对路径并在加载时验证；否则使用父会话 header 的 cwd 并在启动时验证；如果两者都不存在，则在 spawn 任何进程前响亮拒绝。一个 ACP 服务端进程会服务来自多个工作区的会话，因此 `process.cwd()` 不能代替会话工作区——旧的隐式回退会让子进程在服务端启动目录中运行。候选路径必须是 harness 可以进入的绝对目录（要求 `X_OK`；仅 `statSync().isDirectory()` 会接受 mode-600 的目录，而 spawn 会因 EACCES 失败）；解析出的同一路径同时用作子进程 cwd 与 ACP `session/new` 工作区。
 
 ### StopReason 映射
 
-ACP `StopReason` → harness `SubagentStopReason`：`end_turn`→`completed`、`max_tokens`→`max-tokens`、`refusal`→`refusal`、`cancelled`→`aborted`、`max_turn_requests`→`error`（无对等语义，任务未完成）、未知→`error`。spawn/传输/RPC 失败时，结果为 `error`（如果已请求取消则为 `aborted`）；按 seam 契约，`result` 在子 agent 级别失败时从不 reject。
+ACP `StopReason` → harness `SubagentStopReason`：`end_turn`→`completed`、`max_tokens`→`max-tokens`、`refusal`→`refusal`、`cancelled`→`aborted`、`max_turn_requests`→`error`（无对等语义，任务未完成）、未知→`error`。spawn/传输/RPC 失败时，结果为 `error`（如果已请求取消则为 `aborted`）；按 seam 约定，`result` 在子 agent 级别失败时从不 reject。
 
 ### 安全：清洗子进程环境
 
@@ -41,7 +41,7 @@ ACP `StopReason` → harness `SubagentStopReason`：`end_turn`→`completed`、`
 - **无需密钥的单元/集成测试：** 一个脚本化的 ACP 子进程通过真实 stdio 测试提示词输入／输出流程、所有 stop-reason 映射、信号与 dispose 取消（包括 pre-abort、会话前竞态和管道断裂场景）、两种权限策略、被忽略的非消息更新、命令缺失时的清理、提供方重载以及命名空间导出。
 - **无需密钥的 Loader 组合测试：** 仅用于测试的 cordis.yml 通过真实 Loader 启动 stdio 应用，并省略后端的 `cwd`；脚本化模型委派一次，脚本化子进程则证明它在父会话工作区中运行，且 ACP 也对外公布了该工作区，从而端到端覆盖 cwd 继承分支。
 - **需要密钥的 e2e 测试：** 后端 spawn 真实的 ACP 示例；其模型回答 `PONG`，写入 `proof.txt`，父进程验证该文件。
-- **快照缺口：** 每个 ACP 子 agent 是独立进程，拥有自己的回放会话，不同于进程内的按会话回放。确定性 mock 服务器覆盖率已具备；`TODO(acp-subagent-replay)` 跟踪父进程对回放中子 agent 的回放支持。
+- **快照缺口：** 每个 ACP 子 agent 是独立进程，拥有自己的回放会话，不同于进程内的按会话回放。已有确定性 mock 服务器覆盖；`TODO(acp-subagent-replay)` 跟踪父进程对回放中子 agent 的回放支持。
 
 ## 曾考虑的替代方案
 
@@ -59,4 +59,4 @@ ACP `StopReason` → harness `SubagentStopReason`：`end_turn`→`completed`、`
 
 ## 兄弟产品提供方
 
-[Codex app-server 与 Claude Code Agent SDK 提供方](2026-08-04-claude-code-and-codex-subagent-backends.md)作为按名称注册的兄弟提供方，采用同样的进程外启动/提示词/结算/取消边界。A2A 仍是未来的兄弟传输方式；ACP 后端证明了通用 seam 能够支持这项边界，而无需负责产品私有协议。
+[Codex app-server 与 Claude Code Agent SDK 提供方](2026-08-04-claude-code-and-codex-subagent-backends.md)作为按名称注册的兄弟提供方，采用同样的进程外启动/提示词/结算/取消边界。A2A 仍是未来的兄弟传输方式；ACP 后端证明了 subagent seam 能够支持这项边界，而无需负责产品私有协议。

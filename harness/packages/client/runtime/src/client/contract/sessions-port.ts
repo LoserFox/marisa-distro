@@ -1,13 +1,13 @@
 /**
  * Cross-domain sessions face: the contract surface sibling domains (today:
  * workspaces) consume instead of the sessions implementation. The sessions
- * domain satisfies it structurally — SessionsService is assignable, checked
+ * domain satisfies it structurally — SessionRuntime is assignable, checked
  * wherever the assembly layer or a test injects the real service — so
  * widening this face is the explicit act of widening the inter-domain
  * dependency.
  */
 
-import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId, WorkspaceId } from '@deepseek-ai/dsh-api-remotes/client'
 import type { ObservableSnapshot } from './store.ts'
 
 /** Session-list row facts sibling domains read: recency, blank-reuse eligibility, and its cwd canon. */

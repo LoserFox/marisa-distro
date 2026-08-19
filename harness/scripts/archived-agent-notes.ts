@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 import { basename } from 'node:path'
 import { AGENT_NOTE_CLASSES } from './agent-note-tree.ts'
 
-/** Versioned shape of the frozen-content manifest. */
+/** Versioned fields in the frozen-content manifest. */
 export interface ArchiveManifest {
   version: 1
   files: Readonly<Record<string, string>>

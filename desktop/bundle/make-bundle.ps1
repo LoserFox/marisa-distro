@@ -1,5 +1,5 @@
-# make-bundle.ps1 — stage the standalone backend bundle and zip it into
-# desktop/bundle/backend.zip (consumed by go:embed with -tags embeddedbundle).
+# make-bundle.ps1 — stage the standalone backend bundle and tar.zst it into
+# desktop/bundle/backend.tar.zst (consumed by go:embed with -tags embeddedbundle).
 #
 # Bundle layout (zip root = extraction dir):
 #   VERSION                       version marker (version-gates re-extraction)
@@ -35,7 +35,7 @@ $repo = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh' }
 $profile = if ($ProfilePath) { [System.IO.Path]::GetFullPath($ProfilePath) } else { Join-Path $dshHome 'profiles\marisa' }
 $stage = "$repo\release\_stage"
-$out = "$repo\desktop\bundle\backend.zip"
+$out = "$repo\desktop\bundle\backend.tar.zst"
 $node = if ($NodePath) { $NodePath } else { (Get-Command node.exe -ErrorAction Stop).Source }
 if ($SevenZipPath) {
   $sevenZip = $SevenZipPath
@@ -65,6 +65,7 @@ $srcMap = @{
   "$repo\harness"                   = 'marisa-distro/harness'
   "$repo\plugins"                   = 'marisa-distro/plugins'
   "$repo\bundles"                   = 'marisa-distro/bundles'
+  "$repo\dsh-mygo"                  = 'marisa-distro/dsh-mygo'
   "$repo\dsh-skill-manager"         = 'marisa-distro/dsh-skill-manager'
   "$profile"                        = '.dsh/profiles/marisa'
   "$stage\marisa-distro"            = 'marisa-distro'
@@ -72,9 +73,10 @@ $srcMap = @{
 }
 $srcPrefixes = $srcMap.Keys | Sort-Object { -$_.Length }
 
-function Copy-DerefTree([string]$src, [string]$dst, [string]$excludeDir = $null) {
+function Copy-DerefTree([string]$src, [string]$dst, [string[]]$excludeDir = @(), [string[]]$excludeFile = @()) {
   $args = @($src, $dst, '/E', '/COPY:DAT', '/R:1', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/XJ')
-  if ($excludeDir) { $args += @('/XD', $excludeDir) }
+  if ($excludeDir) { $args += '/XD'; $args += $excludeDir }
+  if ($excludeFile) { $args += '/XF'; $args += $excludeFile }
   robocopy @args | Out-Null
   if ($LASTEXITCODE -ge 8) { throw "robocopy failed: $src -> $dst (code $LASTEXITCODE)" }
 }
@@ -175,6 +177,40 @@ function Invoke-PnpmProd([string]$cwd, [string]$what) {
   } finally { Pop-Location }
 }
 
+# --- runtime layer cache ------------------------------------------------------
+# The backend tree (lockfile-driven install + harness/plugins/bundles bodies)
+# changes only when those inputs change. Cache the finished backend.zip keyed
+# on their content hashes: a rebuild with unchanged inputs reuses the archive
+# in ~0s. VERSION carries NO git sha (only the bundle version, plus a -dirty
+# suffix when the workspace is uncommitted) so the extractor's version gate
+# stays consistent across cached rebuilds of the same content.
+$cacheDir = Join-Path $repo 'release\.cache'
+$bundleVersion = if ($Version) { $Version } else { (Get-Content "$repo\package.json" -Raw | ConvertFrom-Json).version }
+if ($bundleVersion -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') { throw "invalid bundle version: $bundleVersion" }
+
+$lockHash = (Get-FileHash "$repo\pnpm-lock.yaml" -Algorithm SHA256).Hash.Substring(0, 16)
+# Content hash of the whole workspace (tracked + untracked), uncommitted
+# changes included. `git stash create -u` snapshots it as a throwaway commit;
+# the COMMIT hash embeds a timestamp (always changes), but the TREE hash
+# (`^{tree}`) is content-only and stable while the tree is stable — so a
+# dirty tree cache-hits between builds, and a changed tree always misses.
+$stashCommit = & git -C $repo stash create -u 2>$null
+if (-not $stashCommit) { $stashCommit = & git -C $repo rev-parse HEAD 2>$null }
+$headHash = & git -C $repo rev-parse HEAD 2>$null
+$workspaceDirty = $stashCommit -ne $headHash
+$dirtySuffix = if ($workspaceDirty) { '-dirty' } else { '' }
+$treeHash = & git -C $repo rev-parse "$stashCommit^{tree}" 2>$null
+if (-not $treeHash) { throw "cannot resolve content tree hash from $stashCommit" }
+$runtimeKey = "$lockHash-$($treeHash.Substring(0, 12))"
+$cachedZip = Join-Path $cacheDir "backend-$runtimeKey.zip"
+
+if (-not $SkipBodies -and (Test-Path -LiteralPath $cachedZip)) {
+  Write-Host "runtime cache HIT: $cachedZip"
+  Copy-Item -LiteralPath $cachedZip -Destination $out -Force
+  Write-Host ('bundle written from cache: {0} bytes ({1:N1} MB)' -f (Get-Item $out).Length, ((Get-Item $out).Length / 1MB))
+  exit 0
+}
+
 # --- clean + skeleton -------------------------------------------------------
 if (-not $SkipBodies) {
   Remove-Item $stage, $out -Recurse -Force -ErrorAction SilentlyContinue
@@ -182,12 +218,11 @@ if (-not $SkipBodies) {
 New-Item -ItemType Directory -Force "$stage\marisa-distro", "$stage\.dsh\profiles" | Out-Null
 
 if (-not $SkipBodies) {
-  $sha = & git -C $repo rev-parse --short HEAD 2>$null
-  if (-not $sha) { $sha = 'nosha' }
-  $bundleVersion = if ($Version) { $Version } else { (Get-Content "$repo\package.json" -Raw | ConvertFrom-Json).version }
-  if ($bundleVersion -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') { throw "invalid bundle version: $bundleVersion" }
-  Set-Content -Path "$stage\VERSION" -Value "marisa-backend-$bundleVersion-$sha" -NoNewline
+  Set-Content -Path "$stage\VERSION" -Value "marisa-backend-$bundleVersion$dirtySuffix" -NoNewline
   Copy-Item $node "$stage\node.exe"
+  # mnemon memory engine: the plugin spawns `mnemon` (PATH lookup) and the
+  # launcher prepends the bundle root, so the exe rides next to node.exe.
+  Copy-Item "$repo\desktop\bundle\mnemon.exe" "$stage\mnemon.exe" -Force
   # launcher.cmd must be CRLF: cmd.exe mis-parses LF-only batch files
   # (each line loses its first two chars — `rem x` executes as `m x`).
   $launcherText = Get-Content "$repo\desktop\bundle\launcher.cmd" -Raw
@@ -201,8 +236,13 @@ if (-not $SkipBodies) {
   Copy-Item "$repo\package.json" "$stage\marisa-distro\package.json" -Force
   Copy-Item "$repo\pnpm-lock.yaml" "$stage\marisa-distro\pnpm-lock.yaml" -Force
   Copy-Item "$repo\pnpm-workspace.yaml" "$stage\marisa-distro\pnpm-workspace.yaml" -Force
-  Write-Host 'copying harness body (node_modules excluded) ...'
-  Copy-DerefTree "$repo\harness" "$stage\marisa-distro\harness" 'node_modules'
+  Write-Host 'copying harness body (node_modules + nested workspace/lock files excluded) ...'
+  # rc7 sync (2026-08-18): pnpm 11 treats EITHER a member-owned pnpm-workspace.yaml
+  # OR a member-owned pnpm-lock.yaml as a nested project and installs it
+  # independently (devDeps included), doubling the staged tree
+  # (harness/node_modules/.pnpm ~1.2 GB). The staged install must resolve the
+  # WHOLE tree as ONE root workspace, so both nested files are not staged.
+  Copy-DerefTree "$repo\harness" "$stage\marisa-distro\harness" 'node_modules' @('pnpm-workspace.yaml', 'pnpm-lock.yaml')
   Write-Host 'copying plugins body (node_modules excluded) ...'
   Copy-DerefTree "$repo\plugins" "$stage\marisa-distro\plugins" 'node_modules'
   Write-Host 'copying bundles body (node_modules excluded) ...'
@@ -213,13 +253,17 @@ if (-not $SkipBodies) {
   Copy-DerefTree "$repo\patches" "$stage\marisa-distro\patches"
   Write-Host 'copying dsh-skill-manager body ...'
   Copy-DerefTree "$repo\dsh-skill-manager" "$stage\marisa-distro\dsh-skill-manager"
+  Write-Host 'copying vendored dsh-mygo body ...'
+  Copy-DerefTree "$repo\dsh-mygo" "$stage\marisa-distro\dsh-mygo" 'node_modules'
   Write-Host 'copying profile files (node_modules excluded) ...'
   Copy-DerefTree $profile "$stage\.dsh\profiles\marisa" 'node_modules'
 
   # Marisa is a packaged distribution, not an upstream internal-test build.
   # A bundled DSH home is recreated for each backend version, so seed the
   # upstream acknowledgement with the version that ships in this bundle.
-  $onboardingCopy = "$stage\marisa-distro\harness\packages\client\ui-settings-general\src\onboarding-copy.ts"
+  # rc7 sync (2026-08-18): onboarding-copy.ts moved from ui-settings-general
+  # to ui-settings-models.
+  $onboardingCopy = "$stage\marisa-distro\harness\packages\client\ui-settings-models\src\onboarding-copy.ts"
   $onboardingMatch = [regex]::Match((Read-Utf8Text $onboardingCopy), "(?m)^export const WELCOME_NOTICE_VERSION = '([^']+)'$")
   if (-not $onboardingMatch.Success) {
     throw "cannot determine the bundled Harness welcome-notice version: $onboardingCopy"
@@ -238,36 +282,11 @@ ui-onboarding:
   # and nothing is duplicated.
   Invoke-PnpmProd "$stage\marisa-distro" 'repo root workspace'
 
-  foreach ($aliasPatch in @(
-    @{ Path = "$stage\marisa-distro\harness\packages\client\ui-slash\lib\client.js"; Needle = 'super(ctx, "slash");'; Alias = 'ctx.provide("inputTriggers", this);' },
-    @{ Path = "$stage\marisa-distro\harness\packages\client\ui-command\lib\client.js"; Needle = 'super(ctx, "command");'; Alias = 'ctx.provide("commandUi", this);' }
-  )) {
-    $aliasText = Read-Utf8Text $aliasPatch.Path
-    $aliasPatched = "$($aliasPatch.Needle)`n`t`t`t`t$($aliasPatch.Alias)"
-    if ($aliasText.Contains($aliasPatch.Needle) -and -not $aliasText.Contains($aliasPatched)) {
-      $aliasText = $aliasText.Replace($aliasPatch.Needle, $aliasPatched)
-    } elseif (-not $aliasText.Contains($aliasPatched)) {
-      throw "client service compatibility signature not found: $($aliasPatch.Path)"
-    }
-    Write-Utf8Text $aliasPatch.Path $aliasText
-  }
-
-  $aigcClientLib = "$stage\marisa-distro\node_modules\@huanlin\dsh-plugin-aigc-canvas\lib\client.js"
-  $aigcClientText = Read-Utf8Text $aigcClientLib
-  $aigcOldId = 'id: "@dsh-external/dsh-aigc-canvas"'
-  $aigcNewId = 'id: "@huanlin/dsh-plugin-aigc-canvas"'
-  if ($aigcClientText.Contains($aigcOldId)) {
-    $aigcClientText = $aigcClientText.Replace($aigcOldId, $aigcNewId)
-  } elseif (-not $aigcClientText.Contains($aigcNewId)) {
-    throw 'dsh-plugin-aigc-canvas compatibility signature not found'
-  }
-  Write-Utf8Text $aigcClientLib $aigcClientText
-
-  Assert-JavaScriptSyntax @(
-    "$stage\marisa-distro\harness\packages\client\ui-slash\lib\client.js",
-    "$stage\marisa-distro\harness\packages\client\ui-command\lib\client.js",
-    $aigcClientLib
-  )
+  # rc7 sync (2026-08-18): the vendored input stack provides `ctx.inputTriggers`
+  # (ui-input-trigger) and `ctx.commandUi` (ui-commands) natively, so the legacy
+  # 0808-snapshot service-alias patches are gone with the old ui-slash/ui-command
+  # packages. The aigc-canvas client module-id rewrite left with the plugin's
+  # removal (2026-08-19).
 
   # --- prune dead weight ------------------------------------------------------
   # Round 1 (2026-08-15): agent-SDK binaries not in the marisa composition
@@ -316,14 +335,76 @@ ui-onboarding:
       Write-Host ("  pruned node-pty\prebuilds\{0}  ({1:N0} bytes)" -f $_.Name, $size)
     }
   }
+  # 2026-08-18: only prune PLATFORM binary packages (sharp-libvips-*/esbuild-*).
+  # The previous "everything not win32-x64" rule deleted @img/colour, a pure-JS
+  # dependency of sharp, and the packaged backend failed to boot
+  # (ERR_MODULE_NOT_FOUND '@img/colour' from sharp/dist/colour.mjs).
   foreach ($scope in '@img', '@esbuild') {
     $sd = Join-Path $stage "marisa-distro\node_modules\$scope"
     if (Test-Path $sd) {
-      Get-ChildItem $sd -Directory | Where-Object { $_.Name -notmatch 'win32-x64$' } | ForEach-Object {
+      Get-ChildItem $sd -Directory | Where-Object {
+        $_.Name -match '^(sharp-libvips|sharp-win32|esbuild)-' -and $_.Name -notmatch 'win32-x64$'
+      } | ForEach-Object {
         $size = (Get-ChildItem $_.FullName -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
         Remove-Item $_.FullName -Recurse -Force
         $pruned += [long]$size
         Write-Host ("  pruned {0}\{1}  ({2:N0} bytes)" -f $scope, $_.Name, $size)
+      }
+    }
+  }
+  # --- dev-only packages in the pnpm virtual store -----------------------------
+  # `pnpm install --prod` at the workspace root prunes only the ROOT project's
+  # devDependencies; every member's devDeps (typescript, rolldown, oxlint,
+  # esbuild, codex, claude-agent-sdk, playwright, vitest, ...) still land in the
+  # virtual store (~1.2 GB staged) and ship in the bundle. Hoisted top-level
+  # entries are links INTO this store, so the prune above drops links but the
+  # real bytes stay. Delete the store bodies of packages that are dev-only for
+  # the marisa runtime composition (codex/claude subagents are not mounted by
+  # the marisa cordis composition; the rest are build/test tooling or
+  # client-only libraries already inlined into prebuilt plugin bundles).
+  Write-Host 'pruning dev-only packages from the pnpm virtual store ...'
+  $storeKillExact = @(
+    '@openai+codex',
+    '@anthropic-ai+claude-agent-sdk',
+    '@anthropic-ai+claude-agent-sdk-win32-x64',
+    '@anthropic-ai+sdk',
+    '@mistralai+mistralai',
+    'typescript',
+    'rolldown', '@rolldown+binding-win32-x64-msvc',
+    'tsdown',
+    'oxlint', 'oxlint-tsgolint',
+    '@oxlint+binding-win32-x64-msvc', '@oxlint-tsgolint+win32-x64',
+    'esbuild', '@esbuild+win32-x64',
+    'rollup',
+    'playwright', 'playwright-core',
+    'mermaid',
+    'lefthook', 'lefthook-windows-x64',
+    'lightningcss', 'lightningcss-win32-x64-msvc',
+    'shiki', '@shikijs+core', '@shikijs+langs',
+    'eslint', 'eslint-plugin-sonarjs',
+    'vitest',
+    'tsx',
+    'knip', 'publint',
+    'vite', 'vitepress',
+    'jsdom',
+    'prettier'
+  )
+  $storeKillPrefix = @('@types+', '@vitest+', '@eslint+', '@algolia+', '@openai+', '@anthropic-ai+')
+  foreach ($storeRoot in @("$stage\marisa-distro\harness\node_modules\.pnpm", "$stage\marisa-distro\node_modules\.pnpm", "$stage\.dsh\profiles\marisa\node_modules\.pnpm")) {
+    if (-not (Test-Path $storeRoot)) { continue }
+    foreach ($entry in Get-ChildItem $storeRoot -Directory) {
+      $m = [regex]::Match($entry.Name, '^(@[^@]+?\+[^@]+?|[^@]+?)@')
+      if (-not $m.Success) { continue }
+      $pkgKey = $m.Groups[1].Value
+      $kill = $storeKillExact -contains $pkgKey
+      if (-not $kill) {
+        foreach ($pre in $storeKillPrefix) { if ($pkgKey.StartsWith($pre)) { $kill = $true; break } }
+      }
+      if ($kill) {
+        $size = (Get-ChildItem $entry.FullName -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+        Remove-Item $entry.FullName -Recurse -Force
+        $pruned += [long]$size
+        Write-Host ("  pruned store {0}  ({1:N0} bytes)" -f $entry.Name, $size)
       }
     }
   }
@@ -363,7 +444,7 @@ if ($bad.Count -gt 0) {
 # External plugins resolve these names from the root production tree. They are
 # workspace packages (and therefore become junctions), so checking only the
 # general package count below can miss either one while still producing a zip.
-foreach ($requiredRootPackage in 'schemastery', '@deepseek-ai/dsh-workflow', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-host-apiproxy', '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-session-persistence', '@deepseek-ai/dsh-credentials', '@r05en1cu/dsh-mygo', '@r05en1cu/dsh-mygo-loader-hub', '@r05en1cu/dsh-mygo-cli', '@r05en1cu/dsh-mygo-ext-panel') {
+foreach ($requiredRootPackage in '@deepseek-ai/schemastery', '@deepseek-ai/dsh-workflow', '@deepseek-ai/dsh-host-webserver', '@deepseek-ai/dsh-host-apiproxy', '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-session-persistence', '@deepseek-ai/dsh-credentials', '@r05en1cu/dsh-mygo', '@r05en1cu/dsh-mygo-loader-hub', '@r05en1cu/dsh-mygo-cli', '@r05en1cu/dsh-mygo-ext-panel') {
   $requiredPath = Join-Path "$stage\marisa-distro\node_modules" $requiredRootPackage
   if (-not (Test-Path -LiteralPath (Join-Path $requiredPath 'package.json'))) {
     throw "staged tree INCOMPLETE — required root runtime package missing: $requiredRootPackage"
@@ -385,6 +466,11 @@ function Handle-NodeModulesDir([string]$srcDir) {
       $resolved = Resolve-LinkTarget $item
       if (-not $resolved -or -not (Test-Path -LiteralPath $resolved)) { return }
       if (-not (Test-Path -LiteralPath $resolved -PathType Container)) { return }
+      # Links into the live harness top-level store are dev-layout artifacts:
+      # the store is not shipped, and the staged install creates the same member
+      # junctions against the hoisted root (recorded by the ALL-staged pass —
+      # which only sees them if no walker entry claims the link path first).
+      if ($resolved.StartsWith("$harnessTopNm\")) { return }
       $targetRel = StageRel $resolved
       if (-not $targetRel) { return }
       $linkRel = StageRel $_.FullName
@@ -406,8 +492,20 @@ function Handle-NodeModulesDir([string]$srcDir) {
 }
 
 Write-Host 'walking live harness internal node_modules for links ...'
+$harnessTopNm = Join-Path $repo 'harness\node_modules'
 Get-ChildItem "$repo\harness" -Directory -Recurse -Force -ErrorAction SilentlyContinue |
-  Where-Object { $_.Name -eq 'node_modules' -and -not $_.LinkType } |
+  # rc7 sync (2026-08-18): skip the harness TOP-LEVEL node_modules SUBTREE — in
+  # the live tree it is a nested-workspace store (harness/pnpm-workspace.yaml)
+  # whose 1.3 GB of real files must not enter the staged tree. The exclusion
+  # must cover the whole subtree, not just the directory itself: the recursive
+  # enumeration descends into it and would otherwise find the ~924 virtual-store
+  # slot dirs (.pnpm/<pkg>@<ver>/node_modules) and copy the live DEV install
+  # (devDeps included) into the stage. The staged install resolves the whole
+  # tree as ONE root workspace and creates member links itself, so member deps
+  # resolve through the root node_modules and harness/node_modules is absent
+  # there. Member-internal node_modules dirs (packages/*/*/node_modules etc.)
+  # are still walked for their links and small real files.
+  Where-Object { $_.Name -eq 'node_modules' -and -not $_.LinkType -and $_.FullName -ne $harnessTopNm -and -not $_.FullName.StartsWith("$harnessTopNm\") } |
   ForEach-Object { Handle-NodeModulesDir $_.FullName }
 
 # The profile's node_modules is ONE junction to the single root tree — every
@@ -446,7 +544,7 @@ foreach ($lp in $stagedLinks) {
   }
 }
 Write-Host "links recorded: $($links.Count) ($recordedExtra extra beyond walker); extra entries copied: $copied"
-foreach ($requiredRootLink in 'marisa-distro/node_modules/schemastery', 'marisa-distro/node_modules/@deepseek-ai/dsh-workflow', 'marisa-distro/node_modules/@deepseek-ai/dsh-host-webserver', 'marisa-distro/node_modules/@deepseek-ai/dsh-host-apiproxy') {
+foreach ($requiredRootLink in 'marisa-distro/node_modules/@deepseek-ai/schemastery', 'marisa-distro/node_modules/@deepseek-ai/dsh-workflow', 'marisa-distro/node_modules/@deepseek-ai/dsh-host-webserver', 'marisa-distro/node_modules/@deepseek-ai/dsh-host-apiproxy') {
   if (-not ($links | Where-Object { $_.link -eq $requiredRootLink })) {
     throw "link manifest INCOMPLETE — required root runtime link missing: $requiredRootLink"
   }
@@ -471,6 +569,110 @@ $junctions | ForEach-Object {
 }
 Write-Host "  junctions deleted: $($junctions.Count)"
 
+# --- runtime dead-weight prune ------------------------------------------------
+# Sourcemaps and test suites are the bulk of the FILE COUNT (not bytes), and
+# file count dominates extraction time (56k opens/writes). They are never
+# read at runtime (verified by boot self-check). Run AFTER junction deletion:
+# the tree is then pure real files, so a recursive walk cannot escape into a
+# live store. 2026-08-18, per the node_modules distribution review.
+Write-Host 'pruning runtime dead weight (*.map, test suites) ...'
+$prunedCount = 0
+$pending = New-Object System.Collections.Generic.Stack[string]
+$pending.Push($stage)
+while ($pending.Count -gt 0) {
+  $d = $pending.Pop()
+  try {
+    foreach ($e in [System.IO.Directory]::EnumerateFileSystemEntries($d)) {
+      $attr = [System.IO.File]::GetAttributes($e)
+      if (($attr -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+      if (($attr -band [System.IO.FileAttributes]::Directory) -ne 0) {
+        $name = [System.IO.Path]::GetFileName($e)
+        if ($name -eq 'test' -or $name -eq 'tests' -or $name -eq '__tests__') {
+          [System.IO.Directory]::Delete($e, $true)
+          $prunedCount++
+        } else {
+          $pending.Push($e)
+        }
+      } elseif ($e.EndsWith('.map')) {
+        [System.IO.File]::Delete($e)
+        $prunedCount++
+      }
+    }
+  } catch { }
+}
+Write-Host "  pruned $prunedCount entries (test dirs + *.map)"
+
+# --- prune redundant member-internal node_modules ------------------------------
+# (2026-08-18, backend size review) The pnpm install puts two classes of dead
+# weight inside member-internal node_modules dirs (packages/*/*/node_modules,
+# apps/*/node_modules, native/*/node_modules, vendor/*/node_modules etc.):
+#
+#   1. `.ignored_*` dirs — pnpm vendored DEV toolchains (typescript, sharp,
+#      diff, chokidar, node-pty). They are dot-prefixed, so Node's resolution
+#      NEVER finds them (dot-dirs are skipped), and they are only there for the
+#      dev build toolchain. ~150 MB across the tree. 100% dead at runtime.
+#
+#   2. Real duplicates of runtime deps (node-pty, diff, fflate, chokidar,
+#      readdirp) that the single-root install also hoists to
+#      marisa-distro/node_modules. Node resolves the nearest copy first, but
+#      walking UP reaches the identical hoisted root copy, so the internal
+#      copies are byte-for-byte redundant.
+#
+# The @deepseek-ai/* workspace junctions inside these dirs are ALREADY recorded
+# in LINKS.json (recreated at extraction by createJunction, which does
+# os.MkdirAll on the parent), so deleting the internal real files / empty
+# junction-slot dirs loses nothing. Run AFTER junction deletion (pure real
+# files) — a recursive walk cannot escape into a live store.
+Write-Host 'pruning redundant member-internal node_modules (.ignored_*, hoisted dupes) ...'
+$internalPrunedBytes = 0L
+$internalPrunedCount = 0
+$dupeNames = @('node-pty', 'diff', 'fflate', 'chokidar', 'readdirp')
+# The root store (marisa-distro/node_modules) is the single source of truth for
+# these deps and MUST never be touched here: its package dirs legitimately
+# contain subdirs that collide with $dupeNames (e.g. diff/libcjs/diff), and its
+# top-level dupes are the hoisted runtime copies we RESOLVE to. Skip the whole
+# subtree. Only member-internal node_modules (harness/plugins/bundles bodies)
+# carry the redundant copies.
+$rootStore = (Join-Path "$stage\marisa-distro" 'node_modules')
+$pending2 = New-Object System.Collections.Generic.Stack[string]
+$pending2.Push($stage)
+while ($pending2.Count -gt 0) {
+  $d = $pending2.Pop()
+  try {
+    foreach ($e in [System.IO.Directory]::EnumerateFileSystemEntries($d)) {
+      $attr = [System.IO.File]::GetAttributes($e)
+      if (($attr -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+      if (($attr -band [System.IO.FileAttributes]::Directory) -eq 0) { continue }
+      if ($e -eq $rootStore) { continue }  # never walk the root store
+      $name = [System.IO.Path]::GetFileName($e)
+      $delete = $false
+      if ($name.StartsWith('.ignored_')) {
+        $delete = $true
+      } elseif ($dupeNames -contains $name) {
+        # only prune real duplicates inside INTERNAL member node_modules; the
+        # parent dir must BE a member-internal node_modules (not a subdir of a
+        # root package). Member-internal node_modules always sit directly under
+        # a member dir (harness/packages/*/*/node_modules etc.), so the parent's
+        # basename is 'node_modules' and it is not the root store.
+        $parent = [System.IO.Path]::GetDirectoryName($e)
+        $parentName = [System.IO.Path]::GetFileName($parent)
+        if ($parentName -eq 'node_modules' -and $parent -ne $rootStore) {
+          $delete = $true
+        }
+      }
+      if ($delete) {
+        $size = (Get-ChildItem $e -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+        [System.IO.Directory]::Delete($e, $true)
+        $internalPrunedBytes += [long]$size
+        $internalPrunedCount++
+      } else {
+        $pending2.Push($e)
+      }
+    }
+  } catch { }
+}
+Write-Host ("  pruned {0} entries from member-internal node_modules ({1:N1} MB)" -f $internalPrunedCount, ($internalPrunedBytes / 1MB))
+
 # --- pre-zip sanity: root workspace links must be covered ----------------------
 # (2026-08-15: without them the zip ships without every @deepseek-ai member and
 # boot dies importing e.g. @deepseek-ai/dsh-settings from dsh-llm-fallbacks.)
@@ -481,10 +683,20 @@ if (($rootLinkCount + $rootEntityCount) -lt 10) {
 }
 Write-Host "  root node_modules workspace coverage: links=$rootLinkCount entities=$rootEntityCount"
 
-# --- zip ----------------------------------------------------------------------
-Write-Host 'zipping (mx=9) ...'
-Push-Location $stage
-& $sevenZip a -tzip -mx=9 -bso0 -bsp0 $out .
-if ($LASTEXITCODE -ne 0) { Pop-Location; throw "7z failed: $LASTEXITCODE" }
-Pop-Location
+# --- tar.zst ------------------------------------------------------------------
+# Single-stream tar.zst via desktop/bundle/tarszst (sorted entries, 16MB
+# window, one zstd stream): better ratio and faster build than per-file zip,
+# and the desktop extractor decodes one sequential stream at ~1GB/s.
+Write-Host 'tarring + zstd ...'
+# go -C: the tarszst tool lives in the desktop module (go.mod there).
+& go -C "$repo\desktop" run ./bundle/tarszst $stage $out
+if ($LASTEXITCODE -ne 0) { throw "tarszst failed: $LASTEXITCODE" }
 Write-Host ('bundle written: {0} bytes ({1:N1} MB)' -f (Get-Item $out).Length, ((Get-Item $out).Length / 1MB))
+
+# --- runtime cache write ------------------------------------------------------
+# keyed on content (incl. uncommitted changes), so any stable tree caches.
+if (-not $SkipBodies) {
+  New-Item -ItemType Directory -Force $cacheDir | Out-Null
+  Copy-Item -LiteralPath $out -Destination $cachedZip -Force
+  Write-Host "runtime cache written: $cachedZip"
+}

@@ -2,11 +2,13 @@
 
 English | [中文](README.zh.md)
 
-The dsh one-shot bundle. [`cordis.patch.yml`](cordis.patch.yml) rides over [`dsh-base`](../base/README.md) + [`dsh-web-app`](../web-app/README.md): it moves the webserver to an OS-assigned port (parallel runs never collide), silences the URL line, and inserts this package's `headless-runner` plugin (config `{task}`). The runner drives one task turn through the in-process API carrier (`InProcessApiClient` over `toFetchHandler(ctx.apiProxy)`, so the full wire chain — serialization, zod, SSE framing — really runs), waits at idle until that mux has consumed the session's final event sequence, aggregates the turn's final assistant text, writes it to stdout, and requests exit (completed → 0, else 1) through the launcher-provided `ctx.headlessIo` seam. The Web composition stays mounted, so the running session is observable in a browser at the stderr-announced URL. The launcher patches the task text in (`dsh run "task"`), and fails loud when the selected profile lacks this row.
+The dsh one-shot bundle. [`cordis.patch.yml`](cordis.patch.yml) rides directly over [`dsh-base`](../base/README.md): it supplies the coding persona and tool mode, disables HMR, mounts Code Mode's worker as a core execution capability, and inserts this package's `headless-runner` plugin (config `{task}`, resolved from the injected `headlessStartup` provider). It mounts no Host, HTTP server, Web runtime, or browser plugin.
+
+After the Loader settles, the runner reads the shared [`ctx.agentDefaultModel`](../../core/agent-default-model/README.md), creates one fresh persisted Agent through `ctx.agents`, submits the task as an ordinary user message, and waits for quiescence. It flushes the Session before folding the owned durable event interval, writes the last non-empty assistant text to stdout, and requests exit through the launcher-provided `ctx.appExit` host hook ([`dsh-cmdline`](../../boot/cmdline/README.md)) (final `turn/end` completed → 0, otherwise 1). A terminal `error` reason also writes its code and message to stderr; successful runs keep stderr empty. The process opens no listening port. The task text is this app's command line: the ordinary `headless-startup` provider ([`src/startup.ts`](src/startup.ts)) injects `ctx.cmdlineArgs` ([`dsh-cmdline`](../../boot/cmdline/README.md)), reads the positional argument of `dsh --profile headless "task"`, prints the app's `--help`, and provides `headlessStartup`; the runner injects that service and reads its task from lazy config. A missing or whitespace-only task is rejected before the runner activates.
 
 ## Model Experience
 
-None, as the runner submits the task as an ordinary user message over the shared composition; prompts and tools belong to the base/web bundles.
+None, as the runner submits the task as an ordinary user message; prompts and tools belong to the base and headless bundle rows.
 
 #### KV Cache effect
 
@@ -14,5 +16,5 @@ None; the runner adds nothing to the request prefix.
 
 ## Known Limitations and Deferred Work
 
-- **One turn only** — the runner anchors on the first message-triggered turn and exits at its end; queued follow-ups and multi-turn tasks are out of scope.
-- **`ctx.headlessIo` is launcher-owned** — booting the headless profile outside the `dsh` launcher fails loud at activation until the host provides the seam.
+- **One submitted task only** — the runner has no interactive follow-up surface; it waits through any work the Agent completes before returning to idle and prints the last non-empty assistant message in that interval.
+- **`ctx.appExit` is launcher-owned** — booting the headless profile outside the `dsh` launcher fails loud at activation until the host provides the exit request.

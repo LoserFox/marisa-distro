@@ -1,26 +1,31 @@
 /**
- * Settings ownerless-copy plugin, browser half: registers everything on the
- * Settings surface that belongs to no single feature — the trigger/header
- * chrome content, local-document action, General section, and `settings`
- * dictionaries. Feature-owned rows and sections stay with their features.
+ * Settings shell and ownerless-copy plugin, browser half: renders the
+ * `sidebar.settings` occupant — panel chrome, section navigation, and the
+ * onboarding stage — and registers everything on the Settings pages that
+ * belongs to no single feature: the trigger/header chrome content,
+ * local-document action, General section, and `settings` dictionaries.
+ * Feature-owned rows and sections stay with their features.
  * Export discipline: packages/client/AGENTS.md.
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
+import type { ConnectionHandle } from '@deepseek-ai/dsh-api-remotes/client'
+import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-web-react'
-// Type-only: pulls the shell's SlotMap merges (trigger/header/section/item).
+// Type-only: the settings slot declarations plus the ctx.settingsScope Context
+// merge. Cross-plugin collaboration goes through the service, never a value
+// import (client bundle purity gate).
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-// Type-only: pulls ctx.locale and the 'settings.general.item' SlotMap merge.
+// Type-only: pulls ctx.locale into this program.
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {
+  SettingsOnboardingStep, SettingsRootInjected, SettingsSectionRow,
+} from './shell-contract.ts'
+import { SettingsRoot } from './SettingsRoot.tsx'
 import { CloseLabel, HeaderContent, TriggerContent } from './chrome.tsx'
 import { GeneralSection } from './GeneralSection.tsx'
 import { SettingsDocumentAction } from './SettingsDocumentAction.tsx'
 import type { SettingsDocumentActionInjected } from './SettingsDocumentAction.tsx'
 import { refreshDocumentIfLoaded, SettingsDocumentStore } from './settings-document-store.ts'
-import type { WelcomeNoticeInjected } from './WelcomeNotice.tsx'
-import { WelcomeNotice } from './WelcomeNotice.tsx'
-import { refreshWelcomeIfLoaded, WelcomeNoticeStore } from './welcome-store.ts'
-import { WELCOME_NOTICE_SETTINGS_NAMESPACE } from '../onboarding-copy.ts'
 import { en, zh, type SettingsKey } from './locales.ts'
 
 export type {
@@ -32,8 +37,6 @@ export type {
 export type { SettingsDocumentActionInjected, SettingsDocumentActionProps } from './SettingsDocumentAction.tsx'
 export type { SettingsDocumentState } from './settings-document-store.ts'
 export { SettingsDocumentStore } from './settings-document-store.ts'
-export type { WelcomeNoticeInjected, WelcomeNoticeProps } from './WelcomeNotice.tsx'
-export type { WelcomeNoticeState } from './welcome-store.ts'
 export type { SettingsKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -75,27 +78,80 @@ export function apply(ctx: ClientContext): void {
       const useSnapshot = bindSnapshotSelector(documentController.store)
       return (): SettingsDocumentActionInjected => ({ controller: documentController, useSnapshot })
     })()
-  const welcomeController = new WelcomeNoticeStore(connection.api, connection.isLoopback ? 'host' : 'memory')
-  const useWelcomeSnapshot = bindSnapshotSelector(welcomeController.store)
-  const welcomeInjected = (): WelcomeNoticeInjected => ({
-    controller: welcomeController,
-    useSnapshot: useWelcomeSnapshot,
+  ctx.effect(() => ctx.on('connection/reset', () => {
+    refreshDocumentIfLoaded(documentController)
+  }), 'ui-settings-general: metadata invalidations')
+  // The settings shell: this package occupies the sidebar-owned hole and
+  // declares the settings slots. Ledger → nav-row projection as an observable
+  // source (uSES contract: getSnapshot returns the cached rows until the
+  // ledger version moves). Labels may be locale-following thunks, so the cache
+  // key includes the locale revision and subscribers ride both sources.
+  let rowsVersion = -1
+  let rowsRevision = -1
+  let rows: readonly SettingsSectionRow[] = []
+  let onboardingVersion = -1
+  let onboardingSteps: readonly SettingsOnboardingStep[] = []
+  const shellInjected = (): SettingsRootInjected => ({
+    hooks: {
+      sections: {
+        getSnapshot: () => {
+          const version = ctx.slots.getVersion('settings.section')
+          const revision = ctx.locale.getSnapshot().revision
+          if (version !== rowsVersion || revision !== rowsRevision) {
+            rowsVersion = version
+            rowsRevision = revision
+            rows = ctx.slots.entries('settings.section')
+              .map(e => ({
+                /* v8 ignore next -- list-slot registration requires id (SlotCore rejects an entry without one) */
+                id: e.options.id ?? '',
+                order: e.options.order ?? 0,
+                label: resolveSlotLabel(e.options.label) ?? '',
+              }))
+              .sort((a, b) => a.order - b.order)
+          }
+          return rows
+        },
+        subscribe: (listener) => {
+          const offLedger = ctx.slots.subscribe('settings.section', listener)
+          const offLocale = ctx.locale.subscribe(listener)
+          return () => {
+            offLedger()
+            offLocale()
+          }
+        },
+      },
+      onboardingSteps: {
+        getSnapshot: () => {
+          const version = ctx.slots.getVersion('settings.onboarding')
+          if (version !== onboardingVersion) {
+            onboardingVersion = version
+            onboardingSteps = ctx.slots.entries('settings.onboarding')
+              .map(e => ({
+                /* v8 ignore next -- list-slot registration requires id */
+                id: e.options.id ?? '',
+                order: e.options.order ?? 0,
+              }))
+              .sort((a, b) => a.order - b.order)
+          }
+          return onboardingSteps
+        },
+        subscribe: listener => ctx.slots.subscribe('settings.onboarding', listener),
+      },
+    },
   })
+  ctx.slots.inject('sidebar.settings', () => ctx.slots.register({
+    name: 'sidebar.settings',
+    children: {
+      'settings.trigger': { kind: 'single', scope: 'root' },
+      'settings.header': { kind: 'single', scope: 'root' },
+      'settings.action': { kind: 'list', scope: 'root' },
+      'settings.close': { kind: 'single', scope: 'root' },
+      'settings.section': { kind: 'list', scope: 'root' },
+      'settings.onboarding': { kind: 'list', scope: 'root' },
+    },
+    inject: shellInjected,
+  }, SettingsRoot))
 
-  ctx.effect(() => {
-    const refresh = (ns?: string): void => {
-      if (ns !== undefined && ns !== WELCOME_NOTICE_SETTINGS_NAMESPACE) return
-      refreshWelcomeIfLoaded(welcomeController)
-    }
-    const disposers = [
-      ctx.on('settings/changed', refresh),
-      ctx.on('connection/reset', () => {
-        refresh()
-        refreshDocumentIfLoaded(documentController)
-      }),
-    ]
-    return () => { for (const dispose of disposers) { dispose() } }
-  }, 'ui-settings-general: metadata invalidations')
   ctx.slots.inject('settings.trigger', () =>
     ctx.slots.register({ name: 'settings.trigger', locale: NS }, TriggerContent))
   ctx.slots.inject('settings.header', () =>
@@ -119,11 +175,4 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     children: { 'settings.general.item': { kind: 'list', scope: 'root' } },
   }, GeneralSection))
-  ctx.slots.inject('settings.onboarding', () => ctx.slots.register({
-    name: 'settings.onboarding',
-    id: 'welcome-notice',
-    order: -100,
-    locale: NS,
-    inject: welcomeInjected,
-  }, WelcomeNotice))
 }

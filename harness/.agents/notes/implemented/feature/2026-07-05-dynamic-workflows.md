@@ -10,7 +10,7 @@ The harness can delegate ONE task to ONE child (`dsh-tool-subagent`), but work t
 
 ## Decision
 
-A workflow capability family at `packages/workflow/` in the bash seam shape (interface / implementation / consumer), plus the structured-output foundation it needs on the subagent seam.
+A workflow capability family at `packages/workflow/` in the bash seam shape (Service Definition / Service Provider / Consumer), plus the structured-output foundation it needs on the subagent seam.
 
 ### The script contract (Claude Code-compatible)
 
@@ -20,13 +20,13 @@ One deliberate strictness DIVERGENCE from CC: hook misuse — unknown or deferre
 
 ### The seam (dsh-workflow)
 
-`ctx.workflows` is an abstract `WorkflowService` in the bash shape — one engine per context, no named-provider registry (engines are deployment swaps, not co-residents). `start(request)` throws synchronously for a script that cannot begin; a returned `WorkflowRun`'s `result` NEVER rejects (failures resolve as `stopReason: 'error' | 'cancelled'`). The `workflow/*` events are observe-only emits carrying DATA SNAPSHOTS (id + meta; `workflow/end` omits the result value), per-listener contained, mirroring `subagent/start`/`subagent/end` — control stays with the run's holder. Vocabulary details: [core-data-structures/workflow.md](../../../../docs/core-data-structures/workflow.md).
+`ctx.workflowEngine` is an abstract `WorkflowEngine` in the bash shape — one engine per context, no named-provider registry (engines are deployment swaps, not co-residents). `start(request)` throws synchronously for a script that cannot begin; a returned `WorkflowRun`'s `result` NEVER rejects (failures resolve as `stopReason: 'error' | 'cancelled'`). The `workflow/*` events are observe-only emits carrying DATA SNAPSHOTS (id + meta; `workflow/end` omits the result value), per-listener contained, mirroring `subagent/start`/`subagent/end` — control stays with the run's holder. Vocabulary details: [subsystems/workflow.md](../../../../docs/subsystems/workflow.md).
 
-### The engine (dsh-workflow-workerthread): one worker thread per run
+### The engine (dsh-workflow-worker-thread): one worker thread per run
 
 **Trust premise**: workflow scripts have the same trust as the model's bash access. The engine contains buggy scripts and guarantees settled results, JSON-safe values, and cancellation quiescence; it does not defend against hostile code. A vm context and worker thread are not security boundaries: a script can escape to Node APIs with process-wide authority. Sandboxing requires a separate-process or isolated-vm engine behind this seam.
 
-**Why `node:worker_threads`**: each run gets one unpooled worker. A vm context limits the documented script surface, while message-port RPC bridges `agent()` to host-side child loops. The worker prevents synchronous script work from blocking the host, provides a serialization boundary, and permits forced termination after cancellation. `isolated-vm` was rejected because of its maintenance state and deployment requirements.
+**Why `node:worker_threads`**: each run gets one unpooled worker. A vm context limits the documented script API, while message-port RPC bridges `agent()` to host-side child loops. The worker prevents synchronous script work from blocking the host, provides a serialization boundary, and permits forced termination after cancellation. `isolated-vm` was rejected because of its maintenance state and deployment requirements.
 
 The host validates metadata and parses the body before publication. Private enum-keyed payload maps define the wire protocol; pending starts, published child records, one cancellation signal, worker-death reaping, result precedence, and disposal quiescence preserve the subagent run contract across it. The [agent-scope runtime-design Agent Note](../architecture/2026-07-12-agent-scope-runtime-design.md#workflow-children-are-pending-starts-or-published-records) owns those race algorithms.
 
@@ -36,13 +36,15 @@ The engine exposes an in-process `MessageChannel` test path because main-process
 
 **Value boundary**: `materializeFromRealm` copies outbound values and rejects functions, symbols, nested `undefined`, exotic prototypes, cycles, sparse arrays, and non-finite numbers. Data-property copies make `"__proto__"` safe; getters are read normally and a throwing getter fails loudly. `args` crosses through `workerData` and is cloned again before exposure. Realm functions are invoked rather than copied, and thrown values use a total renderer so `result` cannot reject. Hook errors are host-realm `WorkflowError`s, so scripts branch on `name` or `code` rather than `instanceof Error`, as documented in the engine README. Concurrency, total-agent, item, timeout, and grace limits are validated config.
 
-### The consumer (dsh-tool-workflow)
+### The Consumer (`dsh-tool-workflow`)
 
 A `workflow` tool mirroring `dsh-tool-subagent`'s synchronous shape: start, await, `try/finally` dispose, abort-bridge `exec.signal`, non-`completed` → `isError`. Render intent: a `generic` card titled by the call's `meta.name` parameter (presentation is a pure function of args). The tool description IS the model-facing authoring spec. The usage policy ships with the tool as its own `tool:<toolName>` prompt section (explicit-ask-only guidance — tool guidance lives in tool plugins, never in the deployment persona); the harness has no ultracode-style effort gate.
 
+For a top-level tool execution, the same consumer also writes the run and actual member lifecycle into the calling parent Session as four log-only `tool-workflow/*` events. The recording path observes rather than controls execution: its first append failure disables later writes for that run and leaves a legal prefix without changing the tool result. [`ui-workflow-run`](../../../../packages/client/ui-workflow-run/README.md) rebuilds those facts through the Conversation Node engine as a separate keyed Chat row; the existing generic tool row remains its own presentation owner. The detailed persistence, replay, disclosure, and live-navigation decision lives in [durable workflow runs in Chat](2026-08-10-durable-workflow-runs-in-chat.md).
+
 ### The foundation: structured output on the subagent seam
 
-`SubagentStartRequest.outputSchema` is implemented by `dsh-subagent-inprocess` for both in-process backends. Each structured child receives its own scoped capture tool, instruction, and enforcement registrations on `child.ctx`; concurrent children can use different schemas without sharing mutable policy, and disposing the child removes the entire attachment.
+`SubagentStartRequest.outputSchema` is implemented by `dsh-subagent-in-process-driver` for both in-process backends. Each structured child receives its own scoped capture tool, instruction, and enforcement registrations on `child.ctx`; concurrent children can use different schemas without sharing mutable policy, and disposing the child removes the entire attachment.
 
 An output schema makes a schema-valid committed capture mandatory for successful child completion. The scoped runtime presents the capture tool and instruction, commits only a successful final outcome—including the enclosing `run_code` outcome for an SDK call—denies later side effects after capture becomes pending, and stops the child without another model step after commit. A validation failure remains a retryable tool error; clean completion without a committed capture settles as an error.
 
@@ -52,22 +54,21 @@ An output schema makes a schema-valid committed capture mandatory for successful
 
 Worker-side logic runs through an in-process `MessageChannel` so V8 coverage measures it. Unit tests cover script helpers, fatal and nullable failures, JSON boundaries, caps, cancellation, child ownership, and structured output through real loops. A built-bin smoke runs the separately bundled `lib/worker.cjs` under plain Node, a with-key e2e drives real child agents, and model-facing workflow behavior is snapshot-covered through its owning example.
 
-## Deferred (documented non-goals of this cut)
+## Deferred (documented non-goals)
 
-- **Background collection** (start tool → run id → completion notice → collect), designed alongside bash/subagent background unification.
+- **Background collection** (start tool → run id → completion notice → collect), designed alongside shell/subagent background unification.
 - **Journaling + resume** (`resumeFromRunId`, cached agent() prefixes) — implementing it reintroduces CC's determinism bans as a script-contract tightening (scripts may read the clock today).
-- **Saved/bundled workflows** (a `.deepseek/workflows/` registry, slash-command surface) and **script persistence to a run directory** (the tool-call event already records the script durably).
+- **Saved/bundled workflows** (a `.deepseek/workflows/` registry, slash-command API) and **script persistence to a run directory** (the tool-call event already records the script durably).
 - **Nested `workflow()`**, **token `budget`**, and the `effort`/`isolation`/`agentType` agent options (each rejects loud with a message naming it deferred).
 - **An overall run wall-clock timeout** — cancellation always frees the caller (result settles within the grace), so a cap on total run time is a policy knob for the background redesign, not a correctness need here.
 - **Engine hardening beyond worker threads**: an isolated-vm or separate-process engine behind the same seam (actual sandboxing; memory limits).
-- **Human-interface progress UI** over the `workflow/*` events (a `/workflows`-style view); the events exist for it.
 - **ACP-backend structured output** and **`toolFilter`** (both still capability-gated `false`).
 
 ## Alternatives considered
 
 - **Hostile-value containment in the host** (trap-free proxy rejection, accessor-never-invoked descriptor walks, realm-side pre-rendering of thrown values, realm-built promises/arrays/error clones with structural fatal recognition): rejected because every defense targets an author the trust premise accepts, while the thread's serialization boundary already makes cross-realm values total by construction.
-- **In-process `node:vm` execution**: mechanically simplest — no RPC, no thread — but `start()` blocks the caller for the script's initial synchronous slice, a synchronous spin past the first await cannot be killed in-process (the vm `timeout` covers only that first slice), and `dispose()` could only abandon an unsettling script on the host loop. The worker-thread engine keeps the same vm-context script surface while unblocking the host and making termination real.
-- **Background execution as the default** (CC's shape): deferred; foreground-synchronous matches `dsh-tool-subagent`'s cut, and background semantics should be designed ONCE across bash/subagent/workflow rather than per-tool.
+- **In-process `node:vm` execution**: mechanically simplest — no RPC, no thread — but `start()` blocks the caller for the script's initial synchronous slice, a synchronous spin past the first await cannot be killed in-process (the vm `timeout` covers only that first slice), and `dispose()` could only abandon an unsettling script on the host loop. The worker-thread engine keeps the same vm-context script API while unblocking the host and making termination real.
+- **Background execution as the default** (CC's shape): deferred; foreground-synchronous matches `dsh-tool-subagent`'s cut, and background semantics should be designed ONCE across shell/subagent/workflow rather than per-tool.
 - **Workflow-layer JSON parsing for `agent({schema})`**: duplicating a seam concern at one consumer while the seam's capability flag stayed dishonestly `false`.
 - **Meta embedded in the script as `export const meta = {...}`** (CC's exact format): keeps scripts self-contained and CC scripts drop-in, but obtaining meta requires evaluating model-written text on the host. Even an empty timed vm context cannot bound script-controlled getters when the host reads the resulting object. A JSON parameter removes the scanner, evaluation, and host-spin hole; the cost is that a CC script's meta header must move into the parameter (the body stays drop-in).
 - **`ValueSchemaSpec` as the `outputSchema` wire type**: the author form now has equivalent vocabulary, but a workflow supplies realm-foreign raw JSON Schema data; pretending that runtime data is a trusted author declaration would skip the raw-schema assertion boundary.
@@ -77,4 +78,4 @@ Worker-side logic runs through an in-process `MessageChannel` so V8 coverage mea
 
 ## Consequences
 
-Fan-out plans now live in rerunnable scripts, and `outputSchema` provides authoritative structured child results. Each run pays worker startup and message-port RPC costs, but host startup stays non-blocking, cancellation can terminate the worker, and serialization enforces the value boundary. Worker threads are not a security boundary. Invalid options fail rather than degrading to Claude Code's `null`; consumers retain control through the run handle while observers receive snapshots only.
+Fan-out plans now live in rerunnable scripts, and `outputSchema` provides authoritative structured child results. Each run pays worker startup and message-port RPC costs, but host startup stays non-blocking, cancellation can terminate the worker, and serialization enforces the value boundary. Worker threads are not a security boundary. Invalid options fail rather than degrading to Claude Code's `null`; consumers retain control through the run handle while observers receive snapshots only. Top-level Web users also receive a durable, replayable workflow record without widening the execution seam or coupling the original tool card to workflow-specific UI.

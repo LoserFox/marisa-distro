@@ -18,7 +18,7 @@ Status: proposed
 
 阶段词汇归声明该 slot 的领域所有，而不属于全局 slot 框架。`SlotMap` 携带确切的阶段元组，用于编译期注册；运行时 `SlotSpec` 重复该元组，作为排序依据。其他链不会获得任何 composer 术语，也无需迁移，除非它们主动声明阶段。
 
-本提案扩展 [Web subagent 对话](../../implemented/feature/2026-07-27-web-subagent-conversations.md)、[Web 权限与审批](../../implemented/feature/2026-07-23-web-permission-and-approval.md)和[计划审阅呈现](../../implemented/feature/2026-07-30-plan-review-presentation-intent.md)契约，但不取代其中任何一项。[运行时所有权子级守卫](../../implemented/bug-fix/2026-08-01-ask-user-delegated-caller-guard.md)仍然是防止子级新建自己负责的人类等待的权威机制。本提案落地时，不应归档任何活跃 Agent Note。
+本提案扩展 [Web subagent 对话](../../implemented/feature/2026-07-27-web-subagent-conversations.md)、[Web 权限与审批](../../implemented/feature/2026-07-23-web-permission-and-approval.md)和[计划审阅呈现](../../implemented/feature/2026-07-30-plan-review-presentation-intent.md)约定，但不取代其中任何一项。[运行时所有权子级守卫](../../implemented/bug-fix/2026-08-01-ask-user-delegated-caller-guard.md)仍然是防止子级新建自己负责的人类等待的权威机制。本提案落地时，不应归档任何活跃 Agent Note。
 
 ## 备选方案
 
@@ -36,7 +36,7 @@ Status: proposed
 - Composer 测试覆盖问题加只读项、审批加只读项、问题加审批加只读项、解决后回到只读项，以及所有选择器均拒绝匹配时回退到 InputBar。问题在 `interaction` 内仍排在审批之前。
 - dispose（资源释放）、HMR（热模块替换）重新注册和重新连接回放均不能留下陈旧的当选阶段；选举仍是当前所有者 props 与当前注册项的纯函数。
 - 一项无密钥组装 Web 快照固定已寻址的 one-shot 对话及其待处理交互：交互界面胜出，解决该交互后，只读界面再次出现。
-- slot、conversation、question、permission 和 subagent 的 README／JSDoc 契约共同描述阶段所有权以及交互先于限制的规则。
+- slot、conversation、question、permission 和 subagent 的 README／JSDoc 约定共同描述阶段所有权以及交互先于限制的规则。
 - 该变更不修改任何模型可见的工具定义、系统提示词章节、请求路由或会话事件。因此，浏览器选举既不产生 token 开销，也不会使 KV Cache 失效；测试会比较仅在客户端发生状态转换前后的模型请求 header。
 
 ## 风险

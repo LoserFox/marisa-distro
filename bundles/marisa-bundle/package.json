@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "main": "./package.json",
-  "description": "魔理沙 fork 聚合 bundle — 20 vendored git plugins + Windows pwsh lane + tool-cordis + skill-manager（组合行见 cordis.patch.yml）",
+  "description": "魔理沙 fork 聚合 bundle — 21 vendored git plugins + Windows pwsh lane + tool-cordis + skill-manager（组合行见 cordis.patch.yml）",
   "dependencies": {
     "@dsh-external/workflow": "file:../../plugins/dsh_workflow",
     "@dpskh/a2a": "file:../../plugins/dsh-a2a",
@@ -21,15 +21,15 @@
     "@dsh-external/dsh-stickers": "file:../../plugins/dsh-stickers",
     "@dsh-external/dsh-suggested-replies": "file:../../plugins/dsh-suggested-replies",
     "@fakechris/dsh-track": "file:../../plugins/dsh-track",
+    "@omdsh-dev/dsh-update-check": "file:../../plugins/dsh-update-check",
     "@dsh-external/dsh-ui-progress": "file:../../plugins/dsh-ui-progress",
     "@dsh-external/dsh-vision-toolkit": "file:../../plugins/dsh-vision-toolkit",
     "@bill9109/dsh-web-ui-notify": "file:../../plugins/dsh-web-ui-approval-notify",
     "whale-girl": "file:../../plugins/whale-girl",
-    "cordis": "file:../../harness/vendor/cordis",
-    "@deepseek-ai/dsh-tool-cordis": "file:../../harness/packages/cordis/tool-cordis",
+    "@deepseek-ai/cordis": "file:../../harness/vendor/cordis",
+    "@deepseek-ai/dsh-tool-cordis": "file:../../harness/packages/extensions/tool-cordis",
     "dsh-skill-manager": "file:../../dsh-skill-manager",
-    "@deepseek-ai/dsh-pwsh-local": "file:../../harness/packages/bash/pwsh-local",
-    "@deepseek-ai/dsh-tool-pwsh": "file:../../harness/packages/bash/tool-pwsh"
+    "@deepseek-ai/dsh-tool-pwsh": "file:../../harness/packages/shell/tool-pwsh"
   },
   "dsh": {
     "bundle": {

@@ -1,6 +1,6 @@
 /**
  * Shared JSDoc parsing and completeness checks for the Cordis, persistence,
- * and config catalogs and the export-surface gate.
+ * and config catalogs and the exported-API gate.
  */
 
 import ts from 'typescript'
@@ -124,7 +124,7 @@ export function parseTags(raw: string): { params: Map<string, string>; returns: 
  * binding-pattern parameters, and reject stale tags. Exempt parameters may
  * still be documented.
  * @param where - the offender label violations open with, e.g. `event 'x' (file:1)`.
- * @param surface - surface noun used in binding-pattern diagnostics.
+ * @param apiKind - API kind used in binding-pattern diagnostics.
  * @param parameters - the declaration's parameter list.
  * @param tags - the parsed `@param` name→description map from parseTags.
  * @param sf - source file used to render binding patterns.
@@ -133,7 +133,7 @@ export function parseTags(raw: string): { params: Map<string, string>; returns: 
  */
 export function checkParams(
   where: string,
-  surface: string,
+  apiKind: string,
   parameters: readonly ts.ParameterDeclaration[],
   tags: Map<string, string>,
   sf: ts.SourceFile,
@@ -142,7 +142,7 @@ export function checkParams(
 ): void {
   for (const p of parameters) {
     if (!ts.isIdentifier(p.name)) {
-      violations.push(`${where}: parameter '${p.name.getText(sf)}' is a binding pattern; the ${surface} surface needs simple identifier parameters so @param can name them.`)
+      violations.push(`${where}: parameter '${p.name.getText(sf)}' is a binding pattern; the ${apiKind} API needs simple identifier parameters so @param can name them.`)
       continue
     }
     if (isExempt(p)) continue

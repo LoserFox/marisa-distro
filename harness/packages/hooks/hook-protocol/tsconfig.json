@@ -15,13 +15,13 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../../bash/bash"
+      "path": "../../shell/shell"
     },
     {
       "path": "../../core/session"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

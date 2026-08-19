@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-07-25-semantic-pr-label-taxonomy.md
-2026-07-25-semantic-pr-label-taxonomy.md: 3217b405e968d4d2c1eba1f1a5a08008b18ba514
-2026-07-25-semantic-pr-label-taxonomy.zh.md: 978f11af9402f248679e2087ff7fb513321b69b9

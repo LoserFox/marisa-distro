@@ -15,13 +15,19 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../../ui/commands"
+      "path": "../../interaction/commands"
     },
     {
       "path": "../../core/session"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../identity/anonymous-user-id"
+    },
+    {
+      "path": "../../session/session-telemetry"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

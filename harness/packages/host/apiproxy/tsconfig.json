@@ -30,10 +30,19 @@
       "path": "../../util/brand"
     },
     {
+      "path": "../../attachment/attachment"
+    },
+    {
       "path": "../../llm/llm"
     },
     {
       "path": "../../core/agent"
+    },
+    {
+      "path": "../../core/agent-default-model"
+    },
+    {
+      "path": "../../preset/agent-presets"
     },
     {
       "path": "../../core/session"
@@ -42,19 +51,19 @@
       "path": "../../core/tools"
     },
     {
-      "path": "../../session-persistence/session-persistence"
+      "path": "../../session/session-persistence"
     },
     {
-      "path": "../../session-projection/session-projection"
+      "path": "../../session/session-projection"
     },
     {
-      "path": "../../session-projection/session-projection-cache"
+      "path": "../../session/session-projection-cache"
     },
     {
       "path": "../../session-query/session-query"
     },
     {
-      "path": "../../session-title/session-title"
+      "path": "../../session/session-title"
     },
     {
       "path": "../../session-query/session-query"
@@ -66,13 +75,16 @@
       "path": "../../skill/skill"
     },
     {
-      "path": "../../ui/commands"
+      "path": "../../jobs/jobs"
     },
     {
-      "path": "../../ui/user-approval"
+      "path": "../../interaction/commands"
     },
     {
-      "path": "../../ui/user-interaction"
+      "path": "../../interaction/user-approval"
+    },
+    {
+      "path": "../../interaction/user-questions"
     },
     {
       "path": "../../workspace/workspace"
@@ -81,7 +93,10 @@
       "path": "../directory-picker"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../extensions/cordis-host-runner"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
       "path": "../../util/native-command"

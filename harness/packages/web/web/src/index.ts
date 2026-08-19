@@ -1,13 +1,13 @@
 /**
- * The web access seam (`ctx.web`): registries and provider-selecting execution for search and
+ * Service Definition for the web access capability seam (`ctx.web`): registries and provider-selecting execution for search and
  * fetch. Duplicate ids are rejected. At execution time, a configured provider must exist and
  * be usable; without one, exactly one usable provider is required, so selection never depends
  * on registration order.
  * @module @deepseek-ai/dsh-web
  */
 
-import { Context, Service } from 'cordis'
-import z from 'schemastery'
+import { Context, Service } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type {
   WebFetchProvider,
   WebFetchRequest,
@@ -32,9 +32,9 @@ export type {
   WebSearchSource,
 } from './types.ts'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    web: WebService
+    web: WebRuntime
   }
 }
 
@@ -52,7 +52,7 @@ interface Selection<P> {
  * provider auto-selects). Operational overrides such as environment variables
  * must feed these same fields rather than introduce a hidden priority chain.
  */
-export interface WebServiceConfig {
+export interface WebRuntimeConfig {
   /** Explicit search provider id. Omitted = auto-select when exactly one usable. */
   readonly searchProvider?: string
   /** Explicit fetch provider id. Omitted = auto-select when exactly one usable. */
@@ -71,13 +71,13 @@ export interface WebServiceConfig {
  * - No id configured, multiple usable providers → `WEB_PROVIDER_AMBIGUOUS`.
  * - No id configured, no usable provider → `WEB_PROVIDER_UNAVAILABLE`.
  */
-export class WebService extends Service {
+export class WebRuntime extends Service {
   /**
    * Provider selection config. Operational env overrides feed the SAME fields:
    * `$DSH_WEB_SEARCH_PROVIDER` / `$DSH_WEB_FETCH_PROVIDER` are equivalent to
    * `searchProvider` / `fetchProvider` and are NOT a hidden priority chain.
    */
-  static Config: z<WebServiceConfig> = z.object({
+  static Config: z<WebRuntimeConfig> = z.object({
     searchProvider: z.string(),
     fetchProvider: z.string(),
   })
@@ -87,7 +87,7 @@ export class WebService extends Service {
   private readonly searchProviderId: string | undefined
   private readonly fetchProviderId: string | undefined
 
-  constructor(ctx: Context, config: WebServiceConfig = {}) {
+  constructor(ctx: Context, config: WebRuntimeConfig = {}) {
     super(ctx, 'web')
     this.searchProviderId = config.searchProvider ?? process.env.DSH_WEB_SEARCH_PROVIDER
     this.fetchProviderId = config.fetchProvider ?? process.env.DSH_WEB_FETCH_PROVIDER
@@ -121,7 +121,7 @@ export class WebService extends Service {
     }
     const dispose = this.ctx.effect(function* () {
       store.set(provider.id, provider)
-      yield () => { return store.delete(provider.id) }
+      yield () => store.delete(provider.id)
     }, 'web.registerProvider()')
     // ctx.effect's disposer returns Promise<void>; our disposer API is
     // synchronous fire-and-forget — discard the (always-resolved) promise.
@@ -133,7 +133,7 @@ export class WebService extends Service {
    * time with the selection rules above; throws {@link WebError} when the
    * capability cannot run. The seam enforces `request.maxResults` on the result:
    * if the provider over-returns, `sources[]` is truncated and `truncated` set.
-   * @param request - the query plus result-shaping options.
+   * @param request - the query and optional result limit.
    * @param signal - optional cancellation signal forwarded to the provider.
    * @returns the provider's results, capped to `request.maxResults`.
    */
@@ -199,4 +199,4 @@ function capSources(result: WebSearchResult, maxResults: number | undefined): We
   return { ...result, sources: result.sources.slice(0, maxResults), truncated: true }
 }
 
-export default WebService
+export default WebRuntime

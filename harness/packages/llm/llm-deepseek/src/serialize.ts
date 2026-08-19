@@ -2,29 +2,30 @@
  * Serialize harness messages into DeepSeek chat completions. User text is joined; assistant text
  * becomes `content`, tool calls become `tool_calls`, and tool results become separate tool messages.
  * Assistant reasoning is replayed as `reasoning_content` only on tool-call turns, as required by
- * thinking-mode passback. Unknown declaration-merged block types are skipped rather than rejected.
+ * thinking-mode passback. Core image blocks are rejected explicitly because this wire route is text-only;
+ * unknown declaration-merged block types retain the adapter's documented extension fallback.
  * @module dsh-llm-deepseek/serialize
  */
 
-import { LlmError } from '@deepseek-ai/dsh-llm'
+import { contentHasImage, LlmError } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import type { WireMessage, WireRequest, WireTool } from './types.ts'
 
 /** Adapter-level request defaults (from plugin config). */
 export interface RequestDefaults {
   thinking?: 'enabled' | 'disabled' | undefined
-  reasoningEffort?: 'off' | 'high' | 'max' | undefined
+  reasoningEffort?: 'off' | 'low' | 'high' | 'max' | undefined
 }
 
 interface ResolvedThinking {
   thinking?: 'enabled' | 'disabled'
-  reasoningEffort?: 'high' | 'max'
+  reasoningEffort?: 'low' | 'high' | 'max'
 }
 
 /** Validate the adapter-owned effort before resolving its DeepSeek wire fields. */
-function reasoningEffort(effort: NonNullable<GenerateOptions['reasoningEffort']>): 'off' | 'high' | 'max' {
-  if (effort === 'off' || effort === 'high' || effort === 'max') {
-    return effort as 'off' | 'high' | 'max'
+function reasoningEffort(effort: NonNullable<GenerateOptions['reasoningEffort']>): 'off' | 'low' | 'high' | 'max' {
+  if (effort === 'off' || effort === 'low' || effort === 'high' || effort === 'max') {
+    return effort as 'off' | 'low' | 'high' | 'max'
   }
   throw new LlmError(
     `DeepSeek does not support reasoning effort "${effort}"`,
@@ -45,7 +46,7 @@ function resolveThinking(options: GenerateOptions, defaults: RequestDefaults): R
     )
   }
   if (effort === 'off') return { thinking: 'disabled' }
-  if (effort === 'high' || effort === 'max') {
+  if (effort === 'low' || effort === 'high' || effort === 'max') {
     return { thinking: 'enabled', reasoningEffort: effort }
   }
   return defaults.thinking === undefined ? {} : { thinking: defaults.thinking }
@@ -57,6 +58,13 @@ function flattenText(blocks: ContentBlock[]): string {
     .filter(block => block.type === 'text')
     .map(block => block.text)
     .join('')
+}
+
+/** Reject core image content before any text-flattening path can silently erase it. */
+function assertTextOnly(blocks: readonly ContentBlock[]): void {
+  if (contentHasImage(blocks)) {
+    throw new LlmError('The DeepSeek chat-completions adapter does not support image content.', 'UNSUPPORTED_CONTENT')
+  }
 }
 
 /** Serialize one assistant message (text + reasoning + tool calls). */
@@ -104,6 +112,7 @@ function serializeAssistant(message: Message): WireMessage {
 export function serializeMessages(messages: Message[]): WireMessage[] {
   const wire: WireMessage[] = []
   for (const message of messages) {
+    assertTextOnly(message.content)
     if (message.role === 'system') {
       wire.push({ role: 'system', content: flattenText(message.content) })
       continue
@@ -171,7 +180,7 @@ export function serializeRequest(
       ? { reasoning_effort: resolvedThinking.reasoningEffort }
       : {},
     ...tools !== undefined && tools.length > 0 ? { tools } : {},
-    ...options.temperature === undefined ? {} : { temperature: options.temperature },
+    ...options.temperature !== undefined ? { temperature: options.temperature } : {},
     ...options.maxTokens === undefined ? {} : { max_tokens: options.maxTokens },
     ...options.stop !== undefined ? { stop: options.stop } : {},
   }

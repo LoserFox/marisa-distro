@@ -17,7 +17,7 @@
  */
 export type CodeBindingFunction = (args: unknown) => Promise<CodeJsonValue>
 
-/** A lossless JSON value transferable across the dependency-light code-runtime seam. */
+/** A lossless JSON value transferable through the dependency-light Service Definition. */
 export type CodeJsonValue = null | boolean | number | string | CodeJsonValue[] | { [key: string]: CodeJsonValue }
 
 /**

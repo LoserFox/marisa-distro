@@ -61,12 +61,14 @@ function thrown(value: unknown): Error {
 }
 
 /**
- * Validate and preserve the one-shot task before crossing the process seam.
+ * Validate and preserve the one-shot task before crossing the process boundary.
  * @param prompt - task content accepted from the shared subagent service.
  * @returns the exact non-empty text block sequence.
  */
 export function textTask(prompt: readonly ContentBlock[]): string[] {
-  if (prompt.length === 0) throw new Error('subagent-codex: the one-shot task must contain only text blocks')
+  if (prompt.length === 0) {
+    throw new Error('subagent-codex: the one-shot task must contain only text blocks')
+  }
   const texts: string[] = []
   for (const block of prompt) {
     if (block.type !== 'text') {
@@ -108,7 +110,7 @@ export async function disposeCodexChild(
 /**
  * Start the real `codex app-server --stdio` child and publish its one-shot run.
  * @param request - resolved shared subagent request.
- * @param spec - workspace, environment, process seam, and diagnostic policy.
+ * @param spec - Workspace, environment, process service, and diagnostic policy.
  * @returns the published run after initialization and ephemeral thread creation.
  */
 export async function startCodexRun(

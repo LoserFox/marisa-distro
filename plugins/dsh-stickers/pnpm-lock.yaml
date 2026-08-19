@@ -9,38 +9,38 @@ importers:
   .:
     devDependencies:
       '@deepseek-ai/cordis':
-        specifier: link:.dsh/source/current/vendor/cordis
-        version: link:.dsh/source/current/vendor/cordis
+        specifier: link:../../harness/vendor/cordis
+        version: link:../../harness/vendor/cordis
       '@deepseek-ai/dsh-agent':
-        specifier: link:.dsh/source/current/packages/core/agent
-        version: link:.dsh/source/current/packages/core/agent
+        specifier: link:../../harness/packages/core/agent
+        version: link:../../harness/packages/core/agent
       '@deepseek-ai/dsh-client-locale':
-        specifier: link:.dsh/source/current/packages/client/locale
-        version: link:.dsh/source/current/packages/client/locale
+        specifier: link:../../harness/packages/client/locale
+        version: link:../../harness/packages/client/locale
       '@deepseek-ai/dsh-client-runtime':
-        specifier: link:.dsh/source/current/packages/client/runtime
-        version: link:.dsh/source/current/packages/client/runtime
+        specifier: link:../../harness/packages/client/runtime
+        version: link:../../harness/packages/client/runtime
       '@deepseek-ai/dsh-client-ui-conversation':
-        specifier: link:.dsh/source/current/packages/client/ui-conversation
-        version: link:.dsh/source/current/packages/client/ui-conversation
+        specifier: link:../../harness/packages/client/ui-conversation
+        version: link:../../harness/packages/client/ui-conversation
       '@deepseek-ai/dsh-client-ui-slots':
-        specifier: link:.dsh/source/current/packages/client/ui-slots
-        version: link:.dsh/source/current/packages/client/ui-slots
+        specifier: link:../../harness/packages/client/ui-slots
+        version: link:../../harness/packages/client/ui-slots
       '@deepseek-ai/dsh-client-ui-tool':
-        specifier: link:.dsh/source/current/packages/client/ui-tool
-        version: link:.dsh/source/current/packages/client/ui-tool
+        specifier: link:../../harness/packages/client/ui-tool
+        version: link:../../harness/packages/client/ui-tool
       '@deepseek-ai/dsh-commands':
-        specifier: link:.dsh/source/current/packages/ui/commands
-        version: link:.dsh/source/current/packages/ui/commands
+        specifier: link:../../harness/packages/interaction/commands
+        version: link:../../harness/packages/interaction/commands
       '@deepseek-ai/dsh-host-webserver':
-        specifier: link:.dsh/source/current/packages/host/webserver
-        version: link:.dsh/source/current/packages/host/webserver
+        specifier: link:../../harness/packages/host/webserver
+        version: link:../../harness/packages/host/webserver
       '@deepseek-ai/dsh-invariants':
-        specifier: link:.dsh/source/current/packages/runtime-diagnostics/invariants
-        version: link:.dsh/source/current/packages/runtime-diagnostics/invariants
+        specifier: link:../../harness/packages/runtime-diagnostics/invariants
+        version: link:../../harness/packages/runtime-diagnostics/invariants
       '@deepseek-ai/dsh-tools':
-        specifier: link:.dsh/source/current/packages/core/tools
-        version: link:.dsh/source/current/packages/core/tools
+        specifier: link:../../harness/packages/core/tools
+        version: link:../../harness/packages/core/tools
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3

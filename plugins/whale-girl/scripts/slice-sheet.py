@@ -563,7 +563,7 @@ def main():
     ap.add_argument('--normalize-scale', type=float, default=DEFAULT_SCALE, help=f'内容占比目标（默认 {DEFAULT_SCALE}：角色高度占帧比例）')
     ap.add_argument('--align', choices=['bottom', 'center'], default='bottom', help='内容对齐（默认 bottom 底对齐）')
     ap.add_argument('--swap-frames', help='帧序校正：目标顺序索引，如 0,2,1')
-    ap.add_argument('--out', default='.dsh-plugin/assets/raw/slices', help='输出目录')
+    ap.add_argument('--out', default='lib/assets/raw/slices', help='输出目录')
     # single 模式
     ap.add_argument('--columns', type=int, help='single 分栏数（左右分栏）')
     ap.add_argument('--states', help='single 分栏/sheet 的状态名（逗号）')

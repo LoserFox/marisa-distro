@@ -1,15 +1,15 @@
 // Web e2e scenario: the conversation column scrolls on one axis only, as the
-// browser actually lays it out. The reported symptom was a horizontal
-// scrollbar under the whole center column once the window (or the sidebar
-// drag) narrowed it — the hero's decorative backdrop ellipse bleeding past the
-// column and becoming user-scrollable.
+// browser actually lays it out. The hazard: a horizontal scrollbar appears
+// under the whole center column once the window (or the sidebar drag) narrows
+// it — the hero's decorative backdrop ellipse bleeds past the column and
+// becomes user-scrollable.
 //
 // The bleed is by construction and stays: `.heroGlow` is sized 1051/776 of the
 // hero box (ConversationRoot.module.css) so the blur scales with the input
-// card. What changed is the scroll container: `[data-conversation-scroll]`
-// scrolls vertically, and a box that scrolls in one axis computes the other
-// axis's initial `visible` to `auto`, so the bleed came back as a bar. The
-// fix states `overflow-x: hidden` there.
+// card. The scroll container is where the bar comes from:
+// `[data-conversation-scroll]` scrolls vertically, and a one-axis scroller
+// computes the other axis's initial `visible` to `auto`, so the bleed becomes
+// a bar; `overflow-x: hidden` on the scroller prevents it.
 //
 // Only a real engine reports that pair — the bleed and the resulting scroll
 // range — so the scenario sweeps viewport widths that bracket the glow's
@@ -36,7 +36,7 @@ const SNAPSHOT_DIR = fileURLToPath(new URL('./snapshots/conversation-column-over
  * Committed golden of the one-axis relation at every stop. It records
  * relations and booleans, never absolute coordinates: the column width follows
  * the viewport and the sidebar, and a golden carrying pixels would document the
- * platform instead of the change.
+ * platform instead of the behavior.
  */
 const GEOMETRY_EXPECTED = join(SNAPSHOT_DIR, 'geometry.expected.md')
 const MODE = webSnapshotMode()
@@ -60,17 +60,20 @@ interface ColumnMetrics {
   columnWidth: number
   /** Resolved `overflow-x` on the conversation scroll container. */
   overflowX: string
-  /** True when the glow's box reaches past the column's content edge — the condition the fix has to survive. */
+  /**
+   * True when the glow's box reaches past the column's content edge — the
+   * condition the `overflow-x: hidden` declaration has to survive.
+   */
   glowBleeds: boolean
   /**
    * `scrollWidth - clientWidth`. Deliberately NOT the assertion: `hidden` and
    * `auto` both report the same value, because `hidden` clips the bleed rather
    * than reflowing it away. Recorded because it is the vacuity guard in
    * numbers — it must stay positive at the narrow stops, or the scenario has
-   * stopped reproducing the situation the fix is for.
+   * stopped reproducing the situation `overflow-x: hidden` exists for.
    */
   bleedRange: number
-  /** True when the column still scrolls vertically — the axis the fix must not take away. */
+  /** True when the column still scrolls vertically — the axis `overflow-x: hidden` must not take away. */
   scrollsVertically: boolean
 }
 
@@ -108,9 +111,10 @@ function measureColumn(page: Page, width: number): Promise<ColumnMetrics> {
  * This is the one signal that separates the two states, and it is why the
  * scenario needs a real engine: `overflow-x: hidden` leaves the box
  * programmatically scrollable and leaves `scrollWidth` untouched, so every
- * property reading agrees across the fix. Only refusing an actual input event
- * differs — measured at the 1200px stop, the shipped column stays at 0 while
- * the same page with `overflow-x: auto` forced on lands at its scroll boundary.
+ * property reading agrees across the two overflow modes. Only refusing an
+ * actual input event differs — measured at the 1200px stop, the shipped
+ * column stays at 0 while the same page with `overflow-x: auto` forced on
+ * lands at its scroll boundary.
  * @param page - the page under test.
  * @returns `scrollLeft` after one horizontal wheel over the column.
  */
@@ -175,10 +179,10 @@ type ColumnStop = ColumnMetrics & {
  * Render the golden body: one line per stop, relations only.
  *
  * Absolute pixels are deliberately absent apart from `scrollLeftAfterWheel`,
- * which the fix pins to 0 by construction. The bleed is recorded as a boolean
- * rather than its width, so the golden survives any platform whose column
- * lands a pixel off — a fixture that has to be re-recorded per platform
- * documents the platform, not the change.
+ * which the shipped overflow mode pins to 0 by construction. The bleed is
+ * recorded as a boolean rather than its width, so the golden survives any
+ * platform whose column lands a pixel off — a fixture that has to be
+ * re-recorded per platform documents the platform, not the behavior.
  * @param stops - the measured stops, in sweep order.
  * @returns the golden body, without a trailing newline.
  */
@@ -272,18 +276,19 @@ describe('web e2e: the conversation column scrolls on one axis', () => {
       // The reported symptom, stated directly: a horizontal wheel over the
       // column moves nothing, at every stop.
       expect(stop.scrollLeftAfterWheel, `viewport ${String(stop.width)}`).toBe(0)
-      // The axis the column is a scroller for must survive the fix.
+      // The axis the column is a scroller for must survive `overflow-x: hidden`.
       expect(stop.scrollsVertically, `viewport ${String(stop.width)}`).toBe(true)
     }
     expect(tripwire.pageErrors).toEqual([])
   }, 120_000)
 
-  it('reports the pre-fix state when the axis is opened back up', async () => {
+  it('scrolls horizontally again once the axis is opened back up (control)', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-conversation-column-overflow-control'))
     // The mutation control, run in the page rather than against a second
-    // build: it restores exactly what the fix changed — the initial `visible`
-    // that a one-axis scroller computes to `auto` — and shows the same gesture,
-    // at the same timing, carrying the column to its positive scroll boundary.
+    // build: it lifts exactly the `overflow-x: hidden` declaration, so the
+    // initial `visible` that a one-axis scroller computes to `auto` takes
+    // over, and shows the same gesture, at the same timing, carrying the
+    // column to its positive scroll boundary.
     // Without it a `scrollLeft` of 0 could equally mean the wheel never arrived.
     // Injected with an id rather than through `addStyleTag`, so the teardown
     // below can take the sheet out again by selector: it must not outlive this

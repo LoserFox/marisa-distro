@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { agentEvents, Inbox, type Agent } from '@deepseek-ai/dsh-agent'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import { boot, loadOverlayPatches } from '@deepseek-ai/dsh-app-boot'
@@ -31,7 +31,7 @@ try {
     steer: () => {},
     inject: () => { throw new Error('dsh-badge snapshot must receive the catalog at the step boundary') },
     cancel: () => {},
-    runMaintenance: task => task(new AbortController().signal),
+    runMaintenance: job => job(new AbortController().signal),
     whenIdle: () => Promise.resolve(),
   }
   const decision = await agentEvents(ctx, agent).waterfall(

@@ -12,15 +12,15 @@ const ENTRY = `export function apply() {}\n`
 
 function makeRoot({ entry = ENTRY } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'gen-'))
-  mkdirSync(join(root, '.dsh-plugin', 'client'), { recursive: true })
-  writeFileSync(join(root, '.dsh-plugin', 'client', 'index.mjs'), entry)
+  mkdirSync(join(root, 'lib', 'client'), { recursive: true })
+  writeFileSync(join(root, 'lib', 'client', 'index.mjs'), entry)
   return root
 }
 
 test('拒绝：client.js 与生成器输出不一致（含修复提示）', { skip: !esbuildAvailable() }, async () => {
   const root = makeRoot()
   await generate({ check: false, root })
-  writeFileSync(join(root, '.dsh-plugin', 'client.js'), readFileSync(join(root, '.dsh-plugin', 'client.js'), 'utf8') + '\n// tampered')
+  writeFileSync(join(root, 'lib', 'client.js'), readFileSync(join(root, 'lib', 'client.js'), 'utf8') + '\n// tampered')
   const result = await generate({ check: true, root })
   assert.equal(result.ok, false)
   assert.match(result.errors.join('\n'), /不一致/)

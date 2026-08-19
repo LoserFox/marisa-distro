@@ -9,7 +9,7 @@ import type { SlotEntryDef, SlotSpec, StoredEntry, Translate } from './index.ts'
  * active-locale or registry change; the renderer re-derives each entry's `t`
  * from (namespace, revision), so a locale switch hands out NEW function
  * references and memoized components re-render naturally. Implemented by the
- * locale plugin, installed through the runtime SlotsService (installLocale).
+ * locale plugin, installed through the runtime SlotRegistry (installLocale).
  * Install before the first render that needs the seat: outlets bind their
  * revision subscription at mount, and a face appearing later has no channel
  * to notify already-mounted outlets (the locale plugin is immediately-tier
@@ -27,18 +27,18 @@ export interface LocaleFace extends HostObservable<{ revision: number }> {
   bind(ns: string): Translate
 }
 
-/** Minimal observable surface for host-provided standard-kit data sources. */
+/** Minimal observable API for host-provided standard-kit data sources. */
 export interface HostObservable<T> {
   getSnapshot(): T
   subscribe(fn: () => void): () => void
 }
 
 /**
- * Type-erased store instance face at the render seam (the typed twin is
+ * Type-erased store instance face at the render boundary (the typed twin is
  * {@link StoreInstance}): a bare snapshot source plus the draft-stripped
- * action callbacks. No React hook crosses this seam — the render machinery
+ * action callbacks. No React hook crosses this boundary — the render machinery
  * binds `useStore` from the source at its own side (cached per instance);
- * typing lands at the component seam via {@link PropsStore}.
+ * typing lands at the component boundary via {@link PropsStore}.
  */
 export interface StoreInstanceLike {
   getSnapshot(): unknown
@@ -54,7 +54,7 @@ export interface StoreInstanceLike {
 /**
  * Per-session standard props resolved per session id (identity-stable per
  * session scope; a recreated scope yields a new info). Plugins contribute
- * members through the runtime `sessions.provide` seam; the render side binds
+ * members through the runtime `sessions.provide` contract; the render side binds
  * every `hooks` source into a `use<Name>` selector hook (hooks never appear
  * on the host contract) and spreads `props` verbatim. The runtime itself
  * contributes the first entry (`'session'` → `useSession`).
@@ -70,8 +70,9 @@ export interface SessionMaybeProvideInfo {
   /** Static plain-member roster; values are undefined with the session. */
   props: Record<string, unknown>
   /**
-   * Key-addressed projection value sources (the useProjection framework seat,
-   * session-projection RFC). Unlike `hooks`, the key space is open — values
+   * Key-addressed projection value sources (the useProjection framework seat;
+   * session-projection subsystem page: docs/subsystems/session-projection.md).
+   * Unlike `hooks`, the key space is open — values
    * arrive from host-computed push frames — so the render side binds per
    * resolved key instead of per static roster member. Faces are always
    * defined per key (absence is an `undefined` snapshot); the whole member is
@@ -87,14 +88,16 @@ export interface SessionProvideInfo extends SessionMaybeProvideInfo {
   hooks: Record<string, HostObservable<unknown>>
 }
 
-/** renderSlot dispatch options at the machinery level: keyed dispatch key, list filtering, empty fallback. */
+/** renderSlot dispatch options at the machinery level. */
 export interface RenderOpts {
   entryKey?: string
   only?: string
   fallback?: ReactNode
+  /** Opaque occurrence context consumed only by function-valued injected Hooks. */
+  hookContext?: unknown
 }
 
-/** Host surface the runtime SlotsService presents to the installed renderer. */
+/** Host API the runtime SlotRegistry presents to the installed renderer. */
 export interface SlotRendererHost {
   /**
    * Subscribe to a key's registration changes (microtask-batched).
@@ -115,6 +118,27 @@ export interface SlotRendererHost {
    * @returns entries in registration (list: order) sequence.
    */
   entriesOf(key: string): readonly StoredEntry[]
+  /**
+   * Shadowing winners per cell for a key — the render read for single/keyed/
+   * list dispatch: the first live (non-abdicated) entry of each cell in
+   * priority order; chain keys pass through unchanged (election consumes
+   * every entry). Fresh array per call — a render-body read, not a uSES
+   * getSnapshot source.
+   * @param key - slot key.
+   * @returns the winning entry per occupied cell.
+   */
+  entriesOfSlot(key: string): readonly StoredEntry[]
+  /**
+   * Report an entry boundary crash. With `info.abdicate` (shadowing kinds)
+   * the entry retires from its cell, one-shot, so the next survivor renders;
+   * chain crashes report without abdicating. The registration stays on the
+   * ledger either way.
+   * @param key - slot key the entry rendered under.
+   * @param entry - the crashed entry.
+   * @param error - the crash cause.
+   * @param info - `abdicate`: whether the crash retires the entry from its cell.
+   */
+  reportEntryError(key: string, entry: StoredEntry, error: unknown, info: { abdicate: boolean }): void
   /**
    * Declared runtime spec from the declarations ledger.
    * @param key - slot key.
@@ -161,11 +185,11 @@ export interface SlotRendererHost {
   locale?: LocaleFace | undefined
 }
 
-/** The install seam: runtime owns install()/renderSlot(); web-react implements rendering. */
+/** The installation contract: runtime owns install()/renderSlot(); web-react implements rendering. */
 export interface SlotRenderer {
   /**
-   * Render the root slot tree over the host surface (the only ctx-level entry).
-   * @param host - the installing service's host surface.
+   * Render the root slot tree over the host API (the only ctx-level entry).
+   * @param host - the installing service's host API.
    * @param ownerProps - owner props from the shell's renderSlot('root', ...) call.
    * @returns the rendered tree.
    */

@@ -12,7 +12,7 @@ English | [中文](2026-08-03-omit-invariants-from-shipped-config.zh.md)
 
 The shipped `dsh` configuration trees under `apps/cli/config/` mount neither `@deepseek-ai/dsh-invariants` nor any package-owned `./invariant` companion. The CLI package therefore carries no direct dependency on the invariant service.
 
-Invariant support remains available for focused tests, example bundles, generated SDK compositions, and custom deployments that opt into diagnostics explicitly. Session validation, snapshotting, freezing, and provenance remain always on and do not depend on the optional service, as defined by the [source-owned immutability decision](../architecture/2026-06-11-dev-invariants-over-deep-readonly.md).
+Invariant support remains available for focused tests, example bundles, generated SDK compositions, and custom deployments that opt into diagnostics explicitly. Session validation, snapshotting, freezing, and cited source-event validation remain always on and do not depend on the optional service, as defined by the [source-owned immutability decision](../architecture/2026-06-11-dev-invariants-over-deep-readonly.md).
 
 The built CLI config-dump test checks both shipped surfaces and rejects either the service entry or any `@deepseek-ai/dsh-*/invariant` entry.
 

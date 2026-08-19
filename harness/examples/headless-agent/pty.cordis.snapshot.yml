@@ -1,6 +1,6 @@
 # Keyless opt-in PTY composition for the headless stream-json snapshot.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -13,11 +13,11 @@
             config:
               mode: danger-full-access
           - id: pty
-            name: '@deepseek-ai/dsh-pty'
+            name: '@deepseek-ai/dsh-terminal'
           - id: pty-snapshot-backend
             name: '../acp-agent/pty-snapshot-backend.mjs'
-          - id: tool-pty
-            name: '@deepseek-ai/dsh-tool-pty'
+          - id: tool-terminal
+            name: '@deepseek-ai/dsh-tool-terminal'
             config:
               maxResultBytes: 64
           - id: llm-replay

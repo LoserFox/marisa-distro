@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod'
-import type { AskUserQuestionItem } from '@deepseek-ai/dsh-user-interaction/types'
+import type { AskUserQuestionItem } from '@deepseek-ai/dsh-user-questions/types'
 import type { HostFrame, MuxFrame } from './events.ts'
 import type { Wire } from './rpc.schema.ts'
 import { rpcErrorSchema, rpcIdSchema } from './rpc.schema.ts'
@@ -13,9 +13,10 @@ import { approvalRequestIdSchema } from './approvals.schema.ts'
 import {
   contentBlockSchema, messageIdSchema, sessionEventSchema, sessionIdSchema, toolEventViewSchema,
 } from './sessions.schema.ts'
+import { taskViewSchema } from './jobs.schema.ts'
 import { workspaceIdSchema, workspaceViewSchema } from './workspace.schema.ts'
 
-/** Question shape validated strictly against core dsh-user-interaction. */
+/** Question fields validated strictly against core dsh-user-questions. */
 export const askUserQuestionItemSchema = z.object({
   id: z.string(),
   question: z.string(),
@@ -44,7 +45,7 @@ export const muxFrameSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('session/subscribed'), sessionId: sessionIdSchema, lastSeq: z.number().int() }),
   z.object({ type: z.literal('approval/requested'), sessionId: sessionIdSchema, approvalId: approvalRequestIdSchema, toolName: z.string(), callId: z.string().optional(), reason: z.string().optional() }),
   z.object({ type: z.literal('approval/resolved'), sessionId: sessionIdSchema, approvalId: approvalRequestIdSchema, outcome: z.union([z.literal('allowed-once'), z.literal('rejected'), z.literal('cancelled'), z.literal('unavailable')]) }),
-  // Non-empty by wire contract: the user-interaction service rejects empty
+  // Non-empty by wire contract: the user-questions service rejects empty
   // batches at ask() (EMPTY_QUESTIONS), so an empty frame is host breakage
   // and must fail loud here, not reach the composer.
   z.object({ type: z.literal('question/requested'), sessionId: sessionIdSchema, questions: z.array(askUserQuestionItemSchema).min(1) }),
@@ -58,6 +59,7 @@ export const muxFrameSchema = z.discriminatedUnion('type', [
       message: messageSchema,
     })),
   }),
+  z.object({ type: z.literal('session/jobs'), sessionId: sessionIdSchema, jobs: z.array(taskViewSchema) }),
   // value stays wide: it already passed its unit's own schema on the host,
   // and deep-validating here would import every domain's schema into the carrier.
   z.object({ type: z.literal('session/projection'), sessionId: sessionIdSchema, key: z.string().min(1), value: z.unknown(), seq: z.number().int().nonnegative() }),
@@ -73,16 +75,19 @@ export const hostFrameSchema = z.discriminatedUnion('type', [
     parentSessionId: sessionIdSchema.optional(),
     origin: z.literal('subagent').optional(),
     cwd: z.string().optional(),
+    agentPreset: z.string().optional(),
   }),
   z.object({ type: z.literal('host/session-removed'), sessionId: sessionIdSchema }),
   z.object({ type: z.literal('host/session-status'), sessionId: sessionIdSchema, running: z.boolean() }),
   z.object({ type: z.literal('host/agent-error'), sessionId: sessionIdSchema, message: z.string() }),
   z.object({ type: z.literal('host/workspace-changed'), workspace: workspaceViewSchema }),
   z.object({ type: z.literal('host/workspace-removed'), workspaceId: workspaceIdSchema }),
+  z.object({ type: z.literal('host/workspace-order-changed'), workspaceIds: z.array(workspaceIdSchema) }),
   z.object({ type: z.literal('host/archived-sessions-changed'), archivedSessionIds: z.array(sessionIdSchema) }),
-  z.object({ type: z.literal('host/commands-changed') }),
-  z.object({ type: z.literal('host/settings-changed'), ns: z.string() }),
-  z.object({ type: z.literal('host/credentials-changed'), ref: z.string() }),
-  z.object({ type: z.literal('host/models-changed') }),
+  // args stays wide, the same posture as session/projection's value: the frame
+  // arrives from JSON.parse, so every element is already a JSON value, and the
+  // structural contract belongs to the owner package's cordis `Events`
+  // declaration — the host validated JSON-safety before forwarding.
+  z.object({ type: z.literal('host/remote-event'), event: z.string().min(1), args: z.array(z.unknown()) }),
   z.object({ type: z.literal('stream/error'), error: rpcErrorSchema }),
 ]) as unknown as z.ZodType<HostFrame>

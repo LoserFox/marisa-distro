@@ -5,9 +5,9 @@
 1. `pnpm install --frozen-lockfile`
 2. 构建 harness 和需要编译的 vendored 插件。
 3. 生成并安装 Marisa profile，执行 profile/MyGO 自检。
-4. `desktop/bundle/make-bundle.ps1` 创建生产后端 `backend.zip`。
+4. `desktop/bundle/make-bundle.ps1` 创建生产后端 `backend.tar.zst`。
 5. `go build -tags embeddedbundle` 生成单文件 EXE。首次启动时解压后端到用户本地目录。
-6. `desktop/scripts/build-msi.ps1` 生成薄桌面壳 MSI；MSI 在安装阶段展开 `backend.zip`，首次启动不再自解压。
+6. `desktop/scripts/build-msi.ps1` 生成薄桌面壳 MSI；MSI 在安装阶段展开 `backend.tar.zst`，首次启动不再自解压。
 7. 生成 `SHA256SUMS.txt`，由手动 Release workflow 上传。
 
 MSI 不包含 standalone EXE；两种格式各自包含运行所需后端。

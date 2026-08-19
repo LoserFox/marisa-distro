@@ -20,8 +20,9 @@ export const inject = ['slots']
  * @param ctx - Client root context.
  */
 export function apply(ctx: ClientContext): void {
-  ctx.slots.inject('conversation.chat.tool', () => ctx.slots.register({
-    name: 'conversation.chat.tool',
+  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
+    name: 'conversation.chat.node',
+    key: 'tool-call',
     locale: NS,
     children: {
       'tool.call.toolview': { kind: 'keyed', scope: 'session' },

@@ -46,7 +46,7 @@ describe('web e2e: queue row actions', () => {
   let overrideDir: string | undefined
 
   afterEach(async () => {
-    const failures: Array<unknown> = []
+    const failures: unknown[] = []
     await browser?.close().catch((error: unknown) => failures.push(error))
     browser = undefined
     const closing = scaffold

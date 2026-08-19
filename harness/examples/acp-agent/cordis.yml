@@ -70,8 +70,8 @@
 
 # Summarize an older range after measured pressure or a canonical provider overflow.
 # Ratios scale against the routed model's context window.
-- id: compact-basic
-  name: '@deepseek-ai/dsh-compact-basic'
+- id: compaction-basic
+  name: '@deepseek-ai/dsh-compaction-basic'
   config:
     thresholdRatio: 0.8
     retainRatio: 0.08
@@ -90,13 +90,13 @@
 - id: subagent
   name: '@deepseek-ai/dsh-subagent'
 
-- id: subagent-spawn
-  name: '@deepseek-ai/dsh-subagent-spawn'
+- id: subagent-spawn-in-process
+  name: '@deepseek-ai/dsh-subagent-spawn-in-process'
   config:
     providerName: spawn
 
-- id: subagent-fork
-  name: '@deepseek-ai/dsh-subagent-fork'
+- id: subagent-fork-in-process
+  name: '@deepseek-ai/dsh-subagent-fork-in-process'
   config:
     providerName: fork
 
@@ -121,19 +121,24 @@
     backgroundMode: continuable
     maxDepth: 1
 
+# Fork stays one-shot because a continuable child's `report` tool and prompt
+# section precede the inherited history a fork reuses; `run_in_background` is off
+# as an explicit foreground-only choice even though agent-spine-demo mounts the
+# generic Job runtime. See .agents/notes/implemented/architecture/2026-08-10-fork-children-stay-one-shot.md.
 - id: tool-subagent-fork
   name: '@deepseek-ai/dsh-tool-subagent'
   config:
     provider: fork
     toolName: subagent_fork
-    backgroundMode: continuable
+    backgroundMode: one-shot
+    enableRunInBackground: false
     maxDepth: 1
 
 
 # The worker-thread workflow engine fans a model-written JavaScript script's
 # `agent()` calls out through the spawn backend; the adjacent tool exposes it to the model.
-- id: workflow-workerthread
-  name: '@deepseek-ai/dsh-workflow-workerthread'
+- id: workflow-worker-thread
+  name: '@deepseek-ai/dsh-workflow-worker-thread'
   config:
     provider: spawn
 
@@ -149,22 +154,22 @@
     allowParallelInProgress: true
 
 # Identical repeat calls trigger advisory context, never a block, at the default
-# thresholds [3, 5, 8]. Only the repeat-tool-guard snapshot scenario reaches them.
-- id: repeat-tool-guard
-  name: '@deepseek-ai/dsh-repeat-tool-guard'
+# thresholds [3, 5, 8]. Only the repeat-tool-reminder snapshot scenario reaches them.
+- id: repeat-tool-reminder
+  name: '@deepseek-ai/dsh-repeat-tool-reminder'
 
 # The filesystem stack rides the SAME sandbox policy as bash: dsh-fs-sandbox
 # replaces dsh-fs-local behind ctx.fs and fences write/edit by the effective
 # mode (read-only denies, workspace-write contains to the workspace + temp
 # roots, danger-full-access passes through), so read/write/edit are available
-# under every mode. fs-policy (read-before-edit) composes orthogonally on top.
+# under every mode. fs-observation-policy (read-before-edit) composes orthogonally on top.
 - id: fs-sandbox
   name: '@deepseek-ai/dsh-fs-sandbox'
   config:
     cwd: !!js process.cwd()
 
-- id: fs-policy
-  name: '@deepseek-ai/dsh-fs-policy'
+- id: fs-observation-policy
+  name: '@deepseek-ai/dsh-fs-observation-policy'
 
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
@@ -173,9 +178,9 @@
 # `session/new.cwd`; one `hooks.json` therefore applies to every session and a
 # project-local file is not discovered. Missing config registers nothing. Hook
 # commands still run in the session cwd. Warnings use `ctx.logger`, never stdout;
-# see packages/hooks/hooks-claude/README.md for the deferred per-session design.
-- id: hooks-claude
-  name: '@deepseek-ai/dsh-hooks-claude'
+# see packages/hooks/hooks-claude-code/README.md for the deferred per-session design.
+- id: hooks-claude-code
+  name: '@deepseek-ai/dsh-hooks-claude-code'
   config:
     configPath: ./hooks.json
 

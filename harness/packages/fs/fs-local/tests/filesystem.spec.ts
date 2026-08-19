@@ -1,16 +1,18 @@
 /**
- * Tests for the local backend through the `ctx.fs` provider seam: stat, whole-
+ * Tests for the local backend through the `ctx.fs` Service Definition: stat, whole-
  * file/streamed text reads, atomic guarded writes (createIfAbsent /
  * replaceIfVersion), version-guarded literal edits, concurrency races, symlink
  * identity, and HMR/disposal. Read WINDOWING is policy and lives in
- * `dsh-fs-policy`, so it is not exercised here.
+ * `dsh-fs-observation-policy`, so it is not exercised here.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { constants as bufferConstants } from 'node:buffer'
 import { mkdir, mkdtemp, readFile, realpath, rm, stat, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from 'cordis'
+import { pathToFileURL } from 'node:url'
+import { Context } from '@deepseek-ai/cordis'
 import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
 import { FsVersion } from '@deepseek-ai/dsh-fs'
 import type { FsTarget } from '@deepseek-ai/dsh-fs'
@@ -42,19 +44,45 @@ async function versionOf(target: FsTarget): Promise<FsVersion> {
   return info.version
 }
 
+async function remountWithDiffLimit(diffBasisMaxBytes: number): Promise<void> {
+  await fiber.dispose()
+  fiber = await ctx.plugin(LocalFileSystem, { cwd: dir, diffBasisMaxBytes })
+  fs = ctx.fs as LocalFileSystem
+}
+
 describe('registration', () => {
   it('registers LocalFileSystem as ctx.fs with a default cwd', async () => {
     const bare = new Context()
     const bareFiber = await bare.plugin(LocalFileSystem)
     expect((bare.fs as LocalFileSystem).config.cwd).toBe(process.cwd())
+    expect((bare.fs as LocalFileSystem).config.diffBasisMaxBytes).toBe(10 * 1024 * 1024)
     await bareFiber.dispose()
+  })
+
+  it('rejects non-positive, fractional, unsafe, or unallocatable diff-basis limits', async () => {
+    const maxDiffBasisBytes = Math.min(
+      bufferConstants.MAX_LENGTH,
+      bufferConstants.MAX_STRING_LENGTH,
+    )
+    const valid = new Context()
+    const validFiber = await valid.plugin(LocalFileSystem, { diffBasisMaxBytes: maxDiffBasisBytes })
+    expect((valid.fs as LocalFileSystem).config.diffBasisMaxBytes).toBe(maxDiffBasisBytes)
+    await validFiber.dispose()
+
+    for (const diffBasisMaxBytes of [0, -1, 1.5, maxDiffBasisBytes + 1, Number.MAX_SAFE_INTEGER + 1]) {
+      const invalid = new Context()
+      await expect(invalid.plugin(LocalFileSystem, { diffBasisMaxBytes })).rejects.toThrow(
+        `fs-local: diffBasisMaxBytes must be a positive safe integer no greater than ${maxDiffBasisBytes}`,
+      )
+      await invalid.fiber.dispose()
+    }
   })
 })
 
 describe('resolve', () => {
   it('resolves a relative path against opts.cwd, not config.cwd', async () => {
     // config.cwd is `dir`; a call supplying a DIFFERENT cwd bases the relative
-    // path there (the per-session-workspace seam — mirrors tool-bash workdir).
+    // path there (the per-session workspace mapping — mirrors tool-bash workdir).
     const other = await mkdtemp(join(tmpdir(), 'dsh-fs-other-'))
     try {
       await writeFile(join(other, 'x.txt'), 'in other')
@@ -84,6 +112,20 @@ describe('resolve', () => {
     controller.abort()
 
     await expect(pending).rejects.toMatchObject({ code: 'FS_ABORTED' })
+  })
+
+  it('projects process paths, file URLs, and canonical containment', async () => {
+    await mkdir(join(dir, 'nested'))
+    await writeFile(join(dir, 'nested', 'file.txt'), 'text')
+    const root = await fs.resolve('.')
+    const child = await fs.resolve('nested/file.txt')
+    const outside = await fs.resolve('..')
+
+    expect(fs.processPath(child)).toBe(await realpath(join(dir, 'nested', 'file.txt')))
+    expect(fs.fileUrl(child)).toBe(pathToFileURL(await realpath(join(dir, 'nested', 'file.txt'))).href)
+    expect(fs.contains(root, root)).toBe(true)
+    expect(fs.contains(root, child)).toBe(true)
+    expect(fs.contains(root, outside)).toBe(false)
   })
 })
 
@@ -223,6 +265,43 @@ describe('readText / streamText', () => {
   })
 })
 
+describe('readBytes', () => {
+  it('reads raw bytes without decoding or NUL rejection', async () => {
+    const raw = Buffer.from([0x68, 0x00, 0x69, 0xff])
+    await writeFile(join(dir, 'a.bin'), raw)
+    expect(Buffer.from(await fs.readBytes(await fs.resolve('a.bin'), undefined, raw.length))).toEqual(raw)
+  })
+
+  it('accepts a file exactly at maxBytes and rejects one past it', async () => {
+    await writeFile(join(dir, 'a.bin'), Buffer.alloc(4, 1))
+    const target = await fs.resolve('a.bin')
+    expect((await fs.readBytes(target, undefined, 4)).length).toBe(4)
+    await expect(fs.readBytes(target, undefined, 3)).rejects.toMatchObject({ code: 'FS_TOO_LARGE' })
+  })
+
+  it('bounds content I/O when a file grows after stat preflight', async () => {
+    await writeFile(join(dir, 'a.bin'), Buffer.alloc(4, 1))
+    const target = await fs.resolve('a.bin')
+    fs.internals.inspectReadBytesAfterStat = () => writeFile(join(dir, 'a.bin'), Buffer.alloc(1024 * 1024, 2))
+
+    await expect(fs.readBytes(target, undefined, 4)).rejects.toMatchObject({ code: 'FS_TOO_LARGE' })
+  })
+
+  it('rejects a missing file and a directory', async () => {
+    await expect(fs.readBytes(await fs.resolve('nope'), undefined, 1024)).rejects.toMatchObject({ code: 'FS_NOT_FOUND' })
+    await expect(fs.readBytes(await fs.resolve('.'), undefined, 1024)).rejects.toMatchObject({ code: 'FS_NOT_REGULAR_FILE' })
+  })
+
+  it('reads under a live signal and rejects an already-aborted one with FS_ABORTED', async () => {
+    await writeFile(join(dir, 'a.bin'), 'data')
+    const live = new AbortController()
+    expect((await fs.readBytes(await fs.resolve('a.bin'), live.signal, 1024)).length).toBe(4)
+    const controller = new AbortController()
+    controller.abort()
+    await expect(fs.readBytes(await fs.resolve('a.bin'), controller.signal, 1024)).rejects.toMatchObject({ code: 'FS_ABORTED' })
+  })
+})
+
 describe('listDir', () => {
   it('lists files and directories in stable name order with resolved child targets', async () => {
     await mkdir(join(dir, 'skills', 'dir-skill'), { recursive: true })
@@ -281,6 +360,51 @@ describe('writeText', () => {
     await expect(fs.writeText(target, 'new', { kind: 'createIfAbsent' }))
       .rejects.toMatchObject({ code: 'FS_NOT_OBSERVED' })
     expect(await readFile(join(dir, 'a.txt'), 'utf8')).toBe('old')
+  })
+
+  it('createIfAbsent preserves a competitor created after the initial probe', async () => {
+    const path = join(dir, 'a.txt')
+    const target = await fs.resolve('a.txt')
+    fs.internals.inspectTemp = async () => { await writeFile(path, 'competitor') }
+
+    await expect(fs.writeText(target, 'ours', { kind: 'createIfAbsent' }))
+      .rejects.toMatchObject({ code: 'FS_NOT_OBSERVED' })
+    expect(await readFile(path, 'utf8')).toBe('competitor')
+  })
+
+  it('reports a createIfAbsent race with the unresolved display path', async () => {
+    const realDirectory = join(dir, 'real-workspace')
+    const linkedDirectory = join(dir, 'linked-workspace')
+    await mkdir(realDirectory)
+    await symlink(realDirectory, linkedDirectory, process.platform === 'win32' ? 'junction' : 'dir')
+    const target = await fs.resolve('linked-workspace/a.txt')
+    fs.internals.inspectTemp = async () => { await writeFile(join(realDirectory, 'a.txt'), 'competitor') }
+
+    await expect(fs.writeText(target, 'ours', { kind: 'createIfAbsent' })).rejects.toMatchObject({
+      code: 'FS_NOT_OBSERVED',
+      message: `cannot overwrite existing "${join(linkedDirectory, 'a.txt')}" without reading it first`,
+    })
+    expect(await readFile(join(realDirectory, 'a.txt'), 'utf8')).toBe('competitor')
+  })
+
+  it('createIfAbsent rejects a competing directory as not a regular file', async () => {
+    const path = join(dir, 'a.txt')
+    const target = await fs.resolve('a.txt')
+    fs.internals.inspectTemp = async () => { await mkdir(path) }
+
+    await expect(fs.writeText(target, 'ours', { kind: 'createIfAbsent' }))
+      .rejects.toMatchObject({ code: 'FS_NOT_REGULAR_FILE' })
+    expect((await stat(path)).isDirectory()).toBe(true)
+  })
+
+  it('createIfAbsent rejects and preserves a dangling symbolic link', async () => {
+    const path = join(dir, 'dangling')
+    await symlink(join(dir, 'missing-target'), path)
+    const target = await fs.resolve('dangling')
+
+    await expect(fs.writeText(target, 'ours', { kind: 'createIfAbsent' }))
+      .rejects.toMatchObject({ code: 'FS_NOT_REGULAR_FILE' })
+    await expect(readFile(path, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' })
   })
 
   it('replaceIfVersion replaces when the version matches', async () => {
@@ -382,6 +506,54 @@ describe('writeText', () => {
     expect(outcome.operation).toBe('update')
     expect(outcome.before).toBeNull()
     expect(outcome.after).toBe('now valid')
+  })
+
+  it('an overwrite of a prior file AT the whole-file bound reports before:null (undiffable), still succeeds', async () => {
+    // The configured bound keeps the fixture small; 8 bytes at a bound of 8
+    // pins the exclusive edge without coupling this provider to a read tool.
+    await remountWithDiffLimit(8)
+    await writeFile(join(dir, 'big.txt'), '12345678')
+    const target = await fs.resolve('big.txt')
+    const outcome = await fs.writeText(target, 'tiny')
+    expect(outcome.operation).toBe('update')
+    expect(outcome.before).toBeNull()
+    expect(outcome.after).toBe('tiny')
+  })
+
+  it('an overwrite whose NEW content is at the whole-file bound reports before:null (no huge contextual diff)', async () => {
+    // The bound gates BOTH sides of the diff pair: a small prior file rewritten
+    // with at/above-bound content yields no contextual-hunk basis either, since
+    // a small-to-huge rewrite's hunk is as large as the new content — the
+    // consumer must fall back to the whole-file diff card, exactly like a
+    // create of the same size.
+    await remountWithDiffLimit(8)
+    await writeFile(join(dir, 'grow.txt'), 'tiny')
+    const target = await fs.resolve('grow.txt')
+    const outcome = await fs.writeText(target, '12345678')
+    expect(outcome.operation).toBe('update')
+    expect(outcome.before).toBeNull()
+    expect(outcome.after).toBe('12345678')
+  })
+
+  it('gates the NEW content by UTF-8 byte length, not character count', async () => {
+    // Three CJK characters are 9 UTF-8 bytes: below an 8-byte bound by
+    // characters but at/above it by bytes, so the basis must be declined.
+    await remountWithDiffLimit(8)
+    await writeFile(join(dir, 'cjk.txt'), 'tiny')
+    const target = await fs.resolve('cjk.txt')
+    const outcome = await fs.writeText(target, '你好吗')
+    expect(outcome.operation).toBe('update')
+    expect(outcome.before).toBeNull()
+    expect(outcome.after).toBe('你好吗')
+  })
+
+  it('an overwrite with BOTH sides below the whole-file bound keeps its contextual before basis', async () => {
+    await remountWithDiffLimit(8)
+    await writeFile(join(dir, 'small.txt'), '1234567')
+    const target = await fs.resolve('small.txt')
+    const outcome = await fs.writeText(target, 'new')
+    expect(outcome.before).toBe('1234567')
+    expect(outcome.after).toBe('new')
   })
 
   it('releases per-target mutation locks after success and failure', async () => {

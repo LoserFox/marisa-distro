@@ -10,6 +10,10 @@ import { WorkspaceTypertGenerator } from '../src/workspace.ts'
 const fixtureRoot = resolve(import.meta.dirname, 'fixtures/remote-model')
 const temporaryRoots: string[] = []
 
+function normalizedPath(path: string): string {
+  return path.replaceAll('\\', '/')
+}
+
 interface RuntimeSchema {
   safeParse(value: unknown): { readonly success: boolean }
 }
@@ -19,6 +23,7 @@ interface RuntimeDescriptor {
   readonly cancellation?: { readonly parameter: 'signal' }
   readonly parameters: readonly {
     readonly wire: string
+    readonly acceptsUndefined?: true
     readonly codec: { readonly schema: RuntimeSchema }
   }[]
   readonly result: { readonly schema: RuntimeSchema }
@@ -109,15 +114,15 @@ describe('Remote model generation', { timeout: 60_000 }, () => {
 
     expect(artifact?.js).toContain('invocations: [')
     expect(artifact?.remote?.dts).toContain(
-      "'goals/create': (agentId: AgentId, request: CreateGoalRequest, signal?: AbortSignal) => Promise<CreateGoalResult>",
+      "'goals/create': (agentId: AgentId, request: CreateGoalRequest, signal?: AbortSignal) => Promise<RemoteResult<CreateGoalResult>>",
     )
-    expect(artifact?.remote?.dts).toContain('interface TypeRTRemoteNamespace$676f616c73 {\n    create:')
-    expect(artifact?.remote?.dts).toContain("'goals': TypeRTRemoteNamespace$676f616c73")
+    expect(artifact?.remote?.dts).toContain('interface TypertRemoteNamespace$676f616c73 {\n    create:')
+    expect(artifact?.remote?.dts).toContain("'goals': TypertRemoteNamespace$676f616c73")
     expect(artifact?.remote?.dts).toContain(
-      "'agent:goals/create': (request: CreateGoalRequest, signal?: AbortSignal) => Promise<CreateGoalResult>",
+      "'agent:goals/create': (request: CreateGoalRequest, signal?: AbortSignal) => Promise<RemoteResult<CreateGoalResult>>",
     )
     expect(artifact?.remote?.dts).toContain(
-      "'agent:goals/rename': (request: RenameGoalRequest) => Promise<RenameGoalResult>",
+      "'agent:goals/rename': (request: RenameGoalRequest) => Promise<RemoteResult<RenameGoalResult>>",
     )
 
     const remoteJs = artifact?.remote?.js
@@ -140,6 +145,57 @@ describe('Remote model generation', { timeout: 60_000 }, () => {
     expect(declarationMap.names).toContain('create')
 
     assertRemoteConsumerTypechecks(artifact?.remote?.dts, artifact?.remote?.dtsMap)
+  })
+
+  it('projects authored optionality and absence onto consumers and codecs', async () => {
+    const root = copyFixture()
+    editFile(root, 'packages/remote/src/index.ts', source => source.replace(
+      '\n}\n\nexport type {',
+      `
+
+  @Remote
+  maybe(value: string | undefined): string | undefined {
+    return value
+  }
+
+  @Remote
+  labelled(id: string, label?: string): string {
+    return label ?? id
+  }
+
+  @Remote
+  clear(): void {}
+}
+
+export type {`,
+    ))
+
+    const [artifact] = new WorkspaceTypertGenerator(root).generate()
+    expect(artifact?.remote?.dts).toContain(
+      "'goals/maybe': (value: string | undefined) => Promise<RemoteResult<string | undefined>>",
+    )
+    expect(artifact?.remote?.dts).toContain("'goals/clear': () => Promise<RemoteResult<void>>")
+    // An explicit `T | undefined` stays a required argument; only authored
+    // optionality lets a consumer omit the field.
+    expect(artifact?.remote?.dts).not.toContain('value?: string')
+    expect(artifact?.remote?.dts).toContain("'goals/labelled': (id: string, label?: string) => Promise<RemoteResult<string>>")
+
+    const remoteJs = artifact?.remote?.js
+    if (remoteJs === undefined) throw new Error('undefined Remote fixture emitted no Host-for-Client JavaScript')
+    const executable = remoteJs.replace("from 'zod'", `from ${JSON.stringify(import.meta.resolve('zod'))}`)
+    const generated = await import(`data:text/javascript,${encodeURIComponent(executable)}`) as RuntimeRemoteModule
+    const maybe = generated.TYPERT_REMOTE.descriptors.find(descriptor => descriptor.id.endsWith('/maybe'))
+    const clear = generated.TYPERT_REMOTE.descriptors.find(descriptor => descriptor.id.endsWith('/clear'))
+    expect(maybe?.parameters[0]?.acceptsUndefined).toBe(true)
+    expect(maybe?.parameters[0]?.codec.schema.safeParse(undefined).success).toBe(true)
+    expect(maybe?.result.schema.safeParse(undefined).success).toBe(true)
+    expect(clear?.result.schema.safeParse(undefined).success).toBe(true)
+    expect(clear?.result.schema.safeParse(null).success).toBe(false)
+    const labelled = generated.TYPERT_REMOTE.descriptors.find(descriptor => descriptor.id.endsWith('/labelled'))
+    expect(labelled?.parameters[0]?.acceptsUndefined).toBeUndefined()
+    expect(labelled?.parameters[1]?.acceptsUndefined).toBe(true)
+    expect(labelled?.parameters[1]?.codec.schema.safeParse(undefined).success).toBe(true)
+    expect(labelled?.parameters[1]?.codec.schema.safeParse(7).success).toBe(false)
   })
 
   it('evaluates declaration-merged mapped and conditional boundaries for codecs without widening consumer types', async () => {
@@ -200,12 +256,12 @@ export type GenericResult = {
 
     const [artifact] = new WorkspaceTypertGenerator(root).generate()
     expect(artifact?.remote?.dts).toContain(
-      "'goals/dispatch': (request: GenericRequest) => Promise<GenericResult>",
+      "'goals/dispatch': (request: GenericRequest) => Promise<RemoteResult<GenericResult>>",
     )
     const remoteJs = artifact?.remote?.js
     if (remoteJs === undefined) throw new Error('generic Remote fixture emitted no Host-for-Client JavaScript')
     const executable = remoteJs.replace("from 'zod'", `from ${JSON.stringify(import.meta.resolve('zod'))}`)
-    const generated: RuntimeRemoteModule = await import(`data:text/javascript,${encodeURIComponent(executable)}`) as RuntimeRemoteModule
+    const generated = await import(`data:text/javascript,${encodeURIComponent(executable)}`) as RuntimeRemoteModule
     const dispatch = generated.TYPERT_REMOTE.descriptors.find(descriptor => descriptor.id.endsWith('/dispatch'))
     const schema = dispatch?.parameters[0]?.codec.schema
     expect(schema?.safeParse({ kind: 'ship', payload: { count: 2, meta: { nested: [true, null] } } }).success).toBe(true)
@@ -250,7 +306,7 @@ export interface BoxPayload {
 
     const [artifact] = new WorkspaceTypertGenerator(root).generate()
     expect(artifact?.remote?.dts).toMatch(/import type \{ [^}]*Box[^}]*BoxPayload[^}]* \} from '@fixture\/remote\/types'/)
-    expect(artifact?.remote?.dts).toContain('box: (request: Box<BoxPayload>) => Promise<Box<BoxPayload>>')
+    expect(artifact?.remote?.dts).toContain('box: (request: Box<BoxPayload>) => Promise<RemoteResult<Box<BoxPayload>>>')
     assertRemoteConsumerTypechecks(artifact?.remote?.dts, artifact?.remote?.dtsMap, root)
   })
 
@@ -270,7 +326,7 @@ export interface BoxPayload {
     ))
 
     const [artifact] = new WorkspaceTypertGenerator(root).generate()
-    expect(artifact?.remote?.dts).toContain("'create-goal': (request: CreateGoalRequest) => Promise<CreateGoalResult>")
+    expect(artifact?.remote?.dts).toContain("'create-goal': (request: CreateGoalRequest) => Promise<RemoteResult<CreateGoalResult>>")
     assertRemoteConsumerTypechecks(artifact?.remote?.dts, artifact?.remote?.dtsMap, root)
   })
 
@@ -305,11 +361,11 @@ export interface RemainingSchema {
     const root = copyFixture()
     const manifestPath = join(root, 'packages/remote/package.json')
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
-      dshClient?: object
+      dsh?: { client?: object }
       exports: Record<string, unknown>
       files: string[]
     }
-    manifest.dshClient = {}
+    manifest.dsh = { client: {} }
     manifest.exports['./client'] = './src/client.ts'
     manifest.exports['./client/typert'] = {
       types: './lib/typert.client.d.ts',
@@ -328,21 +384,23 @@ export interface ClientMarker {
 }
 `)
 
-    expect(new WorkspaceTypertGenerator(root).generate().map(artifact => artifact.face))
-      .toEqual(['host', 'client'])
+    const artifacts = new WorkspaceTypertGenerator(root).generate()
+    expect(artifacts.map(artifact => artifact.face)).toEqual(['host', 'client'])
+    expect(artifacts.find(artifact => artifact.face === 'host')?.dts).not.toContain('ClientMarker')
+    expect(artifacts.find(artifact => artifact.face === 'client')?.dts).toContain('ClientMarker')
   })
 
   it.each([
     {
       name: 'missing binding',
       edit: (source: string) => source.replace(
-        "export class GoalService extends GatewayService {\n  constructor() {\n    super(undefined, 'goals')\n  }",
+        "export class GoalService extends TypertRemoteService {\n  constructor() {\n    super(undefined, 'goals')\n  }",
         'export class GoalService {',
       ),
-      message: 'Remote methods require GatewayService',
+      message: 'Remote methods require TypertRemoteService',
     },
     {
-      name: 'dynamic GatewayService key',
+      name: 'dynamic TypertRemoteService key',
       edit: (source: string) => source.replace(
         "  constructor() {\n    super(undefined, 'goals')\n  }",
         '  constructor(serviceKey: string) {\n    super(undefined, serviceKey)\n  }',
@@ -350,41 +408,41 @@ export interface ClientMarker {
       message: 'Gateway service key must be a string literal',
     },
     {
-      name: 'GatewayService without a constructor',
+      name: 'TypertRemoteService without a constructor',
       edit: (source: string) => source.replace(
         "  constructor() {\n    super(undefined, 'goals')\n  }\n\n",
         '',
       ),
-      message: 'GatewayService subclasses must declare a constructor',
+      message: 'TypertRemoteService subclasses must declare a constructor',
     },
     {
-      name: 'GatewayService without a direct super call',
+      name: 'TypertRemoteService without a direct super call',
       edit: (source: string) => source.replace(
         "    super(undefined, 'goals')",
         '    void undefined',
       ),
-      message: 'GatewayService constructor must call super',
+      message: 'TypertRemoteService constructor must call super',
     },
     {
-      name: 'GatewayService super call without a service key',
+      name: 'TypertRemoteService super call without a service key',
       edit: (source: string) => source.replace(
         "    super(undefined, 'goals')",
         '    super(undefined)',
       ),
-      message: 'GatewayService super\\(\\) requires context, service key',
+      message: 'TypertRemoteService super\\(\\) requires context, service key',
     },
     {
-      name: 'duplicate GatewayService field binding',
+      name: 'duplicate TypertRemoteService field binding',
       edit: (source: string) => source
         .replace(
-          'import { GatewayService, Remote, RemoteScope }',
-          'import { GatewayService, Remote, RemoteScope, bindTypeRTGateway }',
+          'import { TypertRemoteService, Remote, RemoteScope }',
+          'import { TypertRemoteService, Remote, RemoteScope, bindTypertRemote }',
         )
         .replace(
-          'export class GoalService extends GatewayService {',
-          "export class GoalService extends GatewayService {\n  readonly typertGateway = bindTypeRTGateway(this, 'goals')",
+          'export class GoalService extends TypertRemoteService {',
+          "export class GoalService extends TypertRemoteService {\n  readonly typertRemote = bindTypertRemote(this, 'goals')",
         ),
-      message: 'GatewayService subclasses must not declare a second typertGateway binding',
+      message: 'TypertRemoteService subclasses must not declare a second typertRemote binding',
     },
     {
       name: 'private method',
@@ -430,9 +488,9 @@ export interface ClientMarker {
       message: 'Remote parameters cannot have default values',
     },
     {
-      name: 'optional parameter',
-      edit: (source: string) => source.replace('request: CreateGoalRequest', 'request?: CreateGoalRequest'),
-      message: 'Remote parameters cannot be optional',
+      name: 'optional lookup parameter',
+      edit: (source: string) => source.replace('agent: Agent,', 'agent?: Agent,'),
+      message: 'lookup parameter for agent cannot be optional',
     },
     {
       name: 'wrong cancellation type',
@@ -462,11 +520,11 @@ export interface ClientMarker {
   it('rejects a workspace class parameter without a lookup declaration', () => {
     const root = copyFixture()
     editFile(root, 'packages/domain/src/index.ts', source => source.replace(
-      '  interface TypeRTLookupMap {\n    agent: TypeRTLookup<Agent, AgentId>\n  }\n\n',
+      '  interface TypertLookupMap {\n    agent: TypertLookup<Agent, AgentId>\n  }\n\n',
       '',
     ))
 
-    expect(() => analyzeRemote(root, false)).toThrow(/non-JSON class parameter Agent requires a TypeRTLookupMap entry/)
+    expect(() => analyzeRemote(root, false)).toThrow(/non-JSON class parameter Agent requires a TypertLookupMap entry/)
   })
 
   it.each([
@@ -499,7 +557,7 @@ export interface ClientMarker {
     const root = copyFixture()
     editFile(root, 'packages/remote/src/index.ts', source => source.replace("@RemoteScope('agent')", "@RemoteScope('missing')"))
 
-    expect(() => analyzeRemote(root, false)).toThrow(/Remote Scope missing has no TypeRTContextMap entry/)
+    expect(() => analyzeRemote(root, false)).toThrow(/Remote Scope missing has no TypertContextMap entry/)
   })
 
   it('rejects a direct scoped projection whose Context and lookup wire symbols differ', () => {
@@ -507,7 +565,7 @@ export interface ClientMarker {
     editFile(root, 'packages/domain/src/types.ts', source => `${source}\n/** Deliberately distinct Context identity for the failure fixture. */\nexport type OtherAgentId = string\n`)
     editFile(root, 'packages/domain/src/index.ts', source => source
       .replace("import type { AgentId } from './types.ts'", "import type { AgentId, OtherAgentId } from './types.ts'")
-      .replace('agent: TypeRTContext<AgentId>', 'agent: TypeRTContext<OtherAgentId>'))
+      .replace('agent: TypertContext<AgentId>', 'agent: TypertContext<OtherAgentId>'))
 
     expect(() => analyzeRemote(root, false)).toThrow(/Remote scope agent wire type .* does not match lookup wire type/)
   })
@@ -515,7 +573,7 @@ export interface ClientMarker {
   it('rejects duplicate endpoints across Remote services', () => {
     const root = copyFixture()
     editFile(root, 'packages/remote/src/index.ts', source => `${source}
-export class DuplicateGoalService extends GatewayService {
+export class DuplicateGoalService extends TypertRemoteService {
   constructor() {
     super(undefined, 'duplicate', { namespace: 'goals' })
   }
@@ -578,23 +636,24 @@ function assertRemoteConsumerTypechecks(
   const consumerSource = `
 import remote from '@fixture/remote/remote'
 import type {
-  TypeRTRemoteContribution,
-  TypeRTRemoteScopeMap,
-  TypeRTRemoteMap,
-  TypeRTRemoteNamespaceMap,
-} from '@deepseek-ai/dsh-type-meta'
+  RemoteResult,
+  TypertRemoteContribution,
+  TypertRemoteScopeMap,
+  TypertRemoteMap,
+  TypertRemoteNamespaceMap,
+} from '@deepseek-ai/dsh-typert-protocol'
 import type { CreateGoalResult, RenameGoalResult } from '@fixture/remote/types'
 
-const contribution: TypeRTRemoteContribution = remote
-declare const create: TypeRTRemoteMap['goals/create']
-declare const createScoped: TypeRTRemoteScopeMap['agent:goals/create']
-declare const rename: TypeRTRemoteScopeMap['agent:goals/rename']
-const created: Promise<CreateGoalResult> = create('agent-1', { title: 'ship' })
-const cancellable: Promise<CreateGoalResult> = create('agent-1', { title: 'ship' }, new AbortController().signal)
-const createdScoped: Promise<CreateGoalResult> = createScoped({ title: 'ship' })
-const renamed: Promise<RenameGoalResult> = rename({ ref: 'goal-1', title: 'land' })
-declare const ctx: { remote: TypeRTRemoteNamespaceMap }
-const navigated: Promise<CreateGoalResult> = ctx.remote.goals.create('agent-1', { title: 'navigate' })
+const contribution: TypertRemoteContribution = remote
+declare const create: TypertRemoteMap['goals/create']
+declare const createScoped: TypertRemoteScopeMap['agent:goals/create']
+declare const rename: TypertRemoteScopeMap['agent:goals/rename']
+const created: Promise<RemoteResult<CreateGoalResult>> = create('agent-1', { title: 'ship' })
+const cancellable: Promise<RemoteResult<CreateGoalResult>> = create('agent-1', { title: 'ship' }, new AbortController().signal)
+const createdScoped: Promise<RemoteResult<CreateGoalResult>> = createScoped({ title: 'ship' })
+const renamed: Promise<RemoteResult<RenameGoalResult>> = rename({ ref: 'goal-1', title: 'land' })
+declare const ctx: { remote: TypertRemoteNamespaceMap }
+const navigated: Promise<RemoteResult<CreateGoalResult>> = ctx.remote.goals.create('agent-1', { title: 'navigate' })
 void contribution
 void created
 void cancellable
@@ -610,7 +669,7 @@ void navigated
       composite: false,
       skipLibCheck: false,
       paths: {
-        '@deepseek-ai/dsh-type-meta': ['./type-meta.d.ts'],
+        '@deepseek-ai/dsh-typert-protocol': ['./typert-protocol.d.ts'],
         '@fixture/domain/types': ['./packages/domain/src/types.ts'],
         '@fixture/remote/types': ['./packages/remote/src/types.ts'],
         '@fixture/remote/remote': ['./packages/remote/lib/typert.remote-client.d.ts'],
@@ -646,7 +705,8 @@ void navigated
   const navigation = 'ctx.remote.goals.create'
   const position = consumerSource.indexOf(navigation) + navigation.lastIndexOf('create') + 1
   const definitions = languageService.getDefinitionAtPosition(consumerPath, position)
-  const generatedDefinition = definitions?.find(candidate => candidate.fileName === declarationPath)
+  const generatedDefinition = definitions?.find(candidate =>
+    normalizedPath(candidate.fileName) === normalizedPath(declarationPath))
   if (generatedDefinition === undefined) {
     throw new Error(`generated Remote definition not found: ${JSON.stringify(definitions, null, 2)}`)
   }
@@ -661,7 +721,7 @@ void navigated
     pos: generatedDefinition.textSpan.start,
   })
   languageService.dispose()
-  if (definition === undefined || !definition.fileName.endsWith('/packages/remote/src/index.ts')) {
+  if (definition === undefined || !normalizedPath(definition.fileName).endsWith('/packages/remote/src/index.ts')) {
     throw new Error(`generated Remote definition did not map to its Host source: ${JSON.stringify(definition)}`)
   }
   const hostSource = readFileSync(join(consumerRoot, 'packages/remote/src/index.ts'), 'utf8')
@@ -671,8 +731,8 @@ void navigated
 function assertRemoteConsumerWithoutImportHasNoNamespace(consumerRoot: string): void {
   const consumerPath = join(consumerRoot, 'consumer-without-remote.ts')
   writeFileSync(consumerPath, `
-import type { TypeRTRemoteNamespaceMap } from '@deepseek-ai/dsh-type-meta'
-declare const ctx: { remote: TypeRTRemoteNamespaceMap }
+import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol'
+declare const ctx: { remote: TypertRemoteNamespaceMap }
 ctx.remote.goals.create('agent-1', { title: 'must not compile' })
 `)
   const configPath = join(consumerRoot, 'tsconfig.consumer-without-remote.json')
@@ -682,7 +742,7 @@ ctx.remote.goals.create('agent-1', { title: 'must not compile' })
       composite: false,
       skipLibCheck: false,
       paths: {
-        '@deepseek-ai/dsh-type-meta': ['./type-meta.d.ts'],
+        '@deepseek-ai/dsh-typert-protocol': ['./typert-protocol.d.ts'],
       },
     },
     files: ['./consumer-without-remote.ts'],

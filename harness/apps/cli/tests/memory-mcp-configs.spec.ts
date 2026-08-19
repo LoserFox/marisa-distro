@@ -1,6 +1,6 @@
 /**
  * The third-party memory examples stay config-only. This suite parses every
- * checked-in overlay, verifies its pin/transport/secret boundary, then replaces
+ * checked-in overlay, verifies its package pin, transport, and secret handling, then replaces
  * only the upstream endpoint with the package-owned keyless MCP fixture and
  * proves the real Cordis Loader discovers a tool through the generic bridge.
  */
@@ -8,11 +8,11 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { Context } from 'cordis'
-import type { PatchOptions } from '@cordisjs/plugin-include'
+import type { Context } from '@deepseek-ai/cordis'
+import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
 import { boot, loadOverlayPatches } from '@deepseek-ai/dsh-app-boot'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import * as McpClient from '@deepseek-ai/dsh-mcp-client/src/index.ts'
 
 interface ExampleContract {
@@ -81,7 +81,7 @@ async function waitForTool(ctx: Context, name: string): Promise<void> {
 }
 
 describe('third-party memory MCP example overlays', () => {
-  it.each(examples)('parses $file with the documented generic boundary', (contract) => {
+  it.each(examples)('parses $file with the documented generic plugin fields', (contract) => {
     const file = resolve(exampleDir, contract.file)
     const source = readFileSync(file, 'utf8')
     const row = insertedRow(loadOverlayPatches('memory-mcp-config-test', file))
@@ -123,7 +123,7 @@ describe('third-party memory MCP example overlays', () => {
       (ctx) => {
         liveContexts.add(ctx)
         ctx.loader.builtins['memory-test-system-prompt'] = SystemPrompt
-        ctx.loader.builtins['memory-test-tools'] = ToolRegistry
+        ctx.loader.builtins['memory-test-tools'] = ToolRuntime
         ctx.loader.builtins['memory-test-mcp-client'] = McpClient
       },
     )

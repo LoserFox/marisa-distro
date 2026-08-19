@@ -6,15 +6,15 @@ English | [中文](2026-08-05-feedback-gated-session-telemetry.zh.md)
 
 ## Problem
 
-Session telemetry originally has one mounted behavior: every accepted record enters the reporting backend immediately. Deployments need two stricter policies without replacing the plugin: hold a session's telemetry unless its user records feedback, or disable reporting while still explaining what happens to feedback. The policy must preserve the existing full-export default and the telemetry seam's redaction-before-backend boundary.
+Session telemetry originally has one mounted behavior: every accepted record enters the reporting backend immediately. Deployments need two stricter policies without replacing the plugin: hold a session's telemetry unless its user records feedback, or disable reporting while still explaining what happens to feedback. The policy must preserve the telemetry seam's redaction-before-backend boundary.
 
 ## Decision
 
-`@deepseek-ai/dsh-session-telemetry-otel` exposes the string-valued `TelemetryMode` enum to TypeScript callers and accepts the same three uppercase `mode` values in serialized configuration:
+`@deepseek-ai/dsh-session-telemetry-otel` exposes the string-valued `SessionTelemetryMode` enum to TypeScript callers and accepts the same three uppercase `mode` values in serialized configuration:
 
-- `FULL` is the default and preserves immediate delivery to the configured OTel pipeline.
+- `FULL` explicitly selects immediate delivery to the configured OTel pipeline.
 - `FEEDBACK_ONLY` reads the canonical session log when `feedback/record` is appended and hands over the unreleased prefix through that exact event. Records appended after that boundary remain local until another feedback event.
-- `DISABLED` constructs no exporter, processor, or logger provider. A `feedback/record` listener prints that nothing is shared and the feedback remains local.
+- `DISABLED` is the [default](2026-08-10-telemetry-default-off.md), constructs no exporter, processor, or logger provider, and prints that nothing is shared and the feedback remains local when it observes `feedback/record`.
 
 The generic telemetry coordinator owns `live` and `on-demand` capture. Live capture projects, clones, redacts, and hands each event to the backend on the session firehose. On-demand capture registers no continuous capture listeners; `captureSession(session, throughSeq)` reads the canonical log from the handoff cursor through an inclusive boundary, then projects, clones, redacts, and hands over that prefix. The cursor advances only for handed-over records. The [buffer-free replay decision](../simplification/2026-08-06-buffer-free-feedback-telemetry.md) owns why the on-demand path uses the canonical log instead of copied records.
 
@@ -32,4 +32,4 @@ Mode resolution is a closed, fail-before-setup check: an unknown direct-construc
 
 ## Consequences
 
-`FULL` remains source- and wire-compatible with the original default. `FEEDBACK_ONLY` adds no telemetry-owned per-event buffer before feedback; direct service calls and non-canonical feedback events upload nothing, and a crash before feedback uploads nothing from that prefix. Replay applies the redaction policy mounted when feedback is recorded and excludes operational records that do not exist in the canonical log. Feedback-only streams therefore carry neither `agent-error` nor `shutdown` records, and shutdown absence is not a crash signal. Each later feedback captures the suffix accumulated since the previous boundary. `DISABLED` can omit `exporter.url`, does no reporting work, and keeps feedback only in the canonical session log.
+`FULL` retains the original source and wire behavior as an explicit opt-in. `FEEDBACK_ONLY` adds no telemetry-owned per-event buffer before feedback; direct service calls and non-canonical feedback events upload nothing, and a crash before feedback uploads nothing from that prefix. Replay applies the redaction policy mounted when feedback is recorded and excludes operational records that do not exist in the canonical log. Feedback-only streams therefore carry neither `agent-error` nor `shutdown` records, and shutdown absence is not a crash signal. Each later feedback captures the suffix accumulated since the previous boundary. `DISABLED` can omit `exporter.url`, does no reporting work, and keeps feedback only in the canonical session log.

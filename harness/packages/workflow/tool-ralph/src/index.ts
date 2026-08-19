@@ -5,8 +5,8 @@
  * @module @deepseek-ai/dsh-tool-ralph
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { JsonValue } from '@deepseek-ai/dsh-session'
 import type { SubagentProvider } from '@deepseek-ai/dsh-subagent'
@@ -17,7 +17,7 @@ import type { WorkflowResult, WorkflowRun } from '@deepseek-ai/dsh-workflow'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 
 export const name = 'tool-ralph'
-export const inject = ['tools', 'workflows', 'subagents', 'systemPrompt']
+export const inject = ['tools', 'workflowEngine', 'subagents', 'systemPrompt']
 
 /** Deployment policy for the fixed Ralph workflow. */
 export interface Config {
@@ -198,7 +198,9 @@ function resolveConfig(config: Config): ResolvedConfig {
   if (!Number.isSafeInteger(maxHandoffChars) || maxHandoffChars < 1) {
     throw new TypeError('maxHandoffChars must be a positive safe integer')
   }
-  if (!Number.isSafeInteger(maxResultChars) || maxResultChars < 1) throw new TypeError('maxResultChars must be a positive safe integer')
+  if (!Number.isSafeInteger(maxResultChars) || maxResultChars < 1) {
+    throw new TypeError('maxResultChars must be a positive safe integer')
+  }
   return { subagentProvider, maxRounds, maxHandoffChars, maxResultChars }
 }
 
@@ -241,7 +243,7 @@ function normalizedList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(normalizedText)
 }
 
-/** Defensively decode the fixed script's report across an implementation seam. */
+/** Defensively decode the fixed script's report across a provider boundary. */
 function readReport(value: unknown, expectedStatus: RalphRoundStatus, maxChars: number): RalphRoundReport {
   if (!isRecord(value)
     || Object.keys(value).sort().join(',') !== 'blocker,evidence,nextSteps,status,summary'
@@ -357,7 +359,7 @@ function boundResult(text: string, maxChars: number): string {
 
 /** Render the fixed terminal envelope without presenting self-report as certification. */
 function renderResult(result: RalphRunResult, maxChars: number): string {
-  const rounds = `${result.roundsStarted} round${result.roundsStarted !== 1 ? 's' : ''}`
+  const rounds = `${result.roundsStarted} round${result.roundsStarted === 1 ? '' : 's'}`
   let text: string
   switch (result.status) {
     case 'complete':
@@ -442,7 +444,7 @@ export function apply(ctx: Context, config: Config): void {
       const maxRounds = resolveMaxRounds(args.maxRounds, resolved.maxRounds)
       void requireFreshProvider(ctx, resolved.subagentProvider)
 
-      const run: WorkflowRun = ctx.workflows.start({
+      const run: WorkflowRun = ctx.workflowEngine.start({
         script: RALPH_SCRIPT,
         meta: RALPH_META,
         args: { objective, maxRounds, maxHandoffChars: resolved.maxHandoffChars },

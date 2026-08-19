@@ -2,7 +2,7 @@
 // The input order is authoritative; lineage only makes each child adjacent to its parent.
 // Orphaned lineage degrades to root level; cycles fail soft and emit as roots.
 
-import type { SessionId, SessionSummary } from '@deepseek-ai/dsh-client-connection/client'
+import type { SessionId, SessionSummary } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SessionProjectionMap } from '@deepseek-ai/dsh-session-projection/types'
 import type { PendingInteractionStatus } from './pending.ts'
 
@@ -25,6 +25,8 @@ export interface SessionListEntry {
   /** Coarse durable origin for navigation filtering; not a continuation capability. */
   origin?: 'subagent'
   cwd?: string
+  /** Agent preset the session's agent was composed from (summary passthrough). */
+  agentPreset?: string
   /** Current host-computed projection values for list consumers. */
   projectionValues?: Readonly<Partial<SessionProjectionMap>>
   /** User interaction currently blocking this session, derived from live mux frames. */
@@ -50,7 +52,7 @@ export function flattenLineage(
   completed?: ReadonlySet<SessionId>,
 ): SessionListEntry[] {
   const byId = new Map<SessionId, TitledSessionSummary>()
-  for (const s of summaries) { byId.set(s.sessionId, s) }
+  for (const s of summaries) byId.set(s.sessionId, s)
 
   const children = new Map<SessionId, TitledSessionSummary[]>()
   const roots: TitledSessionSummary[] = []

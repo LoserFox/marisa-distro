@@ -122,7 +122,7 @@ describe('snapshotJsonValue', () => {
     const customPrototypeObject = Object.assign(Object.create(customPrototype) as Record<string, unknown>, { value: 1 })
     const forgedIntrinsicObject = objectWithForgedIntrinsicPrototype()
     const revokedIntrinsicObject = objectWithForgedIntrinsicPrototype(true)
-    const forgedPrototype: Array<unknown> = []
+    const forgedPrototype: unknown[] = []
     Object.setPrototypeOf(forgedPrototype, null)
     const forgedArray = [1]
     Object.setPrototypeOf(forgedArray, forgedPrototype)

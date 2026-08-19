@@ -1,14 +1,14 @@
-// Trusted non-loopback Web access must not wedge on the loopback-only
-// settings API while the mandatory product notice owns the viewport.
+// Trusted non-loopback Web access cannot call the loopback-only settings API;
+// the notice therefore advances for this browser process and returns on reload.
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   acknowledgeReloadConnectionLoss, launchWebScaffold, watchConsole, webSnapshotMode,
+  WELCOME_NOTICE_COPY,
   type WebScaffold,
 } from './scaffold.ts'
 import { ZH_BROWSER_LOCALE } from './support.ts'
-import { WELCOME_NOTICE_COPY } from '@deepseek-ai/dsh-client-ui-settings-general'
 
 const MODE = webSnapshotMode()
 
@@ -19,9 +19,15 @@ describe.skipIf(MODE === 'record')('web e2e: remote welcome notice', () => {
   let tripwire: ReturnType<typeof watchConsole>
 
   beforeAll(async () => {
-    scaffold = await launchWebScaffold({ remoteAuthority: 'remote.localhost', welcomeNoticePending: true })
+    scaffold = await launchWebScaffold({
+      remoteAuthority: 'remote.localhost',
+      welcomeNoticePending: true,
+    })
     browser = await chromium.launch()
-    page = await browser.newPage({ viewport: { width: 1440, height: 960 }, locale: ZH_BROWSER_LOCALE })
+    page = await browser.newPage({
+      viewport: { width: 1440, height: 960 },
+      locale: ZH_BROWSER_LOCALE,
+    })
     tripwire = watchConsole(page)
     await page.goto(scaffold.baseUrl, { waitUntil: 'load' })
     await page.waitForSelector('#root', { timeout: 30_000 })
@@ -33,7 +39,7 @@ describe.skipIf(MODE === 'record')('web e2e: remote welcome notice', () => {
   })
 
   it('advances process-locally and presents the notice again after reload', async () => {
-    const welcome = page.getByRole('region', { name: WELCOME_NOTICE_COPY.zh.title })
+    const welcome = page.getByRole('dialog', { name: WELCOME_NOTICE_COPY.zh.title })
     await welcome.waitFor({ timeout: 15_000 })
     expect(await page.locator('#root').evaluate(root => (root as HTMLElement).inert)).toBe(true)
 
@@ -43,6 +49,7 @@ describe.skipIf(MODE === 'record')('web e2e: remote welcome notice', () => {
       () => page.locator('#root').evaluate(root => (root as HTMLElement).inert),
       { timeout: 15_000 },
     ).toBe(false)
+
     const reloadWarnings = tripwire.warnings.length
     await page.reload({ waitUntil: 'load' })
     acknowledgeReloadConnectionLoss(tripwire, reloadWarnings)

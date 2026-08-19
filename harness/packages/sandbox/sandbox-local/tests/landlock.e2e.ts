@@ -4,7 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
 import { launcherPath } from '@deepseek-ai/node-addon-landlock-run'
 import { LocalSandboxProvider } from '@deepseek-ai/dsh-sandbox-local'
@@ -19,7 +19,7 @@ import { LocalSandboxProvider } from '@deepseek-ai/dsh-sandbox-local'
 const probe = spawnSync(launcherPath(), ['--probe'], { timeout: 5_000, encoding: 'utf8' })
 const landlockUsable = probe.status === 0
 /** The running kernel's enforcement level, from the launcher's probe report — every wrap below must carry exactly this. */
-const enforcement = !/partially enforced/.test(probe.stdout ?? '') ? 'full' : 'partial'
+const enforcement = /partially enforced/.test(probe.stdout ?? '') ? 'partial' : 'full'
 
 let ctx: Context | undefined
 const tempDirs: string[] = []
@@ -40,7 +40,7 @@ async function provider(): Promise<LocalSandboxProvider> {
   ctx = new Context()
   await ctx.plugin(LocalSandboxProvider, {})
   const sandbox = ctx.sandbox as LocalSandboxProvider
-  sandbox.internals = { probeBwrap: () => { return false } }
+  sandbox.internals = { probeBwrap: () => false }
   return sandbox
 }
 

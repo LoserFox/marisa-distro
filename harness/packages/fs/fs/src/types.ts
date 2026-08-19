@@ -1,5 +1,5 @@
 /**
- * Vocabulary for the filesystem provider seam (`ctx.fs`): the opaque target/version
+ * Vocabulary for the filesystem Service Definition (`ctx.fs`): the opaque target/version
  * identities, the metadata `stat` returns, the write-intent and outcome shapes, the
  * literal-edit request/outcome, and the typed error taxonomy.
  * @module @deepseek-ai/dsh-fs/types
@@ -43,6 +43,15 @@ export type FsVersion = Branded<'FsVersion'>
 export function FsVersion(v: string): FsVersion {
   return v as FsVersion
 }
+
+/**
+ * One authoritative observation of a target. A present observation carries the
+ * version used by guarded replacement; an absent observation authorizes only a
+ * guarded create, never an edit.
+ */
+export type FsObservation =
+  | { readonly kind: 'present'; readonly version: FsVersion }
+  | { readonly kind: 'absent' }
 
 /**
  * A path resolved by a backend into a stable identity. `resolve()` produces
@@ -123,10 +132,11 @@ export interface FsWriteOutcome {
   version: FsVersion
   /**
    * The file's content BEFORE the write, or `null` when the file did not exist
-   * (a create) or was undiffable (binary/non-UTF-8). LF-normalized storage text
-   * (the diff basis), never a diff — a consumer computes the result-time
-   * contextual diff from `before`/`after` when `before` is present, else falls
-   * back to a whole-file diff.
+   * (a create) or the backend declined a contextual basis (for example, a
+   * binary/non-UTF-8 prior file or either overwrite side reaching its exclusive limit).
+   * LF-normalized storage text (the diff basis), never a diff — a consumer
+   * computes the result-time contextual diff from `before`/`after` when
+   * `before` is present, else falls back to a whole-file diff.
    */
   before: string | null
   /** The file's content AFTER the write, LF-normalized to share `before`'s diff basis. */
@@ -159,7 +169,7 @@ export interface FsEditOutcome {
 
 /**
  * Stable, machine-routable codes for filesystem failures. Carried on
- * {@link FsError}; the tool registry surfaces `{ name, code }` on `isError`
+ * {@link FsError}; the tool registry exposes `{ name, code }` on `isError`
  * results so retry/permission/UI layers can branch without parsing messages.
  */
 export type FsErrorCode =
@@ -167,6 +177,7 @@ export type FsErrorCode =
   | 'FS_NOT_DIRECTORY'
   | 'FS_NOT_TEXT'
   | 'FS_NOT_REGULAR_FILE'
+  | 'FS_TOO_LARGE'
   | 'FS_PERMISSION_DENIED'
   | 'FS_SANDBOX_DENIED'
   | 'FS_IO_ERROR'

@@ -24,13 +24,13 @@
       "path": "../../core/session"
     },
     {
-      "path": "../../session-title/session-title"
+      "path": "../../session/session-title"
     },
     {
-      "path": "../../session-persistence/session-persistence"
+      "path": "../../session/session-persistence"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

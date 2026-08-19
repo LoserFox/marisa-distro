@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/defensive-patterns.md
-defensive-patterns.md: 6dc1708f0b9bbcb00ad4774006d6d60059accf6a
-defensive-patterns.zh.md: 4c376f1a5f2f6d5fbe85124ce473bc7af5ad4c8d
+defensive-patterns.md: 9db582354628a13abd43c5bd052dbbfd6e52f79f
+defensive-patterns.zh.md: 7bebbe3c1964f2b826afc523eaa4af7be180e36e

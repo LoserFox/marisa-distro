@@ -28,7 +28,7 @@ Fenced code and GFM tables own horizontal overflow so long content cannot widen 
 
 **Promote the existing mdast and micromark development dependencies and maintain a custom React walker.** This avoids a new parser family but makes the product own every node mapping, GFM extension, and security-sensitive rendering branch. The dedicated React renderer keeps that traversal upstream while preserving an AST-to-React path. *Later reversed on new evidence — incremental streaming parsing needs AST-level input the string-only wrapper cannot provide; the [incremental AST renderer note](../architecture/2026-08-06-web-markdown-incremental-ast-renderer.md) owns that decision.*
 
-**Replace `MessageText` with Markdown rendering.** This formats user prompts and steering as a side effect. Those authored surfaces remain literal until the product chooses that behavior explicitly.
+**Replace `MessageText` with Markdown rendering.** This formats user prompts and steering as a side effect. Those authored inputs remain literal until the product chooses that behavior explicitly.
 
 **Parse Markdown into session snapshots.** This would make React nodes or presentation ASTs durable runtime state and reintroduce a final-versus-streaming mode boundary. Parsing stays at the presentation leaf instead.
 

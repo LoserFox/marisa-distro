@@ -1,0 +1,5 @@
+# The root .gitignore excludes every `lib/` (built artifacts of the workspace
+# packages). The mygo-rdb extension ships its implementation directly as JS
+# under lib/ (no build step), so re-include it here.
+!lib/
+!lib/**

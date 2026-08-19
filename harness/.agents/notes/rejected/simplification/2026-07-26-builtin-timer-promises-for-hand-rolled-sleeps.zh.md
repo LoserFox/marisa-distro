@@ -6,19 +6,19 @@ Status: rejected — 实现（PR #679）证伪了行为等价前提：vitest 的
 
 ## 问题
 
-三个包手写了用 promise 包装的定时器，而 `node:timers/promises` 内置模块早已提供同等能力；其他包（`dsh-llm-mock-server` 的 `pause()`、`dsh-lsp-local`、`dsh-acp-snapshot`）已经在使用该内置模块，因此这些手写副本同时也是一处一致性缺口：
+三个包手写了用 promise 包装的定时器，而 `node:timers/promises` 内置模块早已提供同等能力；其他包（`dsh-llm-mock-server` 的 `pause()`、`dsh-lsp-stdio`、`dsh-acp-snapshot`）已经在使用该内置模块，因此这些手写副本同时也是一处一致性缺口：
 
 - `packages/llm/llm-retry/src/index.ts` 的 `cancellableDelay()`（约 14 行）：`new Promise` + `setTimeout` + 手动添加和移除中止监听器，定时器触发时 resolve 为 `true`、被中止时 resolve 为 `false`，仅在退避等待处消费一次。
-- `packages/workflow/workflow-workerthread/src/host.ts` 的 `sleep()`（约 7 行）：promise 包装、已 unref 的 `setTimeout`，用作 dispose（资源释放）宽限的时间上界。
-- `packages/pty/pty-local/src/session.ts` 的 `delay()`（约 4 行）：朴素的 promise 包装 `setTimeout`，用于轮询与拆卸等待。
+- `packages/workflow/workflow-worker-thread/src/host.ts` 的 `sleep()`（约 7 行）：promise 包装、已 unref 的 `setTimeout`，用作 dispose（资源释放）宽限的时间上界。
+- `packages/terminal/terminal-bash/src/session.ts` 的 `delay()`（约 4 行）：朴素的 promise 包装 `setTimeout`，用于轮询与拆卸等待。
 
 ## 提案
 
 用 `import { setTimeout } from 'node:timers/promises'` 替换这三处实现：
 
 - llm-retry：`try { await setTimeout(delayMs, undefined, { signal }); /* retry */ } catch { /* abort → fail */ }`。传入 signal 后，该 promise 只会因中止错误而拒绝，已提前中止的 signal 则立即拒绝；行为完全一致，包括中止时清除定时器。按仓库的空 catch 规则，这个空 `catch` 注明其吞下的是 abort 拒绝。
-- workflow-workerthread：`setTimeout(ms, undefined, { ref: false })`，语义完全等价，包括不会让事件循环保持存活。
-- pty-local：`import { setTimeout as delay } from 'node:timers/promises'`，签名完全相同，调用点无需改动。
+- workflow-worker-thread：`setTimeout(ms, undefined, { ref: false })`，语义完全等价，包括不会让事件循环保持存活。
+- terminal-bash：`import { setTimeout as delay } from 'node:timers/promises'`，签名完全相同，调用点无需改动。
 
 没有专属测试固定这些辅助函数本身；各包的行为测试套件继续通过。
 
@@ -30,7 +30,7 @@ Status: rejected — 实现（PR #679）证伪了行为等价前提：vitest 的
 ## 验收标准
 
 - 这三个包都不再各自定义 promise 包装的 `setTimeout` 辅助函数，而是都从 `node:timers/promises` 导入。
-- `llm-retry`、`workflow-workerthread` 与 `pty-local` 的测试套件原样通过（行为等价）。
+- `llm-retry`、`workflow-worker-thread` 与 `terminal-bash` 的测试套件原样通过（行为等价）。
 
 ## 风险
 

@@ -27,7 +27,7 @@
       "path": "../../core/session"
     },
     {
-      "path": "../../session-title/session-title"
+      "path": "../../session/session-title"
     },
     {
       "path": "../../core/system-prompt"
@@ -39,7 +39,7 @@
       "path": "../../skill/skill"
     },
     {
-      "path": "../../skill/skill-local"
+      "path": "../../skill/skill-filesystem"
     },
     {
       "path": "../../skill/tool-skill"
@@ -54,10 +54,10 @@
       "path": "../../goal/tool-goal"
     },
     {
-      "path": "../../goal/goal-session"
+      "path": "../../goal/goal-round-driver"
     },
     {
-      "path": "../../context/workspace-context"
+      "path": "../../context/agent-instructions"
     },
     {
       "path": "../../core/agent-loop"
@@ -66,25 +66,25 @@
       "path": "../../llm/llm-retry"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
-      "path": "../../util/paths"
+      "path": "../../util/home-paths"
     },
     {
-      "path": "../../bash/bash-env"
+      "path": "../../shell/shell-env"
     },
     {
-      "path": "../../bash/tool-bash"
+      "path": "../../shell/tool-bash"
     },
     {
-      "path": "../../tasks/tasks"
+      "path": "../../jobs/jobs"
     },
     {
-      "path": "../../tasks/tasks-local"
+      "path": "../../jobs/jobs-local"
     },
     {
-      "path": "../../tasks/tool-tasks"
+      "path": "../../jobs/tool-jobs"
     }
   ]
 }

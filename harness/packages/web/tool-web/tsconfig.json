@@ -25,13 +25,13 @@
       "path": "../../core/system-prompt"
     },
     {
-      "path": "../../timeout/timeout-policy"
+      "path": "../../guard/timeout-policy"
     },
     {
       "path": "../web"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -84,7 +84,7 @@ export class WorkspaceTypertGenerator {
         `typert(${artifact.face}): ${artifact.package} must export ${subpath} as ${JSON.stringify(expected)}`,
       )
     }
-    const files = !Array.isArray(manifest.files) ? [] : manifest.files
+    const files = Array.isArray(manifest.files) ? manifest.files : []
     for (const file of [`lib/typert.${artifact.face}.js`, `lib/typert.${artifact.face}.d.ts`]) {
       if (!files.includes(file)) {
         throw new TypertAnalysisError(`typert(${artifact.face}): ${artifact.package} package files must include ${file}`)
@@ -98,10 +98,12 @@ export class WorkspaceTypertGenerator {
     const remoteActual = manifest.exports !== null && typeof manifest.exports === 'object'
       ? (manifest.exports as Record<string, unknown>)['./remote']
       : undefined
+    // The declaration map is emitted beside these two but never published: it
+    // serves editor navigation in the workspace, where the package link
+    // resolves its source.
     const remoteFiles = [
       'lib/typert.remote-client.js',
       'lib/typert.remote-client.d.ts',
-      'lib/typert.remote-client.d.ts.map',
     ]
     if (artifact.remote === undefined) {
       if (remoteActual !== undefined || remoteFiles.some(file => files.includes(file))) {

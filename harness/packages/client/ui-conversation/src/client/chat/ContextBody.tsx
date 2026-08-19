@@ -66,7 +66,7 @@ function boundedText(text: string, t: Translate): string {
 
 /**
  * One source field rendered as a value row; nested shapes stay compact JSON.
- * Bounded on its own, because provenance is as unbounded as the text: an unknown
+ * Bounded on its own, because source fields are as unbounded as the text: an unknown
  * producer may record an arbitrarily large string or array.
  */
 function fieldValue(value: unknown, t: Translate): string {
@@ -77,7 +77,7 @@ function fieldValue(value: unknown, t: Translate): string {
 }
 
 /**
- * Provenance fields as a key/value list. `kind` is always omitted because the
+ * Source fields as a key/value list. `kind` is always omitted because the
  * row header already names the producer. `form` is omitted only when a
  * dedicated body rendered for it — then the presentation the reader is looking
  * at IS that value. On the opaque fallback the declaration is kept, because
@@ -159,7 +159,7 @@ function ModelFacingContent({ content, t }: {
 
 /**
  * Default presentation: the model-facing text as text, with its real line
- * breaks, and the remaining provenance beneath it. This is what every form
+ * breaks, and the remaining source fields beneath it. This is what every form
  * this UI version does not recognize renders as.
  * @param props - Durable content, its source, and the locale seat.
  * @returns The opaque context body.
@@ -428,7 +428,7 @@ export function NoticeBody({ content, t }: {
 /**
  * `relay` form: which agent sent this, then what it said.
  *
- * The sender is an opaque session id; it is shown as provenance rather than a
+ * The sender is an opaque session id; it is shown as a field rather than a
  * label, because this client cannot resolve it to a title.
  * @param props - Durable content, its source, and the locale seat.
  * @returns The relay context body.
@@ -471,7 +471,7 @@ function recalledSessions(source: unknown): RecalledSession[] | null {
   const list = record === null ? undefined : record['references']
   if (!Array.isArray(list)) return null
   const sessions: RecalledSession[] = []
-  for (const item of list as ReadonlyArray<unknown>) {
+  for (const item of list as readonly unknown[]) {
     const reference = asRecord(item)
     if (reference === null) return null
     const label = reference['label']

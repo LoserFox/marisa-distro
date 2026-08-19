@@ -41,12 +41,12 @@ const IDENTIFIER = /^[\p{XID_Start}_]\p{XID_Continue}*$/u
  * that normalize together would collapse into one declaration. Those names
  * take the subscript path, which carries their exact bytes.
  *
- * `IDENTIFIER`'s equivalence to `str.isidentifier()` was measured across 21
- * samples with zero divergence, on Node 22.23.1 against CPython 3.9.6 — every
- * sample sits inside the two versions' shared tables, and the skew characters
- * below are exactly where that pair diverges. The predicate as a whole is
- * deliberately stricter than `isidentifier()`, which does not test NFKC
- * stability: `'ﬁeld'.isidentifier()` is True and this returns false.
+ * `IDENTIFIER` matches `str.isidentifier()` (measured on Node 22.23.1 vs
+ * CPython 3.9.6 tables): the equivalence holds inside the two versions' shared
+ * tables, and the skew characters below are exactly where that pair diverges.
+ * The predicate as a whole is deliberately stricter than `isidentifier()`,
+ * which does not test NFKC stability: `'ﬁeld'.isidentifier()` is True and
+ * this returns false.
  *
  * Both conditions are evaluated against the ENGINE's Unicode tables, and the
  * two sides are versioned independently — `\p{XID_Start}`/`\p{XID_Continue}`
@@ -85,8 +85,8 @@ const IDENTIFIER = /^[\p{XID_Start}_]\p{XID_Continue}*$/u
  * here — and the declared `class \u{A7DC}Args` fails with `invalid
  * non-printable character U+A7DC`. Closing the exposure therefore covers all
  * four read points, not this predicate alone; it needs the target interpreter's
- * version, which the backend reporting `language: 'python'` owns and which is
- * unpublished on this base, so the note records it as that PR's decision.
+ * version, which the backend reporting `language: 'python'` owns; the
+ * language-dispatch Agent Note records the deferral.
  *
  * The `ts-types` sibling keeps its own ASCII rule rather than sharing this
  * one: ECMAScript identifiers are a different set (`$`) and are never
@@ -500,7 +500,7 @@ function renderType(schema: unknown, className: string, state: RenderState): str
     ({ schema, className, phase: 'start', listDepth, children: [], childIndex: 0, childTypes: [], entries: [] })
   try {
     // Validate the WHOLE tree once, then trust it — the same contract the
-    // sibling ts-types renderer follows at a typed same-process seam. Every
+    // sibling ts-types renderer follows at a typed same-process boundary. Every
     // node past this point is a validated JSON-schema node, so the walk reads
     // its fields without re-checking. An unsupported or malformed schema throws
     // here (before anything is emitted) and degrades to `Any`, the Python
@@ -733,12 +733,12 @@ export function jsonSchemaToPy(schema: unknown): string {
 /** The fixed model-facing usage contract rendered above the declarations. */
 const SDK_INSTRUCTIONS = `## Writing code for run_code
 
-Pass \`run_code\` the body of an async Python function (top-level \`await\` and \`return\` both work). At run time exactly two of the names declared below are bound: \`tools\` and \`ToolCallError\`. Everything else is a STATIC STUB describing shapes — in particular the \`TypedDict\` classes do NOT exist at run time, so build arguments as plain \`dict\`/\`list\` JSON values: \`await tools.name({"field": 1})\`, never \`FooArgs(field=1)\`, which raises \`NameError\`. Inside the program:
+\`run_code\` takes two required arguments: \`code\` — the body of an async Python function (top-level \`await\` and \`return\` both work) — and \`description\`, a short summary of what the program does. At run time exactly two of the names declared below are bound: \`tools\` and \`ToolCallError\`. Everything else is a STATIC STUB describing argument and return types — in particular the \`TypedDict\` classes do NOT exist at run time, so build arguments as plain \`dict\`/\`list\` JSON values: \`await tools.name({"field": 1})\`, never \`FooArgs(field=1)\`, which raises \`NameError\`. Inside the program:
 
 - Call tools as \`await tools.name(args)\` — subscript access for exotic, reserved, or underscore-leading names: \`await tools["my-tool"](args)\`. Every call resolves to the tool's typed canonical JSON value (each method's return type below). Tool arguments must be lossless JSON.
 - A FAILED tool call raises \`ToolCallError\`, whose \`toolName\` identifies the failed tool and whose message is human-readable — wrap in \`try/except\` to handle and continue.
 - Independent read-only calls MAY overlap under \`asyncio.gather\` (safe calls run concurrently; mutating calls run alone, in submission order). Sequence dependent work with \`await\`.
-- Emit the run's answer with \`print(...)\` and/or a top-level \`return <value>\`; the returned value must be lossless JSON. ONLY what you print and the returned value come back — intermediate tool results never enter the conversation, so extract just what you need.
+- Emit the run's answer with \`print(...)\` and/or a top-level \`return <value>\`; the returned value must be lossless JSON. Only what you print and return is program output. A successful tool result containing an image is attached after the run so you can inspect it on the next step; every other intermediate result stays out of the conversation, so extract just what you need.
 
 The available tools:`
 

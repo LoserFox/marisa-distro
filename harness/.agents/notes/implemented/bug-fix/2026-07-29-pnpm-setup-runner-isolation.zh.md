@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-[主 CI 工作流](../../../../.github/workflows/ci.yml)中的每个 `pnpm/action-setup` 步骤都设置 `dest: ${{ runner.temp }}/setup-pnpm`。每个 runner 服务独占自己的临时目录，因此一个设置过程无法替换另一个 runner 的安装目录。持久 store 的复用仍由 `PNPM_CONFIG_STORE_DIR` 独立处理，遵循 [pnpm 提供机制决策](../process/2026-07-26-pnpm-action-setup-for-symmetric-ci-caching.md)。
+[主 CI 工作流](../../../../.github/workflows/ci.yml)中的每个 `pnpm/action-setup` 步骤都设置 `dest: ${{ runner.temp }}/setup-pnpm`。每个 runner 服务独占自己的临时目录，因此一个设置过程无法替换另一个 runner 的安装目录。持久 store 的复用仍由 `PNPM_CONFIG_STORE_DIR` 独立处理，遵循 [pnpm 配置决策](../process/2026-07-26-pnpm-action-setup-for-symmetric-ci-caching.md)。
 
 [工作流回归测试](../../../../scripts/ci-workflow.spec.ts)会找出 `ci.yml` 中的每个 `pnpm/action-setup` 步骤，并拒绝缺少 runner 专属目标目录的步骤。这可确保后续新增的作业也处于同一隔离边界内。
 
@@ -24,4 +24,4 @@ Status: implemented
 
 ## 后果
 
-pnpm 可执行文件采用临时安装，并按 runner 隔离；包下载仍使用已配置的持久或缓存 store。托管作业使用相同的显式目标目录，不改变缓存政策。工作流中的每个设置步骤因此增加三行配置；只有在 pnpm 提供机制有意迁移到另一种隔离机制时，才需要更新回归测试。
+pnpm 可执行文件采用临时安装，并按 runner 隔离；包下载仍使用已配置的持久或缓存 store。托管作业使用相同的显式目标目录，不改变缓存政策。工作流中的每个设置步骤因此增加三行配置；只有在 pnpm 配置有意改用另一种隔离机制时，才需要更新回归测试。

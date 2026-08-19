@@ -1,6 +1,9 @@
 - banner:
   - navigation "Session hierarchy":
     - button "Load the snapshot-skill skill with" [disabled]
+  - button "Session log":
+    - text: Session log
+    - img
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
@@ -30,6 +33,10 @@
   - text: Think The skill is loaded.
 - paragraph: DONE
 - button "Copy":
+  - img
+- button "Good response":
+  - img
+- button "Bad response":
   - img
 - button "Branch into a new conversation":
   - img

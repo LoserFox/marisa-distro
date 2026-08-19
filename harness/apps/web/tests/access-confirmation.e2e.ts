@@ -29,7 +29,7 @@ describe('web e2e: Full access confirmation', () => {
     // scenario at an installed Chromium when the matching browser download
     // is temporarily unavailable.
     const executablePath = process.env.DSH_PLAYWRIGHT_EXECUTABLE_PATH
-    browser = await chromium.launch(executablePath !== undefined ? { executablePath } : {})
+    browser = await chromium.launch(executablePath === undefined ? {} : { executablePath })
     // Keep the product default Chinese locale: the golden pins the actual
     // registered dictionary rather than a test-local translation callback.
     page = await browser.newPage({ viewport: { width: 1680, height: 1000 }, locale: ZH_BROWSER_LOCALE })

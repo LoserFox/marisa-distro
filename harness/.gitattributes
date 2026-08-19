@@ -7,3 +7,7 @@
 * text=auto eol=lf
 
 *.pdf binary
+
+# Pairing records are generated from the three confirmed owner-blob pairs.
+# The worktree-local installer registers the fail-closed driver command.
+*.i18n.yaml merge=dsh-translation-pairing

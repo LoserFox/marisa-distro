@@ -31,12 +31,34 @@ import type {
  */
 const NO_COST: ModelCost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
 
+/** One request modality a pi-ai model may accept. */
+export type PiAiModality = Model<Api>['input'][number]
+
 /**
- * Input modalities for a model the installed catalog does not describe. The
- * request converter keeps only text blocks, so text is the adapter's actual
- * capability rather than a deployment choice.
+ * Every pi-ai request modality. The `Record` key type is a drift gate: a pi-ai
+ * upgrade that adds or removes a modality fails compilation here naming the
+ * drifted key, instead of silently narrowing what a profile may declare.
  */
-const TEXT_ONLY: Model<Api>['input'] = ['text']
+const MODALITY_GATE: Record<PiAiModality, true> = {
+  text: true,
+  image: true,
+}
+
+/** Every request modality a profile may declare. */
+export const MODALITIES = Object.keys(MODALITY_GATE) as readonly PiAiModality[]
+
+/**
+ * One entry's modality list, or `undefined` when it states no answer. Absent
+ * and empty mean the same thing — `[]` describes a model that accepts nothing
+ * and could serve no request — which is what makes an entry naming a catalog
+ * model without declaring modalities keep the catalog's, since the config
+ * schema materializes `[]` for an absent array.
+ * @param configured - the list a `models` or `modelOverrides` entry supplied.
+ * @returns the declared modalities, or `undefined` to ask the next level.
+ */
+function declaredInput(configured: readonly PiAiModality[] | undefined): Model<Api>['input'] | undefined {
+  return configured === undefined || configured.length === 0 ? undefined : [...configured]
+}
 
 /**
  * Every pi-ai thinking level, in pi-ai's canonical escalation order. The
@@ -62,8 +84,7 @@ type PiThinkingFormat = NonNullable<OpenAICompletionsCompat['thinkingFormat']>
 
 /**
  * pi-ai thinking formats a profile cannot name: both drive the request through
- * `chatTemplateKwargs`, which this configuration does not expose, so offering
- * them would hand back a format with nothing to say.
+ * `chatTemplateKwargs`, which this configuration does not expose.
  */
 type WithheldThinkingFormat = 'chat-template' | 'qwen-chat-template'
 
@@ -121,6 +142,26 @@ export function catalogProviderIds(): readonly string[] {
 }
 
 /**
+ * Whether the installed catalog provider for one route declares an api-key
+ * method — the only authentication this adapter obtains on its own.
+ *
+ * A key is what the harness resolves through its own credential seam and hands
+ * pi-ai per request. pi-ai's other method, OAuth, resolves from a *stored*
+ * OAuth credential alone: `resolveProviderAuth` has no ambient path for it,
+ * this adapter builds its `Models` collection with no credential store, and
+ * nothing here runs a login flow. So a provider offering OAuth by itself
+ * leaves nothing for this adapter to authenticate with, and the posture such a
+ * provider invites — no key configured, credentials discovered by the provider
+ * — fails every request with `Provider is not configured`.
+ * @param provider - provider route key.
+ * @returns whether the catalog provider takes an api key; false for a route
+ *   pi-ai does not ship, which the caller answers for separately.
+ */
+export function catalogProviderTakesApiKey(provider: string): boolean {
+  return catalogProvider(provider)?.auth.apiKey !== undefined
+}
+
+/**
  * The installed catalog models for one route, indexed by model id.
  * @param provider - provider route key.
  * @returns catalog models by id; empty for a route pi-ai does not ship.
@@ -146,12 +187,12 @@ export type PiAiReasoningEfforts = Partial<Record<ModelThinkingLevel, string | n
  * default) or per model (winning over the route). Only the switches pi-ai's
  * reasoning dispatch reads are offered; the rest of pi-ai's compat surface
  * keeps its baseURL-derived auto-detection. pi-ai types both fields only on
- * `OpenAICompletionsCompat` — the other wire protocols carry their reasoning
- * shape in the protocol itself — so resolution rejects a model-level switch
+ * `OpenAICompletionsCompat` — the other wire protocols define their reasoning
+ * fields in the protocol itself — so resolution rejects a model-level switch
  * anywhere else, while a route-level default skips past models it cannot fit.
  */
 export interface PiAiCompatProfile {
-  /** Reasoning parameter shape the endpoint expects; absent keeps the catalog entry's, then pi-ai's baseURL-derived guess. */
+  /** Reasoning parameter format the endpoint expects; absent keeps the catalog entry's, then pi-ai's baseURL-derived guess. */
   thinkingFormat?: PiAiThinkingFormat
   /** Whether the endpoint accepts `reasoning_effort`; absent keeps the catalog entry's, then pi-ai's baseURL-derived guess. */
   supportsReasoningEffort?: boolean
@@ -172,6 +213,18 @@ export interface PiAiModelProfile {
    * default on its own.
    */
   maxTokens?: number
+  /**
+   * Request modalities this model accepts. Absent — or empty, which describes
+   * a model that accepts nothing and so states no answer either — keeps the
+   * installed catalog entry's modalities, then the route's `defaultInput`.
+   * Declaring images is what makes a hand-declared vision model usable, and
+   * declaring text alone corrects a catalog model whose gateway does not serve
+   * what the catalog records. This is a claim about the endpoint, not a check
+   * of it: nothing interrogates a gateway for what it accepts, so a model
+   * claiming images its endpoint refuses is refused by the provider instead,
+   * mid-turn.
+   */
+  input?: PiAiModality[]
   /**
    * Selectable reasoning efforts. Absent inherits the installed catalog
    * entry's capability (a hand-declared model has none and does not reason);
@@ -211,6 +264,8 @@ export interface RouteCatalogRequest {
   defaultContextWindow: number
   /** Output capability for a model neither the entry nor the catalog sizes. */
   defaultMaxTokens: number
+  /** Modalities for a model neither the entry nor the catalog declares. */
+  defaultInput: Model<Api>['input']
 }
 
 /** Report a route the deployment cannot serve, naming the settings key at fault. */
@@ -422,7 +477,7 @@ export function resolveRouteModels(request: RouteCatalogRequest): RouteCatalog {
   // An override becomes the catalog entry's configuration, so everything a
   // models entry may declare — capacities, efforts, compat — resolves through
   // the same path with the same diagnostics and request-default semantics.
-  const entries: ReadonlyArray<PiAiModelProfile> = configured.length > 0
+  const entries: readonly PiAiModelProfile[] = configured.length > 0
     ? configured
     : [...defaults.values()].map(model => ({ id: model.id, ...overrides[model.id] }))
   if (entries.length === 0) {
@@ -467,17 +522,15 @@ export function resolveRouteModels(request: RouteCatalogRequest): RouteCatalog {
       // The installed entry lays the floor, and the fields below override it.
       // Enumerating instead would silently drop every `Model` field this
       // package does not model — reasoning-level spellings, compatibility
-      // quirks, model headers, and whatever a pi-ai upgrade adds next. That is
-      // not hypothetical: `headers` reached this file only after an nvidia
-      // route lost it, and a rebuild keeps re-earning that bug on every
-      // upgrade.
+      // quirks, model headers, and whatever a pi-ai upgrade adds next. Spread,
+      // never enumerate.
       ...base,
       id: entry.id,
       name: entry.name ?? base?.name ?? entry.id,
       api,
       provider,
       baseUrl,
-      input: base?.input ?? TEXT_ONLY,
+      input: declaredInput(entry.input) ?? base?.input ?? [...request.defaultInput],
       cost: base?.cost ?? NO_COST,
       contextWindow,
       maxTokens,

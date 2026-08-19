@@ -7,11 +7,11 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 /**
- * Keyless publish-path rehearsal. It packs the provider, its workspace peers, and the current
- * repository's Landlock entry/platform packages, then installs those exact tarballs in an external
- * plain-Node consumer. The host launcher comes from the exact local tarballs, so no registry copy,
- * tsx, path mapping, or workspace resolution can hide missing files, dependency errors, or lost
- * executable modes. npm may still query registry metadata for an incompatible optional platform
+ * Keyless publish-path rehearsal. It packs the provider, its workspace peers, the vendored framework
+ * peer, and the current repository's Landlock entry/platform packages, then installs those exact
+ * tarballs in an external plain-Node consumer. The host launcher comes from the exact local tarballs,
+ * so no registry copy, tsx, path mapping, or workspace resolution can hide missing files, dependency
+ * errors, or lost executable modes. npm may still query registry metadata for an incompatible optional platform
  * package that cannot supply the host launcher.
  *
  * The installed launcher must match the host architecture, remain executable, and either confine a
@@ -28,11 +28,26 @@ const platformPackageName = `@deepseek-ai/node-addon-landlock-run-linux-${proces
 /** The harness closure the consumer needs; native tarballs are packed through their mode-preserving release script. */
 const WORKSPACE_CLOSURE = [
   'packages/sandbox/sandbox-local',
+  // sandbox-local's win32 chain rung is a runtime dependency: a packed
+  // consumer resolves it like any other @deepseek-ai peer (koffi arrives
+  // from the registry).
+  'packages/sandbox/sandbox-windows-acl',
   'packages/sandbox/sandbox',
+  'packages/core/session',
+  'packages/core/scope',
   'packages/llm/llm',
+  'packages/typert/protocol',
+  'packages/attachment/attachment',
   'packages/util/brand',
   'packages/util/timeout',
-  'packages/support/invariants',
+  'packages/runtime-diagnostics/invariants',
+  // The framework and the vendored packages the closure declares outright:
+  // rescoped into @deepseek-ai, so the consumer installs this repository's
+  // copies. Schemastery is a hard dependency of three members above, not a
+  // peer, so npm resolves it while installing them.
+  'vendor/cordis',
+  'vendor/cosmokit',
+  'vendor/schemastery',
 ]
 
 /** ELF `e_machine` (offset 18, LE) for this host: x86-64 = 62, AArch64 = 183. */
@@ -91,10 +106,10 @@ describe.skipIf(!packable)('sandbox-local: packed-tarball distribution (publish-
     }
     tarballs.push(...nativeTarballs)
 
-    // Peer ranges resolve to the tarballs; Cordis is pinned to their peer range. Do not omit optional
+    // Peer ranges resolve to the tarballs, the framework peer included. Do not omit optional
     // dependencies because the launcher selects its OS/CPU package through one.
     writeFileSync(join(consumerDir, 'package.json'), JSON.stringify({ name: 'dsh-packed-consumer', private: true, type: 'module' }))
-    const install = spawnSync('npm', ['install', '--no-audit', '--no-fund', ...tarballs, 'cordis@4.0.0-rc.7'], {
+    const install = spawnSync('npm', ['install', '--no-audit', '--no-fund', ...tarballs], {
       cwd: consumerDir,
       encoding: 'utf8',
       timeout: 300_000,
@@ -108,7 +123,7 @@ describe.skipIf(!packable)('sandbox-local: packed-tarball distribution (publish-
     writeFileSync(join(consumerDir, 'consumer.mjs'), `
       import { spawnSync } from 'node:child_process'
       import { existsSync } from 'node:fs'
-      import { Context } from 'cordis'
+      import { Context } from '@deepseek-ai/cordis'
       import { launcherPath } from '@deepseek-ai/node-addon-landlock-run'
       import { LocalSandboxProvider } from '@deepseek-ai/dsh-sandbox-local'
       const ctx = new Context()

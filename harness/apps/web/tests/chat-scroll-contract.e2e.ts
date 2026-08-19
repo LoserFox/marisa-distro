@@ -168,8 +168,10 @@ async function launchScrollWorld(options: ScrollWorldOptions): Promise<ScrollWor
     await page.goto(scaffold.baseUrl, { waitUntil: 'load' })
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     // Session-list bootstrap can replace the controlled search state. Wait
-    // for the seeded baseline before openSeed starts the lazy content query.
-    await page.getByText(/^\d+ sessions?$/, { exact: true }).waitFor({ timeout: 30_000 })
+    // for the seeded baseline before openSeed starts the lazy content query
+    // (the compact layout dropped group session counts; the Ungrouped bucket
+    // row is the barrier).
+    await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
     return {
       events,
       page,
@@ -248,19 +250,25 @@ function scrollGeometry(page: Page): Promise<ScrollGeometry> {
   }))
 }
 
-async function conversationTurns(page: Page): Promise<number> {
-  const stats = page.getByText(/\d+ turns · \d+ steps/, { exact: true }).last()
-  await stats.waitFor({ timeout: 15_000 })
-  const value = await stats.textContent()
-  const match = value?.match(/^(\d+) turns · \d+ steps$/)
-  if (match?.[1] === undefined) throw new Error(`unexpected conversation stats ${JSON.stringify(value)}`)
-  return Number(match[1])
+/**
+ * Rendered transcript rows in the loaded window. The stats strip cannot serve
+ * as this probe: its turn/step counts ride the whole-log sessionStats
+ * projection and stay fixed across paging by design, while the row count is
+ * exactly what grows when an older page prepends or a live turn streams in.
+ * @param page - the scenario page.
+ * @returns the number of mounted chat flow rows.
+ */
+async function loadedFlowRows(page: Page): Promise<number> {
+  return page.locator('[data-chat-flow-key]').count()
 }
 
 async function openSeed(page: Page, fixture: ChatScrollFixture, tailMarker?: string): Promise<void> {
-  const search = page.getByRole('textbox', { name: 'Search name, keywords...', exact: true })
+  // Search collapsed into a header action; expand it before filling.
+  const searchButton = page.getByRole('button', { name: 'Search sessions' })
+  if (await searchButton.getAttribute('aria-expanded') !== 'true') await searchButton.click()
+  const search = page.getByRole('textbox', { name: 'Search sessions...', exact: true })
   // Cold summaries initially show the temporary workspace basename, so the
-  // persisted first-message marker is the stable user-facing identity. The
+  // persisted first-prompt marker is the stable user-facing identity. The
   // query itself triggers lazy content-index reconciliation; no transient
   // empty-state paint is used as a barrier.
   await search.fill(fixture.markers.user(1))
@@ -382,7 +390,7 @@ function flowTop(page: Page, key: string): Promise<number> {
     const row = rows.find(candidate => (candidate as HTMLElement).dataset.chatAnchorKey === anchorKey)
     if (!(row instanceof HTMLElement)) throw new Error(`stable Chat anchor ${anchorKey} is not mounted`)
     const host = row.closest('[data-conversation-scroll]')
-    if (!(host instanceof HTMLElement)) { throw new Error('flow row has no conversation scrollport') }
+    if (!(host instanceof HTMLElement)) throw new Error('flow row has no conversation scrollport')
     return row.getBoundingClientRect().top - host.getBoundingClientRect().top
   }, key)
 }
@@ -420,9 +428,9 @@ async function loadEarlierWithAnchor(page: Page): Promise<void> {
   const older = page.getByRole('button', { name: 'Load earlier', exact: true })
   await older.waitFor({ timeout: 10_000 })
   const anchor = await visibleFlowAnchor(page)
-  const before = await conversationTurns(page)
+  const before = await loadedFlowRows(page)
   await older.click()
-  await expect.poll(() => conversationTurns(page), { timeout: 30_000 }).toBeGreaterThan(before)
+  await expect.poll(() => loadedFlowRows(page), { timeout: 30_000 }).toBeGreaterThan(before)
   await nextPaint(page)
   await expectSameFlowTop(page, anchor)
 }
@@ -493,7 +501,7 @@ describe('web e2e: long Chat scroll contract', () => {
         await world.page.getByRole('button', { name: 'Send message', exact: true }).click()
         await world.page.getByText(LIVE_TEXT_FIRST, { exact: false }).last().waitFor({ timeout: 15_000 })
         await wheelToHistoryStart(world.page)
-        const beforeTurns = await conversationTurns(world.page)
+        const beforeRows = await loadedFlowRows(world.page)
         await world.page.getByRole('button', { name: 'Load earlier', exact: true }).click()
         await expect.poll(() => held, { timeout: 10_000 }).toBe(true)
 
@@ -506,7 +514,7 @@ describe('web e2e: long Chat scroll contract', () => {
         ).toBeGreaterThan(chunksAfterAnchor + 5)
 
         releaseHistory()
-        await expect.poll(() => conversationTurns(world.page), { timeout: 30_000 }).toBeGreaterThan(beforeTurns)
+        await expect.poll(() => loadedFlowRows(world.page), { timeout: 30_000 }).toBeGreaterThan(beforeRows)
         await nextPaint(world.page)
         await expectSameFlowTop(world.page, readerAnchor)
       } finally {
@@ -526,7 +534,11 @@ describe('web e2e: long Chat scroll contract', () => {
         additionalPages += 1
       }
       expect(additionalPages).toBeGreaterThan(0)
-      expect(await conversationTurns(world.page)).toBe(HISTORY_FIXTURE.turns + 1)
+      // The whole log is loaded: turn 1's unique marker renders in the
+      // transcript (scoped: the sidebar search row also carries it) and no
+      // page remains.
+      expect(await world.page.locator('[data-conversation-scroll]')
+        .getByText(HISTORY_FIXTURE.markers.user(1), { exact: false }).count()).toBe(1)
       expect(await world.page.getByRole('button', { name: 'Load earlier', exact: true }).count()).toBe(0)
       assertClean(world)
     })

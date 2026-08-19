@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-07-31-coverage-exempt-heavy-suites.md
 2026-07-31-coverage-exempt-heavy-suites.md: 7235a5193554947ecf71f62d522d09f4e21cb1da
-2026-07-31-coverage-exempt-heavy-suites.zh.md: b739e4494ae8d240b0e35109920a49876ebd222d
+2026-07-31-coverage-exempt-heavy-suites.zh.md: e3d6e335ecb069dadeebb06d760cf70c9b0c1fd4

@@ -9,7 +9,7 @@
   overflow-wrap: anywhere;
 }
 
-/* Provenance beneath the text: dimmer than the content it describes. */
+/* Source fields beneath the text: dimmer than the content they describe. */
 .fields {
   display: flex;
   flex-direction: column;

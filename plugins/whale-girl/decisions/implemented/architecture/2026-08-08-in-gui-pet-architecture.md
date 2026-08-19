@@ -2,6 +2,8 @@
 
 Status: implemented
 
+部分消费边界已由 [外部只读快照契约](2026-08-14-external-snapshot-contract.md) 取代：GUI 仍是本仓库唯一分发的界面，但本地外部伴侣可以非消费式读取状态。
+
 ## Problem
 
 目标是一个"类似 QQ 宠物"的插件。QQ 宠物的原型是挂载在 OS 桌面上的原生悬浮窗。plugin-registry 插件的 client half 只能跑在 DSH Web GUI 的浏览器页面里，无法脱离浏览器挂到原生桌面；需要决定宠物以什么形态落地。

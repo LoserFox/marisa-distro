@@ -10,9 +10,9 @@
 
 每次符合条件的 `agent/pre-step`，该插件都会使用调用会话的 cwd 调用 `ctx.skills.snapshot()`，将 pre-step 中止信号转发到发现流程，应用 `skill` 工具的精确可见性，并按顺序渲染 `name` 和 `description` 条目。如果先前不存在目录且该视图非空，插件会向下游 `enter` 决策添加初始的持久用户角色 `<system-reminder>`。目录消息只包含这些摘要；skill 正文、路径、来源、提供方和 `whenToUse` 提示仍位于目录之外。
 
-每条目录消息都携带 `skill-catalog` 来源，也就是 `catalog` 形态的上下文。它的 `entries` 精确记录本次发布的 `name` 与 `description` 对，替换目录另带 `update`。digest 覆盖这些持久条目，而不是渲染后的正文，因此 `<system-reminder>` 包装不会影响是否需要重新发布，消费方也不需要重新解析 `<available_skills>` 块。插件从后向前扫描持久会话事件且不复制，并以最新一条仍可见且可读的 `skill-catalog` 消息作为比较基线；不可读和外来的记录都会跳过。digest 变化时，下游 `enter` 决策会收到一条包含完整替换目录的持久用户角色消息；空替换会显式停用较早的名称。如果没有目录仍然可见，但历史中存在可识别目录，则说明压缩（compaction）已将其遮蔽，下一次完整观察会重新建立当前目录。提供方快照不完整时，插件不会发送任何内容，并会保留最后一次完整的模型视图，在下一次 pre-step 重试。若不存在先前目录且当前视图为空，则不需要 tombstone。
+每条目录消息都携带 `skill-catalog` 来源，也就是 `catalog` 形态的上下文。它的 `entries` 精确记录本次发布的 `name` 与 `description` 对，替换目录另带 `update`。digest 覆盖这些持久条目，而不是渲染后的正文，因此 `<system-reminder>` 包装不会影响是否需要重新发布，消费方也不需要重新解析 `<available_skills>` 块。插件从后向前扫描持久会话事件且不复制，并以最新一条仍可见且可读的 `skill-catalog` 消息作为比较基线；不可读和外来的记录都会跳过。digest 变化时，下游 `enter` 决策会收到一条包含完整替换目录的持久用户角色消息；空替换会显式停用较早的名称。如果已无目录可见，但历史中存在可识别目录，则说明压缩（compaction）已将其遮蔽，下一次完整观察会重新建立当前目录。提供方快照不完整时，插件不会发送任何内容，并会保留最后一次完整的模型视图，在下一次 pre-step 重试。若不存在先前目录且当前视图为空，则不需要 tombstone。
 
-如果最初没有模型可调用 skill，则省略目录；如果该 agent（智能体）的工具视图排除了随附的 `skill` 工具，或解析出同名的作用域内遮蔽项，也会省略目录。可见性变更参与 digest 计算，使提示词指引、模型可见 schema 和可执行分派保持对齐。
+如果最初没有模型可调用 skill，则省略目录；如果该 agent（智能体）的工具视图排除了随附的 `skill` 工具，或解析出同名的作用域内遮蔽项，也会省略目录。身份比对针对本插件所注册的那个定义，而非按自身名字回查，因此本插件既可全局挂载，也可挂在单个 agent 的组装内——在后者中 `register()` 只注册到该 agent 的层中。可见性变更参与 digest 计算，使提示词指引、模型可见 schema 和可执行分派保持对齐。
 
 `catalogDescriptionMaxLength` 控制规范化后的目录描述，渲染时会对其执行 XML 转义。其默认值是 `500`，且必须是不小于 `3` 的整数，以便为截断省略号保留空间。[skill 目录热刷新 Agent Note](../../../.agents/notes/implemented/feature/2026-07-27-skill-catalog-hot-refresh.md) 负责定义持久初始目录和替换目录的生命周期。
 
@@ -36,7 +36,7 @@
 
 #### 模型看到的内容
 
-如果存在模型可调用 skill，且可见的正是这个 `skill` 工具，agent 会在第一个请求之前收到下方目录模板，其中包含每个已排序 skill 的一条随数据而定的条目。该目录是一条持久的用户角色消息。后续成员关系、描述或可见性的变化会使用同一个 `<available_skills>` 信封追加完整替换；删除所有 skill 时，会追加一个空信封，并明确指示不得使用旧名称。模板的结尾一句是防止双重加载的 seam 规则：用户显式的手势边界（下文的 pre-step 监听器）会把同一份 `renderSkillContent` 输出（共享自 `@deepseek-ai/dsh-skill`）内联注入，目录则告诉模型遵循该块，而不是再经工具重新加载该 skill；替换目录模板的两个臂——包括清空后的目录——都携带同一句话。
+如果存在模型可调用 skill，且可见的正是这个 `skill` 工具，agent 会在第一个请求之前收到下方目录模板，其中包含每个已排序 skill 的一条随数据而定的条目。该目录是一条持久的用户角色消息。后续成员关系、描述或可见性的变化会使用同一个 `<available_skills>` 信封追加完整替换；删除所有 skill 时，会追加一个空信封，并明确指示不得使用旧名称。模板的结尾一句是防止双重加载的规则：用户显式的手势边界（下文的 pre-step 监听器）会把同一份 `renderSkillContent` 输出（共享自 `@deepseek-ai/dsh-skill`）内联注入，目录则告诉模型遵循该块，而不是再经工具重新加载该 skill；替换目录模板的两个分支——包括清空后的目录——都携带同一句话。
 
 ##### Skill 目录模板
 
@@ -125,7 +125,7 @@ Load referenced resources only as needed.
 
 #### Token 影响
 
-已加载指令是取决于数据的工具结果 token，并在后续步骤中重新发送，直到压缩（compaction）；不会制作重复的 `agent.inject()` 副本。
+已加载指令是取决于数据的工具结果 token，并在后续步骤中重新发送，直到压缩；不会制作重复的 `agent.inject()` 副本。
 
 #### KV Cache 影响
 
@@ -135,7 +135,7 @@ Load referenced resources only as needed.
 
 #### 模型看到的内容
 
-无效或陈旧选择会精确返回 `Error: invalid skill name "<name>"`、`Error: skill "<name>" is unknown or no longer available` 或 `Error: skill "<name>" is not available for model invocation`。提供方抛出的查找文本取决于数据，并接收同一个 `Error: <message>` 包装层。
+无效或陈旧选择会精确返回 `Error: invalid skill name "<name>"`、`Error: skill "<name>" is unknown or no longer available` 或 `Error: skill "<name>" is not available for model invocation`。提供方抛出的查找文本取决于数据，并套用同一个 `Error: <message>` 包装层。
 
 #### Token 影响
 
@@ -153,7 +153,7 @@ Load referenced resources only as needed.
 
 #### Token 影响
 
-每次手势会把一份渲染后的 skill 正文作为注入上下文加进该轮次——尺寸与同一 skill 的工具结果相同，按用户的请求确定性地支付，而非由模型自行裁量。同一步骤内对同一 skill 的重复手势只注入一次。
+每次手势会把一份渲染后的 skill 正文作为注入上下文加进该轮次——尺寸与同一 skill 的工具结果相同，该成本会随用户请求必然产生，而非由模型自行决定。同一步骤内对同一 skill 的重复手势只注入一次。
 
 #### KV Cache 影响
 

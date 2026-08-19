@@ -8,7 +8,7 @@
 
 - `ctx.storage.backend`：名称 → 后端表。多个后端并排保持挂载（`json`、`sqlite`）；为消费方提供服务的后端由该消费方自身的配置决定（领域层的路由表），绝非中心的全局选择。`register()` 返回资源释放函数；注册重复名称或查找未知名称时都会明确报错。
 - `ctx.storage.mount(form, facility)`／`ctx.storage.form(form)`：数据形式挂载。`StorageForms` 可通过合并扩展；领域层合并 `domain`，并通过 `ctx.storage.domain` 访问。
-- 后端拥有一种介质，并公开其支持的数据形状**分面**。当前分面为 `kv`；其确切契约由 `src/backend.ts` 负责。
+- 后端拥有一种介质，并公开其支持的数据形状**分面**。当前分面为 `kv`；`src/backend.ts` 负责定义其确切约定。
 
 ## 模型体验
 

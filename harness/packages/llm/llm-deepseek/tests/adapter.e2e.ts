@@ -1,35 +1,43 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { createUserMessage, CallId, ReasoningEffortId , createMessage } from '@deepseek-ai/dsh-llm'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { createUserMessage, CallId, ReasoningEffortId , createMessage } from '@deepseek-ai/dsh-llm'
 import type { Message, ToolSchema } from '@deepseek-ai/dsh-llm'
-import { CredentialsLocal } from '@deepseek-ai/dsh-credentials-local'
+import { LocalCredentialProvider } from '@deepseek-ai/dsh-credentials-local'
 import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek'
 import type { Config } from '@deepseek-ai/dsh-llm-deepseek'
 import { assemble, type AssembledResult } from './assemble.ts'
 
 /**
  * Real-API e2e for the direct-fetch adapter: V4 Flash + V4 Pro across
- * thinking modes and both official effort levels. Key-gated — skips
+ * thinking modes and all official effort levels. Key-gated — skips
  * entirely without $DEEPSEEK_API_KEY (see vitest.e2e.config.ts).
  */
 
 const FLASH = 'deepseek-v4-flash'
 const PRO = 'deepseek-v4-pro'
 const contexts: Context[] = []
+let identityHome: string
+
+beforeEach(async () => {
+  identityHome = await mkdtemp(join(tmpdir(), 'dsh-e2e-user-id-'))
+  vi.stubEnv('DSH_HOME', identityHome)
+})
 
 async function harness(_model: string, config: Partial<Config> = {}) {
   const ctx = new Context()
   contexts.push(ctx)
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(LlmDeepSeek, config)
   return ctx
 }
 
 afterEach(async () => {
   await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose()))
+  vi.unstubAllEnvs()
+  await rm(identityHome, { recursive: true, force: true })
 })
 
 function ask(text: string): Message[] {
@@ -70,8 +78,8 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('llm-deepseek e2e (real API)', ()
       vi.stubEnv('DEEPSEEK_API_KEY', '')
       const ctx = new Context()
       contexts.push(ctx)
-      await ctx.plugin(LlmService)
-      await ctx.plugin(CredentialsLocal, { path: join(dir, '.credentials.yaml'), watch: false })
+      await ctx.plugin(LlmRuntime)
+      await ctx.plugin(LocalCredentialProvider, { path: join(dir, '.credentials.yaml'), watch: false })
       await ctx.plugin(LlmDeepSeek, {})
 
       const result = await assemble(ctx, {
@@ -87,7 +95,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('llm-deepseek e2e (real API)', ()
     }
   })
 
-  it('flash dynamically switches from off to high', async () => {
+  it('flash dynamically switches from off to low', async () => {
     const ctx = await harness(FLASH, { reasoningEffort: 'off' })
     const withoutThinking = await assemble(ctx,{
       model: FLASH,
@@ -102,7 +110,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('llm-deepseek e2e (real API)', ()
 
     const withThinking = await assemble(ctx,{
       model: FLASH,
-      reasoningEffort: ReasoningEffortId('high'),
+      reasoningEffort: ReasoningEffortId('low'),
       messages: ask('Which is larger, 9.11 or 9.8? Answer with just the number.'),
       maxTokens: 2000,
     })

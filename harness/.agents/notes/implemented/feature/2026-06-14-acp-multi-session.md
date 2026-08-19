@@ -8,7 +8,7 @@ English | [中文](2026-06-14-acp-multi-session.zh.md)
 
 ## Problem
 
-An ACP automation client can keep several conversations alive over one agent subprocess. A single-active-session bridge would force extra processes and prevent one parent controller from driving independent children over one connection. Multiplexing introduces isolation risks: committed answers, prompt completion, cancellation, permission requests, and predictable background-task ids must never cross session boundaries.
+An ACP automation client can keep several conversations alive over one agent subprocess. A single-active-session bridge would force extra processes and prevent one parent controller from driving independent children over one connection. Multiplexing introduces isolation risks: committed answers, prompt completion, cancellation, permission requests, and predictable background-job ids must never cross session boundaries.
 
 ## Decision
 
@@ -18,7 +18,7 @@ Every `session/event` callback resolves the owning record before sending or sett
 
 Permission ownership uses the same exact-agent check against the forward map. The ACP `approval/request` answerer sends a one-shot machine-policy request only for the session that owns the requesting agent and delegates foreign or call-less requests. The bridge has no elicitation, config-selection, or other human-interaction state.
 
-Background bash tasks carry an opaque owner token equal to the owning session id. `task_output` and `task_kill` compare the caller's token with the executor's task ownership before reading or killing; a predictable task id alone grants no access. Ownership is stored with the executor task, so a tool plugin reload does not erase it.
+Background bash tasks carry an opaque owner token equal to the owning session id. `job_output` and `job_kill` compare the caller's token with the executor's job ownership before reading or killing; a predictable job id alone grants no access. Ownership is stored with the executor task, so a tool plugin reload does not erase it.
 
 Connection teardown clears the live map, settles each pending prompt as cancelled, and disposes all `AgentHandle`s in parallel. Each handle stops and awaits its loop, flushes the session while attached, unregisters the agent, and removes the session. Teardown is memoized and shared by client disconnect and plugin disposal.
 
@@ -36,14 +36,14 @@ A multi-root project inside one session is a separate optional capability: ACP d
 
 **A per-session `ctx.extend()`** — rejected. A child context does not by itself create a child plugin fiber, so listeners would still belong to the bridge fiber. The implemented bridge instead uses global listeners with explicit O(1) demultiplexing and per-session owned records; agent lifecycle is owned by `AgentHandle`.
 
-**Agent object identity as bash-task ownership** — rejected. A resumed or replaced agent object may legitimately represent the same durable session. The opaque session token is the cross-boundary identity that should survive plugin reloads.
+**Agent object identity as bash-job ownership** — rejected. A resumed or replaced agent object may legitimately represent the same durable session. The opaque session token is the cross-boundary identity that should survive plugin reloads.
 
 ## Consequences
 
-N sessions can return committed answers, prompt, request permission, and run background tasks concurrently without interleaving or cross-settling. A cancel in one session does not affect its neighbors. The bridge pays for explicit maps and isolation tests, but it does not add one listener set per session and therefore avoids listener fan-out during long-lived connections.
+N sessions can return committed answers, prompt, request permission, and run background jobs concurrently without interleaving or cross-settling. A cancel in one session does not affect its neighbors. The bridge pays for explicit maps and isolation tests, but it does not add one listener set per session and therefore avoids listener fan-out during long-lived connections.
 
 The bridge exposes no protocol method to close one live session independently. Records leave together on connection teardown; navigation and resume belong to host APIs rather than this automation protocol.
 
 ## Verification
 
-The multi-session suite drives concurrent sessions through routed committed answers, independent in-flight prompts, targeted cancellation, and shared teardown; the approval and output-boundary suites cover permission routing and exact-agent rejection. Tool-bash tests prove one session cannot read or kill another session's background task.
+The multi-session suite drives concurrent sessions through routed committed answers, independent in-flight prompts, targeted cancellation, and shared teardown; the approval and output-boundary suites cover permission routing and exact-agent rejection. Tool-bash tests prove one session cannot read or kill another session's background job.

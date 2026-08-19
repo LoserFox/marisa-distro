@@ -26,7 +26,7 @@ Four behavioral deltas were accepted deliberately, not overlooked. Cross-view ap
 
 **Promote `renderToolView` into the standard kit and move the registry into the runtime package.** Rejected: Tool presentation is Client UI vocabulary; hoisting it into runtime would leak presentation into the data object layer and still leave two registration models.
 
-**Derive slot declarations from subscription refCounts** (declare the slot implicitly when the first registrant subscribes). Rejected for implicit coupling and debounce complexity; noted as a possible revisit only if a genuinely multi-viewer surface appears.
+**Derive slot declarations from subscription refCounts** (declare the slot implicitly when the first registrant subscribes). Rejected for implicit coupling and debounce complexity; noted as a possible revisit only if a genuinely multi-viewer UI appears.
 
 **A thin `registerToolView` facade over slots.register.** Deferred, not rejected: after dissolution the facade would carry only compile-time sugar (slot-name literal narrowing, tool→key vocabulary, props pre-composition) with zero runtime. Per "enforce at the operation boundary" (a facade is not an enforcement point), it stays unbuilt; the useful type composition ships as the exported Tool view props alias. A later facade can be added without disturbing direct registration if repeated registration ceremony justifies it.
 

@@ -31,7 +31,7 @@
       "path": "../../core/tools"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -7,10 +7,20 @@
     - button "模型":
       - img
       - text: 模型
+    - button "插件":
+      - img
+      - text: 插件
+    - button "Agent 预设":
+      - img
+      - text: Agent 预设
   - button "打开配置文件"
   - button "关闭":
     - img
     - text: 关闭
+  - text: Agent 预设 对此后新建的会话生效。运行中的会话保持它开始时的预设。
+  - button "标准模式":
+    - text: 标准模式
+    - img
   - text: 权限 选择新会话的默认权限模式
   - button "Workspace Write":
     - text: Workspace Write

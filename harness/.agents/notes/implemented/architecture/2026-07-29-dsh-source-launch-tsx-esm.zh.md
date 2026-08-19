@@ -4,7 +4,7 @@ Status: implemented
 
 [English](2026-07-29-dsh-source-launch-tsx-esm.md) | 中文
 
-> 取代[已归档的原生 TypeScript 源码启动](../../archived/architecture/2026-07-28-dsh-native-typescript-source-launch.md)：Node 移除了该决策所依赖的能力。
+> 取代[原生 TypeScript 源码启动](../../archived/architecture/2026-07-28-dsh-native-typescript-source-launch.md)：Node 移除了该决策所依赖的能力。
 
 ## 问题
 
@@ -14,11 +14,11 @@ Status: implemented
 
 ## 决策
 
-`dsh` 的 TUI、Web 与无头源码启动运行 `node --import tsx/esm`：由 tsx 的 ESM-only 钩子同时负责 TypeScript 转换与 tsconfig `paths` 投影。`bin/dsh`、根目录的 `dsh`/`demo:tui`/`demo:web` 脚本以及 Code Mode TUI overlay 使用同一向量；`bin/dsh` 以 checkout 的绝对路径引用钩子与 tsconfig（裸的 `tsx/esm` 无法从任意 cwd 解析），并将 `TSX_TSCONFIG_PATH` 固定到根 tsconfig。CJS 钩子保持关闭，因为 CLI 源码图是纯 ESM；实测 TUI 到 banner 约 0.7s，对比完整 tsx 默认形态约 1.1s、已移除的原生链约 0.75s。
+`dsh` 的 TUI、Web 与无头源码启动运行 `node --import tsx/esm`：由 tsx 的 ESM-only 钩子同时负责 TypeScript 转换与 tsconfig `paths` 投影。根目录的 `dsh` 脚本直接从仓库根目录使用同一启动方式；产物生成是独立操作，由[源码启动与构建分离决策](../simplification/2026-08-12-separate-source-launch-from-build.md)规定。CJS 钩子保持关闭，因为 CLI（命令行界面）源码图是纯 ESM；实测运行时启动至 TUI banner 耗时约 0.7s，对比完整 tsx 默认形态约 1.1s、已移除的原生链约 0.75s。
 
-`scripts/tspath-loader.ts` 与 `apps/cli/src/tsconfig-paths-loader.ts` 已删除。随之消失的还有该 loader「仅为已声明运行时依赖映射 workspace import」的运行时规则——tsx 无条件应用 `paths` 映射。声明完整性现在仅由静态门禁保障：配置的裸插件走 `verify-cordis-config`，manifest（元数据清单）走 workspace constraints。（该运行时规则确实发现过真实缺陷：`dsh-plan-mode` 与 `dsh-tool-tasks` 导入 `@deepseek-ai/dsh-llm` 却只声明在 devDependencies；已随本变更修复。）
+`scripts/tspath-loader.ts` 与 `apps/cli/src/tsconfig-paths-loader.ts` 已删除。随之消失的还有该 loader「仅为已声明运行时依赖映射 workspace import」的运行时规则——tsx 无条件应用 `paths` 映射。声明完整性现在仅由静态门禁保障：配置的裸插件走 `verify-cordis-config`，manifest（元数据清单）走 workspace constraints。（该运行时规则确实发现过真实缺陷：`dsh-plan-mode` 与 `dsh-tool-jobs` 导入 `@deepseek-ai/dsh-llm` 却只声明在 devDependencies；后已修复。）
 
-node-compat CI 矩阵（Node 22.19 与 26）新增 `dsh-source-launch-smoke`（`apps/cli/tests/source-launch.compat.spec.ts`）：以精确的生产启动向量做 keyless 管道 stdio 启动，断言非零退出的 TTY 拒绝。未来 Node 对模块钩子或 TypeScript 处理的任何改动都会让该门禁变红，而不是破坏开发者的 `pnpm dsh`。
+node-compat CI 矩阵（Node 22.19 与 26）新增 `dsh-source-launch-smoke`（`apps/cli/tests/source-launch.compat.spec.ts`）：以精确的生产运行时启动向量做 keyless 管道 stdio 启动，断言进程会因 TTY 拒绝而以非零状态退出。未来 Node 对模块钩子或 TypeScript 处理的任何改动都会让该门禁变红，而不是破坏开发者的 `pnpm dsh`。
 
 ## 备选方案
 
@@ -35,4 +35,4 @@ node-compat CI 矩阵（Node 22.19 与 26）新增 `dsh-source-launch-smoke`（`
 - 整个 engines 范围（包括未来改变原生 TypeScript 支持的 Node 版本线）只有一个启动向量；冒烟门禁按矩阵行强制执行。
 - TypeScript 转换重新委托给 tsx/esbuild，逆转了前一篇 Agent Note「证明 Node 原生转换可用」的目标；在 vendor 源码使用不可擦除语法且 Node 不再提供 transform 模式的情况下，该目标不可达。
 - 源码启动中的运行时依赖声明强制不复存在；未声明的 workspace import 现在只能通过静态门禁或构建模式的解析失败暴露。
-- 启动相比完整 tsx 默认形态快约 0.4s（`demo:headless` 现为同一条 `dsh run` 源码启动命令的别名；ACP 保留 `--import tsx`，因为它的依赖图尚未就 CJS 钩子依赖性做审计，且其启动延迟不在交互路径上）。
+- 运行时启动相比完整 tsx 默认形态快约 0.4s；ACP（Agent Client Protocol）保留 `--import tsx`，因为它的依赖图尚未就 CJS 钩子依赖性做审计，且其启动延迟不在交互路径上。

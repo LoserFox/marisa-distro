@@ -48,7 +48,7 @@ export class PartialAccumulator {
   push(chunk: StreamChunk): boolean {
     switch (chunk.type) {
       case 'block-start': {
-        this.blocks[chunk.index] = emptyBlock(chunk.blockType)
+        this.blocks[chunk.index] = emptyAssistantBlock(chunk.blockType)
         this.changed = true
         return true
       }
@@ -102,7 +102,12 @@ export class PartialAccumulator {
   }
 }
 
-function emptyBlock(blockType: string): AssistantBlock {
+/**
+ * Create the empty client projection for one streamed Assistant block kind.
+ * @param blockType - wire block kind.
+ * @returns empty projected block ready to receive deltas.
+ */
+export function emptyAssistantBlock(blockType: string): AssistantBlock {
   switch (blockType) {
     case 'text': return { kind: 'text', text: '' }
     case 'reasoning': return { kind: 'reasoning', text: '' }

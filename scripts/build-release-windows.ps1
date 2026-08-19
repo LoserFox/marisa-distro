@@ -6,6 +6,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$env:CI = 'true'   # pnpm non-interactive mode: never prompt for modules-dir purge confirmation
+# pnpm resolution (verification-profile install) can exceed the default V8 heap
+# on the ~275-project workspace; cap is a limit, not a reservation.
+$env:NODE_OPTIONS = '--max-old-space-size=8192'
 $env:npm_config_fetch_retries = '5'
 $env:npm_config_fetch_retry_mintimeout = '2000'
 $env:npm_config_network_concurrency = '8'

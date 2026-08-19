@@ -4,7 +4,7 @@
  * @module @deepseek-ai/dsh-tool-session-query/workspace-access
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import {
   SessionId,
@@ -76,7 +76,7 @@ async function authorizeTarget(
   target: SessionIdValue,
   signal: AbortSignal,
 ): Promise<void> {
-  if (target === caller.id) { return }
+  if (target === caller.id) return
   const cwd = caller.header.cwd
   if (cwd === undefined) throw serviceBoundary.unauthorizedTarget()
   const records = await serviceBoundary.call(ctx, signal, 'target authorization', () =>

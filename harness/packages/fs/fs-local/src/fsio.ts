@@ -1,13 +1,13 @@
 /**
  * Cordis-free local filesystem mechanics. This provider layer returns validated UTF-8 text,
  * streams large files, and rejects binary data; line windows belong to `dsh-tool-fs`. Writes
- * stage an exclusive owner-only file in a private sibling directory and atomically rename it.
+ * stage an exclusive owner-only file in a private sibling directory and atomically publish it.
  * @module @deepseek-ai/dsh-fs-local/fsio
  */
 
 import { randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { chmod, lstat, mkdir, open, readFile, realpath, readdir, rename, rm, stat } from 'node:fs/promises'
+import { chmod, link, lstat, mkdir, open, readFile, realpath, readdir, rename, rm, stat } from 'node:fs/promises'
 import type { BigIntStats, Dirent, Stats } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { TextDecoder } from 'node:util'
@@ -15,9 +15,15 @@ import { FsError, FsTargetKey, FsVersion } from '@deepseek-ai/dsh-fs'
 import { copyFileDaclWin32, replaceFileWin32 } from './win32.ts'
 
 const BINARY_SAMPLE_BYTES = 8192
+// Bound one non-abortable FileHandle.read so cancellation is observed between chunks.
+const DIFF_BASIS_READ_CHUNK_BYTES = 64 * 1024
 
 function isENOENT(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT'
+}
+
+function isEEXIST(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'EEXIST'
 }
 
 /**
@@ -56,7 +62,7 @@ function throwIfAborted(signal: AbortSignal | undefined, verb: string): void {
  */
 async function readFileAbortable(absolutePath: string, verb: 'read' | 'edit', signal?: AbortSignal): Promise<Buffer> {
   try {
-    return await readFile(absolutePath, !signal ? {} : { signal })
+    return await readFile(absolutePath, signal ? { signal } : {})
   } catch (error: unknown) {
     /* v8 ignore next 2 -- a non-abort readFile rejection needs a permission/IO fault racing an open file. */
     if (!isAbortError(error)) throw error
@@ -70,9 +76,8 @@ function versionOf(info: BigIntStats): FsVersion {
 }
 
 /**
- * Test seam: lets specs pin the atomic-write temp names (to prove
- * exclusive-open behavior without a name race) and observe the staged temp
- * file before it is renamed over the target.
+ * Test hook: lets specs pin the atomic-write temp names (to prove exclusive-open behavior without
+ * a name race), override native boundaries, and observe the staged temp file before publication.
  */
 export interface FsIoInternals {
   /** Override the host platform for native-publication unit coverage. */
@@ -85,8 +90,16 @@ export interface FsIoInternals {
   copyFileDacl?: (source: string, destination: string) => Promise<void>
   /** Override the Win32 security-preserving replacement boundary. */
   replaceFile?: (replaced: string, replacement: string) => Promise<void>
-  /** Test hook after the temp file is written/synced but before final chmod+rename. */
+  /** Override the hard-link no-replace publication boundary. */
+  linkFile?: (existingPath: string, newPath: string) => Promise<void>
+  /** Override target inspection after guarded publication fails. */
+  inspectPublicationTarget?: (path: string) => Promise<BigIntStats>
+  /** Override staging-directory removal for commit-point failure coverage. */
+  removeStagingDir?: (stagingDir: string) => Promise<void>
+  /** Test hook after the temp file is written/synced but before final chmod+publication. */
   inspectTemp?: (paths: { stagingDir: string; tempPath: string }) => void | Promise<void>
+  /** Test hook after raw-read stat preflight and before bounded content I/O. */
+  inspectReadBytesAfterStat?: (target: LocalTarget) => void | Promise<void>
 }
 
 /** A resolved local path: the absolute path shown to callers and its realpath identity. */
@@ -370,6 +383,50 @@ export async function readWholeText(target: LocalTarget, signal?: AbortSignal): 
 }
 
 /**
+ * Read a whole regular file as raw bytes with no decoding or binary rejection.
+ * `maxBytes` bounds the complete content: the stat size short-circuits an
+ * oversized file before any content I/O, and the stream reads at most one byte
+ * beyond the cap so a file growing after stat cannot cause unbounded buffering.
+ * @param target - the resolved file to read.
+ * @param signal - aborts the read (`FS_ABORTED`).
+ * @param maxBytes - inclusive byte cap on the complete content (`FS_TOO_LARGE`).
+ * @param internals - test seam for a deterministic post-stat growth race.
+ * @returns the full raw content, at most `maxBytes` long.
+ */
+export async function readWholeBytes(
+  target: LocalTarget,
+  signal: AbortSignal | undefined,
+  maxBytes: number,
+  internals: FsIoInternals = {},
+): Promise<Uint8Array> {
+  const info = await statRegularFile(target, 'read', signal)
+  if (info.size > maxBytes) {
+    throw new FsError(`cannot read "${target.displayPath}": ${info.size} bytes exceeds the ${maxBytes}-byte limit`, 'FS_TOO_LARGE')
+  }
+  await internals.inspectReadBytesAfterStat?.(target)
+  const stream = createReadStream(target.targetKey, {
+    end: maxBytes,
+    ...signal ? { signal } : {},
+  })
+  const chunks: Buffer[] = []
+  let bytes = 0
+  try {
+    for await (const chunk of stream as AsyncIterable<Buffer>) {
+      bytes += chunk.length
+      if (bytes > maxBytes) {
+        throw new FsError(`cannot read "${target.displayPath}": content exceeds the ${maxBytes}-byte limit`, 'FS_TOO_LARGE')
+      }
+      chunks.push(chunk)
+    }
+  } catch (error: unknown) {
+    /* v8 ignore next 2 -- a mid-stream abort needs cancellation racing an active read; pre-abort is deterministic. */
+    if (isAbortError(error)) throw new FsError('read aborted', 'FS_ABORTED')
+    throw error
+  }
+  return Buffer.concat(chunks, bytes)
+}
+
+/**
  * Stream a whole regular UTF-8 text file as decoded text chunks. Same text
  * semantics as {@link readWholeText} (regular-file check, binary/NUL rejection,
  * cross-chunk UTF-8 decoding), but never holds the whole file in memory.
@@ -407,14 +464,55 @@ export async function* streamWholeText(target: LocalTarget, signal?: AbortSignal
 
 // --- Writing ---
 
-async function removeStagingDirOrThrow(stagingDir: string, originalError: unknown): Promise<never> {
+async function removeStagingDirOrThrow(
+  stagingDir: string,
+  originalError: unknown,
+  removeStagingDir: (path: string) => Promise<void>,
+): Promise<never> {
   try {
-    await rm(stagingDir, { recursive: true, force: true })
+    await removeStagingDir(stagingDir)
   } catch (cleanupError: unknown) {
     /* v8 ignore next 1 -- cleanup failure here needs a second filesystem fault after the primary write failure. */
     throw new FsError(`write failed (${errorMessage(originalError)}) and temp cleanup failed (${errorMessage(cleanupError)})`, 'FS_NOT_FOUND', { cause: originalError })
   }
   throw originalError
+}
+
+async function throwGuardedCreateFailure(
+  error: unknown,
+  absolutePath: string,
+  displayPath: string,
+  inspectPublicationTarget: (path: string) => Promise<BigIntStats>,
+): Promise<never> {
+  let existing: BigIntStats | undefined
+  try {
+    existing = await inspectPublicationTarget(absolutePath)
+  } catch (metadataError: unknown) {
+    if (!isENOENT(metadataError) && !isENOTDIR(metadataError)) {
+      throw new FsError(`cannot write "${displayPath}": ${errorMessage(metadataError)}`, 'FS_IO_ERROR', { cause: metadataError })
+    }
+  }
+
+  // Link errno values vary by platform and filesystem. Inspect the target entry
+  // after failure so a collision is not confused with missing hard-link support.
+  if (existing !== undefined) {
+    if (!existing.isFile()) {
+      throw new FsError(`cannot write "${displayPath}": not a regular file`, 'FS_NOT_REGULAR_FILE', { cause: error })
+    }
+    throw new FsError(
+      `cannot overwrite existing "${displayPath}" without reading it first`,
+      'FS_NOT_OBSERVED',
+      { cause: error },
+    )
+  }
+  if (isEEXIST(error)) {
+    throw new FsError(
+      `cannot overwrite existing "${displayPath}" without reading it first`,
+      'FS_NOT_OBSERVED',
+      { cause: error },
+    )
+  }
+  throw new FsError(`cannot write "${displayPath}": ${errorMessage(error)}`, 'FS_IO_ERROR', { cause: error })
 }
 
 /**
@@ -426,8 +524,11 @@ async function removeStagingDirOrThrow(stagingDir: string, originalError: unknow
  * @param content - the full UTF-8 text to write.
  * @param mode - existing destination's POSIX mode to preserve, or `undefined` for a new file;
  * inert as a mode on Windows but identifies replacement security semantics.
- * @param signal - cancellation checked before the final rename.
- * @param internals - test seam for pinning temp names and observing the staged file.
+ * @param signal - cancellation checked before final publication.
+ * @param internals - Test hook for pinning temp names and observing the staged file.
+ * @param createIfAbsent - when provided, publish with a hard-link no-replace
+ * primitive; a concurrent creator's file is preserved and this write is
+ * rejected with `FS_NOT_OBSERVED` using the supplied display path.
  */
 export async function writeFileAtomic(
   absolutePath: string,
@@ -435,6 +536,7 @@ export async function writeFileAtomic(
   mode: number | undefined,
   signal: AbortSignal | undefined,
   internals: FsIoInternals = {},
+  createIfAbsent?: { displayPath: string },
 ): Promise<void> {
   throwIfAborted(signal, 'write')
   const directory = dirname(absolutePath)
@@ -448,6 +550,11 @@ export async function writeFileAtomic(
   const platform = internals.platform ?? process.platform
   const copyFileDacl = internals.copyFileDacl ?? copyFileDaclWin32
   const replaceFile = internals.replaceFile ?? replaceFileWin32
+  const linkFile = internals.linkFile ?? link
+  const inspectPublicationTarget = internals.inspectPublicationTarget
+    ?? (path => lstat(path, { bigint: true }))
+  const removeStagingDir = internals.removeStagingDir
+    ?? (path => rm(path, { recursive: true, force: true }))
   let handle: Awaited<ReturnType<typeof open>> | undefined
   let stagingCreated = false
   try {
@@ -468,7 +575,13 @@ export async function writeFileAtomic(
     handle = undefined
 
     throwIfAborted(signal, 'write')
-    if (platform === 'win32' && mode !== undefined) {
+    if (createIfAbsent !== undefined) {
+      try {
+        await linkFile(tempPath, absolutePath)
+      } catch (error: unknown) {
+        await throwGuardedCreateFailure(error, absolutePath, createIfAbsent.displayPath, inspectPublicationTarget)
+      }
+    } else if (platform === 'win32' && mode !== undefined) {
       try {
         await replaceFile(absolutePath, tempPath)
       } catch (error: unknown) {
@@ -480,7 +593,11 @@ export async function writeFileAtomic(
     } else {
       await rename(tempPath, absolutePath)
     }
-    await rm(stagingDir, { recursive: true, force: true })
+    try {
+      await removeStagingDir(stagingDir)
+    } catch (_committedStagingCleanupFailure) {
+      // The target is committed; owner-only staging residue cannot turn that write into a failure.
+    }
   } catch (error: unknown) {
     /* v8 ignore next -- abort-mid-write needs a writeFile/signal race; the non-abort (rename/open) side is tested. */
     let failure: unknown = isAbortError(error) ? new FsError('write aborted', 'FS_ABORTED') : error
@@ -493,7 +610,7 @@ export async function writeFileAtomic(
       }
     }
     if (!stagingCreated) throw failure
-    return removeStagingDirOrThrow(stagingDir, failure)
+    return removeStagingDirOrThrow(stagingDir, failure, removeStagingDir)
   }
 }
 
@@ -564,21 +681,67 @@ export async function readForEdit(
 }
 
 /**
- * Best-effort overwrite diff basis. Binary or invalid UTF-8 returns `null` so the write still
- * succeeds and presentation falls back to a whole-file diff.
- * @param absolutePath - the file to read (typically a target key); it must exist.
- * @param signal - aborts the read (`FS_ABORTED`).
- * @returns the LF-normalized text, or null for a binary or non-UTF-8 file.
+ * Best-effort overwrite diff basis. Binary, invalid UTF-8, a file at/above the byte limit,
+ * or a file deleted/made unreadable after the caller's preflight returns `null` so the write
+ * still succeeds and presentation falls back to a whole-file diff. The bound is enforced on
+ * the opened descriptor rather than a prior path stat, so concurrent external replacement or
+ * size changes cannot make this helper buffer more than `maxBytes`.
+ * @param absolutePath - the file to read (typically a target key).
+ * @param maxBytes - exclusive upper bound for bytes held as the contextual-diff basis.
+ * @param signal - aborts the read (`FS_ABORTED`); cancellation propagates, unlike I/O failure.
+ * @returns the LF-normalized text, or null for a non-regular, at/above-limit, binary, non-UTF-8,
+ * descriptor-size-changed, or unreadable file.
  */
-export async function readTextForDiff(absolutePath: string, signal?: AbortSignal): Promise<string | null> {
-  const buffer = await readFileAbortable(absolutePath, 'read', signal)
-  if (buffer.includes(0)) return null
+export async function readTextForDiff(
+  absolutePath: string,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  throwIfAborted(signal, 'read')
   try {
-    return normalizeLineEndings(new TextDecoder('utf-8', { fatal: true }).decode(buffer))
+    const handle = await open(absolutePath, 'r')
+    let buffer: Buffer
+    let total = 0
+    let openedSize = 0
+    try {
+      throwIfAborted(signal, 'read')
+      const info = await handle.stat()
+      throwIfAborted(signal, 'read')
+      if (!info.isFile()) return null
+      if (info.size >= maxBytes) return null
+      openedSize = info.size
+      // One extra byte detects growth after stat without retaining per-read backing buffers.
+      buffer = Buffer.allocUnsafe(openedSize + 1)
+      while (total < buffer.length) {
+        throwIfAborted(signal, 'read')
+        const length = Math.min(buffer.length - total, DIFF_BASIS_READ_CHUNK_BYTES)
+        const { bytesRead } = await handle.read(buffer, total, length, null)
+        if (bytesRead === 0) break
+        total += bytesRead
+      }
+    } finally {
+      await handle.close()
+    }
+    throwIfAborted(signal, 'read')
+    if (total !== openedSize) return null
+    const basis = buffer.subarray(0, total)
+    if (basis.includes(0)) return null
+    try {
+      return normalizeLineEndings(new TextDecoder('utf-8', { fatal: true }).decode(basis))
+    } catch (error: unknown) {
+      /* v8 ignore next 2 -- TextDecoder({fatal}) only throws TypeError on invalid bytes;
+       * any other throw is an unreachable runtime fault. */
+      if (!(error instanceof TypeError)) throw error
+      return null
+    }
   } catch (error: unknown) {
-    /* v8 ignore next 2 -- TextDecoder({fatal}) only throws TypeError on invalid bytes; any other throw is an unreachable runtime fault. */
-    if (!(error instanceof TypeError)) throw error
-    return null
+    // Cancellation is the caller's intent and still propagates.
+    if (error instanceof FsError) throw error
+    // A descriptor-phase errno — deleted or made unreadable after the caller's
+    // preflight, or a faulted read — costs only the optional basis: a committed
+    // write must not fail for a presentation-only pre-read.
+    if (error instanceof Error && 'code' in error) return null
+    throw error
   }
 }
 

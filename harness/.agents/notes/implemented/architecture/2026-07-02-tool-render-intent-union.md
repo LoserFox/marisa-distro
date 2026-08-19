@@ -47,14 +47,14 @@ interface TerminalResultView { card: 'terminal'; title?: string; output?: string
 ### Producer mapping
 
 - `dsh-tool-fs` read → `generic` (`kind:'read'`, a follow-along `location`); write → `diff` (`oldText:null`); edit → `diff` (`oldText:old_string || null`, `newText:new_string ?? ''`). This mirrors `claude-agent-acp`'s `toolInfoFromToolUse` Read/Write/Edit arms field-for-field.
-- `dsh-tool-bash` foreground → `terminal` call + `terminal` result; `run_in_background` → `generic`. The generic `task_*` controls own their own generic cards.
+- `dsh-tool-bash` foreground → `terminal` call + `terminal` result; `run_in_background` → `generic`. The generic `job_*` controls own their own generic cards.
 - `dsh-tool-todo` → `generic`.
 
 ### Terminal fallback ownership
 
 `TerminalResultView` carries only `output`/`exitCode`/`signal`. A UI without the terminal capability needs a fenced ` ```console ` text fallback; that derivation moves to the **bridge** (it wraps `output` in a fenced block on the no-capability path), rather than the tool double-encoding it. This keeps the bash tool's result a single structured shape and preserves the existing capability-gated behavior byte-for-byte.
 
-The terminal intent is display-only. The harness still executes the command through its bash service, preserving sandboxing, environment scrubbing, task ownership, and per-session cwd; a UI projects the completed call and never becomes a second execution backend.
+The terminal intent is display-only. The harness still executes the command through its bash service, preserving sandboxing, environment scrubbing, job ownership, and per-session cwd; a UI projects the completed call and never becomes a second execution backend.
 
 ### Purity preserved
 

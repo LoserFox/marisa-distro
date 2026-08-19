@@ -26,7 +26,7 @@ const MODE = webSnapshotMode()
 
 // The scenario's one drive prompt: elicits one program with a bash sub-call
 // and a failing read the program tolerates — the sub-row set the assertions
-// (and the PR gif) need. Never asserted against model prose.
+// need. Never asserted against model prose.
 const PROMPT = 'Using ONE run_code program: run bash `echo CODE_ROUND_OK`, then read the file missing.txt '
   + 'catching its error in the program. Return an object with both outcomes. Then reply DONE and stop.'
 
@@ -104,7 +104,7 @@ describe('web e2e: Code Mode round renders nested sub-calls', () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-code-mode-rows'))
     await expect.poll(() => page.getByText('DONE', { exact: true }).count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(1)
     // The parent run_code row wears the code variant with the model-authored
-    // description as its summary (the PR1 presentCall contract).
+    // description as its summary (the presentCall contract).
     const codeRow = page.locator('[data-variant="code"]').first()
     await codeRow.waitFor({ timeout: 10_000 })
     // Nested rows are visible WITHOUT any expand interaction, inside the

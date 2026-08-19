@@ -6,38 +6,42 @@ Status: implemented
 
 ## 问题
 
-新会话的起始路由被冻结在网关的组合条目里（web-app bundle patch 中的 `api-gateway` 行）。在一段对话里切换模型只影响这段对话：下一个会话又回到出厂默认，而要改这个默认值，唯一的办法是手工编辑一条 `cordis.yml` 行并重启。组合层与每会话选择之间没有用户设置这一层。
+会话模型选择器与部署默认值是同一项偏好的两个层次。如果选择器只影响其所在会话，下一个空白会话可能选择不同模型，用户却没有途径使默认值与选择器一致。如果默认值位于 Host 网关内部，直接创建 Agent 的入口只有依赖 Host 或复制状态才能共享它。
+
+推理强度使持久化形态变得重要：不含强度的模型选择必须清除已存强度，否则下一个 Agent 可能会采用所选模型不接受的强度。
 
 ## 决定
 
-`ApiProxyService` 把自己的 `{provider, model, reasoningEffort?}` 切片注册为 `api-gateway` 设置段：组合条目是 `base` 层，`settings.yaml` 把用户的选择叠加其上。`workspaceRoot` 留在段外——它是启动器事实，不是偏好。`reasoningEffort` 则是镜像的一例：它在段里、但**不在**插件配置里，因为 seam 是按字段把用户层合并到组合条目之上的，缺席的键覆盖不了存在的键。组合层设的推理等级因此会在此后每一次切到不支持推理的模型时继续存活——正是整段 `replace` 想要杜绝的那种滞留。何况推理等级本就是按模型的事实，它的部署级默认值属于适配器 profile，那里是按模型解析的。
+`AgentDefaultModelConfig` 提供 `ctx.agentDefaultModel`，并把 `{provider, model, reasoningEffort?}` 注册为 `agent-default-model` Settings 分节。其 `{provider, model}` 组合条目是 base 层，`settings.yaml` 提供用户层。该服务不偏向特定入口，因此直接创建与 ApiProxy 支撑的创建共享同一个默认值（[headless 直接 core 入口](../architecture/2026-08-09-headless-direct-core-entry-point.md)）。
 
-`session.selectModel` 把被接受的切换记录为新的默认值。没有另一个单独的手势：在输入框切模型**就是**选定默认值的方式。写入用 `replace` 而非 `update`——切到一个不支持推理的模型必须清掉已存的等级，而合并补丁会把它滞留下来，让下一个会话在它上面失败。存储失败只记日志，不撤销这次切换（它对自己所在的会话已经生效）；没有设置提供方的部署保留组合条目，切换只停留在进程内。
+`reasoningEffort` 属于 Settings 分节，但不属于插件配置。Settings 层按字段合并，因此已配置的强度会在用户选择省略它时继续存在。`saveSelection()` 写入完整的用户分节；因此，缺少该字段会清除已存强度。部署级强度默认值属于适配器 profile，并由它按模型解析。
 
-`ApiProxyDefaults` 改为携带 `defaultTarget()` 与 `persistDefaultTarget()` 两个闭包，而不是扁平的 `provider`／`model` 字段，这样 `createApiProxy` 不需要知道设置这条缝的存在。
+`session.selectModel` 把被接受的 `ModelSelection` 应用于所在会话，并调用 `saveDefaultModelSelection()` 保存共享的 Agent 默认值。存储失败只记日志，不撤销会话选择。没有 Settings 提供方的部署保留组合条目，被接受的选择只停留在该会话中。
 
-`targetFor` 在**每一次**读取时解析各级，而不是只在创建时种一次 ref：本进程内的显式选择，其次是该会话自己最新记录的 `request/header`，最后才是活的默认值。两个方向都依赖这次重新读取。已经跑过一轮的会话此后永远从自己的日志推导，改默认值不会重定向它；而仍然空白的会话会用上它创建之后才保存的默认值——这一点很关键，因为新建会话是复用空白会话而不是再开一个，创建时种下的值恰好会在这个功能存在的意义所在的流程里显示已被取代的模型。
+`ApiProxyDefaults` 携带 `defaultModelSelection()` 与 `saveDefaultModelSelection()` 闭包，因此 `createApiProxy` 不依赖 Settings seam。`ApiProxyService` 将它们分别接到 `ctx.agentDefaultModel.currentSelection()` 与 `ctx.agentDefaultModel.saveSelection()`。
 
-存下来的路由不做注册表校验。默认值指向一条模型页已经删除的路由时，它照样作为 `current` 送到 `session.models`，匹配不到任何已公布的分组——而这正是让输入框选择器已有的回退提示重新选择、而不是显示一个部署根本够不着的模型的原因。
+`selectionFor(agent)` 每次读取时都解析各层：先取进程内的会话选择，其次取会话最新记录的 `request/header`，最后取当前 Agent 默认值。已有请求日志的会话持续绑定到日志中持久化的选择。空白会话即使创建于偏好保存之前，也会观察到当前默认值；这与 New Session 界面可能复用空白会话的行为一致。
+
+已存选择不要求属于目录。某条提供方路由可能服务其仅供参考的目录未列出的模型。因此，`session.models` 会在已公布分组之外单独报告已存选择，并另行报告适配器是否服务其提供方。
 
 ## 影响
 
-`ApiProxyDefaults` 形状变了，约 40 处测试构造点随之更新。`host.describe` 现在报告的是活的默认值而非捕获的快照，这本就是它一直想表达的含义。用户一旦切换模型，`settings.yaml` 就会多出一个 `api-gateway:` 段；`api-gateway` 这个 namespace 刻意**没有**加进网关的暴露名单，因此设置页既不读也不写它——模型选择器就是它的编辑器。
+`host.describe` 报告当前 Agent 默认值。模型切换成功后，`settings.yaml` 中会存有一个 `agent-default-model:` 分节。网关不通过 Settings 页 allowlist 暴露该 namespace；模型选择器是它的编辑器。
 
-## 后续：让发不出消息的会话禁止输入
+## 无法发送消息的会话
 
-默认值指向一条模型页已删除的路由时，编辑器显示「选择模型」，输入框却仍接受消息，然后这一轮在适配器内部失败。两处改动关掉这个口子。
+当没有适配器服务会话所选提供方时，`session.prompt` 会在开启轮次前以 `model-unavailable` 拒绝。这一方法是强制执行边界；禁用 composer 只是客户端提供的便利。
 
-宿主拒绝。`session.prompt` 检查是否有适配器服务该会话的路由，在开启轮次之前就以 `model-unavailable` 应答。这是执行边界：客户端禁用编辑器只是提示性设计，这个方法始终可被调用。
+`session.models` 报告 `routable`。ui-model-selection 插件通过 `ctx.conversation.blocks` 投影不可路由的选择，composer 随之变为不可操作，同时保留模型 seat 可用。客户端不知道是否可路由时不会阻断输入，包括目录首次加载或加载失败的情况。
 
-编辑器变惰性。`session.models` 报告 `routable`，ui-model 经新的 `ctx.conversation.blocks` 注册表推送一个 block；输入栏渲染的仍是它在没有 Workspace 时就会渲染的那个禁用 textarea，只是把抬起方自己的本地化理由作为 placeholder——唯独模型 seat 被 block 刻意保留可用，因为用户正是靠选模型来解除它。推送方向是被迫的——ui-model 本就依赖 ui-conversation，因此 ui-conversation 读不回去。
-
-闸门是 `routable`，**不是**「当前目标匹配不到任何已公布分组」。目录成员关系按设计是咨询性的：一条仍在服务、只是不再公布该模型的路由不在分组里，却完全可用，在那里阻断会破坏一种受支持的配置（对一条活着的路由收窄 `models` 列表）。`routable` 在客户端还是三值的——首次加载之前或加载失败之后的 `null` 绝不阻断，因此慢的或够不着的宿主锁不死一个本来能用的编辑器。
+可路由性与目录成员关系不同。仍在服务的提供方路由可以处理未公布的模型，因此不在目录分组中并不代表会话不可用。
 
 ## 考虑过的替代方案
 
-- **存下来的路由未注册时回落到组合条目。** 否决：那样输入框会显示出厂的 DeepSeek 模型而不是提示选择，既是静默切到用户没选的提供方，也与要求的行为正好相反。
-- **校验并清空失效的默认值。** 否决：目录成员关系按设计是咨询性的（`buildModelCatalog` 有注释说明），适配器可以服务一个自己目录已不再公布的模型；自动修复会破坏这个刻意保留的情形。
-- **用 `settings.update` 合并补丁。** 否决：它清不掉 `reasoningEffort`，于是从推理模型切到普通模型会留下一个等级，让下一个会话在它上面失败。
-- **只在空白会话里持久化。** 否决：最有信息量的切换恰恰是对话到一半发现模型不行时做的那一次，而它永远存不下来。
-- **单独做一个「设为默认」的入口。** 目前否决：同类产品都从切换本身推断的事情，它却要多一个手势。代价是在老会话里的临时切换也会移动默认值。
+| 替代方案 | 约定不匹配之处 |
+|---|---|
+| 已存提供方不可用时回落到组合条目 | 产品会静默切离用户选择。 |
+| 根据目录成员关系校验已存选择 | 目录仅供参考，可能省略仍可请求的模型。 |
+| 使用合并 patch 保存 | 省略的 `reasoningEffort` 无法清除已存字段。 |
+| 只保存空白会话中的选择 | 对话期间知情作出的选择不会成为部署默认值。 |
+| 增加单独的「设为默认」手势 | 会话选择器与未来会话偏好虽然代表同一用户选择，却仍可能分歧。 |

@@ -52,7 +52,7 @@ export class WebApiClient extends AbstractApiClient {
       let full: ServerRequest
       let frame: F
       try {
-        if (typeof event.data !== 'string') { throw new Error('binary WebSocket frame') }
+        if (typeof event.data !== 'string') throw new Error('binary WebSocket frame')
         full = serverRequestSchema.parse(JSON.parse(event.data))
         frame = frameSchema.parse(full.payload)
       } catch (error) {

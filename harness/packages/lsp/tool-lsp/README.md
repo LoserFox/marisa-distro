@@ -10,7 +10,7 @@ Namespace plugin (`name` / `inject` / `Config` / `apply`, no default export). In
 
 `lsp` accepts `operation` (`goToDefinition` | `findReferences` | `goToImplementation` | `hover`), `file_path`, `line`, and `character`. `line` and `character` are positive, one-based UTF-16 cursor coordinates; the tool converts them to the seam's zero-based positions and converts rendered locations back. `findReferences` includes declarations so impact analysis does not omit the defining site. Provider, language id, workspace root, limits, timeout, initialization, and executable stay outside model input.
 
-The tool requires the workspace root from the session `header.cwd`, with no fallback: absence fails as `LSP_WORKSPACE_REQUIRED` before querying. Its canonical result is the complete normalized seam union: `{ kind: "locations", locations, resolvedWorkspaceRoot }` or `{ kind: "hover", hover }`; Code Mode can inspect every acquired location and zero-based range directly. Native rendering then projects stable, file-grouped `path:line:character` entries relativized against the result's `resolvedWorkspaceRoot` (the provider's canonical root), not the session cwd — so a symlinked cwd still renders in-workspace results as workspace-relative paths; a `file:` URI becomes a workspace-relative path (inside) or absolute path (outside), and any other URI stays verbatim. Empty locations and `null` hover are successful no-result responses; malformed provider payloads remain structured errors.
+The tool requires the workspace root from the session `header.cwd`, with no fallback: absence fails as `LSP_WORKSPACE_REQUIRED` before querying. Its canonical result is the complete normalized Service Definition union: `{ kind: "locations", locations, resolvedWorkspaceUri }` or `{ kind: "hover", hover }`; Code Mode can inspect every acquired location and zero-based range directly. Native rendering projects stable, file-grouped `path:line:character` entries against the provider's canonical workspace URI rather than applying host-platform path rules to the session cwd. A `file:` URI becomes a workspace-relative path inside that URI or a URI-derived absolute path outside it; malformed and non-`file:` URIs stay verbatim. Empty locations and `null` hover are successful no-result responses; malformed provider payloads remain structured errors.
 
 ## Configuration
 
@@ -18,7 +18,7 @@ The tool requires the workspace root from the session `header.cwd`, with no fall
 |---|---|---|
 | `maxLocations` | `100` | Largest number of rendered locations before an omission marker. |
 | `maxResultChars` | `16000` | Largest complete rendered result, including truncation metadata. |
-| `timeoutMs` | `60000` | Tool-call timeout budget, enforced by `dsh-timeout-policy`; covers the complete queued open/query/close lifecycle and is not model-configurable. |
+| `timeoutMs` | `60000` | Tool-call timeout budget, enforced by `dsh-tool-call-timeout-policy`; covers the complete queued open/query/close lifecycle and is not model-configurable. |
 
 ## Model Experience
 

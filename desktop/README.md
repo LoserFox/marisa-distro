@@ -89,6 +89,15 @@ Windows packaged builds deliberately replace `DSH_WEB_CMD` with their bundled
 launcher. Do not use those variables to substitute an arbitrary backend into a
 published Windows package.
 
+## Startup logs
+
+On Windows, the desktop shell and bundled backend share
+`%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop.log`. Backend stdout and
+stderr, plus the shell's startup, readiness, exit, and retry diagnostics, are
+written there. The file rotates on startup after reaching 5 MiB, retaining the
+previous file as `marisa-desktop.log.1`. Review logs for local paths, plugin
+configuration, and other sensitive information before sharing them.
+
 ## Verification
 
 For the repository-wide validation and packaging rules, see

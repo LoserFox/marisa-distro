@@ -2,7 +2,7 @@
 # fixture server stay real (the tool call re-executes the actual HTTP fetch and
 # markdown rendering); only the model adapter is replaced by replay.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -12,8 +12,8 @@
       - insert:
           - id: web
             name: '@deepseek-ai/dsh-web'
-          - id: web-fetch-local
-            name: '@deepseek-ai/dsh-web-fetch-local'
+          - id: web-fetch-http
+            name: '@deepseek-ai/dsh-web-fetch-http'
           - id: web-fetch-fixture
             name: './web-fetch-fixture-server.mjs'
           - id: tool-web

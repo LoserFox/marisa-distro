@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { createUserMessage, CallId  } from '@deepseek-ai/dsh-llm'
 import { createScope } from '@deepseek-ai/dsh-scope'
 import type { Scope } from '@deepseek-ai/dsh-scope'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import { CodeRuntime } from '@deepseek-ai/dsh-code-runtime'
 import type { CodeRunRequest, CodeRunResult } from '@deepseek-ai/dsh-code-runtime'
-import ToolRegistry, { CodeRunFailedError, RUN_CODE_NAME, TOOL_ABORTED_BEFORE_DISPATCH, defineContentToolFixture, defineTool } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { CodeRunFailedError, RUN_CODE_NAME, TOOL_ABORTED_BEFORE_DISPATCH, defineContentToolFixture, defineTool } from '@deepseek-ai/dsh-tools'
 import type { Config, JsonSchemaNode, PostToolDecision, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
@@ -19,7 +19,7 @@ const testToolSignal = new AbortController().signal
  * misconfiguration rejections, the run_code dispatch bridge (serialization,
  * abort, JSON normalization, error mapping, events, quiescence), and HMR
  * safety — all against an in-repo fake runtime, exactly the
- * interface/implementation/consumer shape the seam promises.
+ * Service Definition / Service Provider / Consumer roles the seam promises.
  */
 
 /** A scriptable in-repo CodeRuntime: each test sets `behavior` to drive the bindings however it needs. */
@@ -50,7 +50,7 @@ interface SetupOptions {
 async function setup(options: SetupOptions = {}) {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt, { ...options.toolOrder ? { toolOrder: options.toolOrder } : {} })
-  await ctx.plugin(ToolRegistry, { mode: options.mode ?? 'code', ...options.maxParallelSubCalls !== undefined ? { maxParallelSubCalls: options.maxParallelSubCalls } : {} })
+  await ctx.plugin(ToolRuntime, { mode: options.mode ?? 'code', ...options.maxParallelSubCalls !== undefined ? { maxParallelSubCalls: options.maxParallelSubCalls } : {} })
   let runtime: FakeRuntime | undefined
   if (options.runtime !== false) {
     await ctx.plugin(FakeRuntime, options.runtime ?? {})
@@ -59,7 +59,7 @@ async function setup(options: SetupOptions = {}) {
   return { ctx, tools: ctx.tools, systemPrompt: ctx.systemPrompt, runtime: runtime! }
 }
 
-/** Mint one production-shaped agent scope that can register scoped tool policy. */
+/** Mint an agent scope configured like production that can register scoped tool policy. */
 async function mintAgentScope(ctx: Context, name = 'scoped'): Promise<{ scope: Scope; agent: Agent }> {
   const agent = { id: SessionId(name) } as Agent
   let scope!: Scope
@@ -133,6 +133,32 @@ describe('mode-aware wire contribution', () => {
     expect(sdk?.text).toContain('declare const tools: {')
     expect(sdk?.text).toContain('echo: {')
     expect(sdk?.text).not.toContain('run_code:')
+  })
+
+  it("mode 'code' states the run_code-only rule BEFORE the per-tool guidance that names each tool", async () => {
+    const { ctx, systemPrompt } = await setup({ mode: 'code' })
+    registerEcho(ctx)
+    // Stand in for a real tool's guidance section, which sits in the 100-199
+    // band and names its tool without saying how it is reached.
+    ctx.systemPrompt.section({ name: 'tool:echo', order: 100, text: 'Use the echo tool.' })
+
+    const assembly = await systemPrompt.assemble()
+    const names = assembly.sections.map(section => section.name)
+    const rule = assembly.sections.find(section => section.name === 'tools:code-only')
+    expect(rule?.text).toContain(`\`${RUN_CODE_NAME}\` is the only tool you can call directly`)
+    // The rule is worthless after the guidance it qualifies.
+    expect(names.indexOf('tools:code-only')).toBeLessThan(names.indexOf('tool:echo'))
+    expect(names.indexOf('tools:code-only')).toBeLessThan(names.indexOf('tools:sdk'))
+  })
+
+  it("mode 'both' omits the run_code-only rule, because native calls do execute there", async () => {
+    const { ctx, systemPrompt } = await setup({ mode: 'both' })
+    registerEcho(ctx)
+    const assembly = await systemPrompt.assemble()
+    // Registered (the deployment is non-native) but empty, so the renderer
+    // drops it: `both` executes the native call the rule would forbid.
+    expect(assembly.sections.find(section => section.name === 'tools:code-only')?.text).toBe('')
+    expect(assembly.tools.map(tool => tool.name)).toContain('echo')
   })
 
   it('projects deeply nested output schemas into the Code Mode SDK without structured-clone recursion', async () => {
@@ -373,6 +399,10 @@ describe('mode-aware wire contribution', () => {
     const runCodeSchema = assembly.tools.find(tool => tool.name === RUN_CODE_NAME)
     expect(runCodeSchema?.description).toContain('Execute a TypeScript program')
     expect(runCodeSchema?.description).toContain('BODY of an')
+    // Both required arguments are named here, not only in the parameter
+    // schema: prose that describes the call as "pass the program" is what
+    // leads a model to emit `{code}` alone and fail INVALID_ARGS.
+    expect(runCodeSchema?.description).toContain('`description`')
     const codeParam = (runCodeSchema?.parameters as { properties: { code: { description: string } } }).properties.code
     expect(codeParam.description).toBe('The program: the body of an async TypeScript function.')
   })
@@ -384,6 +414,7 @@ describe('mode-aware wire contribution', () => {
     const runCodeSchema = assembly.tools.find(tool => tool.name === RUN_CODE_NAME)
     expect(runCodeSchema?.description).toContain('Execute a Python program')
     expect(runCodeSchema?.description).toContain('`return <value>`')
+    expect(runCodeSchema?.description).toContain('`description`')
     expect(runCodeSchema?.description).not.toContain('TypeScript')
     const codeParam = (runCodeSchema?.parameters as { properties: { code: { description: string } } }).properties.code
     expect(codeParam.description).toBe('The program: the body of an async Python function.')
@@ -407,7 +438,7 @@ describe('mode-aware wire contribution', () => {
   })
 
   it('degrades the run_code flavor to TypeScript when no runtime is mounted', async () => {
-    // Any reader of the definition without a mounted runtime lands here; the
+    // Any reader of the definition without a mounted runtime uses this fallback; the
     // shipped one is the tool-catalog generator, which boots the registry under
     // `mode: code` and reads run_code's schema WITHOUT a runtime. peekRuntime
     // returns undefined there, so the flavor getter degrades to the TS default
@@ -430,7 +461,7 @@ describe('mode-aware wire contribution', () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt, {})
     await ctx.plugin(FakeRuntime, {})
-    const fiber = await ctx.plugin(ToolRegistry, { mode: 'code' })
+    const fiber = await ctx.plugin(ToolRuntime, { mode: 'code' })
     expect(ctx.tools.get(RUN_CODE_NAME)).toBeDefined()
     await fiber.dispose()
     const assembly = await ctx.systemPrompt.assemble()
@@ -663,7 +694,7 @@ describe('the sub-dispatch scheduler (native concurrency contract)', () => {
     expect(stages).toEqual(['post-enter:writer', 'post-exit:writer'])
   })
 
-  it('run settlement drains a commit already in progress: the settle event lands inside the turn', async () => {
+  it('run settlement drains a commit already in progress: the settle event is appended inside the turn', async () => {
     const { ctx, runtime } = await setup({ mode: 'code' })
     const gated = registerGated(ctx, 'safe_read', true)
     const { agent, events } = fakeAgent()
@@ -785,11 +816,11 @@ describe('the run_code dispatch bridge', () => {
     const dispatches = events.filter(event => event.type === 'tool/code-dispatch')
     expect(dispatches.map(event => event.data)).toEqual([
       {
-        parentCallId: 'call-1', subCallId: 'call-1:code:1', name: 'echo',
+        rootCallId: 'call-1', parentCallId: 'call-1', subCallId: 'call-1:code:1', name: 'echo',
         arguments: { value: 'one' }, isError: false, content: [{ type: 'text', text: 'echo:one' }],
       },
       {
-        parentCallId: 'call-1', subCallId: 'call-1:code:2', name: 'echo',
+        rootCallId: 'call-1', parentCallId: 'call-1', subCallId: 'call-1:code:2', name: 'echo',
         arguments: { value: 'two' }, isError: false, content: [{ type: 'text', text: 'echo:two' }],
       },
     ])
@@ -921,10 +952,10 @@ describe('the run_code dispatch bridge', () => {
     expect(result.content[0]).toEqual({ type: 'text', text: 'caught: deliberate failure' })
   })
 
-  it('a throwing tools/code-dispatch-log listener is contained: the unshaped content is logged', async () => {
+  it('a throwing tools/code-dispatch-log listener is contained: the original settled content is logged', async () => {
     const { ctx, runtime } = await setup({ mode: 'code' })
     registerEcho(ctx)
-    ctx.on('tools/code-dispatch-log', () => { throw new Error('shaper exploded') })
+    ctx.on('tools/code-dispatch-log', () => { throw new Error('log-content listener failed') })
     const { agent, events } = fakeAgent()
     runtime.behavior = async (request) => {
       const value = await request.bindings[0]!.functions.echo!({ value: 'x' })
@@ -1054,6 +1085,73 @@ describe('the run_code dispatch bridge', () => {
         source: { kind: 'plugin', plugin: 'test' },
       },
     ])
+  })
+
+  it('defers image-bearing final sub-call content onto the outer run_code result', async () => {
+    const { ctx, runtime } = await setup({ mode: 'code' })
+    ctx.tools.register(defineContentToolFixture({
+      name: 'image_result',
+      description: 'Return one durable image.',
+      parameters: {},
+      execute: () => Promise.resolve([
+        { type: 'text', text: 'image result' },
+        {
+          type: 'image',
+          attachment: {
+            attachmentId: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' as never,
+            mediaType: 'image/png', bytes: 1, width: 1, height: 1,
+          },
+        },
+      ]),
+    }))
+    runtime.behavior = async (request) => {
+      await request.bindings[0]!.functions.image_result!({})
+      return { logs: [], value: 'done' }
+    }
+
+    const result = await runCode(ctx, 'program')
+
+    expect(result.additionalContexts).toMatchObject([{
+      role: 'user',
+      source: { kind: 'plugin', plugin: 'tools-code-mode' },
+      content: [
+        { type: 'text', text: 'image result' },
+        { type: 'image', attachment: { mediaType: 'image/png', bytes: 1, width: 1, height: 1 } },
+      ],
+    }])
+  })
+
+  it('does not defer images removed by a nested post-execute decision', async () => {
+    for (const decision of ['block', 'replace'] as const) {
+      const { ctx, runtime } = await setup({ mode: 'code' })
+      ctx.tools.register(defineContentToolFixture({
+        name: 'image_result',
+        description: 'Return one durable image.',
+        parameters: {},
+        execute: () => Promise.resolve([{
+          type: 'image',
+          attachment: {
+            attachmentId: 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' as never,
+            mediaType: 'image/png', bytes: 1, width: 1, height: 1,
+          },
+        }]),
+      }))
+      ctx.on('tools/post-execute', (exec, _result, next): Promise<PostToolDecision> => {
+        if (exec.name !== 'image_result') return next()
+        return Promise.resolve(decision === 'block'
+          ? { kind: 'block', feedback: [{ type: 'text', text: 'blocked' }] }
+          : { kind: 'accept', content: [{ type: 'text', text: 'replaced' }] })
+      })
+      runtime.behavior = async (request) => {
+        await request.bindings[0]!.functions.image_result!({}).catch(() => undefined)
+        return { logs: [], value: 'done' }
+      }
+
+      const result = await runCode(ctx, 'program')
+
+      expect(result.additionalContexts).toBeUndefined()
+      await ctx.fiber.dispose()
+    }
   })
 
   it('keeps sub-call contexts when run_code fails after the nested dispatch', async () => {
@@ -1190,7 +1288,7 @@ describe('the run_code dispatch bridge', () => {
   it('executing run_code under a missing runtime is a structured isError, not a crash', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt, {})
-    await ctx.plugin(ToolRegistry, { mode: 'code' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
     const result = await runCode(ctx, 'program')
     expect(result.isError).toBe(true)
     expect((result.content[0] as { text: string }).text).toContain('requires a code runtime')
@@ -1229,7 +1327,7 @@ describe('the run_code dispatch bridge', () => {
     const tool = ctx.tools.get(RUN_CODE_NAME)!
 
     expect(result.content).toEqual([{ type: 'text', text }])
-    // Surfaces keep the pending program title and render this durable content
+    // Presenters keep the pending program title and render this durable content
     // through their generic fallback. Omitting a result view also prevents the
     // host frame from carrying the same raw content a second time.
     expect('presentResult' in tool).toBe(false)
@@ -1350,7 +1448,7 @@ describe('the run_code dispatch bridge', () => {
       execute(args) {
         let cursor = args.nested
         while (Array.isArray(cursor)) {
-          if (cursor.length !== 1) { throw new Error('expected one item per nesting layer') }
+          if (cursor.length !== 1) throw new Error('expected one item per nesting layer')
           observedDepth++
           cursor = cursor[0]!
         }
@@ -1526,6 +1624,7 @@ describe('the run_code dispatch bridge', () => {
       content: [{ type: 'text', text: 'hi' }], source: { kind: 'user' },
     }), { surfaceOp: 'append' })
     session.append('tool/code-dispatch', {
+      rootCallId: CallId('p1'),
       parentCallId: CallId('p1'),
       subCallId: CallId('p1:code:1'),
       name: 'echo',
@@ -1541,23 +1640,225 @@ describe('the run_code dispatch bridge', () => {
   it('direct construction rejects a non-positive parallel sub-call cap at load', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt, {})
-    expect(() => new ToolRegistry(ctx, { mode: 'code', maxParallelSubCalls: 0 }))
+    expect(() => new ToolRuntime(ctx, { mode: 'code', maxParallelSubCalls: 0 }))
       .toThrow('maxParallelSubCalls must be a positive integer')
   })
 
   it('direct construction in code mode defaults the parallel sub-call cap', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt, {})
-    const registry = new ToolRegistry(ctx, { mode: 'code' })
+    const registry = new ToolRuntime(ctx, { mode: 'code' })
     expect(registry.get(RUN_CODE_NAME)).toBeDefined()
   })
 
   it('defaults to native mode under direct construction with no config', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt, {})
-    const registry = new ToolRegistry(ctx)
+    const registry = new ToolRuntime(ctx)
     expect(registry.get(RUN_CODE_NAME)).toBeUndefined()
     const assembly = await ctx.systemPrompt.assemble()
     expect(assembly.sections.some(section => section.name === 'tools:sdk')).toBe(false)
+  })
+  it('denies a model-direct native-tool call under code mode as UNKNOWN_TOOL', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt, {})
+    const registry = new ToolRuntime(ctx, { mode: 'code' })
+    registerEcho(ctx, 'write')
+    const result = await registry.execute({
+      signal: testToolSignal,
+      callId: CallId('call-1'),
+      name: 'write',
+      arguments: { text: 'hello' },
+    })
+    expect(result.isError).toBe(true)
+    expect(result.error?.info).toEqual({ name: 'ToolNotFoundError', code: 'UNKNOWN_TOOL' })
+    // The name IS declared to this model, so a bare `unknown tool` reads as a
+    // broken deployment. The denial carries the route instead.
+    expect(result.error?.message).toBe(
+      `unknown tool "write": only \`${RUN_CODE_NAME}\` is callable directly — call \`write\` from inside a \`${RUN_CODE_NAME}\` program instead`,
+    )
+  })
+
+  it('routes a pre-aborted collapsed call through ABORTED_BEFORE_DISPATCH', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt, {})
+    const registry = new ToolRuntime(ctx, { mode: 'code' })
+    registerEcho(ctx, 'write')
+    const aborted = new AbortController()
+    aborted.abort()
+    const result = await registry.execute({
+      signal: aborted.signal,
+      callId: CallId('call-1'),
+      name: 'write',
+      arguments: { text: 'hello' },
+    })
+    expect(result.isError).toBe(true)
+    expect(result.error?.info?.code).toBe(TOOL_ABORTED_BEFORE_DISPATCH)
+  })
+
+})
+
+/**
+ * Presentation is per agent, because an agent preset composes it: one
+ * deployment runs a Code Mode agent beside native ones, and neither may see
+ * the other's catalog. The deployment `mode` is the default those agents
+ * shadow, not a process-wide fact.
+ */
+describe('per-agent presentation', () => {
+  it('gives one agent Code Mode while the deployment stays native', async () => {
+    const { ctx, systemPrompt } = await setup({ mode: 'native' })
+    const calls = registerEcho(ctx)
+    const { scope, agent } = await mintAgentScope(ctx)
+
+    scope.ctx.tools.presentAs('code')
+
+    const coded = await systemPrompt.assemble({ scope: agent })
+    expect(coded.tools.map(tool => tool.name)).toEqual([RUN_CODE_NAME])
+    expect(coded.sections.find(section => section.name === 'tools:sdk')?.text)
+      .toContain('echo')
+    // Announced surface and callable surface must agree for THIS agent, whose
+    // mode is its own rather than the deployment's.
+    const denied = await ctx.tools.execute({
+      signal: testToolSignal,
+      callId: CallId('coded-direct'),
+      name: 'echo',
+      arguments: { value: 'coded' },
+      agent,
+    })
+    expect(denied.error?.info).toEqual({ name: 'ToolNotFoundError', code: 'UNKNOWN_TOOL' })
+    expect(calls).toEqual([])
+    // The deployment default is untouched: an agent that declared nothing —
+    // and the global view behind it — still sees the native catalog.
+    const native = await systemPrompt.assemble()
+    expect(native.tools.map(tool => tool.name)).toEqual(['echo'])
+    expect(native.sections.some(section => section.name === 'tools:sdk')).toBe(false)
+  })
+
+  it('inherits a STANDING preset scope\'s mode down the chain, agents beside it unaffected', async () => {
+    const { bindScopeParent } = await import('@deepseek-ai/dsh-scope')
+    const { ctx, systemPrompt } = await setup({ mode: 'native' })
+    const calls = registerEcho(ctx)
+    // The preset's standing scope declares once; the agent only PARENTS to it
+    // (the per-preset standing mount configuration has no per-agent declaration).
+    const standing = await mintAgentScope(ctx, 'preset:code-like')
+    standing.scope.ctx.tools.presentAs('code')
+    const joined = await mintAgentScope(ctx, 'joined-agent')
+    bindScopeParent(joined.agent, standing.agent)
+    const loner = await mintAgentScope(ctx, 'loner-agent')
+
+    expect(ctx.tools.get(RUN_CODE_NAME, joined.agent)).toBeDefined()
+    const coded = await systemPrompt.assemble({ scope: joined.agent })
+    expect(coded.tools.map(tool => tool.name)).toEqual([RUN_CODE_NAME])
+    // Through the EXECUTOR, not just the wire: the deployment default is
+    // `native` here, so a collapse predicate reading it instead of this
+    // scope's effective mode would announce [run_code] and still execute the
+    // native call — the bypass, reopened for exactly the preset composition
+    // `dsh-agent-tool-presentation` produces.
+    expect(ctx.tools.executionMode({
+      signal: testToolSignal,
+      callId: CallId('preset-coded-schedule'),
+      name: 'echo',
+      arguments: { value: 'joined' },
+      agent: joined.agent,
+    })).toEqual({ kind: 'exclusive' })
+    const denied = await ctx.tools.execute({
+      signal: testToolSignal,
+      callId: CallId('preset-coded-direct'),
+      name: 'echo',
+      arguments: { value: 'joined' },
+      agent: joined.agent,
+    })
+    expect(denied.error?.info).toEqual({ name: 'ToolNotFoundError', code: 'UNKNOWN_TOOL' })
+    expect(calls).toEqual([])
+    // A sibling that never parented stays native, as does the global view.
+    expect(ctx.tools.get(RUN_CODE_NAME, loner.agent)).toBeUndefined()
+    const native = await systemPrompt.assemble({ scope: loner.agent })
+    expect(native.tools.map(tool => tool.name)).toEqual(['echo'])
+    const allowed = await ctx.tools.execute({
+      signal: testToolSignal,
+      callId: CallId('native-sibling-direct'),
+      name: 'echo',
+      arguments: { value: 'loner' },
+      agent: loner.agent,
+    })
+    expect(allowed).toMatchObject({ isError: false, value: 'echo:loner' })
+    expect(calls).toEqual([{ value: 'loner' }])
+  })
+
+  it('keeps run_code out of a native agent\'s dispatch table', async () => {
+    const { ctx } = await setup({ mode: 'native' })
+    registerEcho(ctx)
+    const coded = await mintAgentScope(ctx, 'coded')
+    const plain = await mintAgentScope(ctx, 'plain')
+    coded.scope.ctx.tools.presentAs('code')
+
+    // Not merely hidden from the prompt: the transport one agent presents must
+    // not be dispatchable by another that never presented it.
+    expect(ctx.tools.get(RUN_CODE_NAME, coded.agent)).toBeDefined()
+    expect(ctx.tools.get(RUN_CODE_NAME, plain.agent)).toBeUndefined()
+    expect(ctx.tools.get(RUN_CODE_NAME)).toBeUndefined()
+  })
+
+  it('lets an agent opt out of a code-mode deployment', async () => {
+    const { ctx, systemPrompt } = await setup({ mode: 'code' })
+    registerEcho(ctx)
+    const { scope, agent } = await mintAgentScope(ctx)
+
+    scope.ctx.tools.presentAs('native')
+
+    const assembly = await systemPrompt.assemble({ scope: agent })
+    expect(assembly.tools.map(tool => tool.name)).toEqual(['echo'])
+    // The deployment's global section still reaches this scope; rendering it
+    // empty is what keeps the opted-out agent's prompt free of an SDK.
+    expect(assembly.sections.find(section => section.name === 'tools:sdk')?.text).toBe('')
+  })
+
+  it('restores the deployment default when the agent unloads', async () => {
+    const { ctx, systemPrompt } = await setup({ mode: 'native' })
+    registerEcho(ctx)
+    const { scope, agent } = await mintAgentScope(ctx)
+    const dispose = scope.ctx.tools.presentAs('code')
+
+    dispose()
+
+    const assembly = await systemPrompt.assemble({ scope: agent })
+    expect(assembly.tools.map(tool => tool.name)).toEqual(['echo'])
+    expect(assembly.sections.some(section => section.name === 'tools:sdk')).toBe(false)
+  })
+
+  it('refuses a second declaration for the same agent', async () => {
+    const { ctx } = await setup({ mode: 'native' })
+    const { scope } = await mintAgentScope(ctx)
+    scope.ctx.tools.presentAs('code')
+
+    // Two answers to "which form does the model see" is a contradiction, and
+    // silently keeping either one would make the composition unreadable.
+    expect(() => scope.ctx.tools.presentAs('both'))
+      .toThrow('conflicts with "code" already declared')
+  })
+
+  it('refuses an unscoped declaration', async () => {
+    const { ctx } = await setup({ mode: 'native' })
+
+    expect(() => ctx.tools.presentAs('code'))
+      .toThrow('requires a scoped context')
+  })
+
+  it('reserves run_code even where no agent presents it', async () => {
+    const { ctx } = await setup({ mode: 'native' })
+
+    // The name must stay free under a native deployment too: an agent preset
+    // mounting later would otherwise collide with whatever took it.
+    expect(() => registerEcho(ctx, RUN_CODE_NAME)).toThrow('is reserved')
+  })
+
+  it('reports the missing runtime against the agent\'s own mode', async () => {
+    const { ctx, systemPrompt } = await setup({ mode: 'native', runtime: false })
+    registerEcho(ctx)
+    const { scope, agent } = await mintAgentScope(ctx)
+    scope.ctx.tools.presentAs('both')
+
+    await expect(systemPrompt.assemble({ scope: agent }))
+      .rejects.toThrow('mode "both" requires a code runtime')
   })
 })

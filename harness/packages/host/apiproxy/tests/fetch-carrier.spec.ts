@@ -1,4 +1,3 @@
-import { CommandId } from '@deepseek-ai/dsh-commands/brand'
 import { describe, expect, it, vi } from 'vitest'
 import type { ApiProxy, HostFrame, MuxFrame } from '../src/api/index.ts'
 import type { ClientResponse, RpcMessage, RpcReceipt, RpcRequest } from '../src/api/rpc.ts'
@@ -97,6 +96,12 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       async prompt(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { accepted: true as const } } }
       },
+      async attachment(request) {
+        return {
+          rpcId: request.rpcId,
+          result: { ok: true, value: { attachment: { attachmentId: 'a' as never, mediaType: 'image/png' as const, bytes: 1, width: 1, height: 1 }, data: 'AA==' } },
+        }
+      },
       async updateQueue(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { accepted: true as const } } }
       },
@@ -128,10 +133,19 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
           result: { ok: true, value: { messageId: 'message-1' as never } },
         }
       },
+      async interrupt(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { accepted: true as const } } }
+      },
     },
     host: {
       async describe(request) {
-        return { rpcId: request.rpcId, result: { ok: true, value: { version: 'v', cwd: '/w', attachedSessions: 0 } } }
+        return {
+          rpcId: request.rpcId,
+          result: {
+            ok: true,
+            value: { version: 'v', cwd: '/w', attachedSessions: 0, canOpenPath: true },
+          },
+        }
       },
       async pickDirectory(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { path: null } } }
@@ -165,6 +179,9 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       async delete(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { deleted: true as const } } }
       },
+      async insertBefore(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { workspaceIds: [request.payload.workspaceId] } } }
+      },
       async insertSessionBefore(request) {
         return {
           rpcId: request.rpcId,
@@ -175,23 +192,30 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
         return { rpcId: request.rpcId, result: { ok: true, value: { archivedSessionIds: [request.payload.sessionId] } } }
       },
     },
-    commands: {
-      async list(request) {
-        return { rpcId: request.rpcId, result: { ok: true, value: { commands: [{ name: 'plan', description: 'Toggle plan mode', input: { hint: 'on|off' } }] } } }
+    agentPresets: {
+      list(request: RpcRequest<{}>) {
+        return Promise.resolve({
+          rpcId: request.rpcId,
+          result: { ok: true as const, value: { presets: [], authorable: false, hasDocument: false } },
+        })
       },
-      async execute(request, signal) {
-        if (request.payload.line === '/hang') {
-          // Cooperative hang: settles only through the carrier signal (sticky
-          // abort checked first — listeners never fire retroactively).
-          if (!signal.aborted) {
-            await new Promise<void>((resolve) => { signal.addEventListener('abort', () => { resolve() }, { once: true }) })
-          }
-          return { rpcId: request.rpcId, result: { ok: false, error: { code: 'cancelled', message: 'aborted', details: {} } } }
-        }
-        if (request.payload.line.startsWith('/plan')) {
-          return { rpcId: request.rpcId, result: { ok: true, value: { matched: true, commandId: CommandId('cmd-x') } } }
-        }
-        return { rpcId: request.rpcId, result: { ok: true, value: { matched: false } } }
+      select(request: RpcRequest<{ agentPreset: string }>) {
+        const value = { agentPreset: request.payload.agentPreset }
+        return Promise.resolve({ rpcId: request.rpcId, result: { ok: true as const, value } })
+      },
+      read(request: RpcRequest<{ agentPreset: string }>) {
+        const value = { agentPreset: request.payload.agentPreset, trust: 'user' as const, content: '' }
+        return Promise.resolve({ rpcId: request.rpcId, result: { ok: true as const, value } })
+      },
+      copy(request: RpcRequest<{ from: string; agentPreset: string }>) {
+        const value = { agentPreset: request.payload.agentPreset }
+        return Promise.resolve({ rpcId: request.rpcId, result: { ok: true as const, value } })
+      },
+      openDocument(request: RpcRequest<{ agentPreset: string }>) {
+        return Promise.resolve({ rpcId: request.rpcId, result: { ok: true as const, value: { opened: true as const } } })
+      },
+      remove(request: RpcRequest<{ agentPreset: string }>) {
+        return Promise.resolve({ rpcId: request.rpcId, result: { ok: true as const, value: {} } })
       },
     },
     skills: {
@@ -263,7 +287,12 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       host: (_request, signal) => stream(hostFrames, signal),
     },
     async respond(message: ClientResponse): Promise<RpcReceipt> {
-      return message.rpcId !== 'known' ? { accepted: false, reason: 'not-pending' } : { accepted: true }
+      return message.rpcId === 'known' ? { accepted: true } : { accepted: false, reason: 'not-pending' }
+    },
+    downloads: {
+      async sessionLog() {
+        return new Response('stub', { status: 404 })
+      },
     },
   }
 }
@@ -273,7 +302,7 @@ function client(api: ApiProxy = fakeApi(), timeoutMs?: number): InProcessApiClie
 }
 
 async function collect<F>(stream: AsyncIterable<RpcRequest<F>>): Promise<RpcRequest<F>[]> {
-  const out: Array<RpcRequest<F>> = []
+  const out: RpcRequest<F>[] = []
   for await (const envelope of stream) out.push(envelope)
   return out
 }
@@ -328,6 +357,7 @@ describe('unary round trip (handler ⇄ client, no network)', () => {
     const renamed = await c.sessions.rename({ sessionId: 's' as never, title: 'named' })
     expect(renamed.result).toMatchObject({ ok: true, value: { title: 'named', seq: 0 } })
     expect((await c.sessions.prompt({ sessionId: 's' as never, mode: 'queue', content: [{ type: 'text', text: 'x' }] })).result.ok).toBe(true)
+    expect((await c.sessions.attachment({ sessionId: 's' as never, attachmentId: 'a' as never })).result.ok).toBe(true)
     expect((await c.sessions.updateQueue({
       sessionId: 's' as never,
       itemId: 'item-1' as never,
@@ -335,6 +365,28 @@ describe('unary round trip (handler ⇄ client, no network)', () => {
     })).result.ok).toBe(true)
     expect((await c.sessions.cancel({ sessionId: 's' as never })).result.ok).toBe(true)
     expect((await c.host.describe({})).result.ok).toBe(true)
+  })
+
+  it('round-trips every agent-preset method, authoring included', async () => {
+    const c = client()
+
+    // The whole domain crosses the carrier: the roster a picker reads, the
+    // per-session switch, and the authoring calls the settings page makes.
+    // Each has its own request schema, so a registration missing from either
+    // half fails here rather than in the browser.
+    expect((await c.agentPresets.list({})).result).toEqual({
+      ok: true, value: { presets: [], authorable: false, hasDocument: false },
+    })
+    expect((await c.agentPresets.select({ sessionId: 's' as never, agentPreset: 'minimal' })).result)
+      .toEqual({ ok: true, value: { agentPreset: 'minimal' } })
+    expect((await c.agentPresets.read({ agentPreset: 'mine' })).result).toEqual({
+      ok: true, value: { agentPreset: 'mine', trust: 'user', content: '' },
+    })
+    expect((await c.agentPresets.copy({ from: 'standard', agentPreset: 'mine' })).result)
+      .toEqual({ ok: true, value: { agentPreset: 'mine' } })
+    expect((await c.agentPresets.openDocument({ agentPreset: 'mine' })).result)
+      .toEqual({ ok: true, value: { opened: true } })
+    expect((await c.agentPresets.remove({ agentPreset: 'mine' })).result).toEqual({ ok: true, value: {} })
   })
 
   it('round-trips the native picker without the default unary timeout', async () => {
@@ -372,19 +424,13 @@ describe('unary round trip (handler ⇄ client, no network)', () => {
     expect(response.result).toEqual({ ok: true, value: { opened: true } })
   })
 
-  it('round-trips command.list / command.execute / skill.list through the wire form', async () => {
+  it('round-trips skill.list through the wire form', async () => {
     const c = client()
-    const list = await c.commands.list({ sessionId: 's' as never })
-    expect(list.result).toEqual({ ok: true, value: { commands: [{ name: 'plan', description: 'Toggle plan mode', input: { hint: 'on|off' } }] } })
-    const hit = await c.commands.execute({ sessionId: 's' as never, line: '/plan off' })
-    expect(hit.result).toEqual({ ok: true, value: { matched: true, commandId: 'cmd-x' } })
-    const miss = await c.commands.execute({ sessionId: 's' as never, line: '/nope' })
-    expect(miss.result).toEqual({ ok: true, value: { matched: false } })
     const skills = await c.skills.list({ sessionId: 's' as never })
     expect(skills.result).toEqual({ ok: true, value: { skills: [{ name: 'commit-helper', description: 'Git commits', modelInvocable: true }] } })
   })
 
-  it('lets command.execute finish after the 30-second default unary deadline', async () => {
+  it('lets host.pickDirectory finish after the 30-second default unary deadline', async () => {
     vi.useFakeTimers()
     const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockImplementation((milliseconds) => {
       const controller = new AbortController()
@@ -395,16 +441,13 @@ describe('unary round trip (handler ⇄ client, no network)', () => {
     })
     try {
       const api = fakeApi()
-      api.commands.execute = async (request) => {
+      api.host.pickDirectory = async (request) => {
         await new Promise(resolve => setTimeout(resolve, 30_001))
-        return {
-          rpcId: request.rpcId,
-          result: { ok: true, value: { matched: true, commandId: CommandId('cmd-slow') } },
-        }
+        return { rpcId: request.rpcId, result: { ok: true, value: { path: '/tmp/slow' } } }
       }
-      const execution = client(api).commands.execute({ sessionId: 's' as never, line: '/slow' })
+      const execution = client(api).host.pickDirectory({})
       const assertion = expect(execution).resolves.toMatchObject({
-        result: { ok: true, value: { matched: true, commandId: 'cmd-slow' } },
+        result: { ok: true, value: { path: '/tmp/slow' } },
       })
 
       await Promise.all([
@@ -433,12 +476,17 @@ describe('unary round trip (handler ⇄ client, no network)', () => {
       mode: 'continuable',
       content: [],
     })).result).toEqual({ ok: true, value: { messageId: 'message-1' } })
+    expect((await c.subagents.interrupt({
+      parentSessionId: 'parent' as never,
+      childSessionId: 'child' as never,
+      mode: 'continuable',
+    })).result).toEqual({ ok: true, value: { accepted: true } })
   })
 
-  it('keeps caller and connection aborts on command.execute', async () => {
+  it('keeps caller and connection aborts on a deadline-exempt unary', async () => {
     const api = fakeApi()
     const started = Promise.withResolvers<AbortSignal>()
-    api.commands.execute = async (request, signal) => {
+    api.host.pickDirectory = async (request, signal) => {
       started.resolve(signal)
       if (!signal.aborted) {
         await new Promise<void>((resolve) => {
@@ -451,30 +499,13 @@ describe('unary round trip (handler ⇄ client, no network)', () => {
       }
     }
     const controller = new AbortController()
-    const execution = client(api).commands.execute(
-      { sessionId: 's' as never, line: '/hang' },
-      controller.signal,
-    )
+    const execution = client(api).host.pickDirectory({}, controller.signal)
     const handlerSignal = await started.promise
 
     controller.abort(new Error('connection closed'))
 
     await expect(execution).rejects.toThrow('connection closed')
     expect(handlerSignal.aborted).toBe(true)
-  })
-
-  it('propagates the carrier Request signal into command.execute', async () => {
-    const handler = toFetchHandler(fakeApi())
-    const controller = new AbortController()
-    const body = JSON.stringify({ type: 'client-request', rpcId: 'r-sig', method: 'command.execute', payload: { sessionId: 's', line: '/hang' } })
-    // The fake's /hang settles only when the invoke-level signal aborts: a
-    // completed response with the cancelled error proves req.signal reached it.
-    const pending = handler.fetch(new Request('http://x/api/command.execute', { method: 'POST', headers: { 'content-type': 'application/json' }, body, signal: controller.signal }))
-    controller.abort()
-    const response = await pending
-    const parsed = await response.json() as { rpcId: string; result: { ok: boolean; error?: { code: string } } }
-    expect(parsed.rpcId).toBe('r-sig')
-    expect(parsed.result.error?.code).toBe('cancelled')
   })
 
   it('propagates the carrier Request signal into session.search', async () => {

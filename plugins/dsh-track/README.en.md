@@ -1,5 +1,8 @@
 # dsh-track · Track Bridge
 
+[![npm](https://img.shields.io/npm/v/@fakechris/dsh-track)](https://www.npmjs.com/package/@fakechris/dsh-track)
+[![npm downloads](https://img.shields.io/npm/dm/@fakechris/dsh-track)](https://www.npmjs.com/package/@fakechris/dsh-track)
+
 English | [中文](README.md)
 
 > **The embedded task-management engine for DeepSeek Harness** — turns thoughts, decisions, and tasks
@@ -7,7 +10,18 @@ English | [中文](README.md)
 > tasks have a lifecycle. Everything lives inside the harness (session events + storage KV), zero
 > external dependencies.
 
-**Status** Active · **Tests** 204 passing · **Build** `pnpm run build` · **Version** 0.3.0
+**Status** Active · **Tests** 240 passing · **Build** `pnpm run build` · **Version** 0.5.0
+> **v0.5.0 · panel task actions + pager (2026-08-14)**: issue cards gain direct
+> 完成/取消 (done/canceled) actions with two-step confirm, plus a batch mode
+> (checkboxes + batch done/cancel); pagers gain first-page / page-number jump /
+> last-page controls and scroll anchoring (the pager stays put across page
+> switches instead of jumping).
+> **v0.4.0 · auto-maintenance + config panel (2026-08-14)**: a lifecycle sweep surfaces zombie
+> tasks in a pending-confirmation section; capture auto-promotion + near-duplicate auto-merge
+> (configurable similarity threshold); canceled proposals auto-confirm past a grace period;
+> scheduled sync (weekly v1, capped); a Track-panel settings UI (⚙) backed by /api/track/config.
+> lib artifacts are committed; npm publishing runs LOCALLY (IP trust + hardware 2FA) —
+> GitHub Actions validates the tag and packs the tarball.
 > **v0.3.0 · dedup + panel fixes (2026-08-14)**: no more duplicate entries on the capture wall —
 > `createCapture` is the single gate (durable per-session marker + content-hash fallback, survives
 > restarts); the right panel/tab are fixed (mounted on the real conversation root in the formal-release
@@ -47,7 +61,10 @@ English | [中文](README.md)
 
 ```sh
 # 1. Install the plugin (official form: published dsh; or `dsh plugin ...` if installed)
-npx -p @deepseek-ai/dsh dsh plugin --profile web add github:dsh-external/dsh-track
+# npm package (published — recommended):
+npx -p @deepseek-ai/dsh dsh plugin --profile web add @fakechris/dsh-track
+# git source (fallback):
+# npx -p @deepseek-ai/dsh dsh plugin --profile web add github:dsh-external/dsh-track
 #    (or a local path: `... add /absolute/path/to/dsh-track`)
 
 # 2. Install the protocol skill (decision-point / task-advance discipline)

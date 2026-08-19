@@ -176,7 +176,7 @@ export async function* translate(payloads: AsyncIterable<string>): AsyncGenerato
 
     // Usage may arrive attached to the finish chunk or as a trailing
     // usage-only chunk — keep the latest.
-    if (chunk.usage) { pendingUsage = mapUsage(chunk.usage) }
+    if (chunk.usage) pendingUsage = mapUsage(chunk.usage)
   }
 
   // parseSse guarantees the [DONE] sentinel (or throws); reaching here means

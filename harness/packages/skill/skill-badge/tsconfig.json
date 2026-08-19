@@ -9,6 +9,6 @@
     { "path": "../../../vendor/cosmokit" },
     { "path": "../../../vendor/cordis" },
     { "path": "../skill" },
-    { "path": "../../support/invariants" }
+    { "path": "../../runtime-diagnostics/invariants" }
   ]
 }

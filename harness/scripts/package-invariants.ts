@@ -19,7 +19,7 @@ interface PackageManifest {
   devDependencies?: Record<string, string>
 }
 
-/** One package and the files participating in its invariant publication contract. */
+/** One package and the files participating in its invariant publication rules. */
 export interface PackageInvariantOwner {
   readonly dir: string
   readonly manifestPath: string
@@ -53,7 +53,7 @@ export function packageInvariantOwners(root: string): PackageInvariantOwner[] {
     })
 }
 
-/** Return all violations of the package-invariant companion contract. */
+/** Return all violations of the package-invariant companion rules. */
 export function collectPackageInvariantViolations(root: string): PackageInvariantViolation[] {
   const violations: PackageInvariantViolation[] = []
   for (const owner of packageInvariantOwners(root)) {
@@ -96,11 +96,11 @@ function checkManifest(
     addViolation(violations, owner.manifestPath, 'files must publish lib/invariant.js')
   }
   if (owner.packageName === '@deepseek-ai/dsh-invariants') return
-  if (manifest.peerDependencies?.['@deepseek-ai/dsh-invariants'] !== '^0.0.1') {
+  if (manifest.peerDependencies?.['@deepseek-ai/dsh-invariants'] !== 'workspace:^') {
     addViolation(
       violations,
       owner.manifestPath,
-      '@deepseek-ai/dsh-invariants must be a ^0.0.1 peerDependency',
+      '@deepseek-ai/dsh-invariants must be a workspace:^ peerDependency',
     )
   }
   if (manifest.devDependencies?.['@deepseek-ai/dsh-invariants'] !== 'workspace:^') {
@@ -123,7 +123,7 @@ function checkBuild(
     addViolation(
       violations,
       tsconfigPath,
-      'TypeScript project references must include ../../support/invariants',
+      'TypeScript project references must include ../../runtime-diagnostics/invariants',
     )
   }
 
@@ -137,7 +137,7 @@ function checkBuild(
 
 function projectReferencesInvariants(root: string, ownerDir: string, entryPath: string): boolean {
   const ownerRoot = resolve(root, ownerDir)
-  const target = resolve(root, 'packages/support/invariants')
+  const target = resolve(root, 'packages/runtime-diagnostics/invariants')
   const pending = [resolve(root, entryPath)]
   const visited = new Set<string>()
   while (pending.length > 0) {
@@ -257,7 +257,7 @@ function checkInstaller(
       }
     }
   }
-  const installer = initializer !== undefined ? installerFunction(initializer) : undefined
+  const installer = initializer === undefined ? undefined : installerFunction(initializer)
   if (installer === undefined) {
     addViolation(violations, owner.sourcePath, 'must declare a local install function for package-owned checks')
     return

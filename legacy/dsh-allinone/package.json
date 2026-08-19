@@ -1,0 +1,42 @@
+{
+  "name": "@dsh-external/dsh-allinone",
+  "description": "dsh 整合包（聚合版）：27 个插件一键装 —— bundle 组合流 + 本地 file: 依赖（照 dsh-mega 模式）",
+  "version": "0.1.0",
+  "private": true,
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "dsh-better-sidebar": "^0.10.3",
+    "@loserfox/git-identity": "file:../dsh-git-identity",
+    "@deepseek-ai/dsh-genui": "file:../dsh-genui",
+    "@dsh-external/workflow": "file:../dsh_workflow",
+    "@dsh-external/dsh-vision-toolkit": "file:../dsh-vision-toolkit",
+    "@dsh-external/dsh-web-ui-notify": "file:../dsh-web-ui-approval-notify",
+    "@dsh-external/dsh-suggested-replies": "file:../dsh-suggested-replies",
+    "whale-girl": "file:../whale-girl",
+    "@deepseek-ai/dsh-qwen-mm": "file:../Qwen-MM-Plugins",
+    "@dsh-community/multimedia-webui-input": "file:../dsh-multimedia-webui-input",
+    "@dsh-external/dsh-drag-and-drop": "file:../dsh-drag-and-drop",
+    "@dsh-external/dsh-stickers": "file:../dsh-stickers",
+    "@dsh-external/dsh-code-map": "file:../dsh-code-map",
+    "dsh-llm-fallbacks": "^0.1.0-alpha.1",
+    "@dsh-external/dsh-ui-progress": "file:../dsh-ui-progress",
+    "@dsh-community/dsh-paste-input": "file:../dsh-paste-input",
+    "@dsh-external/dsh-input-history": "file:../dsh-input-history",
+    "@canglongcl/dsh-web-review": "^0.1.0",
+    "@dsh-external/dsh-artifact": "file:../dsh-artifact",
+    "@huanlin/dsh-plugin-yet-another-subagent": "^0.1.2",
+    "@huanlin/dsh-plugin-ya-workspace-sidebar": "^0.1.0",
+    "@huanlin/dsh-plugin-interpreters": "^0.1.0",
+    "@huanlin/dsh-plugin-mineru": "^0.2.1",
+    "@huanlin/dsh-plugin-aigc-canvas": "^0.1.0",
+    "dsh-sonar": "file:../dsh-sonar",
+    "@dsh-external/dsh-sidechain": "file:../dsh-sidechain",
+    "@dsh-external/dsh-diff-viewer": "file:../dsh-diff-viewer",
+    "@deepseek-ai/dsh-track": "file:../dsh-track",
+    "@dpskh/a2a": "file:../dsh-a2a"
+  }
+}

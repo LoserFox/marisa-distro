@@ -16,7 +16,7 @@ vi.mock('node:child_process', () => ({ execFile: execFileMock }))
 
 import { release as osRelease } from 'node:os'
 import { describe, expect, it, vi } from 'vitest'
-import { openNativePath, openNativeTextFile, type PathOpenerRunner } from '../src/native-path-opener.ts'
+import { canOpenNativePath, openNativePath, openNativeTextFile, type PathOpenerRunner } from '../src/native-path-opener.ts'
 
 const signal = () => new AbortController().signal
 
@@ -88,7 +88,7 @@ describe('native path opener', () => {
   })
 
   it('opens with Windows Invoke-Item and escapes single quotes', async () => {
-    const run = vi.fn<PathOpenerRunner>(async () => { return ({ stdout: '', stderr: '' }) })
+    const run = vi.fn<PathOpenerRunner>(async () => ({ stdout: '', stderr: '' }))
     await openNativePath("C:\\work\\o'reilly.txt", signal(), { platform: 'win32', run })
     expect(run).toHaveBeenCalledWith(
       'powershell.exe',
@@ -285,5 +285,37 @@ describe('browser-renderable documents', () => {
         "Invoke-Item -LiteralPath 'C:\\workspace\\page.html'",
       ],
     ])
+  })
+})
+
+describe('canOpenNativePath', () => {
+  it('always answers yes where the desktop is part of the platform', () => {
+    expect(canOpenNativePath({ platform: 'darwin', env: {} })).toBe(true)
+    expect(canOpenNativePath({ platform: 'win32', env: {} })).toBe(true)
+  })
+
+  it('requires a display server or WSL interop on linux', () => {
+    const linux = { platform: 'linux' as const, osRelease: '6.8.0-generic' }
+    // Headless is the case the capability exists for: `xdg-open` would spawn
+    // into nothing, so a surface should show the path as text instead.
+    expect(canOpenNativePath({ ...linux, env: {} })).toBe(false)
+    expect(canOpenNativePath({ ...linux, env: { DISPLAY: ':0' } })).toBe(true)
+    expect(canOpenNativePath({ ...linux, env: { WAYLAND_DISPLAY: 'wayland-0' } })).toBe(true)
+    expect(canOpenNativePath({
+      platform: 'linux', osRelease: '5.15.153.1-microsoft-standard-WSL2', env: {},
+    })).toBe(true)
+  })
+
+  it('answers no on a platform the opener does not support', () => {
+    expect(canOpenNativePath({ platform: 'freebsd', env: {} })).toBe(false)
+  })
+
+  it('samples the ambient environment when no override is supplied', () => {
+    const env = process.env
+    const marked = (value: string | undefined): boolean => value !== undefined && value !== ''
+    const expected = marked(env.WSL_DISTRO_NAME) || marked(env.WSL_INTEROP)
+      || marked(env.DISPLAY) || marked(env.WAYLAND_DISPLAY)
+
+    expect(canOpenNativePath({ platform: 'linux', osRelease: '6.8.0-generic' })).toBe(expected)
   })
 })

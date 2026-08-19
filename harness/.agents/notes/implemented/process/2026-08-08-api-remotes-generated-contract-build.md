@@ -6,13 +6,13 @@ English | [中文](2026-08-08-api-remotes-generated-contract-build.zh.md)
 
 ## Problem
 
-TypeRT must generate `/remote` declarations and runtime contributions from the Host's `@Remote` methods before the Client's `api-remotes/src/client/index.ts` can typecheck and bundle those contributions. If the root build hands both the Host and Client Project Reference graphs to tsc together, the Client compiles before the generated artifacts exist. Adding a separate contracts preprocessing step would instead compile the generator again outside the normal Host graph and let stale artifacts hide incorrect dependencies.
+Typert must generate `/remote` declarations and runtime contributions from the Host's `@Remote` methods before the Client's `api-remotes/src/client/index.ts` can typecheck and bundle those contributions. If the root build hands both the Host and Client Project Reference graphs to tsc together, the Client compiles before the generated artifacts exist. Adding a separate contracts preprocessing step would instead compile the generator again outside the normal Host graph and let stale artifacts hide incorrect dependencies.
 
 This ordering dependency must not change the repository's ordinary package rule. A normal package belongs to exactly one TypeScript face: Host packages are registered in `tsconfig.host.json`, and Client packages in `tsconfig.client.json`. A Client plugin having both a Node loader entry and a browser entry describes its bundled artifact shapes, not a reason to split its TypeScript project.
 
 ## Decision
 
-The root build completes Host tsc and Host tsdown first, with Host tsdown running TypeRT and generating the Remote Client contract. It then completes Client tsc, Client tsdown, and the Web build:
+The root build completes Host tsc and Host tsdown first, with Host tsdown running Typert and generating the Remote Client contract. It then completes Client tsc, Client tsdown, and the Web build:
 
 ~~~text
 tsc -b tsconfig.host.json
@@ -49,11 +49,11 @@ The two projects use disjoint `files` and separate `.tsbuildinfo` files, so they
 
 This exception follows from the real generated-contract ordering and is not a template available to ordinary packages. New packages remain restricted to one aggregate; adding another exception requires changing this decision and proving another generated dependency that cannot be eliminated.
 
-## TypeRT and tsdown
+## Typert and tsdown
 
-Host tsdown enables `typertPlugin({ mode: 'workspace', faces: ['host'] })` in the normal root config. The generator uses only `tsconfig.host.json` as its program seed and produces both `typert.host.*` and the `typert.remote-client.*` projection of Host contracts; Client tsdown neither starts TypeRT nor analyzes the Client aggregate.
+Host tsdown enables `typertPlugin({ mode: 'workspace', faces: ['host'] })` in the normal root config. The generator uses only `tsconfig.host.json` as its program seed and produces both `typert.host.*` and the `typert.remote-client.*` projection of Host contracts; Client tsdown neither starts Typert nor analyzes the Client aggregate.
 
-The TypeRT analyzer distinguishes compiler faces from runtime faces. Direct Project References in the aggregate determine which compiler face analyzes a project; only a split project explicitly referenced through `tsconfig.host.json` or `tsconfig.client.json` is restricted to that corresponding face. Runtime models follow package subpath contributions instead, so an ordinary single-project `dshClient` package may contribute both Host and Client runtime models. Consequently, Host analysis of `api-remotes` does not also register its Client entry, while an ordinary dual-entry package does not lose its Host model.
+The Typert analyzer distinguishes compiler faces from runtime faces. Direct Project References in the aggregate determine which compiler face analyzes a project; only a split project explicitly referenced through `tsconfig.host.json` or `tsconfig.client.json` is restricted to that corresponding face. Runtime models follow package subpath contributions instead, so an ordinary single-project `dshClient` package may contribute both Host and Client runtime models. Consequently, Host analysis of `api-remotes` does not also register its Client entry, while an ordinary dual-entry package does not lose its Host model.
 
 Both the Host and Client tsdown passes receive the same complete workspace of `vendor/*`, `packages/*/*`, and `apps/cli`. The root config does not scan `lib/types/client/index.js`, maintain a package classification table, or use a tsdown filter; package-local configs return entries for the current phase according to `DSH_BUILD_FACE`.
 
@@ -69,7 +69,7 @@ An ordinary Client plugin returns an empty config during the Host pass and produ
 
 **Scan Client compilation artifacts or maintain two workspace lists.** Artifact scanning would make package participation depend on residual files, while hand-maintained lists and package-name filters would drift as directories change. A complete workspace with package-local face selection already provides deterministic behavior.
 
-**Run TypeRT again during the Client pass.** Remote Client is a projection of the Host contract and has no independent Client reflection source; a second TypeRT program would only duplicate work and increase the risk of mixing both sides' declarations into one analysis.
+**Run Typert again during the Client pass.** Remote Client is a projection of the Host contract and has no independent Client reflection source; a second Typert program would only duplicate work and increase the risk of mixing both sides' declarations into one analysis.
 
 ## Consequences
 

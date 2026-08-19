@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { createUserMessage, CallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { RUN_CODE_NAME, defineContentToolFixture } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { RUN_CODE_NAME, defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import { Session, SessionId, type UserMessage } from '@deepseek-ai/dsh-session'
 import AgentRegistry, { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
 import { createScope } from '@deepseek-ai/dsh-scope'
-import UserInteractionService, {
-  UserInteractionError, type AskUserQuestionRequest,
-} from '@deepseek-ai/dsh-user-interaction'
-import CommandService from '@deepseek-ai/dsh-commands'
+import UserQuestionService, {
+  UserQuestionError, type AskUserQuestionRequest,
+} from '@deepseek-ai/dsh-user-questions'
+import CommandRuntime from '@deepseek-ai/dsh-commands'
 import { CodeRuntime, type CodeRunRequest, type CodeRunResult } from '@deepseek-ai/dsh-code-runtime'
-import PlanModeService, { EXIT_PLAN_MODE, foldPlanMode, resolveConfig } from '../src/index.ts'
+import PlanModeController, { EXIT_PLAN_MODE, foldPlanMode, resolveConfig } from '../src/index.ts'
 import type { PlanModeConfig } from '../src/index.ts'
 
 const TEST_PLAN_SECTION = 'Test plan mode instructions.'
@@ -19,7 +19,7 @@ const PLAN_CONFIG = { section: TEST_PLAN_SECTION } satisfies PlanModeConfig
 
 /**
  * Drives the REAL plugin: mounts `dsh-plan-mode` beside real `SystemPrompt` and
- * `ToolRegistry` services, with fake Agents carrying real `Session`s and a
+ * `ToolRuntime` services, with fake Agents carrying real `Session`s and a
  * real scoped `agent.ctx` minted through `createScope`.
  * Request boundaries are simulated by dispatching the real pre-step waterfall
  * and the following `step/start` session event used by the loop.
@@ -68,8 +68,8 @@ function assembleFor(ctx: Context, agent: Agent) {
 async function setup(config: PlanModeConfig = PLAN_CONFIG): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
-  await ctx.plugin(PlanModeService, config)
+  await ctx.plugin(ToolRuntime)
+  await ctx.plugin(PlanModeController, config)
   return ctx
 }
 
@@ -281,8 +281,8 @@ describe('the boundary flush', () => {
   it('removes the pre-step flush when the plugin fiber is disposed', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    const fiber = await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(ToolRuntime)
+    const fiber = await ctx.plugin(PlanModeController, PLAN_CONFIG)
     const agent = await agentWithSession(ctx)
     openTurn(agent.session)
     ctx.planMode.set(agent, true)
@@ -362,7 +362,7 @@ describe('the boundary flush', () => {
     ctx.planMode.set(agent, true)
     const original = agent.session.append.bind(agent.session)
     // Only the flush's own plan/mode append fails; the boundary event itself
-    // lands (the loop appended it before the seam fires).
+    // lands (the loop appended it before the between-step hook fires).
     agent.session.append = (((type: string, ...rest: unknown[]) => {
       if (type === 'plan/mode') throw new Error('backend gone')
       return (original as (...args: unknown[]) => unknown)(type, ...rest)
@@ -433,13 +433,13 @@ describe('the soft layer', () => {
     // Plan guidance does not filter the registry or later assembly additions.
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     ctx.on('system-prompt/assemble', async (_assembly, _context, next) => {
       const final = await next()
       final.tools = [...final.tools, { name: 'added-later', description: 'added after next()', parameters: {} }]
       return final
     })
-    await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(PlanModeController, PLAN_CONFIG)
     registerNamedTools(ctx, ['read'])
     const planning = await agentWithSession(ctx, 'planning', { active: true })
     expect((await assembleFor(ctx, planning)).tools.map(tool => tool.name))
@@ -459,9 +459,9 @@ describe('the soft layer', () => {
     }
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry, { mode: 'code' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
     await ctx.plugin(FakeRuntime)
-    await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(PlanModeController, PLAN_CONFIG)
     registerNamedTools(ctx, ['read', 'write'])
     const agent = await agentWithSession(ctx, 'agent-1', { active: true })
     const assembly = await assembleFor(ctx, agent)
@@ -480,13 +480,13 @@ describe('the soft layer', () => {
     }
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry, { mode: 'both' })
+    await ctx.plugin(ToolRuntime, { mode: 'both' })
     await ctx.plugin(FakeRuntime)
-    await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(PlanModeController, PLAN_CONFIG)
     registerNamedTools(ctx, ['read', 'write'])
     const agent = await agentWithSession(ctx, 'agent-1', { active: true })
     const assembly = await assembleFor(ctx, agent)
-    // The stable registry contribution reaches both surfaces: the exit tool
+    // The stable registry contribution reaches both model interfaces: the exit tool
     // is present on the wire AND in the SDK alongside the untouched toolset.
     expect(assembly.tools.map(tool => tool.name).sort()).toEqual(['exit_plan_mode', 'read', 'run_code', 'write'])
     const sdk = assembly.sections.find(section => section.name === 'tools:sdk')?.text ?? ''
@@ -501,9 +501,9 @@ describe('the soft layer', () => {
     }
     const withPlanMode = new Context()
     await withPlanMode.plugin(SystemPrompt)
-    await withPlanMode.plugin(ToolRegistry, { mode: 'code' })
+    await withPlanMode.plugin(ToolRuntime, { mode: 'code' })
     await withPlanMode.plugin(FakeRuntime)
-    await withPlanMode.plugin(PlanModeService, PLAN_CONFIG)
+    await withPlanMode.plugin(PlanModeController, PLAN_CONFIG)
     registerNamedTools(withPlanMode, ['read', 'write'])
     const agent = await agentWithSession(withPlanMode)
     const defaultSdk = (await assembleFor(withPlanMode, agent)).sections.find(section => section.name === 'tools:sdk')?.text ?? ''
@@ -516,7 +516,7 @@ describe('the soft layer', () => {
     // with a deployment that does not compose plan mode at all.
     const bare = new Context()
     await bare.plugin(SystemPrompt)
-    await bare.plugin(ToolRegistry, { mode: 'code' })
+    await bare.plugin(ToolRuntime, { mode: 'code' })
     await bare.plugin(FakeRuntime)
     registerNamedTools(bare, ['read', 'write'])
     const bareSdk = (await bare.systemPrompt.assemble({ agent })).sections.find(section => section.name === 'tools:sdk')?.text ?? ''
@@ -553,7 +553,7 @@ describe('/plan', () => {
     expect(bare.get('commands')).toBeUndefined()
 
     const ctx = await setup()
-    await ctx.plugin(CommandService)
+    await ctx.plugin(CommandRuntime)
     // The `ctx.inject` child mounts asynchronously once `commands` resolves.
     await new Promise(resolve => setImmediate(resolve))
     const plainAgent = await agentWithSession(ctx, 'plain-plan-command')
@@ -595,7 +595,7 @@ describe('/plan', () => {
 
   it('leaves active plan mode, cancels a pending entry, and treats inactive exit as idempotent', async () => {
     const ctx = await setup()
-    await ctx.plugin(CommandService)
+    await ctx.plugin(CommandRuntime)
     await new Promise(resolve => setImmediate(resolve))
     const signal = new AbortController().signal
 
@@ -633,7 +633,7 @@ describe('/plan', () => {
 
   it('idle sessions get the immediate-commit copy on both /plan and /plan off', async () => {
     const ctx = await setup()
-    await ctx.plugin(CommandService)
+    await ctx.plugin(CommandRuntime)
     await new Promise(resolve => setImmediate(resolve))
     const signal = new AbortController().signal
     const agent = await agentWithSession(ctx, 'idle-plan-command')
@@ -648,9 +648,9 @@ describe('/plan', () => {
   it('removes the contributed command when the plan-mode plugin is disposed', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(CommandService)
-    const fiber = await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(CommandRuntime)
+    const fiber = await ctx.plugin(PlanModeController, PLAN_CONFIG)
     await new Promise(resolve => setImmediate(resolve))
     const agent = await agentWithSession(ctx)
     expect(ctx.commands.list(agent).map(command => command.name)).toEqual(['plan'])
@@ -665,10 +665,10 @@ describe('exit_plan_mode', () => {
   async function setupWithReview(answer?: { selected: string[]; custom?: string }) {
     const ctx = await setup()
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const asked: AskUserQuestionRequest[] = []
     if (answer !== undefined) {
-      ctx.userInteraction.registerProvider({
+      ctx.userQuestions.registerProvider({
         ask: (request) => {
           asked.push(request)
           return Promise.resolve({ answers: [{ id: 'plan-review', ...answer }] })
@@ -725,12 +725,12 @@ describe('exit_plan_mode', () => {
     expect(foldPlanMode(agent.session.events)).toBe(true)
   })
 
-  it('degrades to the manual exit when no user-interaction seam is composed', async () => {
+  it('degrades to the manual exit when no user-questions seam is composed', async () => {
     const ctx = await setup()
     const agent = await agentWithSession(ctx, 'agent-1', { active: true })
     const result = await callExit(ctx, agent)
     expect(result.isError).toBe(true)
-    expect(result.content).toEqual([{ type: 'text', text: 'Error: no user-interaction channel is available to review the plan; ask the user to switch the session mode instead' }])
+    expect(result.content).toEqual([{ type: 'text', text: 'Error: no user-questions channel is available to review the plan; ask the user to switch the session mode instead' }])
     expect(foldPlanMode(agent.session.events)).toBe(true)
   })
 
@@ -738,16 +738,16 @@ describe('exit_plan_mode', () => {
     const { ctx, agent } = await setupWithReview()
     const result = await callExit(ctx, agent)
     expect(result.isError).toBe(true)
-    expect(result.content).toEqual([{ type: 'text', text: 'Error: no user-interaction provider is registered' }])
+    expect(result.content).toEqual([{ type: 'text', text: 'Error: no user-questions provider is registered' }])
     expect(foldPlanMode(agent.session.events)).toBe(true)
   })
 
   it('rejects review from a runtime-owned agent with consumer-neutral guidance', async () => {
     const ctx = await setup()
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const ask = vi.fn(async () => ({ answers: [{ id: 'plan-review', selected: ['Approve'] }] }))
-    ctx.userInteraction.registerProvider({ ask })
+    ctx.userQuestions.registerProvider({ ask })
     const root = await agentWithSession(ctx, 'review-root')
     const child = await agentWithSession(ctx, 'review-child', { active: true, owner: root })
 
@@ -794,13 +794,13 @@ describe('exit_plan_mode', () => {
     }
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry, { mode: 'code' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
     await ctx.plugin(ExitRuntime)
-    await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(PlanModeController, PLAN_CONFIG)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const asked: AskUserQuestionRequest[] = []
-    ctx.userInteraction.registerProvider({
+    ctx.userQuestions.registerProvider({
       ask: (request) => {
         asked.push(request)
         return Promise.resolve({ answers: [{ id: 'plan-review', selected: ['Approve'] }] })
@@ -899,7 +899,7 @@ describe('exit_plan_mode', () => {
 
   it('treats duplicate review answer items as non-consent', async () => {
     const { ctx, agent } = await setupWithReview()
-    ctx.userInteraction.registerProvider({
+    ctx.userQuestions.registerProvider({
       ask: () => Promise.resolve({ answers: [
         { id: 'plan-review', selected: ['Approve'] },
         { id: 'plan-review', selected: ['Keep planning'] },
@@ -913,7 +913,7 @@ describe('exit_plan_mode', () => {
 
   it('a missing answer item reads as keep-planning', async () => {
     const { ctx, agent } = await setupWithReview()
-    ctx.userInteraction.registerProvider({ ask: () => Promise.resolve({ answers: [] }) })
+    ctx.userQuestions.registerProvider({ ask: () => Promise.resolve({ answers: [] }) })
     const result = await callExit(ctx, agent)
     expect(result.isError).toBe(true)
     expect(result.content).toEqual([{ type: 'text', text: 'Error: The user chose to keep planning; revise the plan and present it again.' }])
@@ -931,8 +931,8 @@ describe('exit_plan_mode', () => {
 
   it('reads a dismissed review as the user taking the turn back, not as a failure', async () => {
     const { ctx, agent } = await setupWithReview()
-    ctx.userInteraction.registerProvider({
-      ask: () => Promise.reject(new UserInteractionError(
+    ctx.userQuestions.registerProvider({
+      ask: () => Promise.reject(new UserQuestionError(
         'the user cancelled ask_user_question', 'ASK_CANCELLED')),
     })
     const result = await callExit(ctx, agent)
@@ -943,8 +943,8 @@ describe('exit_plan_mode', () => {
 
   it('leaves every other review failure its own message', async () => {
     const { ctx, agent } = await setupWithReview()
-    ctx.userInteraction.registerProvider({
-      ask: () => Promise.reject(new UserInteractionError(
+    ctx.userQuestions.registerProvider({
+      ask: () => Promise.reject(new UserQuestionError(
         'ask_user_question was aborted before the user answered', 'ASK_ABORTED')),
     })
     const result = await callExit(ctx, agent)
@@ -970,12 +970,12 @@ describe('exit_plan_mode', () => {
   it('fails the call when the plugin is disposed while the review awaits (no phantom exit)', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    const fiber = await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(ToolRuntime)
+    const fiber = await ctx.plugin(PlanModeController, PLAN_CONFIG)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     let answer!: (value: { answers: { id: string; selected: string[] }[] }) => void
-    ctx.userInteraction.registerProvider({
+    ctx.userQuestions.registerProvider({
       ask: () => new Promise((resolve) => { answer = resolve }),
     })
     const agent = await agentWithSession(ctx, 'agent-1', { active: true })
@@ -994,7 +994,7 @@ describe('exit_plan_mode', () => {
 
   it('a throwing provider surfaces as the corrective isError and the mode stays plan', async () => {
     const { ctx, agent } = await setupWithReview()
-    ctx.userInteraction.registerProvider({ ask: () => { throw new Error('review aborted') } })
+    ctx.userQuestions.registerProvider({ ask: () => { throw new Error('review aborted') } })
     const result = await callExit(ctx, agent)
     expect(result.isError).toBe(true)
     expect(result.content).toEqual([{ type: 'text', text: 'Error: review aborted' }])
@@ -1034,12 +1034,12 @@ describe('HMR disposal', () => {
   it('unregisters the service, listeners, prompt section, and stable exit tool with the plugin fiber', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    const fiber = await ctx.plugin(PlanModeService, PLAN_CONFIG)
+    await ctx.plugin(ToolRuntime)
+    const fiber = await ctx.plugin(PlanModeController, PLAN_CONFIG)
     const agent = await agentWithSession(ctx, 'disposed-recovery')
     openTurn(agent.session)
     ctx.planMode.set(agent, true)
-    expect(ctx.get('planMode')).toBeInstanceOf(PlanModeService)
+    expect(ctx.get('planMode')).toBeInstanceOf(PlanModeController)
     expect(ctx.tools.get(EXIT_PLAN_MODE)).toBeDefined()
     expect((await ctx.systemPrompt.assemble()).sections.map(section => section.name)).toContain('plan:policy')
 

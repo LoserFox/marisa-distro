@@ -1,0 +1,12 @@
+import z from 'schemastery';
+import type { Config as SharedConfig, CustomPackConfig as SharedCustomPackConfig, InteractionConfig as SharedInteractionConfig, ResolvedConfig as SharedResolvedConfig, ResolvedInteractionConfig as SharedResolvedInteractionConfig } from './shared/contracts.ts';
+export { DEFAULT_IDLE_REVIEW_MS, DEFAULT_RECALL_CANDIDATE_MULTIPLIER, DEFAULT_RECALL_HIGH_SCORE_THRESHOLD, DEFAULT_RECALL_LIMIT, DEFAULT_RECALL_LOW_SCORE_THRESHOLD, DEFAULT_RECALL_MAX_MEDIUM_RESULTS, DEFAULT_RECALL_MAX_UNKNOWN_RESULTS, DEFAULT_RECALL_QUALITY_POLICY, DEFAULT_TIMEOUT_MS, } from './config-values.ts';
+export type Config = SharedConfig;
+export type CustomPackConfig = SharedCustomPackConfig;
+export type InteractionConfig = SharedInteractionConfig;
+export type ResolvedConfig = SharedResolvedConfig;
+export type ResolvedInteractionConfig = SharedResolvedInteractionConfig;
+export declare const InteractionConfig: z<InteractionConfig>;
+export declare const Config: z<Config>;
+export declare function resolveInteractionConfig(config?: InteractionConfig): ResolvedInteractionConfig;
+export declare function resolveConfig(config?: Config): ResolvedConfig;

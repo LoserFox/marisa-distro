@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-Agent 作用域事件历来采用位置参数：开头的 `agent` 主体、事件专属字段，以及末尾用于 waterfall（瀑布式事件）/serial 事件的 `next`。新增字段或退役上下文类型（如 `PreStepContext` 与 `RequestFailureContext`）都会迫使跨包重写每个监听器和 emitter，契约也一直分散在参数列表中，而不是集中在一个具名 payload 中。
+Agent 作用域事件历来采用位置参数：开头的 `agent` 主体、事件专属字段，以及末尾用于 waterfall（瀑布式事件）/serial 事件的 `next`。新增字段或退役上下文类型（如 `PreStepContext` 与 `RequestFailureContext`）都会迫使跨包重写每个监听器和 emitter，约定也一直分散在参数列表中，而不是集中在一个具名 payload 中。
 
 ## 决策
 
@@ -18,7 +18,7 @@ dispatch 是融合的：`agentEvents(ctx, agent)`（以及一次性 `emitAgentEv
 
 ## 考虑过的替代方案
 
-**保留位置签名。** 新增字段或退役上下文类型依旧会重写每个监听器和 emitter，契约也会继续分散在参数列表中，而不是集中在一个具名 payload 中。
+**保留位置签名。** 新增字段或退役上下文类型依旧会重写每个监听器和 emitter，约定也会继续分散在参数列表中，而不是集中在一个具名 payload 中。
 
 **在每个 dispatch 位置手工构造主体。** loop 的中间设计调用 `ctx.waterfall(this.carrier, …)`，传入手工构造的 `{ agent: this, … }` payload；它避免了每次 dispatch 的分配，却重复了主体注入，并让作用域键与 payload 主体分叉。融合的 dispatcher 是每种 dispatch 模式的唯一注入点。
 

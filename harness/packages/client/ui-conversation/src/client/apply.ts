@@ -1,18 +1,24 @@
 /** Registers the conversation components, shared store, and service callbacks. */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { resolveSlotLabel, type BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
-import { resolveWorkspacePath, type ISessions, type SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import {
+  resolveWorkspacePath, type ISessions, type SessionId,
+} from '@deepseek-ai/dsh-client-runtime/client'
+// Type-only: the ctx.settingsScope Context merge. Cross-plugin collaboration
+// goes through the service, never a value import (client bundle purity gate).
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the locale plugin's Context merge (ctx.locale).
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { ViewTab } from './contract/views.ts'
 import type {
-  ApprovalWait, ChatScrollPosition, ChatViewInjected, ComposerBarInjected, ComposerChainProps, ConversationInjected,
-  ConversationSessionHeaderInjected, ConversationSessionInjected, DetailsInjected,
+  ApprovalWait, ChatNodeTurnDataInjected, ChatScrollPosition, ChatViewInjected, ComposerBarInjected,
+  ComposerChainProps, ConversationInjected, ConversationSessionHeaderInjected, ConversationSessionInjected,
+  DetailsInjected,
 } from './contract/slots.ts'
 import type { InputNotice } from './input/contract.ts'
 import { createChatStore } from './stores.ts'
-import { ConversationService } from './service.ts'
+import { ConversationController, UnsupportedImageMediaTypeError } from './service.ts'
 import type { IConversation } from './service.ts'
 import { ComposerBlockRegistry } from './input/blocks.ts'
 import type { ComposerBlock } from './input/blocks.ts'
@@ -30,6 +36,9 @@ import { ConversationRoot } from './skeleton/ConversationRoot.tsx'
 import { ConversationSession, ConversationSessionHeader } from './skeleton/ConversationSession.tsx'
 import { DetailsPanel } from './skeleton/DetailsPanel.tsx'
 import { en, NS, zh, type ConversationKey } from './locales.ts'
+import { registerConversationNodes } from './conversation-nodes/register.ts'
+import { registerChatNodeRenderers } from './chat/register-node-renderers.ts'
+import { CONVERSATION_SETTINGS_NAMESPACE, type ConversationSettings } from '../submission-settings.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -39,7 +48,10 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Services required by the conversation plugin. */
-export const inject = ['slots', 'layout', 'sessions', 'workspaces', 'locale']
+export const inject = [
+  'slots', 'layout', 'sessions', 'workspaces', 'locale', 'connection', 'remote', 'settingsScope',
+  'conversationEvents', 'conversationViews',
+]
 
 // Static no-session sources for the composer-bar hooks compartment: module
 // constants so the render side's per-source hook cache (observableHook) keeps
@@ -63,12 +75,32 @@ const ABSENT_MENU_LAUNCHER = {
   subscribe: () => () => {},
 }
 
+const CHAT_NODE_INJECT: ChatNodeTurnDataInjected = {
+  hooks: {
+    turnData: ({ useSession }, nodeKey) => function useTurnData(key) {
+      return useSession((snapshot) => {
+        const location = snapshot.chat.nodes.get(nodeKey)?.location
+        return location?.kind === 'turn' || location?.kind === 'step'
+          ? location.turn.data.get(key)
+          : undefined
+      })
+    },
+  },
+}
+
 /** Resolve the session-scoped conversation face (scope-addressed send/cancel), failing loud. */
 function scopedConversation(sessions: ISessions, id: SessionId): IConversation {
   const scoped = sessions.scope(id)
   if (scoped === undefined) throw new Error(`ui-conversation: session "${id}" resolved no scope`)
   const conversation = scoped.get('conversation')
-  if (conversation === undefined) { throw new Error('ui-conversation: conversation service unavailable through the session scope') }
+  if (conversation === undefined) throw new Error('ui-conversation: conversation service unavailable through the session scope')
+  return conversation
+}
+
+/** Resolve package-internal attachment operations from the public service registration. */
+function concreteConversation(ctx: Context): ConversationController {
+  const conversation = ctx.get('conversation') as ConversationController | undefined
+  if (conversation === undefined) throw new Error('ui-conversation: conversation service unavailable')
   return conversation
 }
 
@@ -86,6 +118,9 @@ export function apply(ctx: Context): void {
   const layout = ctx.layout
   const slots = ctx.slots
 
+  registerConversationNodes(ctx)
+  registerChatNodeRenderers(ctx)
+
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-conversation: dictionaries')
 
   // Registration-time text (the view tab label) reads through the bound
@@ -95,7 +130,9 @@ export function apply(ctx: Context): void {
 
   // Apply-time construction keeps store identity bound to this fiber.
   const chatStore = createChatStore()
-  const submissionPolicy = new ComposerSubmissionPolicy()
+  const submissionPolicy = new ComposerSubmissionPolicy(
+    ctx.settingsScope.bind<ConversationSettings>({ namespace: CONVERSATION_SETTINGS_NAMESPACE }),
+  )
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
@@ -128,17 +165,17 @@ export function apply(ctx: Context): void {
     version: () => slots.getVersion('conversation.view'),
   }
 
-  // The per-session input machine registry (InputService face; published as
+  // The per-session input machine registry (SessionInputResolver face; published as
   // ctx.conversation.input by the service below sharing this one instance).
-  const inputHub = new InputHub(ctx)
+  const inputHub = new InputHub(ctx, t)
 
   // The composer-block registry: a plugin that knows a session cannot send —
-  // ui-model, when no adapter serves the session's route — raises a block
+  // ui-model-selection, when no adapter serves the session's route — raises a block
   // here, and the bar reads its own session's store. It cannot flow the other
   // way: this package must not import the plugins that would know.
   const composerBlocks = new ComposerBlockRegistry()
 
-  // Decision 19/20: the input machine feeds every session-scope slot
+  // The input machine feeds every session-scope slot
   // component through the standard provide channel — the 'input' hook plus
   // the two public actions. Materialization is the shell creation trigger
   // (per-session lazy; scope disposer tears down).
@@ -170,6 +207,7 @@ export function apply(ctx: Context): void {
       'conversation.input.left': { kind: 'list', scope: 'session' },
       'conversation.input.right': { kind: 'list', scope: 'session' },
       'conversation.hero.workspace': { kind: 'single', scope: 'root' },
+      'conversation.hero.agentPreset': { kind: 'single', scope: 'root' },
     },
     inject: (sessionId: SessionId | undefined): ConversationInjected => ({
       hooks: { composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId) },
@@ -178,9 +216,16 @@ export function apply(ctx: Context): void {
         if (sessionId !== undefined && nextId !== sessionId) {
           const from = inputHub.shell(sessionId)
           const draft = from.snapshot.draft
-          if (draft !== '') {
-            inputHub.shell(nextId).setDraft(draft)
-            from.setDraft('')
+          const imageIds = from.snapshot.imageIds
+          const next = inputHub.shell(nextId)
+          if (imageIds.length === 0 || next.addImages(imageIds)) {
+            if (draft !== '') {
+              next.setDraft(draft)
+              from.setDraft('')
+            }
+            if (imageIds.length > 0) {
+              for (const id of imageIds) from.removeImage(id)
+            }
           }
         }
         sessions.open(nextId)
@@ -197,10 +242,14 @@ export function apply(ctx: Context): void {
       'conversation.view': { kind: 'list', scope: 'session' },
     },
     store: chatStore,
-    inject: (sessionId: SessionId, _actions: BoundActions<typeof chatStore>): ConversationSessionInjected => ({
-      views,
-      bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
-    }),
+    inject: (sessionId: SessionId, _actions: BoundActions<typeof chatStore>): ConversationSessionInjected => {
+      const conversation = concreteConversation(ctx)
+      return {
+        views,
+        releaseSessionImages: (id) => { conversation.releaseSessionImages(id) },
+        bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
+      }
+    },
   }, ConversationSession)
 
   // Header chrome sits above the resident scrollport but shares the same
@@ -210,6 +259,7 @@ export function apply(ctx: Context): void {
     locale: NS,
     children: {
       'conversation.session.header.actions': { kind: 'list', scope: 'session' },
+      'conversation.session.header.utilities': { kind: 'list', scope: 'session' },
     },
     store: chatStore,
     inject: (): ConversationSessionHeaderInjected => ({
@@ -219,7 +269,7 @@ export function apply(ctx: Context): void {
   }, ConversationSessionHeader)
 
   // The default composer body: its own single slot inside the composer
-  // chain's fallback (decision 20). Public machine surface arrives via the
+  // chain's fallback. Public machine surface arrives via the
   // provide channel above; the keyboard command face and the stop/retry
   // verbs ride this inject (package-internal — hub and bar are one plugin).
   // Session-maybe: with no current session the machine faces are absent and
@@ -230,7 +280,7 @@ export function apply(ctx: Context): void {
     locale: NS,
     // The two named control seats in the bar's tool row (plan beside the
     // access control, model right); empty until their owning plugins
-    // register (B ruling).
+    // register.
     children: {
       'conversation.input.plan': { kind: 'single', scope: 'session' },
       'conversation.input.model': { kind: 'single', scope: 'session' },
@@ -239,6 +289,9 @@ export function apply(ctx: Context): void {
       if (sessionId === undefined) {
         return {
           keyboard: undefined,
+          addImages: undefined,
+          removeImage: undefined,
+          draftImages: undefined,
           resolveSubmitMode: (running, gesture, steeringAvailable) =>
             submissionPolicy.resolve(running, gesture, steeringAvailable),
           toggleCommandMenu: undefined,
@@ -247,18 +300,40 @@ export function apply(ctx: Context): void {
           hooks: { notices: ABSENT_NOTICES, lexicon: ABSENT_LEXICON, menuLauncher: ABSENT_MENU_LAUNCHER },
         }
       }
+      const conversation = concreteConversation(ctx)
       const shell = inputHub.shell(sessionId)
-      const slash = inputHub.slash(sessionId)
+      const inputTriggers = inputHub.inputTriggers(sessionId)
       return {
         keyboard: shell,
+        addImages: (files) => {
+          try {
+            const images = conversation.createDraftImages(files)
+            if (!shell.addImages(images.map(image => image.id))) {
+              conversation.releaseDraftImages(images)
+            }
+            return null
+          } catch (error: unknown) {
+            if (error instanceof UnsupportedImageMediaTypeError) {
+              // Positive copy: the supported list is fixed in imageMediaType,
+              // and naming it beats echoing the rejected MIME type back.
+              return t('image.unsupportedType')
+            }
+            return error instanceof Error ? error.message : String(error)
+          }
+        },
+        removeImage: (id) => {
+          conversation.releaseDraftImage(id)
+          shell.removeImage(id)
+        },
+        draftImages: ids => conversation.draftImages(ids),
         resolveSubmitMode: (running, gesture, steeringAvailable) =>
           submissionPolicy.resolve(running, gesture, steeringAvailable),
-        toggleCommandMenu: slash === undefined
+        toggleCommandMenu: inputTriggers === undefined
           ? undefined
           : (selection) => {
             shell.dismissPopup()
             const snapshot = shell.snapshot
-            slash.toggleSource('command', {
+            inputTriggers.toggleSource('command', {
               trigger: '/',
               query: '',
               position: snapshot.draft.slice(0, selection.start).trim() === '' ? 'leading' : 'inline',
@@ -279,14 +354,14 @@ export function apply(ctx: Context): void {
         hooks: {
           notices: shell.notices,
           lexicon: shell.lexicon,
-          menuLauncher: slash?.launcher ?? ABSENT_MENU_LAUNCHER,
+          menuLauncher: inputTriggers?.launcher ?? ABSENT_MENU_LAUNCHER,
         },
       }
     },
   }, InputBar)
 
   // The approval takeover: a selector-routed entry of the chain this package
-  // just declared (the ui-question registration pattern; the entry lives here
+  // just declared (the ui-user-questions registration pattern; the entry lives here
   // because approval answering is core conversation UX, not an optional tool).
   // Zero business face — data and verbs both ride the matched carrier.
   // priority 1: question takeovers (default 0) win when both kinds are
@@ -296,8 +371,8 @@ export function apply(ctx: Context): void {
   slots.register({ name: 'conversation.composer', select: selectApproval, priority: 1, locale: NS }, ApprovalPanel)
 
   // The chat view: first entry of the ring this package just declared.
-  // ChatView owns ordered Tool placement but delegates each whole root call
-  // to ui-tool, which owns root/subcall composition and atomic dispatch.
+  // ChatView owns only the stable ordered Node list. Business renderers are
+  // independently keyed behind its one Node seat.
   slots.register({
     name: 'conversation.view',
     id: 'chat',
@@ -305,18 +380,18 @@ export function apply(ctx: Context): void {
     label: () => t('view.chat'),
     locale: NS,
     children: {
-      'conversation.chat.tool': { kind: 'single', scope: 'session' },
-      'conversation.chat.commandview': { kind: 'keyed', scope: 'session' },
-      'conversation.chat.turnTail': { kind: 'chain', scope: 'session' },
+      'conversation.chat.node': { kind: 'keyed', scope: 'session', inject: CHAT_NODE_INJECT },
     },
     store: chatStore,
     inject: (sessionId: SessionId, actions: BoundActions<typeof chatStore>): ChatViewInjected => {
+      const conversation = concreteConversation(ctx)
       const scoped = scopedConversation(sessions, sessionId)
       return {
         openDetails: (target) => {
           actions.select(target)
           layout.openDetails()
         },
+        fileMentions: owner => ctx.get('chatFileMentions')?.forClosing(owner),
         openFile: (path) => {
           const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd
           void workspaces.openPath(resolveWorkspacePath(cwd, path)).catch(() => {
@@ -325,6 +400,7 @@ export function apply(ctx: Context): void {
           })
         },
         loadOlder: () => { void scoped.loadOlder() },
+        loadImage: attachment => conversation.resolveImage(sessionId, attachment),
         // Unregistered 'trajectory' id is safe: the tab ring falls back to
         // the first view, and the untouched inspect target stays inert.
         inspectCall: (callId) => {
@@ -356,13 +432,13 @@ export function apply(ctx: Context): void {
   // registers itself as `conversation` and lives on its own child fiber.
   // Presentation registrants depend directly on their slot declarations;
   // this service remains only where conversation actions are required.
-  ctx.plugin(ConversationService, { input: inputHub, blocks: composerBlocks })
+  ctx.plugin(ConversationController, { input: inputHub, blocks: composerBlocks })
 
   // The plan strip rides the input dock above the queue rows (same posture).
   ctx.plugin(todoDockEntry)
 
-  // The read-only queue dock entry (T9 file territory) rides the same
-  // registration seam into the input dock declared above.
+  // The read-only queue dock entry rides the same
+  // registration path into the input dock declared above.
   ctx.plugin(queueDockEntry)
 
   slots.register({

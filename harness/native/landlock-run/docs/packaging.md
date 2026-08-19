@@ -1,6 +1,6 @@
 # Packaging
 
-The package family uses the same broad shape as native packages such as esbuild: one JS entry package plus platform optional packages. Unlike Node addons there is no ABI or backend dimension — each platform package carries exactly the static executables its `prebuilds.json` declares.
+The package family uses the same layout as native packages such as esbuild: one JS entry package plus platform optional packages. Unlike Node addons there is no ABI or backend division — each platform package carries exactly the static executables its `prebuilds.json` declares.
 
 ## Published packages
 

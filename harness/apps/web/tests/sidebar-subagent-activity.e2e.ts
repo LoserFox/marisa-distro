@@ -27,7 +27,7 @@ const MODE = webSnapshotMode()
 const HOLD_PROVIDER = 'web-test-hold'
 const HOLD_MODEL = 'hold'
 
-/** Model seam that completes the owner turn, then holds its delegated child open. */
+/** Model stub that completes the owner turn, then holds its delegated child open. */
 class StagedAdapter extends LlmAdapter {
   activeCalls = 0
   private calls = 0
@@ -92,7 +92,7 @@ describe('web e2e: sidebar subagent activity', () => {
       agentOptions: { provider: HOLD_PROVIDER, model: HOLD_MODEL },
     })
     parentHandle.agent.followup(createUserMessage({
-      content: [{ type: 'text', text: 'Delegate a background task.' }],
+      content: [{ type: 'text', text: 'Delegate a background job.' }],
       source: { kind: 'user' },
     }))
     await parentHandle.agent.whenIdle()
@@ -114,7 +114,7 @@ describe('web e2e: sidebar subagent activity', () => {
     await page.goto(scaffold.baseUrl, { waitUntil: 'load' })
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     await connectFreshWorkspace(page, scaffold.workspaceCwd)
-    const workspace = await scaffold.ctx.workspace.resolveByPath(cwd)
+    const workspace = await scaffold.ctx.workspaceRegistry.resolveByPath(cwd)
     if (workspace === undefined) throw new Error('connected Web workspace was not registered')
     await workspace.attachSession(parentHandle.agent.session.id)
   }, 60_000)
@@ -136,7 +136,7 @@ describe('web e2e: sidebar subagent activity', () => {
   it('pins a running descendant on its visible idle owner row', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-sidebar-subagent-activity'))
     const sidebar = page.getByRole('tree', { name: 'Sessions' })
-    const ownerRow = sidebar.getByRole('treeitem', { name: /1 subagent running Delegate a background task/ })
+    const ownerRow = sidebar.getByRole('treeitem', { name: /1 subagent running Delegate a background job/ })
     await ownerRow.waitFor({ timeout: 10_000 })
     expect(parentHandle.agent.status).toBe('idle')
     await compareOrRefreshGolden(

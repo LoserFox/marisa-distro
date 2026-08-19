@@ -2,9 +2,8 @@
 
 import type {
   HostFrame, IApiClient, RpcError, RpcRequest, RpcResult, SessionId, WorkspaceId, WorkspaceView,
-} from '@deepseek-ai/dsh-client-connection/client'
+} from '@deepseek-ai/dsh-api-remotes/client'
 import { transportError } from '@deepseek-ai/dsh-host-apiproxy/api'
-import { mergeOrderedBaseline } from '../ordered-baseline.ts'
 import { Notifier } from '../sessions/notifier.ts'
 import { Workspace, type WorkspaceCreateInput } from './workspace.ts'
 
@@ -30,6 +29,7 @@ export interface WorkspaceListSnapshot {
 type WorkspaceDelta =
   | { type: 'upsert'; workspace: WorkspaceView }
   | { type: 'remove'; workspaceId: WorkspaceId }
+  | { type: 'order'; workspaceIds: readonly WorkspaceId[] }
 
 /** Workspace object cluster driven by one list baseline and changed-frame upserts. */
 export class WorkspaceManager {
@@ -51,6 +51,12 @@ export class WorkspaceManager {
    * mirror of replaying refreshFrames over the item baseline.
    */
   private archivedSupersedesRefresh = false
+  /** Latest local reorder request; only its unary echo may install order. */
+  private orderRequestGeneration = 0
+  /** Increments on order frames so a later remote commit outranks an older unary echo. */
+  private orderFrameGeneration = 0
+  /** Last complete order accepted from a Host baseline, frame, or current unary echo. */
+  private committedOrder: WorkspaceId[] = []
   /**
    * Ids this process has seen removed, kept for the connection's lifetime so
    * a late changed frame or a stale baseline row cannot resurrect a deleted
@@ -72,16 +78,15 @@ export class WorkspaceManager {
 
   /**
    * Refresh from workspace.list. The first successful response establishes
-   * Host order; later responses update membership and values without moving
-   * identities already visible to the client. Frames arriving during the RPC
-   * are replayed over its response.
+   * Host order; later responses re-establish the durable order so reconnects
+   * adopt reorders committed while this client was offline. Frames arriving
+   * during the RPC are replayed over its response.
    * @returns the shared in-flight refresh.
    */
   refresh(): Promise<void> {
     if (this.inflight !== null) return this.inflight
     this.state = 'loading'
     this.error = null
-    const established = this.itemViews()
     const frames: WorkspaceDelta[] = []
     this.refreshFrames = frames
     this.notifier.markDirty()
@@ -89,9 +94,7 @@ export class WorkspaceManager {
       try {
         const { result } = await this.api.workspace.list({})
         if (result.ok) {
-          let items = this.phase === 'pending'
-            ? result.value.items
-            : mergeOrderedBaseline(established, result.value.items, workspace => workspace.workspaceId)
+          let items = result.value.items
           items = items.filter(workspace => !this.removedIds.has(workspace.workspaceId))
           for (const delta of frames) items = applyWorkspaceDelta(items, delta)
           this.installViews(items)
@@ -120,7 +123,7 @@ export class WorkspaceManager {
   /**
    * Create or resolve a real Workspace, then publish its returned snapshot
    * without waiting for the changed frame.
-   * @param input - name under workspaceRoot or an existing absolute path.
+   * @param input - the existing absolute path to adopt.
    * @returns the wire result.
    */
   async create(input: WorkspaceCreateInput): Promise<RpcResult<{ workspace: WorkspaceView; created: boolean }>> {
@@ -154,6 +157,44 @@ export class WorkspaceManager {
   async delete(workspaceId: WorkspaceId): Promise<RpcResult<{ deleted: true }>> {
     const { result } = await this.api.workspace.delete({ workspaceId })
     if (result.ok) this.remove(workspaceId, true)
+    return result
+  }
+
+  /**
+   * Move a Workspace within the registry display order and install the full
+   * returned order without waiting for the Host frame.
+   * @param workspaceId - Workspace to move.
+   * @param beforeWorkspaceId - Anchor workspace; omitted appends.
+   * @returns the wire result.
+   */
+  async insertBefore(
+    workspaceId: WorkspaceId,
+    beforeWorkspaceId?: WorkspaceId,
+  ): Promise<RpcResult<{ workspaceIds: WorkspaceId[] }>> {
+    const requestGeneration = ++this.orderRequestGeneration
+    const frameGeneration = this.orderFrameGeneration
+    const localOrder = this.itemViews().map(workspace => workspace.workspaceId)
+    this.installOrder(insertIdBefore(localOrder, workspaceId, beforeWorkspaceId))
+    let result: RpcResult<{ workspaceIds: WorkspaceId[] }>
+    try {
+      ;({ result } = await this.api.workspace.insertBefore({
+        workspaceId,
+        ...beforeWorkspaceId === undefined ? {} : { beforeWorkspaceId },
+      }))
+    } catch (error) {
+      if (requestGeneration === this.orderRequestGeneration
+        && frameGeneration === this.orderFrameGeneration) {
+        this.installOrder(this.committedOrder)
+      }
+      throw error
+    }
+    if (result.ok && requestGeneration === this.orderRequestGeneration
+      && frameGeneration === this.orderFrameGeneration) {
+      this.installOrder(result.value.workspaceIds, true)
+    } else if (!result.ok && requestGeneration === this.orderRequestGeneration
+      && frameGeneration === this.orderFrameGeneration) {
+      this.installOrder(this.committedOrder)
+    }
     return result
   }
 
@@ -198,6 +239,10 @@ export class WorkspaceManager {
   handleHostEnvelope(envelope: RpcRequest<HostFrame>): void {
     if (envelope.payload.type === 'host/workspace-changed') this.upsert(envelope.payload.workspace)
     else if (envelope.payload.type === 'host/workspace-removed') this.remove(envelope.payload.workspaceId)
+    else if (envelope.payload.type === 'host/workspace-order-changed') {
+      this.orderFrameGeneration++
+      this.installOrder(envelope.payload.workspaceIds, true)
+    }
     else if (envelope.payload.type === 'host/archived-sessions-changed') {
       this.installArchived(envelope.payload.archivedSessionIds)
     }
@@ -249,6 +294,24 @@ export class WorkspaceManager {
     this.notifier.markDirty()
   }
 
+  /** Reorder known Workspace objects, optionally recording a Host-committed sequence. */
+  private installOrder(workspaceIds: readonly WorkspaceId[], committed = false): void {
+    if (committed) {
+      this.refreshFrames?.push({ type: 'order', workspaceIds })
+      this.committedOrder = [...workspaceIds]
+    }
+    const rank = new Map(workspaceIds.map((id, index) => [id, index]))
+    const items = [...this.items].sort((left, right) => {
+      const leftId = left.getSnapshot().view?.workspaceId
+      const rightId = right.getSnapshot().view?.workspaceId
+      return (leftId === undefined ? Number.MAX_SAFE_INTEGER : rank.get(leftId) ?? Number.MAX_SAFE_INTEGER)
+        - (rightId === undefined ? Number.MAX_SAFE_INTEGER : rank.get(rightId) ?? Number.MAX_SAFE_INTEGER)
+    })
+    if (items.every((item, index) => item === this.items[index])) return
+    this.items = items
+    this.notifier.markDirty()
+  }
+
   /** Upsert one Host view, optionally retaining the local object that materialized it. */
   private upsert(view: WorkspaceView, identity?: Workspace): void {
     if (this.removedIds.has(view.workspaceId)) return
@@ -259,6 +322,9 @@ export class WorkspaceManager {
     // late unary response cannot roll back a newer frame.
     const installed = index === -1 ? undefined : this.items[index]?.getSnapshot().view
     if (installed !== undefined && Date.parse(view.updatedAt) < Date.parse(installed.updatedAt)) return
+    if (!this.committedOrder.includes(view.workspaceId)) {
+      this.committedOrder = [view.workspaceId, ...this.committedOrder]
+    }
     if (identity !== undefined) {
       this.items = index === -1
         ? [identity, ...this.items]
@@ -276,6 +342,7 @@ export class WorkspaceManager {
   private remove(workspaceId: WorkspaceId, direct = false): void {
     this.refreshFrames?.push({ type: 'remove', workspaceId })
     this.removedIds.add(workspaceId)
+    this.committedOrder = this.committedOrder.filter(id => id !== workspaceId)
     const items = this.items.filter(item =>
       item.getSnapshot().view?.workspaceId !== workspaceId)
     if (items.length === this.items.length) {
@@ -309,6 +376,7 @@ export class WorkspaceManager {
       installed.set(view.workspaceId, workspace)
     }
     this.items = [...installed.values()]
+    this.committedOrder = views.map(view => view.workspaceId)
   }
 
   private itemViews(): readonly WorkspaceView[] {
@@ -332,7 +400,26 @@ function upsertWorkspace(items: readonly WorkspaceView[], workspace: WorkspaceVi
 
 /** Replay one ordered delta over a baseline: upsert in place, or drop the removed id. */
 function applyWorkspaceDelta(items: readonly WorkspaceView[], delta: WorkspaceDelta): WorkspaceView[] {
-  return delta.type === 'upsert'
-    ? upsertWorkspace(items, delta.workspace)
-    : items.filter(workspace => workspace.workspaceId !== delta.workspaceId)
+  if (delta.type === 'upsert') return upsertWorkspace(items, delta.workspace)
+  if (delta.type === 'remove') {
+    return items.filter(workspace => workspace.workspaceId !== delta.workspaceId)
+  }
+  const rank = new Map(delta.workspaceIds.map((id, index) => [id, index]))
+  return [...items].sort((left, right) =>
+    (rank.get(left.workspaceId) ?? Number.MAX_SAFE_INTEGER)
+    - (rank.get(right.workspaceId) ?? Number.MAX_SAFE_INTEGER))
+}
+
+/** Move one known id before an optional anchor; unknown ids leave the order unchanged. */
+function insertIdBefore(
+  ids: readonly WorkspaceId[],
+  id: WorkspaceId,
+  beforeId?: WorkspaceId,
+): WorkspaceId[] {
+  if (!ids.includes(id) || (beforeId !== undefined && !ids.includes(beforeId)) || beforeId === id) {
+    return [...ids]
+  }
+  const without = ids.filter(candidate => candidate !== id)
+  const at = beforeId === undefined ? without.length : without.indexOf(beforeId)
+  return [...without.slice(0, at), id, ...without.slice(at)]
 }

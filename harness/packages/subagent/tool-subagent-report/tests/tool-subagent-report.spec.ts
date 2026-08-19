@@ -2,8 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
+import { assembleContextFor } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
 import { CallId, LlmAdapter } from '@deepseek-ai/dsh-llm'
@@ -11,8 +12,8 @@ import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import SubagentService from '@deepseek-ai/dsh-subagent'
-import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
+import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import * as control from '@deepseek-ai/dsh-tool-subagent-control'
 import { textResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import * as tool from '../src/index.ts'
@@ -50,7 +51,7 @@ async function setup(options: { load?: boolean; config?: tool.Config } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'dsh-tool-subagent-report-'))
   await ctx.plugin(JsonlSessionPersistence, { root })
   await ctx.plugin(AgentLoop, { agents: [] })
-  await ctx.plugin(SubagentService)
+  await ctx.plugin(SubagentRuntime)
   await ctx.plugin(SubagentSpawn, { providerName: 'spawn' })
   const fiber = options.load === false
     ? undefined
@@ -96,6 +97,17 @@ function callReport(ctx: Context, child: Agent, output: string, signal = testSig
   })
 }
 
+/** Occupy the child-local report name to force installation rollback. */
+function registerReportConflict(child: Agent): () => void {
+  return child.ctx.tools.register({
+    name: 'report',
+    description: 'conflicting report fixture',
+    parameters: { type: 'object', properties: {} },
+    output: { schema: { type: 'object', properties: {} }, render: () => [] },
+    execute: () => Promise.resolve({}),
+  })
+}
+
 /** Reports already visible or still pending in one Agent. */
 function reports(agent: Agent): { id: string; text: string; sender: string }[] {
   const visible = agent.session.events.flatMap(event => event.type === 'user/message' ? [event.data] : [])
@@ -111,6 +123,12 @@ function reports(agent: Agent): { id: string; text: string; sender: string }[] {
 
 function renderedText(result: { content: { type: string; text?: string }[] }): string {
   return result.content.flatMap(block => block.type === 'text' ? [block.text ?? ''] : []).join('')
+}
+
+/** The prompt sections one agent's scope assembles, by name. */
+async function sectionNames(ctx: Context, agent: Agent): Promise<string[]> {
+  const assembly = await ctx.systemPrompt.assemble(assembleContextFor(agent))
+  return assembly.sections.map(section => section.name)
 }
 
 describe('dsh-tool-subagent-report', () => {
@@ -159,7 +177,7 @@ describe('dsh-tool-subagent-report', () => {
     expect(names).not.toContain('send_message')
   })
 
-  it('delivers quiet reports with stable identity and provenance without waking', async () => {
+  it('delivers quiet reports with stable message and sender identities without waking', async () => {
     const { ctx, parent, adapter } = await setup()
     const { started, child } = await startChild(ctx, parent)
     const parentRequests = adapter.requests.filter(request => request.sessionId === parent.id).length
@@ -219,7 +237,9 @@ describe('dsh-tool-subagent-report', () => {
     expect((await callReport(ctx, child, 'DURABLE_SELECTION')).isError).toBe(false)
 
     adapter.release()
-    await vi.waitFor(() => { expect(ctx.agents.get(started.childId)).toBeUndefined() })
+    await vi.waitFor(() => {
+      expect(ctx.agents.get(started.childId) === undefined).toBe(true)
+    }, { timeout: 5_000 })
     expect(reports(parent).map(report => report.text)).toEqual([
       `Background subagent ${started.childId} reported:\nDURABLE_SELECTION`,
     ])
@@ -307,14 +327,99 @@ describe('dsh-tool-subagent-report', () => {
     const { ctx, parent, fiber } = await setup()
     const { child } = await startChild(ctx, parent)
     expect(ctx.tools.schemas(child).map(schema => schema.name)).toContain('report')
+    expect(await sectionNames(ctx, child)).toContain('tool:report')
 
     await fiber?.dispose()
     expect(ctx.tools.schemas(child).map(schema => schema.name)).not.toContain('report')
+    expect(await sectionNames(ctx, child)).not.toContain('tool:report')
     expect((await callReport(ctx, child, 'revoked')).isError).toBe(true)
 
     const late = await ctx.plugin(tool, { reportDelivery: 'quiet' })
     expect(ctx.tools.schemas(child).map(schema => schema.name)).not.toContain('report')
+    expect(await sectionNames(ctx, child)).not.toContain('tool:report')
     await late.dispose()
+  })
+
+  it('rolls back prompt guidance when tool registration fails', async () => {
+    const { ctx, parent } = await setup({ load: false })
+    const { child } = await startChild(ctx, parent)
+    const disposeConflict = registerReportConflict(child)
+
+    expect(() => tool.installReportTool(child.ctx, ctx, 'quiet')).toThrow(/already registered in this scope/)
+    expect(await sectionNames(ctx, child)).not.toContain('tool:report')
+    disposeConflict()
+  })
+
+  it('aggregates a registration failure with a prompt rollback failure', async () => {
+    const { ctx, parent } = await setup({ load: false })
+    const { child } = await startChild(ctx, parent)
+    const disposeConflict = registerReportConflict(child)
+    const rollbackFailure = new Error('prompt rollback listener failed')
+    let promptChanges = 0
+    const off = ctx.on('system-prompt/change', () => {
+      promptChanges++
+      if (promptChanges === 2) throw rollbackFailure
+    })
+
+    let failure: unknown
+    try {
+      tool.installReportTool(child.ctx, ctx, 'quiet')
+    } catch (error: unknown) {
+      failure = error
+    }
+    off()
+
+    expect(failure).toBeInstanceOf(AggregateError)
+    if (!(failure instanceof AggregateError)) throw new Error('expected aggregate installation failure')
+    expect(failure.errors).toHaveLength(2)
+    expect(String(failure.errors[0])).toContain('already registered in this scope')
+    expect(failure.errors[1]).toBe(rollbackFailure)
+    expect(await sectionNames(ctx, child)).not.toContain('tool:report')
+    disposeConflict()
+  })
+
+  it('attempts both revocations and aggregates change-listener failures', async () => {
+    const { ctx, parent } = await setup({ load: false })
+    const { child } = await startChild(ctx, parent)
+    const dispose = tool.installReportTool(child.ctx, ctx, 'quiet')
+    const toolFailure = new Error('tool removal listener failed')
+    const promptFailure = new Error('prompt removal listener failed')
+    const offTool = ctx.on('tools/change', () => { throw toolFailure })
+    const offPrompt = ctx.on('system-prompt/change', () => { throw promptFailure })
+
+    let failure: unknown
+    try {
+      dispose()
+    } catch (error: unknown) {
+      failure = error
+    }
+    offPrompt()
+    offTool()
+
+    expect(failure).toBeInstanceOf(AggregateError)
+    if (!(failure instanceof AggregateError)) throw new Error('expected aggregate revocation failure')
+    expect(failure.errors).toEqual([toolFailure, promptFailure])
+    expect(ctx.tools.schemas(child).map(schema => schema.name)).not.toContain('report')
+    expect(await sectionNames(ctx, child)).not.toContain('tool:report')
+  })
+
+  it('scopes the report guidance to the child that owns it', async () => {
+    const { ctx, parent } = await setup()
+    const { child } = await startChild(ctx, parent, 'first child')
+    const { child: sibling } = await startChild(ctx, parent, 'second child')
+
+    const assembly = await ctx.systemPrompt.assemble(assembleContextFor(child))
+    const guidance = assembly.sections.find(section => section.name === 'tool:report')
+    // Pins the model-visible instruction that makes the return channel a
+    // contract rather than an option the child may quietly skip.
+    expect(guidance?.text).toContain('Deliver your result with the report tool before you finish')
+    expect(guidance?.text).toContain('reporting never ends your turn')
+
+    expect(await sectionNames(ctx, parent)).not.toContain('tool:report')
+    // A sibling installs its own copy; neither child can observe the other's.
+    expect(await sectionNames(ctx, sibling)).toContain('tool:report')
+    expect((await ctx.systemPrompt.assemble()).sections.map(section => section.name))
+      .not.toContain('tool:report')
   })
 
   it('rolls back materialization when a setup contribution revokes itself', async () => {
@@ -403,28 +508,52 @@ describe('dsh-tool-subagent-report', () => {
   it('keeps the namespace plugin shape and validates its default', () => {
     expect('default' in tool).toBe(false)
     expect(tool.name).toBe('tool-subagent-report')
-    expect(tool.inject).toEqual(['subagents', 'tools'])
-    expect(tool.Config({}).reportDelivery).toBe('quiet')
+    expect(tool.inject).toEqual(['subagents', 'tools', 'systemPrompt'])
+    // Waking is the default because a report that never wakes its parent
+    // cannot deliver a result to an agent that already parked.
+    expect(tool.Config({}).reportDelivery).toBe('wakeup')
     expect(() => tool.Config({ reportDelivery: 'shout' } as never)).toThrow()
+  })
+
+  it('wakes the parent under the default configuration', async () => {
+    const { ctx, parent, adapter } = await setup({ config: {} })
+    const { child } = await startChild(ctx, parent)
+    const enqueues: string[] = []
+    ctx.on('agent/inbox/inserted', ({ agent, message }) => {
+      if (agent === parent) {
+        enqueues.push(agent.inbox.nextTurn.some(queued => queued.id === message.id) ? 'queued' : 'steering')
+      }
+    })
+
+    expect((await callReport(ctx, child, 'DEFAULT_WAKES')).isError).toBe(false)
+    expect(enqueues).toEqual(['queued'])
+    await vi.waitFor(() => {
+      expect(adapter.requests.some(request => request.sessionId === parent.id)).toBe(true)
+    })
   })
 })
 
-/** Prove report delivery uses ordinary logged user messages. */
+/** Prove report delivery uses ordinary logged user messages (runtime-context snapshots excluded). */
 function userTexts(events: readonly SessionEvent[]): string[] {
-  return events.flatMap(event => event.type === 'user/message'
+  return events.flatMap(event => event.type === 'user/message' && event.data.source.kind !== 'plugin'
     ? event.data.content.flatMap(block => block.type === 'text' ? [block.text] : [])
     : [])
 }
 
 describe('dsh-tool-subagent-report result independence', () => {
-  it('does not report a final assistant answer automatically or create Tasks', async () => {
+  it('does not report a final assistant answer automatically or create Jobs', async () => {
     const { ctx, parent, adapter } = await setup()
     const { started } = await startChild(ctx, parent)
     adapter.release()
-    await vi.waitFor(() => { expect(ctx.agents.get(started.childId)).toBeUndefined() })
+    await vi.waitFor(() => {
+      expect(ctx.agents.get(started.childId) === undefined).toBe(true)
+    }, { timeout: 5_000 })
 
+    // The parent does learn the child settled — that account is the
+    // continuation service's, carried under its own `subagent-settled` source.
+    // Nothing turns the child's final answer into a report it did not send.
     expect(reports(parent)).toEqual([])
     expect(userTexts((await ctx.sessionPersistence.load(started.childId)).events)).toEqual(['child task'])
-    expect(ctx.get('tasks')).toBeUndefined()
+    expect(ctx.get('jobs')).toBeUndefined()
   })
 })

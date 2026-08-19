@@ -68,7 +68,7 @@ describe('deepFreeze', () => {
     const root: unknown[] = []
     let cursor = root
     for (let index = 0; index < depth; index++) {
-      const child: Array<unknown> = []
+      const child: unknown[] = []
       cursor.push(child)
       cursor = child
     }

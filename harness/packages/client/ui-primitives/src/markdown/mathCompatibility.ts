@@ -146,7 +146,7 @@ function createMathFlow(marker: number, openMarker: number, closeMarker: number,
       effects.consume(code)
       effects.exit('mathFlowFenceSequence')
       effects.exit('mathFlowFence')
-      return marker !== codes.dollarSign ? content : afterDollarOpen
+      return marker === codes.dollarSign ? afterDollarOpen : content
     }
 
     function afterDollarOpen(code: number | null): State | undefined {

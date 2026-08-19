@@ -6,7 +6,7 @@ Status: implemented
 
 ## Problem
 
-无效的 `cordis.yml` 编辑不得杀死运行中的 agent（智能体）；但若一次看似有效的更新先部分替换 Loader 树，后续配置项才失败，仅仅保住进程仍不够。调用方还需要能观察到被拒绝的实时更新，同时不能让同一个错误被当作未处理的启动失败。个人配置还带来第二项要求：HMR（热模块替换）必须观察其模块根目录之外的一个确切文件，包括启动后才创建的文件或父目录。
+无效的 `cordis.yml` 编辑不得杀死运行中的 agent（智能体）；但若一次看似有效的更新先部分替换 Loader 树，后续配置项才失败，仅仅保住进程仍不够。调用方还需要能观察到被拒绝的实时更新，同时不能让同一个错误被当作未处理的启动失败。个人配置还带来第二项要求：HMR（热模块替换）必须观察其模块根目录之外的一个确切文件，即使该文件或其父目录在启动后才创建也不例外。
 
 ## Decision
 
@@ -16,7 +16,7 @@ vendor 中的 Cordis 生命周期和 Loader 插件提供可等待、带补偿的
 
 Loader 会先导入变化后的模块名，再 dispose（资源释放）活动 fiber。它会 await 候选项的应用；若失败，则 dispose 候选项的 effect，并恢复先前的插件或配置。组内对账会并发启动各候选项，等待每项结果，并会在拒绝前恢复已变更的配置项、添加项、移除项和移动项。只有程序化变更成功后才会持久化。这是一种补偿事务：生命周期 effect 可能短暂可见；回滚失败会报告为 `AggregateError`，而不会被误称为树已保留。
 
-Include 读取并校验尚未提交的候选内容，把补丁应用到其副本，对账 Loader 树，然后才提交缓存内容和解析数据。解析、校验、应用或回滚失败后，`refresh()` 会向调用方 reject。初始加载继续快速失败；只有文件不存在时才可以使用 `initial`。YAML/JSON 结果若不是数组即为无效；文件刷新和 Include 配置更新都会重新应用补丁，且不修改缓存的解析结果。
+Include 读取并校验尚未提交的候选内容，把补丁应用到其副本，对账 Loader 树，然后才提交缓存内容和解析数据。解析、校验、应用或回滚失败后，`refresh()` 会向调用方 reject。初始加载仍会明确报错；只有文件不存在时才可以使用 `initial`。YAML/JSON 结果若不是数组即为无效；文件刷新和 Include 配置更新都会重新应用补丁，且不修改缓存的解析结果。
 
 HMR 收容实时刷新 rejection。其 `registerConfig(filename, refresh)` 方法从最近的现有祖先目录开始监听一个确切路径，串行化并合并刷新，并返回一个异步 disposer；该 disposer 会关闭 watcher 并排空活跃工作。确切路径和普通配置文件的刷新都使用此队列。失败会被规范化为 `Error`、记入日志，并通过并行事件 `hmr/config-update-failed(filename, error)` 广播；发生 rejection 的观察者会被记录，但不会阻止后续刷新。创建、变更和移除均会被观察。
 
@@ -38,4 +38,4 @@ HMR 收容实时刷新 rejection。其 `registerConfig(filename, refresh)` 方�
 
 ## Testing
 
-`packages/ui/app-boot/tests/config-reload.spec.ts` 启动真实的临时 Loader/Include 树，并覆盖对解析和形状错误的拒绝、先导入再 dispose、插件/配置恢复、多配置项回滚、祖先禁用、overlay 收敛、option 对象身份、失败的直接更新不持久化以及失败的程序化移动。`packages/ui/app-boot/tests/hmr-config.spec.ts` 覆盖现有和缺失的确切路径、添加/变更/移除、串行化合并、dispose 排空、非 `Error` 值的规范化、失败广播以及对发生 rejection 的观察者的收容。`packages/host/webserver/tests/webserver.spec.ts` 证明受服务门控的启动失败会让 Loader 组合以其 bind 诊断 reject；`packages/typert/loader/tests/loader.spec.ts` 则通过真实 Loader 消费方演练可等待的程序化移除；ACP（Agent Client Protocol）的 `pty-tools` 快照会防止并发组合改变同优先级提示词段的顺序。
+`packages/boot/app-boot/tests/config-reload.spec.ts` 启动真实的临时 Loader/Include 树，并覆盖对解析和形状错误的拒绝、先导入再 dispose、插件/配置恢复、多配置项回滚、祖先禁用、overlay 收敛、option 对象身份、失败的直接更新不持久化以及失败的程序化移动。`packages/boot/app-boot/tests/hmr-config.spec.ts` 覆盖现有和缺失的确切路径、添加/变更/移除、串行化合并、dispose 排空、非 `Error` 值的规范化、失败广播以及对发生 rejection 的观察者的收容。`packages/host/webserver/tests/webserver.spec.ts` 证明受服务门控的启动失败会让 Loader 组合以其 bind 诊断 reject；`packages/typert/loader/tests/loader.spec.ts` 则通过真实 Loader 消费方演练可等待的程序化移除；ACP（Agent Client Protocol）的 `pty-tools` 快照会防止并发组合改变同优先级提示词段的顺序。

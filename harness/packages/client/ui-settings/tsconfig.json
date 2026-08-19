@@ -12,22 +12,22 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../locale"
-    },
-    {
       "path": "../ui-slots"
-    },
-    {
-      "path": "../ui-primitives"
     },
     {
       "path": "../runtime"
     },
     {
-      "path": "../ui-sidebar"
+      "path": "../schema-form"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

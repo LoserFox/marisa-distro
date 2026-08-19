@@ -1,11 +1,21 @@
 # dsh-track · Track Bridge
 
+[![npm](https://img.shields.io/npm/v/@fakechris/dsh-track)](https://www.npmjs.com/package/@fakechris/dsh-track)
+[![npm downloads](https://img.shields.io/npm/dm/@fakechris/dsh-track)](https://www.npmjs.com/package/@fakechris/dsh-track)
+
 [English](README.en.md) | 中文
 
 > **DeepSeek Harness 的嵌入式任务管理引擎** —— 把「念头、决策、任务」变成结构化、可追溯、可折叠的数据。
 > 捕获零摩擦，决策留痕迹，任务有生命周期。数据全部在 harness 内部（session 事件 + storage KV），零外部依赖。
 
-**状态** Active · **测试** 204 passing · **构建** `pnpm run build` · **版本** 0.3.0
+**状态** Active · **测试** 240 passing · **构建** `pnpm run build` · **版本** 0.5.0
+> **v0.5.0 · 面板任务操作 + 翻页器（2026-08-14）**：任务卡新增「完成/取消」直接操作（两步入确认）
+> 与「批量」模式（复选框 + 批量完成/取消）；翻页器补齐「第一页 / 页码输入跳页 / 最后一页」，
+> 翻页滚动锚定（切换页面时分页器保持在视口原位置，不再跳动）。
+> **v0.4.0 · 自动维护机制 + 配置面板（2026-08-14）**：生命周期 sweep 让僵尸任务浮出「待确认」区；
+> capture 自动促转 + 近似重复自动归并（token 相似度阈值可配）；canceled 提议超宽限期自动确认；
+> 定时 sync（周级 v1 限额）；Track 面板 ⚙ 配置面板（/api/track/config）。lib 产物入库；
+> npm 发布走本地（IP 信任 + 硬件 2FA），GitHub Actions 做 tag 验证与打包产物。
 > **v0.3.0 · 去重 + 面板修复（2026-08-14）**：捕获墙不再出现重复条目——`createCapture`
 > 统一闸门（持久化 per-session 标记 + 内容哈希兜底，重启后不重捕）；右侧面板/页签修复（正式版 UI
 > 布局下挂载到真实会话根，Track 页签可开合）；底部 strip 显示真实捕获数并可点击打开面板。
@@ -34,7 +44,10 @@
 
 ```sh
 # 1. 安装插件（官方推荐：用发布版 dsh 安装；本地已有 dsh 也可直接 `dsh plugin ...`）
-npx -p @deepseek-ai/dsh dsh plugin --profile web add github:dsh-external/dsh-track
+#    npm 包（已发布，推荐）：
+npx -p @deepseek-ai/dsh dsh plugin --profile web add @fakechris/dsh-track
+#    git 源（npm 不可达时的备选）：
+#    npx -p @deepseek-ai/dsh dsh plugin --profile web add github:dsh-external/dsh-track
 #    （或本地路径：`... add /absolute/path/to/dsh-track`）
 
 # 2. 安装协议 skill（决策点 / 任务推进的调用纪律，装到默认扫描目录）

@@ -1,35 +1,35 @@
 /**
- * Runtime registry for generated TypeRT reflection, Remote invocations, and
+ * Runtime registry for generated Typert reflection, Remote invocations, and
  * dependency-inverted lookup/Context providers. It performs no TypeScript
  * analysis or schema generation.
  * @module @deepseek-ai/dsh-typert-registry
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { z } from 'zod'
 import type {
   InvocationDescriptor,
-  TypeRTClientContextBinder,
-  TypeRTContextMap,
-  TypeRTContextRegistry,
-  TypeRTContextWire,
-  TypeRTDisposer,
-  TypeRTHostContextProvider,
-  TypeRTHostContextResolver,
-  TypeRTLocalRegistry,
-  TypeRTLookupHost,
-  TypeRTLookupDefinition,
-  TypeRTLookupMap,
-  TypeRTLookupProvider,
-  TypeRTLookupResolver,
-  TypeRTLookupRegistry,
-  TypeRTLookupWire,
-  TypeRTRemoteContribution,
-  TypeRTRemoteRegistry,
-  TypeRTRegistryChange,
-  TypeRTRegistryListener,
-  TypeRTService,
-} from '@deepseek-ai/dsh-type-meta'
+  TypertClientContextBinder,
+  TypertContextMap,
+  TypertContextRegistry,
+  TypertContextWire,
+  TypertDisposer,
+  TypertHostContextProvider,
+  TypertHostContextResolver,
+  TypertLocalRegistry,
+  TypertLookupHost,
+  TypertLookupDefinition,
+  TypertLookupMap,
+  TypertLookupProvider,
+  TypertLookupResolver,
+  TypertLookupRegistry,
+  TypertLookupWire,
+  TypertRemoteContribution,
+  TypertRemoteRegistry,
+  TypertRegistryChange,
+  TypertRegistryListener,
+  TypertRegistryContract,
+} from '@deepseek-ai/dsh-typert-protocol'
 import type {
   TypertContribution,
   TypertFace,
@@ -78,14 +78,14 @@ interface ProviderEntry<Provider> {
   readonly owner: object
 }
 
-type ReportObserverError = (change: TypeRTRegistryChange, error: unknown) => void
+type ReportObserverError = (change: TypertRegistryChange, error: unknown) => void
 
 class ChangeSource {
-  private readonly listeners = new Set<TypeRTRegistryListener>()
+  private readonly listeners = new Set<TypertRegistryListener>()
 
   constructor(private readonly report: ReportObserverError) {}
 
-  subscribe(ctx: Context, listener: TypeRTRegistryListener): TypeRTDisposer {
+  subscribe(ctx: Context, listener: TypertRegistryListener): TypertDisposer {
     const { listeners } = this
     return ctx.effect(function* () {
       listeners.add(listener)
@@ -93,7 +93,7 @@ class ChangeSource {
     }, 'typert registry subscription')
   }
 
-  emit(change: TypeRTRegistryChange): void {
+  emit(change: TypertRegistryChange): void {
     for (const listener of [...this.listeners]) {
       try {
         listener(change)
@@ -174,7 +174,7 @@ class DescriptorStore {
     return [...this.entries.values()].map(entry => entry.descriptor)
   }
 
-  subscribe(ctx: Context, listener: TypeRTRegistryListener): TypeRTDisposer {
+  subscribe(ctx: Context, listener: TypertRegistryListener): TypertDisposer {
     return this.changes.subscribe(ctx, listener)
   }
 }
@@ -184,7 +184,7 @@ class RemoteStore {
 
   constructor(private readonly descriptors: DescriptorStore) {}
 
-  view(ctx: Context): TypeRTRemoteRegistry {
+  view(ctx: Context): TypertRemoteRegistry {
     return {
       register: contribution => this.register(ctx, contribution),
       get: endpoint => this.descriptors.get(endpoint),
@@ -193,7 +193,7 @@ class RemoteStore {
     }
   }
 
-  private register(ctx: Context, contribution: TypeRTRemoteContribution): TypeRTDisposer {
+  private register(ctx: Context, contribution: TypertRemoteContribution): TypertDisposer {
     validateSegment('Remote package name', contribution.package)
     if (this.packages.has(contribution.package)) {
       throw new Error(`typert: Remote package "${contribution.package}" is already registered`)
@@ -214,29 +214,29 @@ class RemoteStore {
 }
 
 class LookupStore {
-  private readonly providers = new Map<string, ProviderEntry<TypeRTLookupProvider>>()
+  private readonly providers = new Map<string, ProviderEntry<TypertLookupProvider>>()
   private readonly resolvers = new Map<string, ProviderEntry<LookupResolverEntry>>()
-  private readonly definitions = new Map<string, TypeRTLookupDefinition>()
+  private readonly definitions = new Map<string, TypertLookupDefinition>()
   private readonly changes: ChangeSource
 
   constructor(report: ReportObserverError) {
     this.changes = new ChangeSource(report)
   }
 
-  view(ctx: Context): TypeRTLookupRegistry {
+  view(ctx: Context): TypertLookupRegistry {
     return {
-      register: <K extends Extract<keyof TypeRTLookupMap, string>>(
+      register: <K extends Extract<keyof TypertLookupMap, string>>(
         key: K,
-        provider: TypeRTLookupProvider<
-          TypeRTLookupHost<TypeRTLookupMap[K]>,
-          TypeRTLookupWire<TypeRTLookupMap[K]>
+        provider: TypertLookupProvider<
+          TypertLookupHost<TypertLookupMap[K]>,
+          TypertLookupWire<TypertLookupMap[K]>
         >,
       ) => this.register(ctx, key, provider),
-      configure: <K extends Extract<keyof TypeRTLookupMap, string>>(
+      configure: <K extends Extract<keyof TypertLookupMap, string>>(
         key: K,
-        resolver: TypeRTLookupResolver<
-          TypeRTLookupHost<TypeRTLookupMap[K]>,
-          TypeRTLookupWire<TypeRTLookupMap[K]>
+        resolver: TypertLookupResolver<
+          TypertLookupHost<TypertLookupMap[K]>,
+          TypertLookupWire<TypertLookupMap[K]>
         >,
       ) => this.configure(ctx, key, resolver),
       get: key => this.get(key),
@@ -246,7 +246,7 @@ class LookupStore {
     }
   }
 
-  private get(key: string): TypeRTLookupProvider | undefined {
+  private get(key: string): TypertLookupProvider | undefined {
     const provider = this.providers.get(key)?.provider
     if (provider === undefined) return undefined
     const resolver = this.resolvers.get(key)?.provider
@@ -263,8 +263,8 @@ class LookupStore {
   private configure<Host, Wire>(
     ctx: Context,
     key: string,
-    resolver: TypeRTLookupResolver<Host, Wire>,
-  ): TypeRTDisposer {
+    resolver: TypertLookupResolver<Host, Wire>,
+  ): TypertDisposer {
     validateSegment('lookup key', key)
     if (this.resolvers.has(key)) throw new Error(`typert: lookup "${key}" resolver is already configured`)
     const owner = {}
@@ -287,14 +287,14 @@ class LookupStore {
     }, `typert.lookups.configure(${JSON.stringify(key)})`)
   }
 
-  private register<Host, Wire>(ctx: Context, key: string, provider: TypeRTLookupProvider<Host, Wire>): TypeRTDisposer {
+  private register<Host, Wire>(ctx: Context, key: string, provider: TypertLookupProvider<Host, Wire>): TypertDisposer {
     validateSegment('lookup key', key)
     validateSegment('lookup parameter', provider.parameter)
     validateWireName('lookup wire field', provider.wire)
     validateNonempty('lookup Host type symbol', provider.hostTypeSymbol)
     validateNonempty('lookup wire type symbol', provider.wireTypeSymbol)
     if (this.providers.has(key)) throw new Error(`typert: lookup "${key}" is already registered`)
-    const definition: TypeRTLookupDefinition = {
+    const definition: TypertLookupDefinition = {
       key,
       parameter: provider.parameter,
       wire: provider.wire,
@@ -306,7 +306,7 @@ class LookupStore {
       throw new Error(`typert: lookup "${key}" changed its wire declaration during this registry lifetime`)
     }
     const owner = {}
-    const entry: ProviderEntry<TypeRTLookupProvider> = { provider, owner }
+    const entry: ProviderEntry<TypertLookupProvider> = { provider, owner }
     const { definitions, providers, changes } = this
     return ctx.effect(function* () {
       definitions.set(key, definition)
@@ -326,7 +326,7 @@ interface LookupResolverEntry {
   resolve(id: unknown): Promise<unknown>
 }
 
-function lookupDefinitionEquals(left: TypeRTLookupDefinition, right: TypeRTLookupDefinition): boolean {
+function lookupDefinitionEquals(left: TypertLookupDefinition, right: TypertLookupDefinition): boolean {
   return left.parameter === right.parameter
     && left.wire === right.wire
     && left.hostTypeSymbol === right.hostTypeSymbol
@@ -334,28 +334,28 @@ function lookupDefinitionEquals(left: TypeRTLookupDefinition, right: TypeRTLooku
 }
 
 class ContextStore {
-  private readonly hosts = new Map<string, ProviderEntry<TypeRTHostContextProvider>>()
+  private readonly hosts = new Map<string, ProviderEntry<TypertHostContextProvider>>()
   private readonly hostResolvers = new Map<string, ProviderEntry<HostContextResolverEntry>>()
-  private readonly clients = new Map<string, ProviderEntry<TypeRTClientContextBinder>>()
+  private readonly clients = new Map<string, ProviderEntry<TypertClientContextBinder>>()
   private readonly changes: ChangeSource
 
   constructor(report: ReportObserverError) {
     this.changes = new ChangeSource(report)
   }
 
-  view(ctx: Context): TypeRTContextRegistry {
+  view(ctx: Context): TypertContextRegistry {
     return {
-      registerHost: <K extends Extract<keyof TypeRTContextMap, string>>(
+      registerHost: <K extends Extract<keyof TypertContextMap, string>>(
         key: K,
-        provider: TypeRTHostContextProvider<TypeRTContextWire<TypeRTContextMap[K]>>,
+        provider: TypertHostContextProvider<TypertContextWire<TypertContextMap[K]>>,
       ) => this.registerHost(ctx, key, provider),
-      configureHost: <K extends Extract<keyof TypeRTContextMap, string>>(
+      configureHost: <K extends Extract<keyof TypertContextMap, string>>(
         key: K,
-        resolver: TypeRTHostContextResolver<TypeRTContextWire<TypeRTContextMap[K]>>,
+        resolver: TypertHostContextResolver<TypertContextWire<TypertContextMap[K]>>,
       ) => this.configureHost(ctx, key, resolver),
-      registerClient: <K extends Extract<keyof TypeRTContextMap, string>>(
+      registerClient: <K extends Extract<keyof TypertContextMap, string>>(
         key: K,
-        binder: TypeRTClientContextBinder<TypeRTContextWire<TypeRTContextMap[K]>>,
+        binder: TypertClientContextBinder<TypertContextWire<TypertContextMap[K]>>,
       ) => this.registerClient(ctx, key, binder),
       getHost: key => this.getHost(key),
       getClient: key => this.clients.get(key)?.provider,
@@ -363,7 +363,7 @@ class ContextStore {
     }
   }
 
-  private getHost(key: string): TypeRTHostContextProvider | undefined {
+  private getHost(key: string): TypertHostContextProvider | undefined {
     const provider = this.hosts.get(key)?.provider
     if (provider === undefined) return undefined
     const resolver = this.hostResolvers.get(key)?.provider
@@ -378,8 +378,8 @@ class ContextStore {
   private configureHost<Wire>(
     ctx: Context,
     key: string,
-    resolver: TypeRTHostContextResolver<Wire>,
-  ): TypeRTDisposer {
+    resolver: TypertHostContextResolver<Wire>,
+  ): TypertDisposer {
     validateSegment('Context key', key)
     if (this.hostResolvers.has(key)) throw new Error(`typert: host-context "${key}" resolver is already configured`)
     const entry: ProviderEntry<HostContextResolverEntry> = {
@@ -399,14 +399,14 @@ class ContextStore {
     }, `typert.contexts.configureHost(${JSON.stringify(key)})`)
   }
 
-  private registerHost<Wire>(ctx: Context, key: string, provider: TypeRTHostContextProvider<Wire>): TypeRTDisposer {
+  private registerHost<Wire>(ctx: Context, key: string, provider: TypertHostContextProvider<Wire>): TypertDisposer {
     validateSegment('Context key', key)
     validateWireName('Context wire field', provider.wire)
     validateNonempty('Context wire type symbol', provider.wireTypeSymbol)
     return this.registerProvider(ctx, this.hosts, 'host-context', key, provider)
   }
 
-  private registerClient<Wire>(ctx: Context, key: string, binder: TypeRTClientContextBinder<Wire>): TypeRTDisposer {
+  private registerClient<Wire>(ctx: Context, key: string, binder: TypertClientContextBinder<Wire>): TypertDisposer {
     validateSegment('Context key', key)
     return this.registerProvider(ctx, this.clients, 'client-context', key, binder)
   }
@@ -417,7 +417,7 @@ class ContextStore {
     kind: 'host-context' | 'client-context',
     key: string,
     provider: Provider,
-  ): TypeRTDisposer {
+  ): TypertDisposer {
     if (table.has(key)) throw new Error(`typert: ${kind} provider "${key}" is already registered`)
     const entry: ProviderEntry<Provider> = { provider, owner: {} }
     const { changes } = this
@@ -443,7 +443,7 @@ interface HostContextResolverEntry {
  * dependency providers.
  * @typert service typert
  */
-export class TypertRegistry extends Service implements TypeRTService {
+export class TypertRegistry extends Service implements TypertRegistryContract {
   private readonly schemas = new Map<string, TypertSchemaRecord>()
   private readonly packages = new Map<string, TypertPackageRecord>()
   private readonly localStore: DescriptorStore
@@ -464,7 +464,7 @@ export class TypertRegistry extends Service implements TypeRTService {
   }
 
   /** Current-environment invocation definitions. */
-  get local(): TypeRTLocalRegistry {
+  get local(): TypertLocalRegistry {
     const ctx = this.ctx
     return {
       get: endpoint => this.localStore.get(endpoint),
@@ -475,17 +475,17 @@ export class TypertRegistry extends Service implements TypeRTService {
   }
 
   /** Consumer-selected Remote definitions. */
-  get remotes(): TypeRTRemoteRegistry {
+  get remotes(): TypertRemoteRegistry {
     return this.remoteStore.view(this.ctx)
   }
 
   /** Host object lookup providers. */
-  get lookups(): TypeRTLookupRegistry {
+  get lookups(): TypertLookupRegistry {
     return this.lookupStore.view(this.ctx)
   }
 
   /** Host Context providers and Client Context binders. */
-  get contexts(): TypeRTContextRegistry {
+  get contexts(): TypertContextRegistry {
     return this.contextStore.view(this.ctx)
   }
 
@@ -496,7 +496,7 @@ export class TypertRegistry extends Service implements TypeRTService {
    * @param contribution - generated schemas, reflection, and Host invocations.
    * @returns the exact effect disposer that removes this contribution.
    */
-  register(contribution: TypertContribution): TypeRTDisposer {
+  register(contribution: TypertContribution): TypertDisposer {
     const packageRecord = this.validatePackage(contribution)
     const schemaRecords = this.validateSchemas(contribution)
     const invocations = contribution.invocations
@@ -653,6 +653,9 @@ function validateInvocation(descriptor: InvocationDescriptor): void {
     }
     wires.add(parameter.wire)
     if (parameter.source === 'lookup') {
+      if (parameter.acceptsUndefined !== undefined) {
+        throw new Error(`typert: invocation "${descriptor.id}" lookup parameter "${parameter.name}" cannot accept undefined`)
+      }
       if (parameter.lookup === undefined) {
         throw new Error(`typert: invocation "${descriptor.id}" lookup parameter "${parameter.name}" has no lookup key`)
       }

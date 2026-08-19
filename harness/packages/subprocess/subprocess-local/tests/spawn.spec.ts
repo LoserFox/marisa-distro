@@ -60,7 +60,7 @@ function spec(command: string, overrides: SpecOverrides = {}) {
   }
 }
 
-/** Poll until a pid no longer exists (kill(pid, 0) throws ESRCH). */
+/** Poll until a pid no longer exists, or is only a zombie on Linux. */
 async function waitGone(pid: number, timeoutMs = 5_000): Promise<void> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
@@ -68,6 +68,16 @@ async function waitGone(pid: number, timeoutMs = 5_000): Promise<void> {
       process.kill(pid, 0)
     } catch {
       return
+    }
+    if (process.platform === 'linux') {
+      try {
+        const stat = readFileSync(`/proc/${pid}/stat`, 'utf8')
+        const state = stat.slice(stat.lastIndexOf(')') + 2, stat.lastIndexOf(')') + 3)
+        if (state === 'Z' || state === 'X') return
+      } catch (error: unknown) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+        throw error
+      }
     }
     await new Promise(resolve => setTimeout(resolve, 20))
   }
@@ -268,6 +278,24 @@ describe('spawnSubprocess', () => {
     expect(result.signal).toBe('SIGTERM')
   })
 
+  it('does not wait for a Linux group that has only zombie members', async () => {
+    const pidFile = join(spillDir, `zombie-group-${Date.now()}.pid`)
+    const running = spawnSubprocess(spec(`sleep 60 & echo $! > ${pidFile}; echo leader-done`, { graceMs: 100 }), {
+      platform: 'linux',
+      linuxProcessGroupHasLiveMembers: () => false,
+    })
+    const descendant = await waitForPidFile(pidFile)
+    try {
+      await running.done
+      await expect(running.waitForExit()).resolves.toBe(true)
+    } finally {
+      // The confirmed-absent verdict is a permanent no-more-signals boundary,
+      // so terminate() must stay inert here; reap the live survivor directly.
+      process.kill(descendant, 'SIGKILL')
+      await waitGone(descendant)
+    }
+  })
+
   it('bounds inherited-pipe draining after the shell exits', async () => {
     const pidFile = join(spillDir, `pipe-holder-${Date.now()}.pid`)
     const started = Date.now()
@@ -301,7 +329,7 @@ describe('stdin and extra env (set by in-process plugins)', () => {
   })
 
   it('gives fd 0 the exact pre-seam type: /dev/null when no stdin, a pipe when supplied', async () => {
-    // With no bytes, fd 0 remains the pre-seam `ignore` default (/dev/null, a character device).
+    // With no bytes, fd 0 remains the pre-spawn `ignore` default (/dev/null, a character device).
     // Supplied bytes use Node's spawn pipe, which is an AF_UNIX socket rather than a FIFO.
     const none = await finish(spawnSubprocess(spec('test -c /dev/stdin && echo char || echo other')))
     expect(none.stdout.text).toBe('char\n')
@@ -554,9 +582,28 @@ describe('stdio dispositions', () => {
 })
 
 describe('windows tree semantics (injected platform)', () => {
+  it('host-exit termination routes through taskkill immediately', async () => {
+    const killed: number[] = []
+    const running = spawnSubprocess(spec('exec sleep 60', { graceMs: 60_000 }), {
+      spillDir,
+      platform: 'win32',
+      taskkill: (pid) => {
+        killed.push(pid)
+        try {
+          process.kill(pid, 'SIGKILL')
+        } catch {
+          // Already gone — matches taskkill's tolerated not-found status.
+        }
+      },
+    })
+    running.terminateForHostExit()
+    await running.done
+    expect(killed).toEqual([running.pid])
+  })
+
   it('terminate routes through taskkill by root pid', async () => {
     const killed: number[] = []
-    const running = spawnSubprocess(spec('sleep 60', { graceMs: 100 }), {
+    const running = spawnSubprocess(spec('exec sleep 60', { graceMs: 100 }), {
       spillDir,
       platform: 'win32',
       taskkill: (pid) => {
@@ -603,6 +650,23 @@ describe('waitForExit', () => {
   })
 })
 
+describe('synchronous host-exit termination', () => {
+  it('force-kills the current process tree without waiting for the normal grace', async () => {
+    const running = spawnSubprocess(spec('trap "" TERM; sleep 60', { graceMs: 60_000 }))
+    running.terminateForHostExit()
+    await expect(running.done).resolves.toMatchObject({ exitCode: null, signal: 'SIGKILL' })
+    await expect(running.waitForExit()).resolves.toBe(true)
+
+    const kill = vi.spyOn(process, 'kill')
+    try {
+      running.terminateForHostExit()
+      expect(kill).not.toHaveBeenCalled()
+    } finally {
+      kill.mockRestore()
+    }
+  })
+})
+
 describe('tree-survivor escalation (terminate and bounded waits reach helpers the leader left behind)', () => {
   it('terminate() SIGKILLs a TERM-trapping descendant after the direct child settles', async () => {
     // The leader spawns a TERM-trapping helper with all stdio detached from
@@ -637,15 +701,15 @@ describe('tree-survivor escalation (terminate and bounded waits reach helpers th
     clearTimeout(timer)
     running.terminate()
     await expect(running.waitForExit()).resolves.toBe(true)
-    expect(() => { return process.kill(helper, 0) }).toThrow()
+    await expect(waitGone(helper)).resolves.toBeUndefined()
   })
 
   it('service teardown awaits tree survivors, not just handle settlement', async () => {
-    const { Context } = await import('cordis')
-    const { default: LocalSubprocessService } = await import('@deepseek-ai/dsh-subprocess-local')
+    const { Context } = await import('@deepseek-ai/cordis')
+    const { default: LocalSubprocessRuntime } = await import('@deepseek-ai/dsh-subprocess-local')
     const ctx = new Context()
-    const fiber = await ctx.plugin(LocalSubprocessService)
-    ;(ctx.subprocess as InstanceType<typeof LocalSubprocessService>).internals = { spillDir }
+    const fiber = await ctx.plugin(LocalSubprocessRuntime)
+    ;(ctx.subprocess as InstanceType<typeof LocalSubprocessRuntime>).internals = { spillDir }
     const pidFile = join(spillDir, `survivor-svc-${Date.now()}.pid`)
     const running = ctx.subprocess.spawn(spec(
       `bash -c 'trap "" TERM; echo $$ > ${pidFile}; sleep 60' >/dev/null 2>&1 & disown; exit 0`,
@@ -654,8 +718,8 @@ describe('tree-survivor escalation (terminate and bounded waits reach helpers th
     const helper = await waitForPidFile(pidFile)
     await running.done
     await fiber.dispose()
-    // Teardown itself waited for the survivor to die.
-    expect(() => process.kill(helper, 0)).toThrow()
+    // Teardown itself waited for the survivor to become quiescent.
+    await expect(waitGone(helper)).resolves.toBeUndefined()
   })
 })
 

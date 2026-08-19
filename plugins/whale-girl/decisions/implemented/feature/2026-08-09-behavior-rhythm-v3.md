@@ -25,7 +25,7 @@ Status: implemented
 
 ### 3. 调度决策纯函数化（Step 2 落点）
 
-- 新增纯函数面（[client/logic.mjs](../../../.dsh-plugin/client/logic.mjs)）：`nextWorkingRhythm`（随机插曲决策）、`detectRoundCompleted`（翻转检测）、`shouldWake`（睡醒边沿）——now/随机源显式注入，可单测（确定性时间推进测试的落点）。
+- 新增纯函数面（[client/logic.mjs](../../../lib/client/logic.mjs)）：`nextWorkingRhythm`（随机插曲决策）、`detectRoundCompleted`（翻转检测）、`shouldWake`（睡醒边沿）——now/随机源显式注入，可单测（确定性时间推进测试的落点）。
 - wake 边沿从 tick 闭包 hack 改为调用 `shouldWake(prevState, nextState, {dragging, transient})`。
 - 所有权规则：状态变量只由 tick 消费纯函数结果写入；事件处理器不再手写窗口；timer 清理进 dispose。
 

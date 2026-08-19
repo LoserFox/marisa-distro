@@ -1,11 +1,13 @@
 /**
  * Validate Cordis Loader entry metadata and package resolution.
  *
- * The Loader interpolates only a plugin entry's `config`; expression objects in
- * fields such as `disabled` remain truthy data and silently change composition.
- * Example configs and the dsh Web composition resolve named plugins from their
- * owning workspace manifests. Local example packages must also be in the root
- * TypeScript project graph.
+ * The Loader interpolates a plugin entry's `config` (after declared injections
+ * activate, against that plugin context) and the entry `disabled` field (at
+ * every mount decision, against the loader context). Every other entry
+ * metadata field stays static, so an expression there remains truthy data and
+ * silently changes composition. Example configs and the dsh Web composition
+ * resolve named plugins from their owning workspace manifests. Local example
+ * packages must also be in the root TypeScript project graph.
  */
 
 import { globSync, readFileSync } from 'node:fs'
@@ -33,22 +35,26 @@ const root = resolve(import.meta.dirname, '..')
 // specifiers resolve from apps/cli rather than the examples workspace.
 const appOverlayFiles = new Set([
   'examples/web-cordis/cordis.yml',
+  'examples/web-schedule/cordis.yml',
   ...globSync('examples/mcp-memory/*.cordis.yml', { cwd: root }),
 ])
-const metadataFields = ['id', 'name', 'group', 'disabled', 'inject', 'intercept', 'isolate'] as const
+const metadataFields = ['id', 'name', 'group', 'inject', 'intercept', 'isolate'] as const
 
 /** The adaptive directory-picker chooser package (mounts a backend row at boot). */
 const CHOOSER_PACKAGE = '@deepseek-ai/dsh-host-directory-picker-auto'
 
 /**
- * The backends the chooser mounts by runtime string (mirror of its exported
- * `BACKEND_PACKAGES`), invisible to yml-row scanning: a composition mounting
- * the chooser must resolve both, or keyless Linux CI (which only ever
- * resolves `browse`) hides a dropped `-native` dependency until a macOS boot.
+ * The packages the chooser mounts by runtime string (mirror of its exported
+ * `BACKEND_PACKAGES` and `SURFACE_PACKAGES`), invisible to yml-row scanning: a
+ * composition mounting the chooser must resolve every one, or keyless Linux CI
+ * (which only ever resolves `browse`) hides a dropped `-native` dependency
+ * until a macOS boot.
  */
 const CHOOSER_BACKEND_PACKAGES = [
   '@deepseek-ai/dsh-host-directory-picker-native',
   '@deepseek-ai/dsh-host-directory-picker-browse',
+  '@deepseek-ai/dsh-client-ui-directory-picker-browse',
+  '@deepseek-ai/dsh-client-ui-directory-picker-native',
 ]
 const jsExprType = new yaml.Type('tag:yaml.org,2002:js', {
   kind: 'scalar',
@@ -60,31 +66,135 @@ const jsExprType = new yaml.Type('tag:yaml.org,2002:js', {
 })
 const schema = yaml.JSON_SCHEMA.extend(jsExprType)
 
-const files = cordisConfigFiles(root)
 const errors: string[] = []
 const pluginReferences: PluginReference[] = []
 
-for (const file of files) {
-  const document: unknown = yaml.load(readFileSync(resolve(root, file), 'utf8'), { schema })
-  if (!isUnknownArray(document)) {
-    errors.push(`${file}: root must be a Loader entry array`)
-    continue
+if (import.meta.main) {
+  const files = cordisConfigFiles(root)
+
+  for (const file of files) {
+    const document: unknown = yaml.load(readFileSync(resolve(root, file), 'utf8'), { schema })
+    if (!isUnknownArray(document)) {
+      errors.push(`${file}: root must be a Loader entry array`)
+      continue
+    }
+    for (let index = 0; index < document.length; index++) {
+      validateEntry(document[index], file, `[${index}]`)
+    }
   }
-  for (let index = 0; index < document.length; index++) {
-    validateEntry(document[index], file, `[${index}]`)
+
+  errors.push(...validateExampleResolution())
+  errors.push(...validateAppResolution())
+  errors.push(...validateSourcePlaneResolution())
+  errors.push(...validatePresetPlaneSeparation())
+  errors.push(...validateClientHalvesDeclared())
+
+  if (errors.length > 0) {
+    console.error('verify-cordis-config: invalid Loader metadata or plugin package resolution:')
+    for (const error of errors) console.error(`- ${error}`)
+    process.exitCode = 1
+  } else {
+    console.log(`verify-cordis-config: ${files.length} config files passed.`)
   }
 }
 
-errors.push(...validateExampleResolution())
-errors.push(...validateAppResolution())
-errors.push(...validateSourcePlaneResolution())
+/**
+ * A browser plugin must declare the browser half it ships.
+ *
+ * The browser roster is discovered by scanning composed packages for a
+ * `dsh.client` block, and the node half of a surface plugin is an empty
+ * `apply`. A `packages/client` package that exports `./client` without that
+ * block therefore composes, activates, and contributes nothing — its bundle is
+ * never served and no error is raised anywhere. The mismatch is invisible in
+ * the composition file, so it is checked against the manifests instead. Only
+ * this group is checked: a Host package's `./client` export is the typed wire
+ * face its browser consumers import, not a plugin the roster serves.
+ * @returns one violation per client package whose `./client` export and
+ * `dsh.client` declaration disagree.
+ */
+function validateClientHalvesDeclared(): string[] {
+  return globSync('packages/client/*/package.json', { cwd: root }).flatMap((manifestPath) => {
+    const manifest = readManifest(manifestPath) as PackageManifest & {
+      exports?: Record<string, unknown>
+      dsh?: { client?: unknown }
+    }
+    const shipsClient = manifest.exports !== undefined && Object.hasOwn(manifest.exports, './client')
+    const declaresClient = manifest.dsh?.client !== undefined
+    if (shipsClient === declaresClient) return []
+    return [shipsClient
+      ? `${manifestPath}: exports "./client" but declares no dsh.client, so its browser half is never served`
+      : `${manifestPath}: declares dsh.client but exports no "./client" entry to serve`]
+  })
+}
 
-if (errors.length > 0) {
-  console.error('verify-cordis-config: invalid Loader metadata or plugin package resolution:')
-  for (const error of errors) console.error(`- ${error}`)
-  process.exitCode = 1
-} else {
-  console.log(`verify-cordis-config: ${files.length} config files passed.`)
+/**
+ * No shipped agent preset may repeat a row the host composition still runs.
+ *
+ * A preset contributes what ONE session adds to the host's registries. A row
+ * active on both planes is therefore mounted twice — once per process and once
+ * per session — and what that costs depends on what the row does: a provider
+ * behind an `isolate` realm shadows the host's for its own consumers, so a host
+ * contributor to that service reaches nobody; a row that registers into a host
+ * singleton registers once per live session, so the second one collides.
+ *
+ * Both have happened. `shell-env` in a preset realm left `DSH_WEB_URL` reaching
+ * no shell, and `tool-subagent-report` handed every child `report` once per live
+ * session until the second registration threw. Neither changes a tool catalog,
+ * so no catalog assertion can see them — and the shipped presets are near-copies
+ * of each other, so a fix applied to three of four is the normal failure.
+ * @returns one diagnostic per preset row that is also active on the host plane.
+ */
+function validatePresetPlaneSeparation(): string[] {
+  const problems: string[] = []
+  // The shipped Web surface is two bundle patch layers over an empty root.
+  const hostFile = 'packages/bundle/base/cordis.patch.yml'
+  const overlayFile = 'packages/bundle/web-app/cordis.patch.yml'
+  const hostRows = rowIds(hostFile)
+  const overlay = loadEntries(overlayFile)
+  const disabled = new Set<string>()
+  for (const entry of overlay) {
+    if (!isRecord(entry)) continue
+    if (entry.disabled === true && typeof entry.id === 'string') disabled.add(entry.id)
+  }
+  // The overlay's own inserts are host-plane too; its disables take them back out.
+  const active = new Set([...hostRows, ...rowIds(overlayFile)].filter(id => !disabled.has(id)))
+  for (const file of globSync('apps/cli/config/agent-presets/*/agent.cordis.yml', { cwd: root })) {
+    for (const id of rowIds(file)) {
+      if (!active.has(id)) continue
+      problems.push(
+        `${file}: row "${id}" is also active in the host composition; `
+        + 'a row belongs to exactly one plane',
+      )
+    }
+  }
+  return problems
+}
+
+/** Every entry of one config file, or an empty list when it is not an entry array. */
+function loadEntries(file: string): unknown[] {
+  const document: unknown = yaml.load(readFileSync(resolve(root, file), 'utf8'), { schema })
+  return isUnknownArray(document) ? document : []
+}
+
+/**
+ * Row ids declared anywhere in one config file, including inside group `config`
+ * lists — a preset nests most of its rows in `isolate` groups.
+ * @param file - repository-relative config path.
+ * @returns the declared ids.
+ */
+function rowIds(file: string): Set<string> {
+  const ids = new Set<string>()
+  const walk = (value: unknown): void => {
+    if (isUnknownArray(value)) {
+      for (const item of value) walk(item)
+      return
+    }
+    if (!isRecord(value)) return
+    if (typeof value.id === 'string' && typeof value.name === 'string') ids.add(value.id)
+    for (const child of Object.values(value)) walk(child)
+  }
+  walk(loadEntries(file))
+  return ids
 }
 
 function validateEntry(value: unknown, file: string, path: string): void {
@@ -94,7 +204,7 @@ function validateEntry(value: unknown, file: string, path: string): void {
   }
   recordPlugin(value, file)
   validateMetadata(value, file, path)
-  if ((value.group === true || value.name === '@cordisjs/plugin-group') && isUnknownArray(value.config)) {
+  if ((value.group === true || value.name === '@deepseek-ai/cordis-plugin-group') && isUnknownArray(value.config)) {
     for (let index = 0; index < value.config.length; index++) {
       validateEntry(value.config[index], file, `${path}.config[${index}]`)
     }
@@ -104,7 +214,7 @@ function validateEntry(value: unknown, file: string, path: string): void {
       validateEntry(value.insert[index], file, `${path}.insert[${index}]`)
     }
   }
-  if (value.name !== '@cordisjs/plugin-include') { return }
+  if (value.name !== '@deepseek-ai/cordis-plugin-include') return
   const config = value.config
   if (!isRecord(config) || !isUnknownArray(config.patches)) return
   for (let index = 0; index < config.patches.length; index++) {
@@ -304,11 +414,60 @@ function packageNameFromSpecifier(specifier: string): string | undefined {
 }
 
 function validateMetadata(entry: Record<string, unknown>, file: string, path: string): void {
+  for (const problem of metadataExpressionErrors(entry, path)) {
+    errors.push(`${file}${problem}`)
+  }
+}
+
+/**
+ * Expression-node diagnostics for one entry. `disabled` is the single
+ * interpolated metadata field: its own `!!js` expression node is allowed and
+ * must parse, while expressions nested below it stay truthy data; every other
+ * metadata field must stay fully static.
+ * @param entry - one loader entry (or patch row).
+ * @param path - the entry's diagnostic path prefix.
+ * @returns one diagnostic per offending expression.
+ */
+export function metadataExpressionErrors(entry: Record<string, unknown>, path: string): string[] {
+  const problems: string[] = []
   for (const field of metadataFields) {
     if (!(field in entry)) continue
     const expressionPaths: string[] = []
     collectExpressionPaths(entry[field], `${path}.${field}`, expressionPaths)
-    for (const expressionPath of expressionPaths) errors.push(`${file}${expressionPath}: !!js is not interpolated here`)
+    for (const expressionPath of expressionPaths) problems.push(`${expressionPath}: !!js is not interpolated here`)
+  }
+  const disabled = entry.disabled
+  if (disabled !== undefined) {
+    if (isJsExpr(disabled)) {
+      const detail = disabledExpressionProblem(disabled.__jsExpr)
+      if (detail !== undefined) problems.push(`${path}.disabled${detail}`)
+    } else {
+      // A non-expression value gates on Boolean() at mount; an expression
+      // nested anywhere below it never evaluates, so it must stay literal.
+      const expressionPaths: string[] = []
+      collectExpressionPaths(disabled, `${path}.disabled`, expressionPaths)
+      for (const expressionPath of expressionPaths) problems.push(`${expressionPath}: !!js is not interpolated here`)
+    }
+  }
+  return problems
+}
+
+/**
+ * Parse-only validation of a `disabled` expression: the Loader evaluates it
+ * at every mount decision, and a syntax error would fail the boot — rejecting
+ * it here moves that failure to the earliest resolvable point.
+ * @param expression - the `!!js` expression text.
+ * @returns the diagnostic suffix, or `undefined` when the expression parses.
+ */
+function disabledExpressionProblem(expression: string): string | undefined {
+  try {
+    // Compilation only — the constructor never executes the body.
+    // oxlint-disable-next-line typescript/no-implied-eval
+    new Function(`return (${expression})`)
+    return undefined
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    return `: disabled expression does not parse: ${detail}`
   }
 }
 

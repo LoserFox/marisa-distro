@@ -1,7 +1,8 @@
 /**
  * Internal continuable-subagent manager: stable child ids, descriptor
  * persistence, activation admission, the live ownership graph, cold resume,
- * and child-first disposal behind `ctx.subagents`.
+ * child-first disposal, and settlement delivery to the parent, behind
+ * `ctx.subagents`.
  *
  * A continuable child has one durable Session and at most one process-local
  * {@link Activation} — one residency epoch for a reconstructed child Agent. An
@@ -11,11 +12,17 @@
  * residency while the Agent loop owns all turn ordering and execution. No
  * continuable path creates a Task or an intermediate result-bearing wrapper.
  *
+ * Because residency is this manager's alone to end, telling the parent that a
+ * child settled is its job too. An external `subagent/end` listener cannot do
+ * it correctly: that payload names no parent, the child handle is already
+ * disposed by then, and the release that wakes the parent's own settlement
+ * watcher has already run. See {@link SubagentContinuationManager.notifySettlement}.
+ *
  * @module @deepseek-ai/dsh-subagent
  */
 
 import { randomUUID } from 'node:crypto'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type {
   Agent,
   AgentHandle,
@@ -23,7 +30,7 @@ import type {
   AgentSetupCommit,
   CreateAgentOptions,
 } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, errorChain } from '@deepseek-ai/dsh-llm'
+import { boundContextSummary, createUserMessage, errorChain } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, MessageId, MessageSource } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
@@ -32,15 +39,18 @@ import type { ToolRestriction } from '@deepseek-ai/dsh-tools'
 import { foldSubagentDescriptor, snapshotSubagentDescriptor } from './descriptor.ts'
 import type { SubagentDescriptorData } from './descriptor.ts'
 import {
+  appendDelegatedPolicyOverrides,
   applyChildComposition,
+  captureDelegatedPolicyOverrides,
   childSessionMeta,
   resolveChildAgentOptions,
   resolveChildDepth,
 } from './child-agent.ts'
+import type { DelegatedPolicyOverrides } from './child-agent.ts'
 import { assertSubagentMaxDepth } from './depth.ts'
 import { seedDescriptorTurn } from './descriptor-seed.ts'
-import type { ContinuableCreateRequest, ContinuableCreateSpec, SubagentStartRequest } from './types.ts'
-import type { ActivationObserver } from './lifecycle.ts'
+import type { ContinuableCreateRequest, ContinuableCreateSpec, SubagentResult, SubagentStartRequest } from './types.ts'
+import type { ActivationObserver, ActivationTerminal } from './lifecycle.ts'
 import { SubagentError } from './error.ts'
 import type SubagentActivationSetupRegistry from './activation-setup-registry.ts'
 
@@ -62,10 +72,28 @@ export interface SubagentReportMessageSource {
   readonly senderSessionId: SessionId
 }
 
+/**
+ * Durable attribution for the runtime's own account of a continuable child
+ * settling. Deliberately a different kind from
+ * {@link SubagentReportMessageSource}: a report is content the child chose,
+ * while this message is the manager stating what became of the child, and a
+ * transcript that merged them would credit the child with words it never wrote.
+ */
+export interface SubagentSettledMessageSource {
+  readonly kind: 'subagent-settled'
+  /** A runtime account shown without expanding the row (`notice` context form). */
+  readonly form: 'notice'
+  /** One-line account of how the child ended. */
+  readonly summary: string
+  /** Session id of the child that settled. */
+  readonly senderSessionId: SessionId
+}
+
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
     coordinator: CoordinatorMessageSource
     'subagent-report': SubagentReportMessageSource
+    'subagent-settled': SubagentSettledMessageSource
   }
 }
 
@@ -103,6 +131,15 @@ export interface ContinuableStart {
   readonly messageId: MessageId
 }
 
+/**
+ * Authority under which one interrupt request is admitted. `user` carries the
+ * durable direct-parent address a human client presented; `ancestor` carries
+ * the exact live Agent object whose recorded lineage must contain the caller.
+ */
+export type SubagentInterruptAuthority =
+  | { readonly kind: 'user'; readonly parentSessionId: SessionId }
+  | { readonly kind: 'ancestor'; readonly agent: Agent }
+
 /** Options for following up with one continuable child. */
 export interface SubagentFollowupOptions {
   /** Durable attribution retained on the delivered message; it grants no authority. */
@@ -124,7 +161,7 @@ type ActivationState = 'running' | 'waiting' | 'settled'
 /**
  * Hooks the manager needs from the owning service. Declared here, by the
  * dependent, so the manager states exactly what it requires instead of
- * depending back on the whole {@link SubagentService}. Package-private: no
+ * depending back on the whole {@link SubagentRuntime}. Package-private: no
  * consumer outside this package supplies a host.
  */
 interface ContinuationHost {
@@ -154,6 +191,13 @@ interface ContinuationHost {
 interface Activation {
   /** The durable child this Activation is an epoch of. */
   readonly childId: SessionId
+  /**
+   * The durable direct parent, stored because settlement delivery must resolve
+   * that parent after the child handle is gone. {@link ancestry} cannot answer
+   * it: a `WeakSet` is not enumerable, and the child's own header is only
+   * reachable through a handle disposal has already released.
+   */
+  readonly parentSession: SessionId
   /** The provider name recorded in the durable descriptor. */
   readonly provider: string
   /** The retained live Agent handle, disposed exactly once at settlement. */
@@ -185,6 +229,12 @@ interface Activation {
    * microtask that admits it, so settlement must not treat that gap as quiet.
    */
   readonly accepted: Set<MessageId>
+  /**
+   * Whether any delivery to this child was ever accepted. A materialization
+   * rolled back before its first acceptance is a child the caller was told does
+   * not exist, so its teardown owes the parent no settlement account.
+   */
+  announced: boolean
   /** Renewed whenever a settlement watcher must re-observe quiescence. */
   poke: PromiseWithResolvers<void>
 }
@@ -194,8 +244,17 @@ interface MaterializeInputs {
   childId: SessionId
   provider: string
   parent: Agent
-  /** Creation inputs; absent for a cold resume, which loads the persisted session. */
-  create?: { seed: readonly SessionEvent[]; meta: NonNullable<CreateAgentOptions['meta']> }
+  /**
+   * Creation inputs; absent for a cold resume, which loads the persisted
+   * session — including the delegation policy events a fresh creation seeded,
+   * so a resume never re-captures the parent's policy.
+   */
+  create?: {
+    seed: readonly SessionEvent[]
+    meta: NonNullable<CreateAgentOptions['meta']>
+    /** Policy captured at the delegation boundary: the parent's sandbox override plus the approval pin. */
+    delegatedPolicies: DelegatedPolicyOverrides
+  }
   agentOptions: AgentOptions
   composition: { persona?: string | undefined; toolFilter?: ToolRestriction | undefined }
   signal: AbortSignal
@@ -220,6 +279,36 @@ interface Materialization {
  */
 function disposalOf(activation: Activation): Promise<void> | undefined {
   return activation.disposal
+}
+
+/**
+ * One line telling a parent that a background child is finished and why, in
+ * the parent's own task vocabulary.
+ * @param childId - the durable child the parent knows by id.
+ * @param stopReason - how the child's last ordinary turn ended.
+ * @returns the model-facing opening line of the settlement notice.
+ */
+function settlementSummary(childId: SessionId, stopReason: SubagentResult['stopReason']): string {
+  const subject = `Background subagent ${childId}`
+  switch (stopReason) {
+    case 'completed':
+      return `${subject} finished and will do no further work unless you send it more.`
+    case 'aborted':
+      return `${subject} was stopped before it finished.`
+    case 'max-tokens':
+      return `${subject} ran out of room before it finished.`
+    // A pre-step rejection — a hook deny, a policy plugin — discarded input
+    // the child had claimed, so the parent must not treat the task as done.
+    case 'refusal':
+      return `${subject} declined the task.`
+    case 'error':
+      return `${subject} failed before it finished.`
+    /* v8 ignore next 4 -- `SubagentResult['stopReason']` is merge-extensible, so this arm
+     * needs a backend that adds a variant; an unnameable ending is reported as unfinished
+     * rather than silently as success. */
+    default:
+      return `${subject} ended abnormally (${String(stopReason)}) before it finished.`
+  }
 }
 
 /** Whether one settlement attempt opened the disposal transaction. */
@@ -292,7 +381,7 @@ export class SubagentContinuationManager {
     })
     ctx.effect(function* (this: SubagentContinuationManager) {
       yield scope.dispose
-      yield () => { return this.drain() }
+      yield () => this.drain()
     }.bind(this), 'subagents.continuations()')
   }
 
@@ -332,6 +421,9 @@ export class SubagentContinuationManager {
       ...request.persona !== undefined ? { persona: request.persona } : {},
       ...request.toolFilter !== undefined ? { toolFilter: request.toolFilter } : {},
     })
+    // Capture before the first await: a later parent switch belongs to the
+    // parent's future, not to this child.
+    const delegatedPolicies = captureDelegatedPolicyOverrides(parent)
 
     const prepared = await this.host.prepareContinuable(spec.provider, {
       sessionId: childId,
@@ -348,7 +440,7 @@ export class SubagentContinuationManager {
         childId,
         provider: spec.provider,
         parent,
-        create: { seed, meta: childSessionMeta(parent, childDepth, lineageSeedLength) },
+        create: { seed, meta: childSessionMeta(parent, childDepth, lineageSeedLength), delegatedPolicies },
         agentOptions: resolveChildAgentOptions(parent, request.agentOptions, childDepth),
         composition: { persona: request.persona, toolFilter: request.toolFilter },
         signal: spec.signal,
@@ -377,7 +469,7 @@ export class SubagentContinuationManager {
    * @param parent - the exact live direct parent authorizing this delivery.
    * @param childId - the durable child session id.
    * @param content - the user-role content to deliver.
-   * @param options - durable provenance and caller cancellation.
+   * @param options - the message source fields and caller cancellation.
    * @returns the accepted message's inbox id.
    * @throws when parent authority, availability, or admission rejects the delivery.
    */
@@ -410,6 +502,69 @@ export class SubagentContinuationManager {
       options.signal.throwIfAborted()
       /* v8 ignore stop */
     }
+  }
+
+  /**
+   * Interrupt one live continuable child's current turn. Admission is
+   * synchronous and the effect is asynchronous: this authorizes the caller,
+   * requests `Agent.cancel(cause, { keepInbox: true })` on the target, and
+   * returns without waiting for the target to observe the signal or reach
+   * quiescence. The Activation, its handle, accepted unclaimed inbox work, and
+   * already-published descendants are untouched; work already claimed into the
+   * interrupted turn is not requeued. Once the interrupted driver is idle, a
+   * waking send resumes the parked queue.
+   *
+   * An absent target is an accepted no-op, which uniformly covers natural
+   * completion races, repeated requests, one-shot ids, and unknown ids without
+   * consulting the durable catalog. A target whose disposal transaction is
+   * already open is likewise an accepted no-op after authorization.
+   * @param targetSessionId - the durable child session id to interrupt.
+   * @param authority - the human parent address or exact live ancestor Agent.
+   * @throws {SubagentError} `UNAUTHORIZED` when the presented authority does
+   *   not own the live target: a stale or self-targeting ancestor caller, a
+   *   parent address that is not the live target's durable direct parent, or
+   *   an ancestor outside the target's recorded live lineage.
+   */
+  interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void {
+    if (authority.kind === 'ancestor') {
+      const caller = authority.agent
+      // A stale caller is rejected even when the target is absent, so a
+      // replaced same-id Agent can never probe this manager's state.
+      if (this.ctx.agents.get(caller.id) !== caller) {
+        throw new SubagentError(
+          `interrupting "${targetSessionId}" requires the exact live ancestor agent`,
+          'UNAUTHORIZED',
+        )
+      }
+      if (caller.id === targetSessionId) {
+        throw new SubagentError(
+          `agent "${caller.id}" cannot interrupt itself`,
+          'UNAUTHORIZED',
+        )
+      }
+    }
+    const activation = this.activations.get(targetSessionId)
+    if (activation === undefined) return
+    if (authority.kind === 'user') {
+      if (activation.handle.agent.session.header.parentSession !== authority.parentSessionId) {
+        throw new SubagentError(
+          `subagent "${targetSessionId}" belongs to another parent session`,
+          'UNAUTHORIZED',
+        )
+      }
+    } else if (!activation.ancestry.has(authority.agent)) {
+      throw new SubagentError(
+        `subagent "${targetSessionId}" is not a live descendant of agent "${authority.agent.id}"`,
+        'UNAUTHORIZED',
+      )
+    }
+    // Disposal already stopped the target with a whole-Activation teardown;
+    // a second cancel would be a redundant signal on a closing handle.
+    if (activation.disposal !== undefined) return
+    activation.handle.agent.cancel(
+      authority.kind === 'user' ? { kind: 'user' } : { kind: 'parent' },
+      { keepInbox: true },
+    )
   }
 
   /**
@@ -489,17 +644,34 @@ export class SubagentContinuationManager {
         senderSessionId: activation.childId,
       },
     })
-    const parentActivation = this.activations.get(parent.id)
-    if (delivery === 'wakeup'
-      && parentActivation !== undefined
-      && parentActivation.handle.agent === parent) {
-      this.admitWaking(parentActivation, message.id, () => {
-        this.sendReport(parent, message, delivery)
-      })
+    if (delivery === 'wakeup') {
+      this.sendWaking(parent, message, () => { this.sendReport(parent, message, delivery) })
     } else {
       this.sendReport(parent, message, delivery)
     }
     return message.id
+  }
+
+  /**
+   * Perform one waking send to a parent, accounted against that parent's own
+   * Activation when it has one. Registering the id before the send is what
+   * keeps a continuation-managed parent from being judged quiescent in the
+   * window between `followup()` and the microtask that admits it.
+   * @param parent - the exact live parent receiving the waking message.
+   * @param message - the message whose id is accounted.
+   * @param send - the synchronous waking send to perform.
+   */
+  private sendWaking(
+    parent: Agent,
+    message: ReturnType<typeof createUserMessage>,
+    send: () => void,
+  ): void {
+    const parentActivation = this.activations.get(parent.id)
+    if (parentActivation !== undefined && parentActivation.handle.agent === parent) {
+      this.admitWaking(parentActivation, message.id, send)
+    } else {
+      send()
+    }
   }
 
   /** Send one report while translating only the parent's own rejection. */
@@ -658,23 +830,32 @@ export class SubagentContinuationManager {
     return lineage
   }
 
-  /** Reject new admission once the manager or this exact parent tree began draining. */
-  private assertAdmitting(agent: Agent): void {
-    if (this.draining) {
-      throw new SubagentError(
-        'continuable subagents are draining; the operation was not admitted',
-        'DRAINING',
-      )
-    }
+  /**
+   * The teardown that closed continuable admission for this agent's lineage.
+   * `'manager'` is the whole manager draining; an Agent is the exact scoped root
+   * whose forest is closing.
+   * @param agent - the agent whose lineage is tested.
+   * @returns the closing teardown, or `undefined` while admission is open.
+   */
+  private closingTeardownFor(agent: Agent): Agent | 'manager' | undefined {
+    if (this.draining) return 'manager'
     const lineage = this.liveLineage(agent)
     for (const [root, members] of this.closingScopes) {
-      if (members.has(agent) || lineage.includes(root)) {
-        throw new SubagentError(
-          `continuable subagents below parent "${root.id}" are draining; the operation was not admitted`,
-          'DRAINING',
-        )
-      }
+      if (members.has(agent) || lineage.includes(root)) return root
     }
+    return undefined
+  }
+
+  /** Reject new admission once the manager or this exact parent tree began draining. */
+  private assertAdmitting(agent: Agent): void {
+    const closing = this.closingTeardownFor(agent)
+    if (closing === undefined) return
+    throw new SubagentError(
+      closing === 'manager'
+        ? 'continuable subagents are draining; the operation was not admitted'
+        : `continuable subagents below parent "${closing.id}" are draining; the operation was not admitted`,
+      'DRAINING',
+    )
   }
 
   /**
@@ -754,7 +935,7 @@ export class SubagentContinuationManager {
    * Submit to a freshly materialized Activation or roll it back completely.
    * @param activation - the just-published Activation to admit or release.
    * @param content - the initial or resumed message content.
-   * @param source - durable provenance for the accepted message.
+   * @param source - durable fields naming who supplied the accepted message.
    * @param parent - the live direct parent authorizing admission.
    * @param signal - caller cancellation owning admission until acceptance.
    * @returns the accepted inbox message id.
@@ -806,18 +987,23 @@ export class SubagentContinuationManager {
     inputs: MaterializeInputs,
     parentLineage: readonly Agent[],
   ): Promise<Activation> {
-    const { childId, provider, parent } = inputs
+    const { childId, provider, parent, create } = inputs
     // No id pre-check here: the child lock serializes each durable child, both
     // callers reach this only after confirming no Activation exists, and
     // `AgentRegistry.enter()` is the authoritative collision boundary for an id
     // some other owner holds — a duplicate would reject there with rollback.
     inputs.signal.throwIfAborted()
     const setup = (childCtx: Context): AgentSetupCommit => {
-      applyChildComposition(childCtx, inputs.composition)
+      // Only fresh creation seeds the delegation policy onto the child's own
+      // log (after any fork seed, so fresh policy wins stale seed state); a
+      // cold resume replays those persisted events instead.
+      if (create !== undefined) {
+        appendDelegatedPolicyOverrides((childCtx.agent as Agent).session, create.delegatedPolicies)
+      }
+      applyChildComposition(childCtx, parent, inputs.composition)
       return this.setupRegistry.apply(childCtx)
     }
     const observer = this.host.observeActivation(provider, childId, parent)
-    const { create } = inputs
     // Agent creation owns rollback before handle transfer. A rejection leaves
     // no resident Activation and therefore publishes no lifecycle edge.
     const handle: AgentHandle = create === undefined
@@ -838,6 +1024,10 @@ export class SubagentContinuationManager {
 
     const activation: Activation = {
       childId,
+      // The durable lineage, not merely the caller: creation stamps this same
+      // agent into the child's header, and cold resume authorized it against
+      // the persisted header before materializing.
+      parentSession: parent.id,
       provider,
       handle,
       ancestry: new WeakSet([handle.agent, ...parentLineage]),
@@ -845,6 +1035,7 @@ export class SubagentContinuationManager {
       observer,
       disposal: undefined,
       accepted: new Set(),
+      announced: false,
       poke: Promise.withResolvers<void>(),
     }
     // After transfer, any failure must dispose the created handle, remove the
@@ -946,9 +1137,13 @@ export class SubagentContinuationManager {
     // establish it before the message can enter the child's inbox.
     this.acquireOwnership(parent, activation.childId)
     const message = createUserMessage({ content, source })
-    return this.admitWaking(activation, message.id, () => {
+    const accepted = this.admitWaking(activation, message.id, () => {
       activation.handle.agent.followup(message)
     })
+    // Past this point the caller has an id for this child, so its eventual
+    // settlement is something the parent is owed an account of.
+    activation.announced = true
+    return accepted
   }
 
   /**
@@ -1169,6 +1364,12 @@ export class SubagentContinuationManager {
     // makes a racing delivery wait for release rather than cold-resume into the
     // still-registered agent.
     this.activations.delete(childId)
+    // BEFORE releasing ownership, while the parent still counts this child and
+    // therefore cannot be judged settled. Delivering after the release would
+    // race a parent watcher that resumes one microtask later, finds itself
+    // childless and quiet, and disposes an Agent whose `cancel()` clears the
+    // inbox this notice is sitting in.
+    this.notifySettlement(activation, activation.observer.terminal(failure))
     // Release ownership even on failure: a retained failed child would pin its
     // ancestors in `waiting` forever.
     this.releaseOwnership(childId)
@@ -1176,6 +1377,75 @@ export class SubagentContinuationManager {
     // cannot be reported as a successful epoch.
     activation.observer.settle(failure)
     if (failure !== undefined) throw failure
+  }
+
+  /**
+   * Tell the durable direct parent that this child produced everything it is
+   * going to. Unconditional for every child the caller received an id for: it
+   * does not consider whether the child reported, because the cases that most
+   * need it — a token ceiling, a model failure, cancellation, teardown — are
+   * exactly the ones where the child never got to choose. A materialization
+   * rolled back before its first acceptance stays silent, since the caller was
+   * told that child was not established. A parent that is no longer live is not
+   * an error; the child's own Session remains the durable record either way.
+   * A parent whose own lineage is already closing receives the notice without a
+   * wake, because teardown is not a reason to start a turn.
+   *
+   * Never blocks disposal. A delivery failure is logged and dropped, because
+   * retaining a child to retry a notice would pin its whole ancestry in
+   * `waiting` forever.
+   * @param activation - the settling Activation, still owned by its parent.
+   * @param terminal - how this epoch ended, as the terminal edge will report it.
+   */
+  private notifySettlement(activation: Activation, terminal: ActivationTerminal): void {
+    if (!activation.announced) return
+    try {
+      const parent = this.ctx.agents.get(activation.parentSession)
+      if (parent === undefined) return
+      const summary = settlementSummary(activation.childId, terminal.stopReason)
+      const message = createUserMessage({
+        content: [
+          { type: 'text' as const, text: summary },
+          ...terminal.output === undefined
+            ? [{ type: 'text' as const, text: 'It left no closing message.' }]
+            : [{ type: 'text' as const, text: 'Its closing message:' }, ...terminal.output],
+        ],
+        source: {
+          kind: 'subagent-settled' as const,
+          form: 'notice' as const,
+          summary: boundContextSummary(summary),
+          senderSessionId: activation.childId,
+        },
+      })
+      // A parent whose own teardown already began must not be woken. Waking is
+      // not a queue operation: `followup()` on a quiescent Agent starts a turn,
+      // and `cancel()` does not arm against a later one, so a notice arriving
+      // during teardown would spend a model request on an Agent its host is
+      // about to dispose — once per tree layer, since each layer's own notice
+      // then wakes the layer above it. Injecting delivers to a parent still
+      // reading its inbox and records the account in the log either way; it
+      // does NOT survive that parent's own disposal, whose `keepInbox: false`
+      // cancel durably clears whatever it never claimed.
+      if (this.closingTeardownFor(parent) !== undefined) {
+        parent.inject(message)
+        return
+      }
+      // An idle parent has nothing else to look at, so it gets one ordinary
+      // turn. A busy parent is steered instead of woken: `Inbox.claim()` takes
+      // the whole next-step batch at one boundary, so several children settling
+      // together cost one step rather than one turn each. Steering rather than
+      // injecting closes the window where a driver retires between this status
+      // read and the send, which would strand the notice unclaimed.
+      this.sendWaking(parent, message, () => {
+        if (parent.status === 'idle') parent.followup(message)
+        else parent.steer(message)
+      })
+    } catch (error: unknown) {
+      this.ctx.logger.warn(
+        `subagent "${activation.childId}" settlement notice was not delivered to its parent: `
+        + errorChain(error),
+      )
+    }
   }
 
   /**

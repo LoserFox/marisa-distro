@@ -3,7 +3,7 @@
 # and the deliberately distinct sandbox fallback are applied together to the
 # live tree.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:

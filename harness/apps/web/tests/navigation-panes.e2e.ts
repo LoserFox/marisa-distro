@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import type { Browser, Page, Response } from 'playwright'
 import { chromium } from 'playwright'
+import { strFromU8, unzipSync } from 'fflate'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, onTestFailed } from 'vitest'
 import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
@@ -51,8 +52,16 @@ async function assertBaselineSucceeded(response: Response, method: string): Prom
 }
 
 async function ensureSeedOpen(page: Page): Promise<void> {
+  const welcome = page.locator('[class*="onboardingOverlay"]')
+  if (await welcome.count() > 0) {
+    await welcome.getByRole('button').click()
+    await welcome.waitFor({ state: 'detached', timeout: 15_000 })
+  }
   const chat = page.getByRole('tab', { name: 'Chat', exact: true })
-  const search = page.getByPlaceholder('Search name, keywords', { exact: false })
+  // Search is a collapsed header action; expand it so the input is actionable.
+  const searchButton = page.getByRole('button', { name: 'Search sessions' })
+  if (await searchButton.getAttribute('aria-expanded') !== 'true') await searchButton.click()
+  const search = page.getByPlaceholder('Search sessions', { exact: false })
   if (await chat.count() === 0) {
     await search.fill('WATERFALL')
     const result = page.getByRole('tree', { name: 'Search results' }).getByRole('treeitem')
@@ -78,8 +87,8 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
   beforeAll(async () => {
     scaffold = await launchWebScaffold({})
     // The workspace-aware flow runs sessions in <workspaceCwd>/workspace;
-    // the read targets must live in that session cwd (pre-creation is safe:
-    // create-by-name adopts an existing directory).
+    // the read targets must live in that session cwd (pre-creation is safe
+    // because the picker adopts an existing directory by path).
     const sessionCwd = join(scaffold.workspaceCwd, 'workspace')
     await mkdir(sessionCwd, { recursive: true })
     await writeFile(join(sessionCwd, 'nav-a.md'), '# alpha nav\n')
@@ -118,8 +127,9 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     // The frame mounts before the asynchronous session-list baseline lands.
     // Search must target the settled seeded row, not the startup input that
-    // the ready projection replaces.
-    await page.getByText('1 session', { exact: true }).waitFor({ timeout: 30_000 })
+    // the ready projection replaces (the compact layout dropped group session
+    // counts; the Ungrouped bucket row is the barrier).
+    await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
   }, 120_000)
 
   afterEach(async () => {
@@ -164,8 +174,8 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
       sessionId = await settled
     }
     await recordFixture(scaffold, sessionId!, SEED)
-    // Fixture honesty: the recording must carry the shape the replay
-    // scenarios assert on — three calls in turn 1 and two closed turns.
+    // Fixture honesty: the recording must contain the events the replay
+    // scenarios assert on: three calls in turn 1 and two closed turns.
     const recorded = parseSessionLog(await readFile(SEED, 'utf8'))
     expect(recorded.filter(e => e.type === 'turn/end')).toHaveLength(2)
     const calls = recorded.filter((e): e is SessionEvent & { data: { name: string } } => e.type === 'tool/call')
@@ -175,9 +185,13 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
   it.skipIf(MODE === 'record')('finds an unopened seeded session by message content and opens it', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-navigation-search'))
     // The API baselines can settle before React commits their projection. The
-    // seeded count is the final user-visible barrier before editing search.
-    await page.getByText('1 session', { exact: true }).waitFor({ timeout: 30_000 })
-    const search = page.getByPlaceholder('Search name, keywords', { exact: false })
+    // seeded Ungrouped bucket row is the final user-visible barrier before
+    // editing search (the compact layout dropped group session counts).
+    await page.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
+    // Search is a collapsed header action; expand it so the input is actionable.
+    const searchButton = page.getByRole('button', { name: 'Search sessions' })
+    if (await searchButton.getAttribute('aria-expanded') !== 'true') await searchButton.click()
+    const search = page.getByPlaceholder('Search sessions', { exact: false })
     // The cold row has not been opened, so only the persisted log can satisfy
     // this query. First search lazily reconciles the SQLite content index.
     await search.fill('zzzqx-no-such-session')
@@ -274,6 +288,95 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     await details.getByRole('button', { name: 'Close details' }).click()
   }, 60_000)
 
+  it.skipIf(MODE === 'record')('downloads through the Session Header and /export with one dialog', async () => {
+    onTestFailed(() => saveFailureShot(page, 'web-e2e-navigation-export'))
+    await ensureSeedOpen(page)
+    const exportButton = page.getByRole('button', { name: 'Session log' })
+    expect(await exportButton.isDisabled()).toBe(false)
+    const header = exportButton.locator('xpath=ancestor::header[1]')
+    const [buttonBox, headerBox] = await Promise.all([
+      exportButton.boundingBox(), header.boundingBox(),
+    ])
+    if (buttonBox === null || headerBox === null) {
+      throw new Error('Session Header export geometry is unavailable')
+    }
+    expect(headerBox.x + headerBox.width - (buttonBox.x + buttonBox.width)).toBeLessThanOrEqual(32)
+    const responsePromise = page.waitForResponse(response =>
+      response.request().method() === 'HEAD'
+      && new URL(response.url()).pathname === '/api/session.export', { timeout: 30_000 })
+    const downloadPromise = page.waitForEvent('download', { timeout: 30_000 })
+    await exportButton.click()
+    const response = await responsePromise
+    expect(response.status()).toBe(200)
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toMatch(/^dsh-session-.+\.zip$/)
+    const dialog = page.getByRole('dialog', { name: 'Session download started' })
+    await dialog.waitFor({ timeout: 30_000 })
+    // The real host streamed the ZIP; its root entry is the persisted log
+    // text verbatim (the assembled seam: real route, real persistence read).
+    const files = unzipSync(await readFile(await download.path()))
+    expect(Object.keys(files)).toEqual(['session.jsonl'])
+    const content = strFromU8(files['session.jsonl'] as Uint8Array)
+    expect(content.split('\n')[0]).toContain(SEED_ID)
+    expect(content).toContain('FIRST_DONE')
+    await dialog.getByText('Close', { exact: true }).click()
+
+    const observer = await newEnglishPage(browser)
+    const observerTripwire = watchConsole(observer)
+    const observerSlotErrors: string[] = []
+    let observerDownloads = 0
+    observer.on('download', () => { observerDownloads += 1 })
+    observer.on('console', (message) => {
+      if (message.type() === 'error' && /slot entry crashed/i.test(message.text())) {
+        observerSlotErrors.push(message.text())
+      }
+    })
+    const observerSessionBaseline = baselineResponse(observer, 'session.list')
+    const observerWorkspaceBaseline = baselineResponse(observer, 'workspace.list')
+    const [, observerSessionResponse, observerWorkspaceResponse] = await Promise.all([
+      observer.goto(scaffold.baseUrl, { waitUntil: 'load' }),
+      observerSessionBaseline,
+      observerWorkspaceBaseline,
+    ])
+    await Promise.all([
+      assertBaselineSucceeded(observerSessionResponse, 'observer session.list'),
+      assertBaselineSucceeded(observerWorkspaceResponse, 'observer workspace.list'),
+    ])
+    await observer.getByText('Ungrouped', { exact: true }).waitFor({ timeout: 30_000 })
+    await ensureSeedOpen(observer)
+
+    try {
+      const input = page.locator('textarea').first()
+      const slashDownloadPromise = page.waitForEvent('download', { timeout: 30_000 })
+      await input.fill('/export')
+      await page.getByRole('option', { name: /export/u }).waitFor({ timeout: 10_000 })
+      await input.press('Enter')
+      const slashDownload = await slashDownloadPromise
+      expect(slashDownload.suggestedFilename()).toBe(download.suggestedFilename())
+      const slashFiles = unzipSync(await readFile(await slashDownload.path()))
+      const slashContent = strFromU8(slashFiles['session.jsonl'] as Uint8Array)
+      const slashEvents = parseSessionLog(slashContent)
+      const exportRun = slashEvents.findLast(event => event.type === 'command/run' && event.data.name === 'export')
+      if (exportRun?.type !== 'command/run') throw new Error('slash ZIP has no export command/run')
+      const exportDone = slashEvents.find(event =>
+        event.type === 'command/done' && event.data.commandId === exportRun.data.commandId)
+      expect(exportDone?.type).toBe('command/done')
+      await page.getByRole('dialog', { name: 'Session download started' }).waitFor({ timeout: 30_000 })
+      await page.getByRole('dialog', { name: 'Session download started' })
+        .getByText('Close', { exact: true }).click()
+      await observer.getByText('Session log download requested.', { exact: true }).waitFor({ timeout: 30_000 })
+      expect(observerDownloads).toBe(0)
+      expect(await observer.getByRole('dialog', { name: 'Session download started' }).count()).toBe(0)
+      expect({
+        pageErrors: observerTripwire.pageErrors,
+        slotErrors: observerSlotErrors,
+        warnings: observerTripwire.warnings,
+      }).toEqual({ pageErrors: [], slotErrors: [], warnings: [] })
+    } finally {
+      await observer.close()
+    }
+  }, 120_000)
+
   it.skipIf(MODE === 'record')('focuses the ledger by dragging an overview interval', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-navigation-timeline'))
     await ensureSeedOpen(page)
@@ -282,7 +385,7 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     await plot.waitFor({ timeout: 15_000 })
     const before = await page.locator('tr[data-kind]').count()
     const box = await plot.boundingBox()
-    if (box === null) { throw new Error('trajectory timeline plot has no layout box') }
+    if (box === null) throw new Error('trajectory timeline plot has no layout box')
     await page.mouse.move(box.x + box.width * 0.55, box.y + box.height / 2)
     await page.mouse.down()
     await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2)
@@ -331,7 +434,7 @@ describe('web e2e: navigation & panes over a rich seeded session', () => {
     // Real layout, not jsdom's stub (which computes no geometry at all):
     // squeeze the output pane below its content width and the line must keep
     // its single row and overflow sideways instead of folding. Soft-wrapping
-    // here is what shredded the column alignment this card exists to hold.
+    // here shreds the column alignment this card exists to hold.
     const layout = await card.locator('[class*="_output_"]').first().evaluate((node) => {
       const pane = node as HTMLElement
       const row = pane.querySelector<HTMLElement>('[class*="_line_"]')

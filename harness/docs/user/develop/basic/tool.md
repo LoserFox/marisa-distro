@@ -9,7 +9,7 @@ This tutorial adds a `greet` tool to the Web UI. Complete [Your first plugin](./
 Replace `scratch-plugin/src/my-plugin.ts` with:
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 
 export const name = 'greet-tool'
@@ -40,7 +40,7 @@ export function apply(ctx: Context) {
 Restart the development command if it is not running:
 
 ```sh
-pnpm run dsh web --patch ./scratch-plugin/cordis.yml
+pnpm dsh web --patch ./scratch-plugin/cordis.yml
 ```
 
 Open `http://127.0.0.1:3080` and ask: `Use the greet tool to greet Ada.` The model can call `greet` and receives `Hello, Ada!` as the tool result.
@@ -49,4 +49,4 @@ Open `http://127.0.0.1:3080` and ask: `Use the greet tool to greet Ada.` The mod
 
 - [Plugin configuration](./config.md) — make the greeting configurable.
 - [Tool authoring reference](../../../cookbook/adding-a-tool.md) — look up nested schemas, canonical values, background work, policy hooks, Code Mode, and UI cards.
-- [Capability layering](../practice/) — split a replaceable capability into interface, implementation, and consumer packages.
+- [Capability layering](../practice/) — split a replaceable capability into Service Definition, Service Provider, and Consumer packages.

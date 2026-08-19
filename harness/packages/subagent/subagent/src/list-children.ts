@@ -1,24 +1,22 @@
 /**
- * Read-only enumeration of one parent's durable subagent children straight
- * from the live session store and optional session persistence — no query
- * seam. Candidates are the live-preferred merge of both listings filtered to
- * durable `origin: 'subagent'` under the parent; each child's mode/label is
- * the registered `subagent` projection unit's value, resolved down a
- * three-rung ladder: the registry's watermark cache for a live child, a
- * durable projection-cache row when it serves an own-suffix identity (the
+ * Read-only enumeration of durable subagent children and descendant trees
+ * straight from the live session store and optional session persistence — no
+ * query service. Candidates come from one live-preferred corpus; each child's
+ * mode/label is the registered `subagent` projection unit's value, resolved
+ * down a three-rung ladder: the registry's watermark cache for a live child,
+ * a durable projection-cache row when it serves an own-suffix identity (the
  * seq gate), and one persistence inspection folded through the registry
- * otherwise, validated against the enumerated lifecycle. The projection
- * fold is the single
- * classification authority — this module parses no descriptor itself. Absent
- * persistence, enumeration is live-only: a cold child is unreachable for
- * resume anyway, so its absence is capability absence, not an error. The
- * module owns no catalog state and does not consult Activation,
+ * otherwise, validated against the enumerated lifecycle. The projection fold
+ * is the single classification authority — this module parses no descriptor
+ * itself. Absent persistence, enumeration is live-only: a cold child is
+ * unreachable for resume anyway, so its absence is capability absence, not an
+ * error. The module owns no catalog state and does not consult Activation,
  * Agent-registry, continuation-manager, or provider state.
  *
  * @module @deepseek-ai/dsh-subagent
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionPersistence } from '@deepseek-ai/dsh-session-persistence'
 import type { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection'
@@ -82,11 +80,39 @@ export type SubagentListEntry =
      * for any candidate whose log makes a registered unit's fold or schema
      * throw (deterministic data damage, contained per child); `unavailable`
      * when the candidate's persistence inspection failed (retried on the
-     * next listing). `unsupported` is kept for consumers already routing on
-     * it but is no longer produced.
+     * next listing). `unsupported` is never produced; it remains in the
+     * union for consumers that route on it.
      */
     readonly reason: 'corrupt' | 'unsupported' | 'unavailable'
   }
+
+/**
+ * One entry of a descendant listing: the interpreted subagent facts plus its
+ * position in the complete session tree. `parentId` is the durable direct
+ * parent from the enumerated header, and `depth` counts edges from the root.
+ */
+export type SubagentDescendantListEntry = SubagentListEntry & {
+  /** Durable direct parent of this candidate in the enumerated tree. */
+  readonly parentId: SessionId
+  /** Edge distance from the requested root; direct children are `1`. */
+  readonly depth: number
+}
+
+type CorpusRecord = { readonly header: SessionHeader; readonly live: Session | undefined }
+
+interface ListingRuntime {
+  readonly projections: SessionProjectionRegistry
+  readonly persistence: SessionPersistence | undefined
+  readonly cache: SessionProjectionCache | undefined
+  readonly corpus: ReadonlyMap<SessionId, CorpusRecord>
+  readonly subagentParents: ReadonlySet<SessionId>
+}
+
+interface PositionedCandidate {
+  readonly record: CorpusRecord
+  readonly parentId: SessionId
+  readonly depth: number
+}
 
 /**
  * Enumerate one parent's origin-classified direct children from the
@@ -96,7 +122,7 @@ export type SubagentListEntry =
  * projection-cache row when it serves an own-suffix identity (the seq gate),
  * else one bounded-concurrency persistence inspection folded through the
  * registry.
- * @see SubagentService.listChildren for the public cancellation and failure contract.
+ * @see SubagentRuntime.listChildren for the public cancellation and failure contract.
  * @param ctx - context carrying the session store, the projection registry,
  *   optional persistence, and the optional projection cache.
  * @param parentSessionId - parent session whose direct children are listed.
@@ -110,6 +136,55 @@ export async function listChildren(
   parentSessionId: SessionId,
   signal?: AbortSignal,
 ): Promise<SubagentListEntry[]> {
+  const listing = await prepareListing(ctx, signal)
+  const candidates = [...listing.corpus.values()]
+    .filter(record => record.header.parentSession === parentSessionId
+      && record.header.origin === 'subagent')
+    .sort(compareCorpusRecords)
+  const rows = await resolveCandidateRows(candidates, listing, signal)
+  return rows.filter((row): row is SubagentListEntry => row !== undefined)
+}
+
+/**
+ * Enumerate every session-backed subagent below one root in stable pre-order.
+ * Ordinary sessions and one-shot children remain traversal nodes, so a
+ * continuable child below either is still discovered. Classification uses the
+ * same projection-backed runtime as {@link listChildren}; no Agent is loaded or
+ * resumed.
+ * @see SubagentRuntime.listDescendants for the public cancellation and failure contract.
+ * @param ctx - context carrying the session store, projection registry, and optional persistence/cache.
+ * @param rootSessionId - session whose complete descendant tree is listed.
+ * @param signal - caller-owned cancellation observed around every persistence read.
+ * @returns interpreted subagents with durable direct-parent and root-relative depth.
+ * @throws {@link SubagentError} under the same conditions as {@link listChildren}.
+ */
+export async function listDescendants(
+  ctx: Context,
+  rootSessionId: SessionId,
+  signal?: AbortSignal,
+): Promise<SubagentDescendantListEntry[]> {
+  const listing = await prepareListing(ctx, signal)
+  const positioned = descendantCandidates(listing.corpus, rootSessionId)
+  const rows = await resolveCandidateRows(
+    positioned.map(candidate => candidate.record),
+    listing,
+    signal,
+  )
+  const entries: SubagentDescendantListEntry[] = []
+  positioned.forEach((position, index) => {
+    const row = rows[index]
+    if (row !== undefined) {
+      entries.push({ ...row, parentId: position.parentId, depth: position.depth })
+    }
+  })
+  return entries
+}
+
+/** Resolve listing services once and build one live-preferred session corpus. */
+async function prepareListing(
+  ctx: Context,
+  signal: AbortSignal | undefined,
+): Promise<ListingRuntime> {
   const projections = ctx.get('sessionProjections')
   // Checked before any read, even with zero candidates: mode/label are the
   // row's strong contract, so a missing fold capability is a deterministic
@@ -150,7 +225,7 @@ export async function listChildren(
   }
   // Live-preferred merge without header reconciliation: a live record wins
   // its id wholesale, exactly as a live-preferred corpus would serve it.
-  const corpus = new Map<SessionId, { header: SessionHeader; live: Session | undefined }>()
+  const corpus = new Map<SessionId, CorpusRecord>()
   for (const header of persistedHeaders) corpus.set(header.id, { header, live: undefined })
   for (const session of sessions.list()) {
     corpus.set(session.header.id, { header: session.header, live: session })
@@ -161,13 +236,17 @@ export async function listChildren(
       subagentParents.add(record.header.parentSession)
     }
   }
-  const candidates = [...corpus.values()]
-    .filter(record => record.header.parentSession === parentSessionId
-      && record.header.origin === 'subagent')
-    .sort((a, b) => a.header.createdAt - b.header.createdAt
-      || a.header.id.localeCompare(b.header.id))
+  return { projections, persistence, cache, corpus, subagentParents }
+}
 
-  const rows: Array<SubagentListEntry | undefined> = Array.from({ length: candidates.length })
+/** Resolve projection-backed rows for aligned candidates with bounded cold reads. */
+async function resolveCandidateRows(
+  candidates: readonly CorpusRecord[],
+  listing: ListingRuntime,
+  signal: AbortSignal | undefined,
+): Promise<(SubagentListEntry | undefined)[]> {
+  const { projections, persistence, cache, subagentParents } = listing
+  const rows: (SubagentListEntry | undefined)[] = Array.from({ length: candidates.length })
   const coldReads: { index: number; header: SessionHeader }[] = []
   candidates.forEach((candidate, index) => {
     const childId = candidate.header.id
@@ -212,7 +291,48 @@ export async function listChildren(
     ))
   }
   assertListingNotCancelled(signal)
-  return rows.filter((row): row is SubagentListEntry => row !== undefined)
+  return rows
+}
+
+/** Build origin-classified candidates from the complete tree without recursion. */
+function descendantCandidates(
+  corpus: ReadonlyMap<SessionId, CorpusRecord>,
+  rootSessionId: SessionId,
+): PositionedCandidate[] {
+  const children = new Map<SessionId, CorpusRecord[]>()
+  for (const record of corpus.values()) {
+    const parentId = record.header.parentSession
+    if (parentId === undefined) continue
+    const siblings = children.get(parentId)
+    if (siblings === undefined) children.set(parentId, [record])
+    else siblings.push(record)
+  }
+  for (const siblings of children.values()) siblings.sort(compareCorpusRecords)
+
+  const positioned: PositionedCandidate[] = []
+  const stack: PositionedCandidate[] = (children.get(rootSessionId) ?? [])
+    .map(record => ({ record, parentId: rootSessionId, depth: 1 }))
+    .reverse()
+  const visited = new Set<SessionId>([rootSessionId])
+  while (stack.length > 0) {
+    // The length guard proves one frame exists.
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const position = stack.pop()!
+    const id = position.record.header.id
+    if (visited.has(id)) continue
+    visited.add(id)
+    if (position.record.header.origin === 'subagent') positioned.push(position)
+    const descendants = children.get(id) ?? []
+    for (const record of [...descendants].reverse()) {
+      stack.push({ record, parentId: id, depth: position.depth + 1 })
+    }
+  }
+  return positioned
+}
+
+/** Compare siblings by durable creation time, then id. */
+function compareCorpusRecords(a: CorpusRecord, b: CorpusRecord): number {
+  return a.header.createdAt - b.header.createdAt || a.header.id.localeCompare(b.header.id)
 }
 
 /**
@@ -319,10 +439,7 @@ const LIFECYCLE_WITNESS_KEYS = [
   'version', 'id', 'createdAt', 'cwd', 'parentSession', 'seedLength', 'delegationDepth',
 ] as const
 
-/**
- * Whether an inspected log still belongs to the enumerated lifecycle,
- * mirroring the retired query-source compatibility check's field set.
- */
+/** Whether an inspected log still belongs to the enumerated lifecycle. */
 function sameLifecycle(meta: SessionHeader, expected: SessionHeader): boolean {
   return LIFECYCLE_WITNESS_KEYS.every(key => meta[key] === expected[key])
 }

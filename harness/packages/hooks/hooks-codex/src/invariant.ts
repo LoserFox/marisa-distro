@@ -4,7 +4,7 @@
  */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-hooks-codex'
@@ -16,7 +16,7 @@ export const inject = ['invariants']
 
 /**
  * No runtime invariant: this bridge publishes hook-protocol session events, whose companion owns
- * their cross-event provenance relation.
+ * which invocation event each result cites.
  */
 const install: InvariantInstaller = () => {}
 

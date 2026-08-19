@@ -1,6 +1,6 @@
 /**
  * Enforce Agent Note lifecycle/class paths and dated filenames. Structural rules
- * are shared with `agent-note-tree.ts`; the closed classification contract lives
+ * are shared with `agent-note-tree.ts`; the closed classification rules live
  * in `.agents/notes/README.md`.
  */
 
@@ -23,5 +23,5 @@ if (errors.length === 0) {
 }
 
 console.error('verify-agent-note-classification: violations found:')
-for (const e of errors) { console.error(`  ${e}`) }
+for (const e of errors) console.error(`  ${e}`)
 process.exit(1)

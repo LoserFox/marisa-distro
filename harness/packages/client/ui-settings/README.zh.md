@@ -2,13 +2,13 @@
 
 [English](README.md) | 中文
 
-设置外壳插件：一个纯组合表层。它以触发控件和模态设置面板占用 `sidebar.settings`，并声明由注册方填充的 slot：`settings.trigger`／`settings.header`／`settings.close`（界面框架内容）、`settings.action`（内容标题栏中的有序操作）、`settings.section`（每项功能一页）和 `settings.onboarding`（由各功能持有、显示在全视口展示层中的有序页面）。外壳不自带文案：所有文本都来自注册方（ui-settings-general 拥有界面框架、「通用」分区和产品声明；各功能拥有各自的操作、分区、行和条件式首次使用引导页面）。导航 label 可以是跟随语言的 thunk，因此导航投影经 `resolveSlotLabel` 解析，并在分区账本更新或 locale revision 变化时重新渲染（`ctx.get('locale')` 可选读取，无硬 locale 依赖）。
+设置领域的底座，承担两项职责，本身不含任何呈现内容。它提供 `ctx.settingsScope`——每个偏好设置行绑定自己那份持久化命名空间分区所用的宿主传输层；并声明由注册方填充的设置 slot 类型：`settings.trigger`／`settings.header`／`settings.close`（界面框架内容）、`settings.action`（内容标题栏中的有序操作）、`settings.section`（每项功能一页）、`settings.plugins.tab`（“插件”分区内由各功能持有的页面）和 `settings.onboarding`（由各功能持有的有序页面）。它不依赖任何 `ui-*` 呈现包，因此任何持有偏好设置的功能都能够到它；设置**外壳**——`sidebar.settings` 占位方、它的导航与界面框架——位于 ui-settings-general，因为外壳一旦依赖 ui-sidebar，就会经 ui-layout 与 ui-theme 闭合出一条引用图环路。外壳自身的契约类型出于同一原因与外壳放在一起。
 
-外壳将首次使用引导记录按升序投影，每次只挂载一个页面；接管界面框架（body 层级的展示层、遮罩、应用根节点 `inert`）经 ui-primitives 的 `OnboardingSurface` 由步骤自身持有，因此已挂载但仍在判定私有事实的步骤渲染 null 时不绘制也不阻塞任何内容——步骤判定期间外壳不会露出空白展示层。当前注册方会收到该条目的 id、`complete()` 和 `openSection(id)` 回调；完成或跳过当前页面后，所有权转交给下一项。持久化完成状态、能力就绪状态、文案、变更操作以及页面的外层包裹均由注册方持有，因此独立注册的流程无法堆叠，外壳也不会成为第二个配置事实来源。
+该插件不注入任何服务、也不等待任何服务：`ctx.settingsScope.bind(spec)` 在调用时经**调用方**的 context 解析线路面，因此绑定所得 scope 的 disposer 归调用方 fiber 所有，而由调用方注入 `connection` 取得传输层、注入 `remote` 取得失效通知。监听器在首次后台读取启动之前就已存在，因此某一行的激活绝不会阻塞在设置传输层上。已绑定的 scope 会在收到属于自己命名空间的转发 `settings/document-updated` 事件时、以及在 `connection/reset` 时重新读取。写入携带单一字段路径以及最近已知的命名空间 revision 作为 `expectedRevision`；被拒绝或失败的写入会重新读取，除非已有更新的写入取代了它，而过期的读取绝不会覆盖发布更新的结果。若 spec 未提供 `decode`，则分区不是普通对象、未通过其重建后的 schema 校验、或携带本客户端无法重建的 schema 信封时，一律不发布任何值，于是行渲染自己的缺失状态，而不是一份半解码的值。
 
 ## 模型体验
 
-无。设置外壳为浏览器 UI 提供组合能力；这里没有任何内容进入模型请求。
+无。设置领域底座为浏览器提供偏好设置存储与 slot 声明；这里没有任何内容进入模型请求。
 
 #### KV Cache 影响
 
@@ -16,4 +16,5 @@
 
 ## 已知限制与暂缓事项
 
-- **面板仅涵盖浏览器偏好设置**：宿主侧设置表层（权限模式、工具调用模式）尚无 RPC 支撑；其骨架位于 ui-settings-general。
+- **远程浏览器没有持久化设置**：设置 RPC 仅限 loopback，因此在非 loopback 浏览器中绑定的 scope 以 `unavailable` 起步且从不跨线路，它支撑的每一行在那里都是无效的。
+- **每次写入仅一个字段**：`set` 只发送单个 `set` op，因此需要同时改动两个字段的行没有事务可用，会发布两个 revision。

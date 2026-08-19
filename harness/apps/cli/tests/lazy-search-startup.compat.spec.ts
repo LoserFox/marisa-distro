@@ -21,13 +21,20 @@ import { describe, expect, it } from 'vitest'
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url))
 const builtBin = join(repoRoot, 'apps/cli/lib/bin.js')
 const webDist = join(repoRoot, 'apps/web/dist/index.html')
-// The web bundle's patch owns the session-query-sqlite lazy-open row.
-const configPath = join(repoRoot, 'packages/bundle/web-app/cordis.patch.yml')
+// Full-text session search ships off (`openAt: never` on both layers): the
+// base patch carries the default, and the web restatement must not re-enable it.
+const baseConfigPath = join(repoRoot, 'packages/bundle/base/cordis.patch.yml')
+const webConfigPath = join(repoRoot, 'packages/bundle/web-app/cordis.patch.yml')
 const requireBuiltArtifacts = process.env.DSH_REQUIRE_BUILT_CLI_SMOKE === '1'
 
 interface ConfigRow {
   id?: string
+  disabled?: unknown
   config?: { openAt?: unknown }
+}
+
+interface PatchEntry extends ConfigRow {
+  insert?: ConfigRow[]
 }
 
 const jsExprType = new yaml.Type('tag:yaml.org,2002:js', {
@@ -92,12 +99,20 @@ function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; cod
 }
 
 describe.skipIf(!requireBuiltArtifacts)('built CLI lazy-search startup', () => {
-  it('boots and disposes the shipped composition without a SQLite startup warning', async () => {
+  it('boots and disposes the shipped composition with full-text search off by default', async () => {
     expect(existsSync(builtBin), `missing built CLI ${resolve(builtBin)}; run pnpm build`).toBe(true)
     expect(existsSync(webDist), `missing Web dist ${resolve(webDist)}; run pnpm run build:web`).toBe(true)
-    const rows = yaml.load(await readFile(configPath, 'utf8'), { schema: configSchema }) as ConfigRow[]
-    const searchRow = rows.find(row => row.id === 'session-query-sqlite')
-    expect(searchRow?.config?.openAt).toBe('first-search')
+    const baseRows = (yaml.load(await readFile(baseConfigPath, 'utf8'), { schema: configSchema }) as PatchEntry[])
+      .flatMap(entry => entry.insert ?? [entry])
+    const webRows = (yaml.load(await readFile(webConfigPath, 'utf8'), { schema: configSchema }) as PatchEntry[])
+      .flatMap(entry => entry.insert ?? [entry])
+    const baseRow = baseRows.find(row => row.id === 'session-query-sqlite')
+    const webRow = webRows.find(row => row.id === 'session-query-sqlite')
+    expect(baseRow?.config?.openAt).toBe('never')
+    expect(baseRow?.disabled).toBeUndefined()
+    // The web restatement keeps the shipped default; opting in is a later layer's override.
+    expect(webRow?.config?.openAt).toBe('never')
+    expect(webRow?.disabled).toBeUndefined()
 
     const cwd = await mkdtemp(join(tmpdir(), 'dsh-cli-lazy-search-'))
     try {

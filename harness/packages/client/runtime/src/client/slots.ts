@@ -1,10 +1,10 @@
 /**
- * SlotsService: the cordis Service layer of the slot system over the pure
+ * SlotRegistry: the cordis Service layer of the slot system over the pure
  * SlotCore (ui-slots owns registration semantics, the declaration ledger,
  * the load-time validations, and the unload cascade). This layer owns what
  * needs the runtime: the 'slots/changed' event bridge, register and
  * declaration injection through the caller's ctx.effect (fiber unload
- * collects both), the renderer install seam (install()/renderSlot('root') +
+ * collects both), the renderer installation contract (install()/renderSlot('root') +
  * the SlotRendererHost face), and the store INSTANCE axis — handle x scope
  * key -> create/cache, dropped with the last holding entry, session instances
  * cleared (with persisted state) on scope death.
@@ -14,17 +14,30 @@
  * holds this package's 'root' row in this compilation unit, but consumers
  * merge keys in; the rule fires on the narrow-map view, not on real
  * redundancy. */
-import { Service } from 'cordis'
-import type { Context } from 'cordis'
+import { Service } from '@deepseek-ai/cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
-  LocaleFace, OwnerOf, SlotEntryDef, SlotMap, SlotRenderer, SlotRendererHost,
+  LiveSlotNode, LocaleFace, OwnerOf, SlotEntryDef, SlotMap, SlotRenderer, SlotRendererHost,
   SlotScope, SlotSpec, StoreDecl, StoreFactory, StoredEntry, StoreInstanceLike,
 } from '@deepseek-ai/dsh-client-ui-slots'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
-    /** The built-in render-tree root hole (seeded by SlotCore): rendered only by the shell, occupied by a layout entry. */
+    /**
+     * The built-in render-tree root hole (seeded by SlotCore): the one slot the
+     * shell itself renders, and the ancestor of every other seat. OCCUPIED by
+     * ui-layout's AppFrame, which declares the sidebar, conversation, details,
+     * and shell.overlay seats inside it.
+     *
+     * DO NOT register here. This is a single slot, so a second entry does not
+     * sit beside the frame — it shadows it, and a dynamically registered entry
+     * is assigned a lower priority than the shipped one, which makes it the
+     * winner: the page would render your component alone, with every seat the
+     * frame declares gone. For a surface of your own that floats over the whole
+     * app, register into `shell.overlay` instead (a list slot: additive, and
+     * click-through until your entry opts into pointer events).
+     */
     'root': { kind: 'single'; scope: 'root'; owner: RootOwnerProps }
   }
 }
@@ -77,7 +90,7 @@ interface ErasedCore { register(options: object, component: unknown): () => void
 type SlotInjectionEffect = (() => void) | Iterable<() => void, void, void>
 
 /** cordis Service layer of the slot system; see the module doc for the split with SlotCore. */
-export class SlotsService extends Service {
+export class SlotRegistry extends Service {
   private readonly _core = new SlotCore()
   /** Store-instance axis: handle -> mounted scope, refcount, resolved instances. */
   private readonly _stores = new Map<EngineStoreHandle, StoreAxisRecord>()
@@ -275,6 +288,43 @@ export class SlotsService extends Service {
   }
 
   /**
+   * Shadowing winners per cell for a key: the first live (non-abdicated)
+   * entry of each cell in priority order — what outlets render; chain keys
+   * pass through unchanged (election consumes every entry). The raw
+   * {@link SlotsService.entries} view stays the inspection surface. Fresh
+   * array per call, not a uSES getSnapshot source.
+   * @param key - SlotMap key.
+   * @returns the winning entry per occupied cell.
+   */
+  entriesOfSlot(key: keyof SlotMap & string): readonly StoredEntry[] {
+    return this._core.entriesOfSlot(key)
+  }
+
+  /**
+   * Export the current JSON-safe Slot declaration tree for read-only inspection.
+   * @param root - exact live Slot root; omitted returns all roots.
+   * @returns selected Slot trees.
+   */
+  snapshot(root?: string): LiveSlotNode[] {
+    return this._core.snapshot(root)
+  }
+
+  /**
+   * Observe entry boundary crashes (every render-time entry failure the
+   * boundaries contain, abdicating or not) — the supervision seam for
+   * plugins mirroring contribution health. Fires synchronously per report,
+   * after the registry mutated for abdicating crashes. Callers own the
+   * disposer (wire it through ctx.effect for fiber-lifetime cleanup, as with
+   * {@link SlotsService.subscribe}).
+   * @param fn - called with the slot key, the crashed entry, the crash
+   * cause, and `abdicated`: whether the crash retired the entry from its cell.
+   * @returns unsubscribe.
+   */
+  onEntryError(fn: (key: string, entry: StoredEntry, error: unknown, info: { abdicated: boolean }) => void): () => void {
+    return this._core.onEntryError(fn)
+  }
+
+  /**
    * Look up a declared spec (register-declared or the built-in 'root').
    * @param key - SlotMap key.
    * @returns spec or undefined.
@@ -320,7 +370,7 @@ export class SlotsService extends Service {
     const dispose = (this._core as unknown as ErasedCore).register(erased, component)
     if (store !== undefined) {
       // Register succeeded, so the target's spec is on the ledger.
-      const scope = (this._core.specDynamic(options.name) as SlotSpec<never>).scope
+      const scope = (this._core.specDynamic(options.name) as SlotSpec<SlotEntryDef>).scope
       this._acquire(store, scope)
     }
     let disposed = false
@@ -353,6 +403,8 @@ export class SlotsService extends Service {
       subscribe: (key, fn) => this._core.subscribe(key, fn),
       getVersion: key => this._core.getVersion(key),
       entriesOf: key => this._core.entries(key),
+      entriesOfSlot: key => this._core.entriesOfSlot(key),
+      reportEntryError: (key, entry, error, info) => { this._core.reportEntryError(key, entry, error, info) },
       specOf: key => this._core.specDynamic(key),
       isLive: entry => this._core.isLive(entry),
       storeOf: (entry, scopeKey) =>
@@ -377,7 +429,7 @@ export class SlotsService extends Service {
     if (instance === undefined) {
       // Session instances get the scope key (the engine suffixes the persist
       // key per session); root instances stay keyless.
-      instance = record.scope !== 'root' ? handle.create(key) : handle.create()
+      instance = record.scope === 'root' ? handle.create() : handle.create(key)
       record.instances.set(key, instance)
     }
     return instance
@@ -409,8 +461,8 @@ export class SlotsService extends Service {
 // inside the class — see its JSDoc for why it must live on the prototype).
 // Element access reaches the private _register legally and keeps it a
 // TS-visible read.
-;(SlotsService.prototype as { register: (options: object, component: unknown) => () => void }).register
-  = function register(this: SlotsService, rawOptions: object, component: unknown): () => void {
+;(SlotRegistry.prototype as { register: (options: object, component: unknown) => () => void }).register
+  = function register(this: SlotRegistry, rawOptions: object, component: unknown): () => void {
     // The core's overloads proved the shares; the implementation works on
     // the erased view (same pattern as the core's own implementation arm).
     const options = rawOptions as ErasedRegisterOptions

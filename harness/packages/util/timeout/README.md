@@ -8,7 +8,7 @@ It owns **no termination**. The signal it hands out only *notifies*; actually st
 
 It is a **library, not a service or plugin**: no `ctx`, registers nothing, holds no state, emits no events. A "timeout service" would have to understand how to stop every capability's work — exactly the knowledge a microkernel keeps out of shared layers.
 
-## Surface
+## API
 
 ```ts
 import { clampTimeout, deadline, idleWatchdog, MAX_TIMER_DELAY_MS, timeoutOf, TimeoutReason } from '@deepseek-ai/dsh-timeout'
@@ -18,7 +18,7 @@ import { clampTimeout, deadline, idleWatchdog, MAX_TIMER_DELAY_MS, timeoutOf, Ti
 |---|---|
 | `clampTimeout(requested, def, max, name?)` | Validate the caller's optional positive-finite hint, fill from `def`, cap at `max`. Throws (with `name`) on a non-positive/non-finite hint. |
 | `deadline(upstream, timeoutMs, code)` | Fuse `upstream` cancellation with a timeout into one `AbortSignal` (`AbortSignal.any`); the timeout carries a `TimeoutReason`. `[Symbol.dispose]` clears the timer. |
-| `idleWatchdog(upstream, timeoutMs, code)` | Keep one stable fused signal and arm only while its guarded async-iterator `next()` is outstanding. Resolution disarms; later demand rearms; disposal clears; concurrent demand rejects. |
+| `idleWatchdog(upstream, timeoutMs, code)` | Keep one stable fused signal and arm only while its guarded async-iterator `next()` is outstanding. Resolution disarms; later demand or `pulse()` activity rearms; disposal clears; concurrent demand rejects. |
 | `MAX_TIMER_DELAY_MS` | Largest delay Node schedules without clamping it to one millisecond (`2_147_483_647`). Timer-owning config must not exceed it. |
 | `timeoutOf(signal \| { reason }, code?)` | Recover the `TimeoutReason` from an aborted signal/error, else `undefined` — the timeout-vs-cancel classifier. Pass `code` to match only THIS deadline's timer (see nesting below). |
 | `TimeoutReason` | The internal reason (`code` + `timeoutMs`) stamped on a timeout abort. Not a public error — providers translate it into their own error/field. |
@@ -48,15 +48,15 @@ The signal only *notifies* — the caller MUST attach its own termination (`d.si
 
 Pass your own `code` to `timeoutOf` so classification composes under nesting. When `upstream` is itself a deadline signal, `AbortSignal.any` preserves its `TimeoutReason` if that timer fires first. Scoping to your code makes a foreign timeout read as an ordinary upstream cancel instead of claiming that the local timer expired.
 
-For a streamed transport, create one `idleWatchdog`, pass its stable `signal` into the transport, and call `watchdog.next(iterator)` for each provider read. The interval must be positive, finite, and no greater than `MAX_TIMER_DELAY_MS`; Node otherwise clamps it to one millisecond. It measures only outstanding demand, so no timer runs while downstream code renders or otherwise waits before asking for the next chunk. The primitive still only notifies, so the transport must observe the stable signal; the DeepSeek and pi-ai adapters prove that timeout closes their real response body or SDK request.
+For a streamed transport, create one `idleWatchdog`, pass its stable `signal` into the transport, and call `watchdog.next(iterator)` for each provider read. Call `watchdog.pulse()` when transport activity does not yield an iterator value. The interval must be positive, finite, and no greater than `MAX_TIMER_DELAY_MS`; Node otherwise clamps it to one millisecond. It measures only outstanding demand, so no timer runs while downstream code renders or otherwise waits before asking for the next chunk. The primitive still only notifies, so the transport must observe the stable signal; the DeepSeek and pi-ai adapters prove that timeout closes their real response body or SDK request.
 
 ## What does NOT get a timeout
 
-Local file `read`/`write`/`edit` take no `timeoutMs`: a syscall is best-effort-abortable at most, a timeout could not force `fsync`/`rename` to stop, and adding one would be an implicit default that violates explicit-over-implicit. See [`fs/`](../../fs/README.md).
+Local file `read`/`write`/`edit` take no `timeoutMs`: file IO runs untimed because a deadline would kill work the OS will still finish. See [the filesystem subsystem page](../../../docs/subsystems/filesystem.md).
 
 ## Model Experience
 
-Indirectly, through consumers such as `dsh-timeout-policy`, which may replace a provider result with a retained timeout error or suppress a late result.
+Indirectly, through consumers such as `dsh-tool-call-timeout-policy`, which may replace a provider result with a retained timeout error or suppress a late result.
 
 #### KV Cache effect
 

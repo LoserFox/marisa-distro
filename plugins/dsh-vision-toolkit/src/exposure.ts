@@ -1,7 +1,8 @@
 /**
  * Agent-scoped progressive exposure for the model-facing visual tools.
- * Runtime readiness is global, while tool schemas enter only an Agent that has
- * loaded the matching Skill; administrative diagnostics stay on the Web seam.
+ * Runtime readiness is global, while tool schemas enter only an Agent through
+ * the matching Skill or its bootstrap tool; administrative diagnostics stay on
+ * the Web seam.
  * @module dsh-vision-toolkit/exposure
  */
 
@@ -9,15 +10,22 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { Session } from '@deepseek-ai/dsh-session'
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools'
-import type { Context } from 'cordis'
-import { VISION_TOOLS_SKILL_CONTENT, VISION_TOOLS_SKILL_NAME } from './skill.ts'
+import type { Context } from '@deepseek-ai/cordis'
+import { VISION_SKILLS_CONTENT, VISION_SKILLS_NAME } from './skill.ts'
+import { VISION_TOOL_NAMES } from './tools.ts'
 
 /** Small bootstrap tool retained only until the current Agent gains visual tools. */
 export const VISION_TOOLKIT_ACTIVATE = 'vision_toolkit_activate'
 
+/** Skill name used by releases before the rename to vision-skills. */
+export const LEGACY_VISION_TOOLS_SKILL_NAME = 'vision-tools'
+
+/** Unique pre-rename line in bundled instructions, kept for Session restore. */
+export const LEGACY_VISION_TOOLS_SKILL_MARKER = 'If this content arrived through a direct `/vision-tools` invocation and the'
+
 interface AgentExposure {
   active: boolean
-  hideActivation?: () => void
+  liftRestriction?: () => void
   toolDisposers: Array<() => void>
   toolNames: string[]
 }
@@ -36,8 +44,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+function isBundledSkillName(name: unknown): boolean {
+  return name === VISION_SKILLS_NAME || name === LEGACY_VISION_TOOLS_SKILL_NAME
+}
+
+function isBundledSkillContent(text: string): boolean {
+  return text.includes(VISION_SKILLS_CONTENT) || text.includes(LEGACY_VISION_TOOLS_SKILL_MARKER)
+}
+
 function isVisionSkillArguments(value: unknown): boolean {
-  return isRecord(value) && value.name === VISION_TOOLS_SKILL_NAME
+  return isRecord(value) && isBundledSkillName(value.name)
 }
 
 function nativeSkillCall(raw: string): boolean {
@@ -52,13 +68,14 @@ function containsBundledSkillContent(blocks: readonly unknown[]): boolean {
   return blocks.some(block => isRecord(block)
     && block.type === 'text'
     && typeof block.text === 'string'
-    && block.text.includes(VISION_TOOLS_SKILL_CONTENT))
+    && isBundledSkillContent(block.text))
 }
 
 function isBundledSkillResult(value: unknown): boolean {
   return isRecord(value)
-    && value.name === VISION_TOOLS_SKILL_NAME
-    && value.content === VISION_TOOLS_SKILL_CONTENT
+    && isBundledSkillName(value.name)
+    && typeof value.content === 'string'
+    && isBundledSkillContent(value.content)
 }
 
 /** Whether durable history proves that this Session loaded the bundled Skill. */
@@ -68,7 +85,7 @@ function hasLoadedVisionSkill(session: Session): boolean {
     if (event.type === 'user/message') {
       const source = event.data.source
       if (source.kind === 'skill-invocation'
-        && source.name === VISION_TOOLS_SKILL_NAME
+        && isBundledSkillName(source.name)
         && containsBundledSkillContent(event.data.content)) return true
       continue
     }
@@ -98,7 +115,8 @@ function hasLoadedVisionSkill(session: Session): boolean {
 /**
  * Owns one progressive-exposure generation for a ready Vision Toolkit runtime.
  * The bootstrap tool is global; visual definitions are created and registered
- * in an Agent scope only after the Skill load is durable or just succeeded.
+ * in an Agent scope after the Skill load is durable, just succeeded, or the
+ * model explicitly invokes the bootstrap fallback.
  */
 export class VisionToolExposure {
   readonly activationTool: ToolDefinition
@@ -115,8 +133,9 @@ export class VisionToolExposure {
   ) {
     this.activationTool = defineTool({
       name: VISION_TOOLKIT_ACTIVATE,
-      description: `Activate the independent Vision Toolkit execution tools for this Agent after loading the ${VISION_TOOLS_SKILL_NAME} Skill. `
-        + 'The Skill tool normally activates them automatically; call this once only after a direct Skill invocation when the visual tools are still absent. This activation tool disappears after success.',
+      description: `Activate the independent Vision Toolkit execution tools for this Agent: ${Object.values(VISION_TOOL_NAMES).join(', ')}. `
+        + `Loading the ${VISION_SKILLS_NAME} Skill normally activates them automatically; call this once when the visual tools are still absent, then use them for image understanding, OCR, UI detection, and related tasks. `
+        + 'It is safe to call before the Skill is loaded, and this activation tool disappears after success.',
       parameters: {},
       output: {
         schema: {
@@ -133,9 +152,6 @@ export class VisionToolExposure {
         if (exec.agent === undefined) {
           throw new Error(`${VISION_TOOLKIT_ACTIVATE}: an Agent Session is required`)
         }
-        if (!hasLoadedVisionSkill(exec.agent.session)) {
-          throw new Error(`${VISION_TOOLKIT_ACTIVATE}: load the ${VISION_TOOLS_SKILL_NAME} Skill first`)
-        }
         return Promise.resolve(this.activate(exec.agent))
       },
       presentCall: () => ({ card: 'generic', title: 'Activate vision tools', kind: 'execute' }),
@@ -149,6 +165,9 @@ export class VisionToolExposure {
     const listeners = [
       this.ctx.on('agent/created', ({ agent }) => { this.attach(agent) }),
       this.ctx.on('agent/disposed', ({ agent }) => { this.detach(agent) }),
+      this.ctx.on('session/event', (session, event) => {
+        if (event.type === 'step/end') this.applyHideActivationForSession(session)
+      }),
       this.ctx.on('tools/result', (exec, result) => {
         if (result.isError === false
           && exec.name === 'skill'
@@ -191,21 +210,40 @@ export class VisionToolExposure {
 
     const definitions = this.createTools()
     const toolDisposers: Array<() => void> = []
-    let hideActivation: (() => void) | undefined
     try {
       for (const definition of definitions) toolDisposers.push(agent.ctx.tools.register(definition))
-      hideActivation = agent.ctx.tools.restrict({ deny: [VISION_TOOLKIT_ACTIVATE] })
+      // A Skill call and the bootstrap can be issued in the same model step.
+      // Restricting immediately would turn the still-in-flight bootstrap call
+      // into an UNKNOWN_TOOL error, so live sessions hide at step/end.
+      if (!this.isLiveSession(agent.session)) this.applyHideActivation(agent)
     } catch (error) {
-      hideActivation?.()
       for (const dispose of toolDisposers.reverse()) dispose()
       throw error
     }
 
     state.active = true
-    state.hideActivation = hideActivation
     state.toolDisposers = toolDisposers
     state.toolNames = definitions.map(definition => definition.name)
     return { activated: true, tools: [...state.toolNames] }
+  }
+
+  /** Whether the session is attached to the live SessionStore (production). */
+  private isLiveSession(session: Session): boolean {
+    return this.ctx.sessions.get(session.id) === session
+  }
+
+  private applyHideActivationForSession(session: Session): void {
+    for (const agent of this.ctx.agents.list()) {
+      if (agent.session === session && this.states.get(agent)?.active === true) {
+        this.applyHideActivation(agent)
+      }
+    }
+  }
+
+  private applyHideActivation(agent: Agent): void {
+    const state = this.states.get(agent)
+    if (state === undefined || state.liftRestriction !== undefined) return
+    state.liftRestriction = agent.ctx.tools.restrict({ deny: [VISION_TOOLKIT_ACTIVATE] })
   }
 
   private detach(agent: Agent): void {
@@ -221,7 +259,7 @@ export class VisionToolExposure {
   }
 
   private disposeState(state: AgentExposure): void {
-    state.hideActivation?.()
+    state.liftRestriction?.()
     for (const dispose of state.toolDisposers.reverse()) dispose()
   }
 }

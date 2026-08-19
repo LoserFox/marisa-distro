@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-07-26-subprocess-consumer-migration.md
-2026-07-26-subprocess-consumer-migration.md: 477dffc2271db08b8986b34645067b247ad7ace7
-2026-07-26-subprocess-consumer-migration.zh.md: 8e0e377fc3fe00ff452803fe7fe5f4115003f937

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { CallId, LlmAdapter } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { CallId, LlmAdapter } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import * as LlmInvariant from '@deepseek-ai/dsh-llm/invariant'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(LlmInvariant)
   return ctx
 }
@@ -19,7 +19,7 @@ async function* source(chunks: readonly StreamChunk[]): AsyncIterable<StreamChun
 }
 
 async function consume(ctx: Context, chunks: readonly StreamChunk[]): Promise<StreamChunk[]> {
-  const stream = ctx.waterfall(ctx as never, 'llm/stream', options, () => { return source(chunks) })
+  const stream = ctx.waterfall(ctx as never, 'llm/stream', options, () => source(chunks))
   const consumed: StreamChunk[] = []
   for await (const chunk of stream) consumed.push(chunk)
   return consumed
@@ -95,7 +95,7 @@ describe('adapters-updated invariants', () => {
 
   it('accepts a coherent registry at every topology notification', async () => {
     const ctx = await setup()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     const dispose = ctx.llm.registerAdapter(['coherent'], new NoopAdapter())
     ctx.llm.registerConfigurableProviders([
       { provider: 'dormant', displayName: 'Dormant', settingsNs: 'ns', settingsPath: [] },
@@ -110,7 +110,7 @@ describe('adapters-updated invariants', () => {
   })
 
   it('reports a notification whose registry cannot be re-read', async () => {
-    class BrokenLlm extends LlmService {
+    class BrokenLlm extends LlmRuntime {
       override providerRetryPolicy(_provider: string): never {
         throw new Error('registration vanished')
       }

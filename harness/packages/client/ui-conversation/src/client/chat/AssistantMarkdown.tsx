@@ -10,12 +10,13 @@
 // turn's transcript tail. Think / tool-head-only nodes stay chrome-free.
 
 import { memo, useMemo } from 'react'
+import type { ReactNode } from 'react'
 import type { AssistantBlock } from '@deepseek-ai/dsh-client-runtime/client'
-import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ChatViewSlotProps, TurnTailOwnerProps } from '../contract/slots.ts'
-import { hasContentText } from './chat-flow.ts'
-import { MessageIconActions } from './MessageIconActions.tsx'
+import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives'
+import { ImageGallery, type ImageLoader } from '@deepseek-ai/dsh-client-ui-attachment'
+import type { ChatViewSlotProps } from '../contract/slots.ts'
+import { messageImageLabels } from '../image-labels.ts'
 import { ReasoningRow } from './ReasoningRow.tsx'
 import css from './AssistantMarkdown.module.css'
 
@@ -24,42 +25,19 @@ export interface AssistantMarkdownProps {
   streaming: boolean
   /** Frozen partial of an aborted turn: rendered with a stopped marker. */
   interrupted?: boolean | undefined
-  /** Unix epoch ms for the IconActions clock; omitted while streaming or when
-   *  the parent withholds chrome (mid-turn content assistants and every node
-   *  of a turn that has not ended). */
-  time?: number | undefined
-  /** Turn wall time in ms for the IconActions run-time label; omitted when the
-   *  turn's triggering input is outside the loaded window. */
-  runMs?: number | undefined
-  /** Turn first-step TTFT in ms for the IconActions label; omitted when unrecorded. */
-  ttftMs?: number | undefined
-  /** Turn decode throughput for the IconActions label; omitted when unrecorded. */
-  tokensPerSecond?: number | undefined
-  /** Event sequence used as the fork boundary; omitted while streaming. */
-  seq?: number | undefined
-  /** Fork the session through this finalized message's completed turn when eligible. */
-  onFork?: ((seq: number) => void) | undefined
-  /** Turn-tail slot dispatch share and owner currency; omitted for a mid-turn assistant. */
-  turnTail?: (Pick<PropsRenderSlots<'conversation.chat.turnTail'>, 'renderSlotChain'> & { owner: TurnTailOwnerProps }) | undefined
-  /** The message is not the transcript tail of a completed turn. */
-  forkUnavailable?: boolean | undefined
+  /** Session-authorized durable image loader. */
+  loadImage?: ImageLoader
+  /** Resolved prose file mentions for this Assistant's closing turn. */
+  mentions?: MarkdownFileMentions | undefined
   /** The owning view's locale seat, passed down as a plain prop. */
   t: ChatViewSlotProps['t']
 }
 
-/** Joined text blocks for the copy action (reasoning / tool heads stay out). */
-function copyText(blocks: readonly AssistantBlock[]): string {
-  const parts: string[] = []
-  for (const block of blocks) {
-    if (block.kind === 'text') parts.push(block.text)
-  }
-  return parts.join('')
-}
-
 /** Reasoning block as the Think variant summary row (figma 39:28304). */
 export const AssistantMarkdown = memo(function AssistantMarkdown({
-  blocks, streaming, interrupted, time, runMs, ttftMs, tokensPerSecond, seq, onFork, forkUnavailable, turnTail, t,
+  blocks, streaming, interrupted, loadImage, mentions, t,
 }: AssistantMarkdownProps) {
+  const imageLoader = loadImage ?? (() => Promise.reject(new Error(t('image.serviceUnavailable'))))
   // Stable per locale revision (t identity changes on switch): a fresh object
   // per render would rebuild MarkdownText's component table every chunk.
   const codeLabels = useMemo(() => ({ copyLabel: t('copy'), copiedLabel: t('copied') }), [t])
@@ -71,46 +49,62 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
     || interrupted === true
     || blocks.some(block => block.kind !== 'tool-call')
   if (!hasVisible) return null
-  // Footer only under settled content text; Think-only / streaming omit it.
-  const showActions = !streaming && time !== undefined && hasContentText(blocks)
+  const rendered: ReactNode[] = []
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (block === undefined) continue
+    switch (block.kind) {
+      case 'text':
+        rendered.push(
+          <MarkdownText
+            key={i}
+            text={block.text}
+            streaming={streaming}
+            codeLabels={codeLabels}
+            fileMentions={mentions}
+          />,
+        )
+        break
+      case 'reasoning':
+        rendered.push(<ReasoningRow key={i} text={block.text} running={streaming && i === last} t={t} />)
+        break
+      case 'image': {
+        // Consecutive image blocks share one gallery so several images tile
+        // into rows instead of each opening a one-image group of its own.
+        // Keyed by the group's FIRST block index: a streaming append that
+        // extends the group then only grows `images` instead of remounting
+        // the gallery under a shifted key.
+        const start = i
+        const group = [block]
+        while (i + 1 < blocks.length) {
+          const next = blocks[i + 1]
+          if (next === undefined || next.kind !== 'image') break
+          group.push(next)
+          i += 1
+        }
+        rendered.push(<ImageGallery key={start} images={group} load={imageLoader} align="start" labels={messageImageLabels(t)} />)
+        break
+      }
+      // Grouped into tool rows by ChatView; hasVisible above skips an empty shell.
+      case 'tool-call':
+        break
+      default:
+        rendered.push(
+          <JsonBlock
+            key={i}
+            label={t('message.unknownBlock')}
+            payload={block.block}
+            truncatedLabel={total => t('json.truncated', { total })}
+          />,
+        )
+    }
+  }
   return (
-    <div className={css.root} data-streaming={streaming || undefined} data-time-hover-root>
+    <div className={css.root} data-streaming={streaming || undefined}>
       <div className={css.body}>
-        {blocks.map((block, i) => {
-          switch (block.kind) {
-            case 'text': return (
-              <MarkdownText key={i} text={block.text} streaming={streaming} codeLabels={codeLabels} />
-            )
-            case 'reasoning': return <ReasoningRow key={i} text={block.text} running={streaming && i === last} t={t} />
-            // Grouped into tool rows by ChatView; hasVisible above skips an empty shell.
-            case 'tool-call': return null
-            default: return (
-              <JsonBlock
-                key={i}
-                label={t('message.unknownBlock')}
-                payload={block.block}
-                truncatedLabel={total => t('json.truncated', { total })}
-              />
-            )
-          }
-        })}
+        {rendered}
         {interrupted && <span className={css.stopped}>{t('message.stopped')}</span>}
       </div>
-      {showActions && turnTail?.renderSlotChain('conversation.chat.turnTail', turnTail.owner)}
-      {showActions && (
-        <MessageIconActions
-          text={copyText(blocks)}
-          time={time}
-          runMs={runMs}
-          ttftMs={ttftMs}
-          tokensPerSecond={tokensPerSecond}
-          clock="end"
-          onBranch={onFork === undefined || seq === undefined ? undefined : () => { onFork(seq) }}
-          branchUnavailable={forkUnavailable}
-          className={css.actions}
-          t={t}
-        />
-      )}
     </div>
   )
 })

@@ -45,6 +45,8 @@ const credentialsConfigPath = fileURLToPath(new URL('../credentials.cordis.snaps
 const invalidCredentialScenarioDir = join(snapshotsDir, 'invalid-credential')
 const ralphScenarioDir = join(snapshotsDir, 'ralph-loop')
 const ralphConfigPath = fileURLToPath(new URL('../ralph.cordis.snapshot.yml', import.meta.url))
+const settlementScenarioDir = join(snapshotsDir, 'subagent-settlement')
+const settlementConfigPath = fileURLToPath(new URL('../subagent-settlement.cordis.snapshot.yml', import.meta.url))
 const startupFailureConfigPath = fileURLToPath(new URL('./fixtures/startup-activation-error/cordis.yml', import.meta.url))
 const startupFailureExpected = join(snapshotsDir, 'startup-activation-error', 'stderr.expected.txt')
 const binScript = fileURLToPath(new URL('./fixtures/headless-driver.ts', import.meta.url))
@@ -52,8 +54,9 @@ const dshBinScript = fileURLToPath(new URL('../../../apps/cli/src/bin.ts', impor
 const tsconfigPath = fileURLToPath(new URL('../../../tsconfig.json', import.meta.url))
 const reasoningConfigPath = fileURLToPath(new URL('./fixtures/cli.cordis.yml', import.meta.url))
 const deepseekDefaultsConfigPath = fileURLToPath(new URL('./fixtures/deepseek-defaults.cordis.yml', import.meta.url))
-const dshRunOverlayPath = fileURLToPath(new URL('./fixtures/dsh-run.cordis.yml', import.meta.url))
-const dshRunSessionExpected = join(snapshotsDir, 'dsh-run', 'session.expected.jsonl')
+const headlessOverlayPath = fileURLToPath(new URL('./fixtures/headless-profile.cordis.yml', import.meta.url))
+const headlessSessionExpected = join(snapshotsDir, 'headless-profile', 'session.expected.jsonl')
+const headlessFailureExpected = join(snapshotsDir, 'headless-profile', 'stderr.expected.txt')
 const cliMockLlmPluginPath = fileURLToPath(new URL('./fixtures/cli-mock-llm.ts', import.meta.url))
 const refreshing = process.env.DSH_SNAPSHOT === 'refresh'
 
@@ -82,12 +85,21 @@ async function deepseekDefaultsServer(): Promise<DeepSeekDefaultsServer> {
     request.on('end', () => {
       requests.push(JSON.parse(body) as JsonObject)
       response.writeHead(200, { 'content-type': 'text/event-stream' })
-      response.end([
-        'data: {"choices":[{"delta":{"content":"DEFAULTS_OK"}}]}',
-        'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":1}}',
-        'data: [DONE]',
-        '',
-      ].join('\n\n'))
+      let keepAlives = 3
+      const write = (): void => {
+        if (keepAlives-- > 0) {
+          response.write(': keep-alive\n\n')
+          setTimeout(write, 60)
+          return
+        }
+        response.end([
+          'data: {"choices":[{"delta":{"content":"DEFAULTS_OK"}}]}',
+          'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":1}}',
+          'data: [DONE]',
+          '',
+        ].join('\n\n'))
+      }
+      setTimeout(write, 60)
     })
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -109,7 +121,7 @@ function parseJsonl(content: string): JsonObject[] {
 function contextFromLogs(contents: readonly string[]): NormalizeContext {
   const headers = contents.map(content => parseJsonl(content)[0])
   return {
-    sessionIds: headers.flatMap(header => typeof header?.id !== 'string' ? [] : [header.id]),
+    sessionIds: headers.flatMap(header => typeof header?.id === 'string' ? [header.id] : []),
     cwd: typeof headers[0]?.cwd === 'string' ? headers[0].cwd : '\0no-cwd\0',
   }
 }
@@ -196,45 +208,69 @@ async function persistedLogs(cwd: string, root: string = join(cwd, '.sessions'))
   }))
 }
 
+/** Install the keyless product-CLI adapter into the temporary headless profile. */
+async function prepareCliMockFixture(cwd: string): Promise<void> {
+  const fixtureDir = join(cwd, '.dsh', 'profiles', 'headless', 'snapshot-fixtures')
+  await mkdir(fixtureDir, { recursive: true })
+  await Promise.all([
+    copyFile(cliMockLlmPluginPath, join(fixtureDir, 'cli-mock-llm.ts')),
+    writeFile(join(fixtureDir, 'package.json'), '{"type":"module"}\n'),
+  ])
+}
+
 describe('headless stream-json snapshots', () => {
-  it('runs one task through the product dsh run command', async () => {
-    const task = 'Prove the product dsh run path with one real tool round trip.'
+  it('runs one task through the product headless profile command', async () => {
+    const task = 'Prove the product headless profile path with one real tool round trip.'
     const result = await runLoaderSmoke({
-      label: 'product dsh run snapshot',
-      tempDirPrefix: 'headless-snapshot-dsh-run-',
+      label: 'product headless profile snapshot',
+      tempDirPrefix: 'headless-snapshot-profile-',
       binScript: dshBinScript,
-      configPath: dshRunOverlayPath,
-      binArgs: ['run', '--patch', dshRunOverlayPath, task],
+      configPath: headlessOverlayPath,
+      binArgs: ['--profile', 'headless', '--patch', headlessOverlayPath, task],
       tsconfigPath,
       env: {
         DSH_PERMISSION_MODE: 'danger-full-access',
         DSH_TELEMETRY_DISABLED: '1',
         NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
       },
-      prepare: async (cwd) => {
-        const fixtureDir = join(cwd, '.dsh', 'profiles', 'headless', 'snapshot-fixtures')
-        await mkdir(fixtureDir, { recursive: true })
-        await Promise.all([
-          copyFile(cliMockLlmPluginPath, join(fixtureDir, 'cli-mock-llm.ts')),
-          writeFile(join(fixtureDir, 'package.json'), '{"type":"module"}\n'),
-        ])
-      },
+      prepare: prepareCliMockFixture,
       inspect: async (cwd) => {
         const logs = await persistedLogs(cwd, join(cwd, '.dsh', 'sessions'))
         expect(logs).toHaveLength(1)
         const actual = logs[0]
-        if (actual === undefined) throw new Error('dsh run did not persist its session')
+        if (actual === undefined) throw new Error('the headless profile did not persist its session')
         const context = contextFromLogs([actual.content])
         const session = scrubRequestHeaders(normalizeSessionLog(actual.content, context))
-        if (refreshing) await writeFile(dshRunSessionExpected, session)
-        expect(session).toBe(await readFile(dshRunSessionExpected, 'utf8'))
+        if (refreshing) await writeFile(headlessSessionExpected, session)
+        expect(session).toBe(await readFile(headlessSessionExpected, 'utf8'))
         expect(session).toContain(task)
         expect(session).toContain('CLI tool round trip complete: CLI_TOOL_ROUND_TRIP')
       },
     })
 
     expect(result.stdout).toBe('CLI tool round trip complete: CLI_TOOL_ROUND_TRIP\n')
-    expect(result.stderr).toMatch(/^dsh: observing at http:\/\/127\.0\.0\.1:\d+\n$/u)
+    expect(result.stderr).toBe('')
+  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
+
+  it('prints a terminal model failure through the product headless profile command', async () => {
+    const result = await runLoaderSmoke({
+      label: 'product headless profile model failure snapshot',
+      tempDirPrefix: 'headless-snapshot-profile-failure-',
+      binScript: dshBinScript,
+      configPath: headlessOverlayPath,
+      binArgs: ['--profile', 'headless', '--patch', headlessOverlayPath, 'Trigger the keyless model failure.'],
+      tsconfigPath,
+      expectedExitCode: 1,
+      env: {
+        DSH_CLI_MOCK_FAILURE: '1',
+        DSH_TELEMETRY_DISABLED: '1',
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
+      },
+      prepare: prepareCliMockFixture,
+    })
+
+    expect(result.stdout).toBe('\n')
+    await expect(result.stderr).toMatchFileSnapshot(headlessFailureExpected)
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
   it('prints the original Loader activation error through the assembled one-shot app', async () => {
@@ -318,17 +354,17 @@ describe('headless stream-json snapshots', () => {
         if (actual === undefined) throw new Error('compaction snapshot did not persist its session')
         const records = parseJsonl(actual.content)
         const types = records.map(record => record.type)
-        expect(types.filter(type => type === 'compact/start')).toHaveLength(1)
-        expect(types.filter(type => type === 'compact/summary')).toHaveLength(1)
-        expect(types.filter(type => type === 'compact/end')).toHaveLength(1)
-        const start = types.indexOf('compact/start')
-        const summary = types.indexOf('compact/summary')
+        expect(types.filter(type => type === 'compaction/start')).toHaveLength(1)
+        expect(types.filter(type => type === 'compaction/summary')).toHaveLength(1)
+        expect(types.filter(type => type === 'compaction/end')).toHaveLength(1)
+        const start = types.indexOf('compaction/start')
+        const summary = types.indexOf('compaction/summary')
         const replacement = records.findIndex((record) => {
           if (record.type !== 'user/message') return false
           const surfaceOp = record.surfaceOp as JsonObject | undefined
           return surfaceOp?.op === 'replace'
         })
-        const end = types.indexOf('compact/end')
+        const end = types.indexOf('compaction/end')
         expect(start).toBeLessThan(summary)
         expect(summary).toBeLessThan(replacement)
         expect(replacement).toBeLessThan(end)
@@ -413,9 +449,9 @@ describe('headless stream-json snapshots', () => {
       binArgs: [credentialsConfigPath, 'say pong'],
       tsconfigPath,
       env: {
-        // A key that exists but no HTTP header can carry — the paste this
-        // change exists for. Before it, `fetch` refused to build the header
-        // and the turn ended on a retried ByteString TypeError.
+        // A key that exists but no HTTP header can carry — the paste the
+        // credential guard exists for: without it, `fetch` refuses to build
+        // the header and the turn ends on a retried ByteString TypeError.
         DEEPSEEK_API_KEY: 'sk-\u{1F600}pasted-from-a-chat-window',
         DEEPSEEK_BASE_URL: '',
         NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
@@ -432,8 +468,8 @@ describe('headless stream-json snapshots', () => {
     // page at all.
     expect(normalized).toContain('the API key resolved from DEEPSEEK_API_KEY contains characters')
     expect(normalized).toContain('the web Models page writes it')
-    // Neither the key nor the transport-level symptom it used to produce may
-    // reach the user: the code point of one character is still the key.
+    // Neither the key nor its transport-level symptom (the ByteString error)
+    // may reach the user: the code point of one character is still the key.
     expect(normalized).not.toContain('pasted-from-a-chat-window')
     expect(normalized).not.toContain('ByteString')
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
@@ -479,7 +515,7 @@ describe('headless stream-json snapshots', () => {
     `)
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
-  it('logs and sends the DeepSeek adapter maxTokens default through the one-shot app', async () => {
+  it('keeps provider comments alive and sends DeepSeek defaults through the one-shot app', async () => {
     const server = await deepseekDefaultsServer()
     try {
       const result = await runLoaderSmoke({
@@ -505,6 +541,7 @@ describe('headless stream-json snapshots', () => {
       expect(result.stderr).toBe('')
       expect(server.requests).toHaveLength(1)
       expect(server.requests[0]?.max_tokens).toBe(256_000)
+      expect(server.requests[0]?.reasoning_effort).toBe('low')
       const header = (parseJsonl(result.stdout)
         .map(record => record.event)
         .find((event): event is JsonObject => (
@@ -519,7 +556,7 @@ describe('headless stream-json snapshots', () => {
           "maxTokens": 256000,
           "model": "deepseek-v4-flash",
           "provider": "deepseek-official",
-          "reasoningEffort": "off",
+          "reasoningEffort": "low",
         }
       `)
       expect(header?.adapterDefaults).toEqual({
@@ -738,6 +775,77 @@ describe('headless stream-json snapshots', () => {
     })
 
     expect(result.stderr).toBe('')
+    const normalized = normalizeHeadlessStream(result.stdout, runCwd)
+    if (refreshing) await writeFile(streamExpected, normalized)
+    expect(normalized).toBe(await readFile(streamExpected, 'utf8'))
+  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
+
+  it('delivers a continuable child result without parent polling', async () => {
+    const parentReplay = join(settlementScenarioDir, 'parent.replay.jsonl')
+    const parentOverride = join(settlementScenarioDir, 'parent.override.json')
+    const childReplay = join(settlementScenarioDir, 'child.replay.jsonl')
+    const childExpected = join(settlementScenarioDir, 'child.expected.jsonl')
+    const streamExpected = join(settlementScenarioDir, 'stream-json.expected.jsonl')
+    const task = 'Start one continuable background subagent and answer from its completion notice. Do not call list_agents, send_message, job_output, or job_list.'
+    let runCwd = ''
+    const result = await runLoaderSmoke({
+      label: 'continuable settlement headless stream-json snapshot',
+      tempDirPrefix: 'headless-snapshot-subagent-settlement-',
+      binScript,
+      libBinScript: binScript,
+      configPath: settlementConfigPath,
+      binArgs: [settlementConfigPath, task],
+      tsconfigPath,
+      env: {
+        // The override fully supplies the parent script; the child fixture
+        // remains separate so replay binds it to the fresh child Session.
+        DSH_SNAPSHOT_FILE: parentReplay,
+        DSH_SNAPSHOT_OVERRIDE: parentOverride,
+        DSH_SNAPSHOT_CHILD_FILES: childReplay,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
+      },
+      prepare: (cwd) => { runCwd = cwd },
+      inspect: async (cwd) => {
+        const logs = await persistedLogs(cwd)
+        expect(logs).toHaveLength(2)
+        const parent = logs.find(log => typeof log.header.parentSession !== 'string')
+        const child = logs.find(log => typeof log.header.parentSession === 'string')
+        if (parent === undefined || child === undefined) throw new Error('missing persisted parent or child log')
+
+        const parentRecords = parseJsonl(parent.content)
+        const calls = parentRecords.filter(record => record.type === 'tool/call')
+        expect(calls.map(record => (record.data as JsonObject | undefined)?.name)).toEqual(['subagent'])
+        const callArguments = (calls[0]?.data as JsonObject | undefined)?.arguments
+        if (typeof callArguments !== 'string') throw new Error('subagent call did not persist its arguments')
+        expect(JSON.parse(callArguments)).not.toHaveProperty('run_in_background')
+
+        const notices = parentRecords.flatMap((record) => {
+          if (record.type !== 'agent/inbox/spliced') return []
+          const inserted = (record.data as JsonObject | undefined)?.inserted
+          if (!Array.isArray(inserted)) return []
+          return (inserted as JsonObject[]).filter((message) => {
+            const source = message.source as JsonObject | undefined
+            return source?.kind === 'subagent-settled'
+          })
+        })
+        expect(notices).toHaveLength(1)
+        expect(JSON.stringify(notices[0])).toContain('CHILD_RESULT')
+
+        const context = contextFromLogs([parent.content, child.content])
+        const normalizedChild = scrubRequestHeaders(normalizeSessionLog(child.content, context))
+        if (refreshing) await writeFile(childExpected, normalizedChild)
+        expect(normalizedChild).toBe(await readFile(childExpected, 'utf8'))
+        expect(normalizedChild).toContain('CHILD_RESULT')
+        expect(normalizedChild).not.toContain('"name":"report"')
+      },
+    })
+
+    expect(result.stderr).toBe('')
+    const records = parseJsonl(result.stdout)
+    expect(records.at(-1)).toMatchObject({
+      type: 'result',
+      output: 'PARENT_RECEIVED_CHILD_RESULT',
+    })
     const normalized = normalizeHeadlessStream(result.stdout, runCwd)
     if (refreshing) await writeFile(streamExpected, normalized)
     expect(normalized).toBe(await readFile(streamExpected, 'utf8'))

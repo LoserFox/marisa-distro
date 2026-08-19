@@ -35,6 +35,7 @@ export interface RpcErrorDetailsMap {
   'session-not-found': { sessionId: SessionId }
   'model-unavailable': { provider: string; model: string }
   'session-conflict': { sessionId: SessionId; requestedCwd: string; existingCwd?: string }
+  'invalid-time-zone': { value: string }
   'workspace-attach-failed': { sessionId: SessionId; workspaceId: string }
   'workspace-not-found': { workspaceId: string }
   'workspace-invalid-path': { path: string }
@@ -44,7 +45,13 @@ export interface RpcErrorDetailsMap {
   'directory-exists': { path: string }
   'directory-create-failed': { path: string }
   'directory-picker-unavailable': { capability: string }
+  'agent-preset-read-only': { agentPreset: string; reason: string }
+  'agent-preset-locked': { sessionId: SessionId; agentPreset: string }
+  'agent-preset-conflict': { sessionId: SessionId; requestedPreset: string; existingPreset?: string }
+  'agent-preset-not-found': { agentPreset: string; available: string[] }
+  'agent-preset-invalid': { agentPreset: string; reason: string }
   'agent-busy': { reason: string }
+  'attachment-error': { reason: string }
   'queue-item-not-found': { itemId: MessageId }
   'steer-unavailable': { itemId: MessageId }
   /** A known slash command reported a usage/state error; the message is the command's own text. */
@@ -56,12 +63,6 @@ export interface RpcErrorDetailsMap {
    * read-only provider, or storage failure); the message is the seam's text.
    */
   'settings-rejected': { ns: string }
-  /**
-   * A settings namespace exists in the seam but is outside the configuration
-   * plane's model-provider boundary, so this proxy neither reads nor writes
-   * it; the message names the namespace.
-   */
-  'settings-not-exposed': { ns: string }
   /**
    * A settings write carried an `expectedRevision` the namespace has already
    * moved past: another writer (tab, editor, or an external file edit) landed
@@ -110,7 +111,7 @@ export type RpcResult<T> = { ok: true; value: T } | { ok: false; error: RpcError
 
 /**
  * Fold a transport exception into the RpcResult error branch (unified error
- * surface; 'internal' as the catch-all code). Lives with RpcResult so every
+ * API; 'internal' as the catch-all code). Lives with RpcResult so every
  * carrier consumer folds the same way.
  * @param error - the thrown value from the carrier.
  * @returns the error branch of an RpcResult.

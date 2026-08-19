@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { check } from './verify-spec-states.mjs'
-import { STATE_NAMES, STATE_TABLE } from '../../.dsh-plugin/client/logic.mjs'
+import { STATE_NAMES, STATE_TABLE } from '../../lib/client/logic.mjs'
 
 const names = [...STATE_NAMES]
 // 真实 playback 映射（与 assets/manifest.json 一致；测试用简化全 loop + idle blink + walk pingpong）
@@ -50,7 +50,7 @@ function makeTree(specContent, manifest = null, stateMachine = goodPriority()) {
   writeFileSync(join(docs, 'sprites-spec.md'), specContent)
   writeFileSync(join(docs, 'state-machine.md'), stateMachine)
   if (manifest !== null) {
-    const assets = join(root, '.dsh-plugin', 'assets')
+    const assets = join(root, 'lib', 'assets')
     mkdirSync(assets, { recursive: true })
     writeFileSync(join(assets, 'manifest.json'), JSON.stringify(manifest))
   }

@@ -12,11 +12,45 @@ const AUDIT_MARKER = '<!-- dsh-issue-policy -->'
 const OWNER_LINE = /^Owner: @([A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?)$/
 const TYPES = new Set(['Idea', 'Feature', 'Bug', 'Research', 'Task'])
 const PRIORITIES = ['p0', 'p1', 'p2', 'p3']
+const PR_KINDS = new Set([
+  'kind/feature',
+  'kind/bug-fix',
+  'kind/doc',
+  'kind/testing',
+  'kind/cleanup',
+  'kind/dependency',
+])
+// Retired label aliases stay reserved so they cannot be recreated.
+const LEGACY_LABELS = new Set([
+  'kind/bug',
+  'kind/documentation',
+  'feature',
+  'bug-fix',
+  'doc',
+  'cleanup',
+  'testing',
+  'dependencies',
+  'ci',
+  'cli',
+  'llm',
+  'web-search',
+])
 const TERMINAL_STATUSES = new Set(['Done', 'No action'])
 const ACTIVE_STATUS_ORDER = config.statuses.filter((status) => !TERMINAL_STATUSES.has(status))
+const IMPLEMENTATION_PULL_REQUEST_ACTIONS = new Set([
+  'opened',
+  'edited',
+  'synchronize',
+  'reopened',
+  'labeled',
+  'unlabeled',
+])
 
 for (const status of ['In progress', 'In review']) {
   if (!ACTIVE_STATUS_ORDER.includes(status)) throw new Error(`config.statuses 缺少 ${status}`)
+}
+if (typeof config.lifecycleActor !== 'string' || !config.lifecycleActor) {
+  throw new Error('config.lifecycleActor 未设置')
 }
 
 /**
@@ -86,7 +120,7 @@ function firstNonblankLine(body) {
 }
 
 /**
- * Validate body shape and Owner against assignees.
+ * Validate required body sections and check Owner against assignees.
  * @param {{body: string, assignees: string[], allowUnassignedOwner?: boolean}} input Body input.
  * @returns {string[]} Validation errors.
  */
@@ -121,7 +155,7 @@ export function validateBody({
 }
 
 /**
- * Decide whether a PR has entered the human-review enforcement boundary.
+ * Decide whether the human-review policy applies to a PR.
  * @param {{isDraft: boolean, authorType: string, reviewRequestCount: number, reviewCount: number}} input PR state.
  * @returns {boolean} Whether the PR policy is mandatory.
  */
@@ -136,18 +170,48 @@ export function requiresPullRequestPolicy({
 }
 
 /**
- * Derive a forward-only Issue status from the current PR phase.
- * @param {string|null} currentStatus Current Project status.
- * @param {{isDraft: boolean, reviewRequestCount: number, reviewCount: number}} pull PR phase.
- * @returns {string|null} Status to write, or null when no forward transition exists.
+ * Translate a repository event into one resolving-Issue lifecycle command.
+ * @param {string} eventName GitHub event name.
+ * @param {{action?: string, review?: {state?: string}}} event GitHub event payload.
+ * @returns {'implementation'|'review-requested'|'changes-requested'|null} Lifecycle command.
  */
-export function nextResolvingIssueStatus(currentStatus, pull) {
-  const target =
-    !pull.isDraft && (pull.reviewRequestCount > 0 || pull.reviewCount > 0)
-      ? 'In review'
-      : 'In progress'
+export function resolvingIssueStatusCommand(eventName, event) {
+  if (eventName === 'pull_request') {
+    if (event.action === 'review_requested') return 'review-requested'
+    return IMPLEMENTATION_PULL_REQUEST_ACTIONS.has(event.action) ? 'implementation' : null
+  }
+  if (
+    eventName === 'pull_request_review' &&
+    event.action === 'submitted' &&
+    event.review?.state?.toLowerCase() === 'changes_requested'
+  ) {
+    return 'changes-requested'
+  }
+  return null
+}
+
+/**
+ * Plan one event-directed resolving-Issue status transition.
+ * @param {string|null} currentStatus Current Project status.
+ * @param {'implementation'|'review-requested'|'changes-requested'} command Lifecycle command.
+ * @param {string|null} currentStatusActor Actor that last set the current Project status.
+ * @returns {string|null} Status to write, or null when no permitted transition exists.
+ */
+export function nextResolvingIssueStatus(currentStatus, command, currentStatusActor = null) {
+  let target
+  if (command === 'review-requested') target = 'In review'
+  else if (command === 'implementation' || command === 'changes-requested') target = 'In progress'
+  else throw new Error(`未知 lifecycle command：${command}`)
+
   const currentIndex = ACTIVE_STATUS_ORDER.indexOf(currentStatus)
   const targetIndex = ACTIVE_STATUS_ORDER.indexOf(target)
+  if (
+    command === 'changes-requested' &&
+    currentStatus === 'In review' &&
+    currentStatusActor === config.lifecycleActor
+  ) {
+    return target
+  }
   return currentIndex >= 0 && currentIndex < targetIndex ? target : null
 }
 
@@ -224,8 +288,14 @@ export function retainIssueReferences(references, issues) {
 export function validateIssue(issue) {
   const errors = validateBody(issue)
   const status = issue.status
+  const invalidLabels = issue.labels.filter(
+    (label) => label.startsWith('kind/') || LEGACY_LABELS.has(label),
+  )
 
   if (!/\p{Script=Han}/u.test(issue.title)) errors.push('Issue 标题必须包含中文')
+  if (invalidLabels.length > 0) {
+    errors.push(`Issue 不得使用 PR kind 或旧版标签：${invalidLabels.join(', ')}`)
+  }
   if (
     /^\s*(?:\[(?:Idea|Feature|Bug|Research|Task|P[0-3]|Inbox|Backlog|Ready|In progress|In review|Done|No action|Owner|area\/[^\]]+)[^\]]*\]|(?:Idea|Feature|Bug|Research|Task|P[0-3]|Inbox|Backlog|Ready|In progress|In review|Done|No action|Owner|area\/[^:： ]+)\s*[:：-])/iu.test(
       issue.title,
@@ -261,12 +331,24 @@ export function validateIssue(issue) {
 export function validatePullRequest(input) {
   if (!requiresPullRequestPolicy(input)) return []
   const errors = []
-  const kinds = input.labels.filter((label) => label.startsWith('kind/'))
+  const kinds = input.labels.filter((label) => PR_KINDS.has(label))
+  const unknownKinds = input.labels.filter(
+    (label) => label.startsWith('kind/') && !PR_KINDS.has(label) && !LEGACY_LABELS.has(label),
+  )
+  const legacyLabels = input.labels.filter((label) => LEGACY_LABELS.has(label))
+  const sourceLabels = input.labels.filter((label) => label.startsWith('source/'))
   const priorities = input.labels.filter((label) => PRIORITIES.includes(label))
   const areas = input.labels.filter((label) => label.startsWith('area/'))
 
   if (input.references.all.length === 0) errors.push('PR 正文必须引用至少一个同仓库 Issue')
-  if (kinds.length !== 1) errors.push(`PR 必须恰好有一个 kind/*，当前为 ${kinds.length}`)
+  if (kinds.length !== 1) {
+    errors.push(`PR 必须恰好有一个允许的 kind/*，当前为 ${kinds.length}`)
+  }
+  if (unknownKinds.length > 0) {
+    errors.push(`PR 含不支持的 kind/*：${unknownKinds.join(', ')}`)
+  }
+  if (legacyLabels.length > 0) errors.push(`PR 含旧版标签：${legacyLabels.join(', ')}`)
+  if (sourceLabels.length > 0) errors.push(`source/* 仅用于 Issue：${sourceLabels.join(', ')}`)
   if (priorities.length > 1) errors.push(`PR 最多有一个 p0–p3，当前为 ${priorities.length}`)
   if (areas.length === 0) errors.push('PR 必须至少有一个 area/*')
   for (const number of input.references.all) {
@@ -355,9 +437,15 @@ async function issueSnapshot(number, status = undefined) {
   }
 }
 
-async function projectContext(number) {
+async function projectContext(number, includeStatusActor = false) {
   const data = await graphql(
-    `query($organization: String!, $repository: String!, $number: Int!, $project: Int!) {
+    `query(
+      $organization: String!
+      $repository: String!
+      $number: Int!
+      $project: Int!
+      $includeStatusActor: Boolean!
+    ) {
       organization(login: $organization) {
         projectV2(number: $project) {
           id
@@ -372,6 +460,16 @@ async function projectContext(number) {
       repository(owner: $organization, name: $repository) {
         issue(number: $number) {
           id
+          timelineItems(last: 100, itemTypes: [PROJECT_V2_ITEM_STATUS_CHANGED_EVENT])
+            @include(if: $includeStatusActor) {
+            nodes {
+              ... on ProjectV2ItemStatusChangedEvent {
+                actor { login }
+                project { id }
+                status
+              }
+            }
+          }
           projectItems(first: 20, includeArchived: true) {
             nodes {
               id
@@ -389,6 +487,7 @@ async function projectContext(number) {
       repository: config.repository,
       number,
       project: config.projectNumber,
+      includeStatusActor,
     },
   )
   const project = data.organization?.projectV2
@@ -398,7 +497,14 @@ async function projectContext(number) {
   const statusField = project.fields.nodes.find((field) => field?.name === 'Status')
   if (!statusField) throw new Error('Project 缺少 Status 字段')
   const item = issue.projectItems.nodes.find((candidate) => candidate.project.id === project.id)
-  return { project, issue, statusField, item }
+  const latestStatusEvent = issue.timelineItems?.nodes
+    ?.filter((event) => event?.project?.id === project.id)
+    .at(-1)
+  const statusActor =
+    latestStatusEvent?.status === item?.fieldValueByName?.name
+      ? (latestStatusEvent.actor?.login ?? null)
+      : null
+  return { project, issue, statusField, item, statusActor }
 }
 
 async function projectStatus(number) {
@@ -489,12 +595,7 @@ async function auditIssue(number, extraErrors = [], status = undefined) {
   return errors
 }
 
-async function pullRequestSnapshot(number) {
-  const pull = await api(`/repos/${config.organization}/${config.repository}/pulls/${number}`)
-  const [reviewRequests, reviews] = await Promise.all([
-    api(`/repos/${config.organization}/${config.repository}/pulls/${number}/requested_reviewers`),
-    api(`/repos/${config.organization}/${config.repository}/pulls/${number}/reviews?per_page=100`),
-  ])
+async function resolvingReferencesSnapshot(number, pull) {
   const references = parseReferences({
     body: pull.body ?? '',
     repository: `${config.organization}/${config.repository}`,
@@ -506,20 +607,41 @@ async function pullRequestSnapshot(number) {
   }
   return {
     number,
-    isDraft: pull.draft,
-    authorType: pull.user?.type ?? 'User',
-    reviewRequestCount: reviewRequests.users.length + reviewRequests.teams.length,
-    reviewCount: reviews.length,
-    labels: pull.labels.map((label) => label.name),
     references: retainIssueReferences(references, issues),
     issues,
   }
 }
 
-async function advanceResolvingIssues(pull) {
+async function pullRequestSnapshot(number) {
+  const [pull, reviewRequests, reviews] = await Promise.all([
+    api(`/repos/${config.organization}/${config.repository}/pulls/${number}`),
+    api(`/repos/${config.organization}/${config.repository}/pulls/${number}/requested_reviewers`),
+    api(`/repos/${config.organization}/${config.repository}/pulls/${number}/reviews?per_page=100`),
+  ])
+  const resolving = await resolvingReferencesSnapshot(number, pull)
+  return {
+    ...resolving,
+    isDraft: pull.draft,
+    authorType: pull.user?.type ?? 'User',
+    reviewRequestCount: reviewRequests.users.length + reviewRequests.teams.length,
+    reviewCount: reviews.length,
+    labels: pull.labels.map((label) => label.name),
+  }
+}
+
+async function lifecyclePullRequestSnapshot(number) {
+  const pull = await api(`/repos/${config.organization}/${config.repository}/pulls/${number}`)
+  return resolvingReferencesSnapshot(number, pull)
+}
+
+async function transitionResolvingIssues(pull, command) {
   for (const number of pull.references.resolving) {
-    const context = await projectContext(number)
-    const target = nextResolvingIssueStatus(context.item?.fieldValueByName?.name ?? null, pull)
+    const context = await projectContext(number, command === 'changes-requested')
+    const target = nextResolvingIssueStatus(
+      context.item?.fieldValueByName?.name ?? null,
+      command,
+      context.statusActor,
+    )
     if (!target) continue
     // TODO: Replace this latest-state guard with per-Issue serialization or a
     // conditional ProjectV2 update; GraphQL currently has no compare-and-swap.
@@ -557,8 +679,10 @@ async function runLifecycle(eventName, event) {
   }
 
   if (eventName === 'pull_request' || eventName === 'pull_request_review') {
-    const pull = await pullRequestSnapshot(event.pull_request.number)
-    await advanceResolvingIssues(pull)
+    const command = resolvingIssueStatusCommand(eventName, event)
+    if (!command) return
+    const pull = await lifecyclePullRequestSnapshot(event.pull_request.number)
+    await transitionResolvingIssues(pull, command)
   }
 }
 

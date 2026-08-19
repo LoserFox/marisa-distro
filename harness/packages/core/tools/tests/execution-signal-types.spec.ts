@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, it } from 'vitest'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {
@@ -82,7 +82,7 @@ const inferredTool = defineTool({
   parameters: {},
   output: {
     schema: { type: 'null' },
-    render: () => { return [] },
+    render: () => [],
   },
   async execute(_args, exec) {
     expectTypeOf(exec.signal).toEqualTypeOf<AbortSignal>()

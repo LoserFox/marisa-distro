@@ -19,7 +19,7 @@ ACP `session/load` can replay prior assistant messages as complete content block
 ## Acceptance criteria
 
 - `SessionEventMap` drops `assistant/chunk`, or marks it as non-persisted if a transitional live event is needed.
-- [Session persistence docs](../../../../packages/session-persistence/session-persistence/README.md) no longer require every stream chunk to be stored verbatim.
+- [Session persistence docs](../../../../packages/session/session-persistence/README.md) no longer require every stream chunk to be stored verbatim.
 - `llm-replay` and ACP snapshots use an explicit replay fixture format or sidecar for model chunks.
 - `session/load` renders completed assistant messages from `assistant/message`.
 - Stored logs get much smaller and remain `seq`-contiguous without chunk holes.

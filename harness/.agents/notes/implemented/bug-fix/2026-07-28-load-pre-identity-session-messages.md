@@ -28,7 +28,7 @@ The upgrade is read-only. Stored legacy records remain unchanged; a resumed sess
 
 ## Consequences
 
-Pre-identity JSONL and SQLite sessions resume with their original message content, sources, provider provenance, tool correlation, errors, metadata, and surface replacements. The returned events are otherwise indistinguishable from current imported message snapshots and remain deeply frozen.
+Pre-identity JSONL and SQLite sessions resume with their original message content, sources, assistant provider/model fields, tool correlation, errors, metadata, and surface replacements. The returned events are otherwise indistinguishable from current imported message snapshots and remain deeply frozen.
 
 This is one explicit same-version import exception, not a general v0 compatibility layer. Adding another exception requires another complete, unambiguous mapping at the persistence boundary; malformed current data continues to fail rather than being guessed into validity. The shared coordinator contract exercises the upgrade against the in-memory reference, JSONL, and SQLite backends, including deterministic reload and tool-result replacement identity.
 

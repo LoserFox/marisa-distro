@@ -1,10 +1,10 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
-import { Context } from 'cordis'
-import { createUserMessage, CallId , createMessage } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import { createUserMessage, CallId, createMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, Message, TokenUsage } from '@deepseek-ai/dsh-llm'
 import SessionStore, { Session, SessionId, canonicalHeader } from '@deepseek-ai/dsh-session'
 import type { EpochHeader, SessionEvent } from '@deepseek-ai/dsh-session'
-import TokenMeterService from '@deepseek-ai/dsh-token-meter'
+import TokenMeter from '@deepseek-ai/dsh-token-meter'
 import type { TokenMeasurement, TokenMeterConfig } from '@deepseek-ai/dsh-token-meter'
 
 function header(model: string, extras: Omit<EpochHeader, 'config'> = {}): EpochHeader {
@@ -89,8 +89,8 @@ function appendSuccessfulCall(
   session.append('step/end', { turn, step })
 }
 
-function meter(config: TokenMeterConfig = {}): TokenMeterService {
-  return new TokenMeterService(new Context(), config)
+function meter(config: TokenMeterConfig = {}): TokenMeter {
+  return new TokenMeter(new Context(), config)
 }
 
 function expectSurfaceTotal(measurement: TokenMeasurement): void {
@@ -98,7 +98,7 @@ function expectSurfaceTotal(measurement: TokenMeasurement): void {
     .toBe(measurement.surfaceTokens)
 }
 
-describe('TokenMeterService configuration and registration', () => {
+describe('TokenMeter configuration and registration', () => {
   it('exposes an empty public configuration type', () => {
     expectTypeOf<{}>().toExtend<TokenMeterConfig>()
     expectTypeOf<{ contextWindow: number }>().not.toExtend<TokenMeterConfig>()
@@ -115,14 +115,14 @@ describe('TokenMeterService configuration and registration', () => {
   it('registers and unregisters ctx.tokenMeter with its plugin fiber', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    const fiber = await ctx.plugin(TokenMeterService)
-    expect(ctx.get('tokenMeter')).toBeInstanceOf(TokenMeterService)
+    const fiber = await ctx.plugin(TokenMeter)
+    expect(ctx.get('tokenMeter')).toBeInstanceOf(TokenMeter)
     await fiber.dispose()
     expect(ctx.get('tokenMeter')).toBeUndefined()
   })
 })
 
-describe('TokenMeterService pricing', () => {
+describe('TokenMeter pricing', () => {
   it('prices every built-in content shape and merge-extended blocks with one fixed heuristic', () => {
     const service = meter()
     const blocks: ContentBlock[] = [
@@ -313,7 +313,7 @@ describe('replay anchors and surface folds', () => {
     expect(advanced.surfaceDeltaTokens).toBeGreaterThan(0)
   })
 
-  it('distinguishes explicit empty provenance from absent legacy provenance', () => {
+  it('distinguishes an explicit empty source-event list from an absent legacy list', () => {
     const explicit = Session.create(SessionId('explicit-empty'))
     const legacy = Session.create(SessionId('legacy-absent'))
     appendSuccessfulCall(explicit, header('deepseek-v4-flash'), {
@@ -438,7 +438,7 @@ describe('replay anchors and surface folds', () => {
 })
 
 describe('malformed replay and listener lifecycle', () => {
-  function expectRepeatedFailure(service: TokenMeterService, session: Session, pattern: RegExp): void {
+  function expectRepeatedFailure(service: TokenMeter, session: Session, pattern: RegExp): void {
     expect(() => service.measure(session)).toThrow(pattern)
     expect(() => service.measure(session)).toThrow(pattern)
   }
@@ -503,7 +503,7 @@ describe('malformed replay and listener lifecycle', () => {
     )
   })
 
-  it('rejects invalid assistant provenance', () => {
+  it('rejects invalid assistant source-event references', () => {
     const cases: Array<{
       name: string
       appendSource(session: Session): number[]
@@ -553,7 +553,7 @@ describe('malformed replay and listener lifecycle', () => {
     }
   })
 
-  it('rejects repeated and non-earlier assistant provenance', () => {
+  it('rejects repeated and non-earlier assistant source-event references', () => {
     const duplicate = Session.create(SessionId('duplicate-source'))
     duplicate.append('step/start', { turn: 1, step: 1 })
     appendHeader(duplicate, header('deepseek-v4-flash'))
@@ -660,12 +660,12 @@ describe('malformed replay and listener lifecycle', () => {
   it('handles earlier-reader catch-up, eager observation, and service reload', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    let activeMeter: TokenMeterService | undefined
+    let activeMeter: TokenMeter | undefined
     const revisions: number[] = []
     ctx.on('session/event', (session) => {
       if (activeMeter !== undefined) revisions.push(activeMeter.measure(session).logRevision)
     })
-    const firstFiber = await ctx.plugin(TokenMeterService)
+    const firstFiber = await ctx.plugin(TokenMeter)
     activeMeter = ctx.tokenMeter
     const session = ctx.sessions.create(SessionId('listener-order'), { seed: [{
       type: 'turn/start',
@@ -684,7 +684,7 @@ describe('malformed replay and listener lifecycle', () => {
     expect(activeMeter.measure(session).logRevision).toBe(3)
 
     await firstFiber.dispose()
-    const secondFiber = await ctx.plugin(TokenMeterService)
+    const secondFiber = await ctx.plugin(TokenMeter)
     activeMeter = ctx.tokenMeter
     expect(activeMeter.measure(session).logRevision).toBe(3)
     await secondFiber.dispose()

@@ -6,7 +6,7 @@
  * (one node per model-visible message) would grow a checkpoint without
  * bound over the session's life. Instead, replacements ride the compact
  * seam's shadow-price protocol: the metering event immediately before a
- * surface `replace` (`compact/summary` or `compact/prune`) states the
+ * surface `replace` (`compaction/summary` or `compaction/prune`) states the
  * heuristic price of the exact replaced range, so the fold keeps a running
  * total plus at most one pending claim and never retains per-node prices.
  * The counts are exact by construction: producers derive them from the same
@@ -19,8 +19,8 @@
 
 import { deriveEventMessage, isSurfaceEvent } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
-// Type-only: the `compact/*` SessionEventMap merges (shadow-price events).
-import type {} from '@deepseek-ai/dsh-compact'
+// Type-only: the `compaction/*` SessionEventMap merges (shadow-price events).
+import type {} from '@deepseek-ai/dsh-compaction'
 import { estimateMessage } from './estimate.ts'
 
 /**
@@ -67,7 +67,7 @@ export function foldSurfaceProjection(
   claim: ShadowPriceClaim | undefined,
   event: SessionEvent,
 ): SurfaceTokensFold {
-  if (event.type === 'compact/summary' || event.type === 'compact/prune') {
+  if (event.type === 'compaction/summary' || event.type === 'compaction/prune') {
     const { shadowedRange, shadowedTokenCount } = event.data
     return {
       deltaTokens: 0,
@@ -83,7 +83,7 @@ export function foldSurfaceProjection(
   // no adjacent metering event; the bounded state cannot reconstruct the
   // replaced range's price, so fold those neutrally — historical replay
   // degrades to drift instead of failing.
-  if (claim === undefined) { return { deltaTokens: 0, claim: undefined } }
+  if (claim === undefined) return { deltaTokens: 0, claim: undefined }
   if (claim.start !== op.start || claim.end !== op.end) {
     throw new Error(
       `token surface: replace at seq ${event.seq} over range ${op.start}-${op.end} has no adjacent shadow price`

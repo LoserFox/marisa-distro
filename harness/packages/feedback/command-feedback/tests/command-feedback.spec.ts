@@ -1,17 +1,43 @@
-import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
 import type { Agent, AgentStatus } from '@deepseek-ai/dsh-agent'
-import CommandService from '@deepseek-ai/dsh-commands'
+import CommandRuntime from '@deepseek-ai/dsh-commands'
 import SessionStore, { foldSurface, Session, SessionId } from '@deepseek-ai/dsh-session'
+import { SessionTelemetryBackend, type SessionTelemetrySharingStatus } from '@deepseek-ai/dsh-session-telemetry'
 import * as commandFeedback from '@deepseek-ai/dsh-command-feedback'
+
+const { USER_ID, getOrCreateAnonymousUserId } = vi.hoisted(() => {
+  const USER_ID = '01234567-89ab-4cde-8f01-23456789abcd'
+  return { USER_ID, getOrCreateAnonymousUserId: vi.fn(() => USER_ID) }
+})
+
+vi.mock('@deepseek-ai/dsh-anonymous-user-id', () => ({
+  getOrCreateAnonymousUserId,
+}))
+
+beforeEach(() => getOrCreateAnonymousUserId.mockClear())
 
 interface Harness {
   readonly ctx: Context
   readonly agent: Agent
   readonly session: Session
   readonly plugin: Awaited<ReturnType<Context['plugin']>>
+}
+
+/** Minimal mounted backend disclosing one sharing policy. */
+class FakeTelemetry extends SessionTelemetryBackend {
+  override readonly sharing: SessionTelemetrySharingStatus
+
+  constructor(ctx: Context, config: { sharing: SessionTelemetrySharingStatus }) {
+    super(ctx)
+    this.sharing = config.sharing
+  }
+
+  emit(): void {}
+
+  async shutdown(): Promise<void> {}
 }
 
 /** Build a live idle agent over a store-owned session, as an app's spine does. */
@@ -37,12 +63,17 @@ function stubAgent(ctx: Context, id: string): { agent: Agent; session: Session }
   return { agent, session }
 }
 
-/** Mount the real command registry and this producer. */
-async function harness(): Promise<Harness> {
+/**
+ * Mount the real command registry, this producer, and optionally a telemetry
+ * backend disclosing one sharing policy. Without `sharing`, no telemetry
+ * service exists and the acknowledgement reports "not configured".
+ */
+async function harness(sharing?: SessionTelemetrySharingStatus): Promise<Harness> {
   const ctx = new Context()
-  await ctx.plugin(CommandService)
+  await ctx.plugin(CommandRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(SessionStore)
+  if (sharing !== undefined) await ctx.plugin(FakeTelemetry, { sharing })
   const plugin = await ctx.plugin(commandFeedback)
   const { agent, session } = stubAgent(ctx, `command-feedback-${Math.random()}`)
   ctx.agents.register(agent)
@@ -93,7 +124,7 @@ describe('/feedback human command', () => {
     const test = await harness()
     await expect(run(test, ' the diff view is unreadable')).resolves.toEqual({
       kind: 'success',
-      text: 'Feedback recorded.',
+      text: `Feedback recorded for session ${test.session.id}\nAnonymous user: ${USER_ID}. Session sharing is not configured.`,
     })
     expect(feedbackTexts(test.session)).toEqual(['the diff view is unreadable'])
     const commandRun = test.session.events.find(event => event.type === 'command/run')
@@ -141,13 +172,40 @@ describe('/feedback human command', () => {
       test.ctx.commands.execute(test.agent, '/feedback second', signal),
     ])
     expect(settled.map(item => item?.result)).toEqual([
-      { kind: 'success', text: 'Feedback recorded.' },
-      { kind: 'success', text: 'Feedback recorded.' },
+      { kind: 'success', text: `Feedback recorded for session ${test.session.id}\nAnonymous user: ${USER_ID}. Session sharing is not configured.` },
+      { kind: 'success', text: `Feedback recorded for session ${test.session.id}\nAnonymous user: ${USER_ID}. Session sharing is not configured.` },
     ])
     expect(feedbackTexts(test.session)).toEqual(['first', 'second'])
   })
 
-  it('keeps every recorded event off the model surface and out of derived history', async () => {
+  it('discloses full session sharing in the acknowledgement', async () => {
+    const test = await harness('full')
+    await expect(run(test, ' everything shared')).resolves.toEqual({
+      kind: 'success',
+      text: `Feedback recorded for session ${test.session.id}\nAnonymous user: ${USER_ID}. Session sharing is enabled.`,
+    })
+    expect(feedbackTexts(test.session)).toEqual(['everything shared'])
+  })
+
+  it('discloses feedback-gated session sharing in the acknowledgement', async () => {
+    const test = await harness('feedback-only')
+    await expect(run(test, ' gated sharing')).resolves.toEqual({
+      kind: 'success',
+      text: `Feedback recorded for session ${test.session.id}\nAnonymous user: ${USER_ID}. Session sharing is feedback-gated; recording feedback releases the session prefix for sharing.`,
+    })
+    expect(feedbackTexts(test.session)).toEqual(['gated sharing'])
+  })
+
+  it('discloses disabled session sharing in the acknowledgement', async () => {
+    const test = await harness('disabled')
+    await expect(run(test, ' local only')).resolves.toEqual({
+      kind: 'success',
+      text: `Feedback recorded for session ${test.session.id}\nAnonymous user: ${USER_ID}. Session sharing is disabled.`,
+    })
+    expect(feedbackTexts(test.session)).toEqual(['local only'])
+  })
+
+  it('keeps every recorded event out of model context and derived history', async () => {
     const test = await harness()
     await run(test, ' invisible to the model')
     for (const event of test.session.events) {
@@ -167,6 +225,7 @@ describe('/feedback human command', () => {
     }
     await expect(run(test)).resolves.toEqual(expected)
     await expect(run(test, '   \n\t ')).resolves.toEqual(expected)
+    expect(getOrCreateAnonymousUserId).not.toHaveBeenCalled()
     expect(feedbackTexts(test.session)).toEqual([])
     const done = test.session.events.filter(event => event.type === 'command/done')
     expect(done.map(event => event.data.kind)).toEqual(['error', 'error'])

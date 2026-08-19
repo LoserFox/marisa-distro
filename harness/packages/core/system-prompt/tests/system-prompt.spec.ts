@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SystemPrompt, { AssembleContext, PromptAssembly, renderContextSnapshot, renderPrompt } from '@deepseek-ai/dsh-system-prompt'
 
 /**
@@ -9,7 +9,7 @@ import SystemPrompt, { AssembleContext, PromptAssembly, renderContextSnapshot, r
  * their own sections; the built-ins' behavior is pinned by its own describe.
  */
 const BUILT_IN = ['harness:identity', 'deployment:persona']
-const IDENTITY = 'You are an AI agent powered by the DeepSeek Harness SDK.'
+const IDENTITY = 'You are an AI agent powered by DeepSeek Harness.'
 function contributed(assembly: PromptAssembly): PromptAssembly['sections'] {
   return assembly.sections.filter(section => !BUILT_IN.includes(section.name))
 }
@@ -18,14 +18,14 @@ describe('SystemPrompt', () => {
   describe('built-in sections', () => {
     it('registers the harness identity and the configured deployment persona', async () => {
       const ctx = new Context()
-      await ctx.plugin(SystemPrompt, { persona: 'You are DeepSeek Harness SDK.' })
+      await ctx.plugin(SystemPrompt, { persona: 'You are DeepSeek Harness.' })
 
       const assembly = await ctx.systemPrompt.assemble()
       expect(assembly.sections.map(s => s.name)).toEqual([
         'harness:identity',
         'deployment:persona',
       ])
-      expect(renderPrompt(assembly)).toBe(`${IDENTITY}\n\nYou are DeepSeek Harness SDK.`)
+      expect(renderPrompt(assembly)).toBe(`${IDENTITY}\n\nYou are DeepSeek Harness.`)
       // The names are reserved by the plugin — one owner per section.
       expect(() => ctx.systemPrompt.section({ name: 'deployment:persona', order: 0, text: 'imposter' }))
         .toThrow('prompt section "deployment:persona" is already registered')
@@ -49,6 +49,25 @@ describe('SystemPrompt', () => {
       expect(renderPrompt(assembly)).toBe('You are a helpful software engineer assistant.')
     })
 
+    it('can suppress runtime context without evaluating providers or accepting waterfall additions', async () => {
+      const ctx = new Context()
+      await ctx.plugin(SystemPrompt, { includeRuntimeContext: false })
+      let providerCalls = 0
+      ctx.systemPrompt.context({
+        name: 'policy',
+        order: 0,
+        text: () => `policy ${++providerCalls}`,
+      })
+      ctx.on('system-prompt/assemble', async (assembly, _context, next) => {
+        assembly.contexts.push({ name: 'late', text: 'late context' })
+        return next()
+      })
+
+      const assembly = await ctx.systemPrompt.assemble()
+      expect(assembly.contexts).toEqual([])
+      expect(providerCalls).toBe(0)
+    })
+
     it('tolerates a schema-bypassing direct construction (persona omitted)', async () => {
       // ctx.plugin validates + defaults the config first; a direct construction
       // skips the schema, so the ctor's `?? ''` narrowing is what fires.
@@ -60,7 +79,7 @@ describe('SystemPrompt', () => {
 
   it('assembles sections in order with context-resolved text and collected tools', async () => {
     const ctx = new Context()
-    await ctx.plugin(SystemPrompt, { persona: 'You are DeepSeek Harness SDK.' })
+    await ctx.plugin(SystemPrompt, { persona: 'You are DeepSeek Harness.' })
 
     ctx.systemPrompt.section({ name: 'cwd', order: 20, text: () => 'cwd: /tmp' })
     ctx.systemPrompt.section({ name: 'rules', order: 10, text: 'Be precise.' })
@@ -70,14 +89,14 @@ describe('SystemPrompt', () => {
 
     const assembly = await ctx.systemPrompt.assemble()
     expect(assembly.sections.map(s => s.name)).toEqual(['harness:identity', 'deployment:persona', 'rules', 'cwd'])
-    expect(assembly.sections.map(s => s.text)).toEqual([IDENTITY, 'You are DeepSeek Harness SDK.', 'Be precise.', 'cwd: /tmp'])
+    expect(assembly.sections.map(s => s.text)).toEqual([IDENTITY, 'You are DeepSeek Harness.', 'Be precise.', 'cwd: /tmp'])
     expect(assembly.contexts).toEqual([
       { name: 'earlier', text: 'context 1' },
       { name: 'later', text: 'context 2' },
     ])
     expect(assembly.tools).toEqual([{ name: 'echo', description: 'echo back', parameters: {} }])
     expect(assembly.variables).toEqual({})
-    expect(renderPrompt(assembly)).toBe(`${IDENTITY}\n\nYou are DeepSeek Harness SDK.\n\nBe precise.\n\ncwd: /tmp`)
+    expect(renderPrompt(assembly)).toBe(`${IDENTITY}\n\nYou are DeepSeek Harness.\n\nBe precise.\n\ncwd: /tmp`)
     expect(renderContextSnapshot(assembly)).toBe('Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\ncontext 1\n\ncontext 2')
   })
 
@@ -262,6 +281,34 @@ describe('SystemPrompt', () => {
 
     const assembly = await ctx.systemPrompt.assemble()
     expect(assembly.sections).toHaveLength(0)
+  })
+
+  it('restores one complete section after the assembly waterfall', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt)
+    ctx.systemPrompt.section({ name: 'complete', order: 10, text: 'Exact prompt.', complete: true })
+    ctx.systemPrompt.section({ name: 'extra', order: 20, text: 'extra' })
+    ctx.on('system-prompt/assemble', async (assembly, _context, next) => {
+      const complete = assembly.sections.find(section => section.name === 'complete')
+      if (complete === undefined) throw new Error('complete section missing before waterfall')
+      complete.text = 'mutated'
+      assembly.sections.push({ name: 'late', text: 'late' })
+      return next()
+    }, { prepend: true })
+
+    expect((await ctx.systemPrompt.assemble()).sections).toEqual([
+      { name: 'complete', text: 'Exact prompt.' },
+    ])
+  })
+
+  it('rejects multiple effective complete sections', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt)
+    ctx.systemPrompt.section({ name: 'first', order: 10, text: 'first', complete: true })
+    ctx.systemPrompt.section({ name: 'second', order: 20, text: 'second', complete: true })
+
+    await expect(ctx.systemPrompt.assemble())
+      .rejects.toThrow('multiple complete prompt sections are active: "first", "second"')
   })
 
   it('assembles snapshots so one-step mutations do not leak into future assemblies', async () => {

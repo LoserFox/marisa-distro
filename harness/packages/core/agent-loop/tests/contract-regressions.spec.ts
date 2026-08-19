@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { createUserMessage, CallId, LlmError, MessageSource, ProviderRequestId, StreamChunk  } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { createUserMessage, CallId, LlmError, MessageSource, ProviderRequestId, StreamChunk  } from '@deepseek-ai/dsh-llm'
 import SessionStore, { Session, SessionEvent, SessionId, TurnEndReason, type UserMessage } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { defineContentToolFixture, type PostToolDecision } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineContentToolFixture, type PostToolDecision } from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { ReactLoopAgent } from '../src/agent.ts'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import * as SessionInvariant from '@deepseek-ai/dsh-session/invariant'
 import * as AgentInvariant from '@deepseek-ai/dsh-agent/invariant'
 import * as AgentLoopInvariant from '@deepseek-ai/dsh-agent-loop/invariant'
 import { MockAdapter, textResponse, toolCallResponse } from './mock-adapter.ts'
 
 async function mountInvariants(ctx: Context): Promise<void> {
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(SessionInvariant)
   await ctx.plugin(AgentInvariant)
   await ctx.plugin(AgentLoopInvariant)
@@ -28,10 +28,10 @@ function driverDone(agent: Agent): Promise<void> {
 
 async function harness(adapter: MockAdapter) {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, { agents: [] })
   ctx.llm.registerAdapter(['mock'], adapter)
@@ -59,10 +59,10 @@ function inboxText(message: UserMessage): string {
     .join('')
 }
 
-describe('assistant replay provenance', () => {
+describe('assistant replay provider and model fields', () => {
   it('records adapter replay state with the assembled assistant content', async () => {
     const response = textResponse('unchanged')
-    const replayState = { private: 'state' }
+    const replayState = { response: { private: 'state' }, blocks: ['block-meta'] }
     response[response.length - 1] = { type: 'finish', reason: { kind: 'stop' }, replayState }
     const adapter = new MockAdapter([response])
     const ctx = await harness(adapter)
@@ -427,7 +427,7 @@ describe('disposal leaves the two-state status contract balanced', () => {
 describe('adapter registration, routing, and accepted-input ownership', () => {
   it('duplicate adapter registration is rejected', async () => {
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     const adapter = new MockAdapter([])
     ctx.llm.registerAdapter(['m1'], adapter)
     expect(() => ctx.llm.registerAdapter(['m1'], new MockAdapter([])))
@@ -523,10 +523,10 @@ describe('turn numbering continues across seeded sessions', () => {
     // fork: seed a second context's agent with the first session's log
     const second = new MockAdapter([textResponse('turn two')])
     const ctx2 = new Context()
-    await ctx2.plugin(LlmService)
+    await ctx2.plugin(LlmRuntime)
     await ctx2.plugin(SessionStore)
     await ctx2.plugin(SystemPrompt)
-    await ctx2.plugin(ToolRegistry)
+    await ctx2.plugin(ToolRuntime)
     await ctx2.plugin(AgentRegistry)
     await ctx2.plugin(AgentLoop, { agents: [] })
     ctx2.llm.registerAdapter(['mock'], second)
@@ -674,10 +674,10 @@ describe('turn and step boundary recovery', () => {
   // The session invariant companion makes an unbalanced log fail the test.
   async function balancedHarness(adapter: MockAdapter) {
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     await mountInvariants(ctx)
@@ -792,7 +792,7 @@ describe('turn and step boundary recovery', () => {
     const agent = ctx.agentLoop.create(SessionId('a-stepend-veto'), { provider: 'mock', model: 'mock' })
     let rejected = false
     ctx.on('internal/dispatch', (_mode, name, args) => {
-      if (name !== 'session/event') { return }
+      if (name !== 'session/event') return
       const event = args[1] as SessionEvent
       if (event.type === 'step/end' && !rejected) {
         rejected = true
@@ -1106,10 +1106,10 @@ describe('disposal and cancellation during pre-step assembly', () => {
     const blocked = new Promise<void>(r => void (releaseAssemble = r))
 
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     await mountInvariants(ctx)
@@ -1156,10 +1156,10 @@ describe('disposal and cancellation during pre-step assembly', () => {
     const blocker = new Promise<void>(r => void (releaseAssemble = r))
 
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     await mountInvariants(ctx)
@@ -1206,10 +1206,10 @@ describe('disposal and cancellation during pre-step assembly', () => {
     const blocker = new Promise<void>(r => void (releasePreStep = r))
 
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     await mountInvariants(ctx)
@@ -1252,10 +1252,10 @@ describe('disposal and cancellation during pre-step assembly', () => {
     const blocker = new Promise<void>(r => void (releasePreStep = r))
 
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     await mountInvariants(ctx)
@@ -1300,10 +1300,10 @@ describe('disposal and cancellation during pre-step assembly', () => {
     const blocker = new Promise<void>(r => void (releaseAssemble = r))
 
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     await mountInvariants(ctx)

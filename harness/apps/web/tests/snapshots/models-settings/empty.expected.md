@@ -7,6 +7,12 @@
     - button "模型":
       - img
       - text: 模型
+    - button "插件":
+      - img
+      - text: 插件
+    - button "Agent 预设":
+      - img
+      - text: Agent 预设
   - button "打开配置文件"
   - button "关闭":
     - img
@@ -38,7 +44,6 @@
     - option "moonshotai-cn"
     - option "nvidia"
     - option "openai"
-    - option "openai-codex"
     - option "opencode"
     - option "opencode-go"
     - option "openrouter"

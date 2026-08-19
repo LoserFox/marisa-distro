@@ -8,7 +8,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { VisionToolkitError, upstreamFailureMessage } from "./errors.js";
-import { displayCommand, prepareUpstreamRuntime, } from "./runtime-install.js";
+import { displayCommand, isolatedPythonEnvironment, prepareUpstreamRuntime, } from "./runtime-install.js";
 import { UPSTREAM_COMMIT, UPSTREAM_REPOSITORY, UPSTREAM_VERSION } from "./version.js";
 const BOX_SUFFIX = /x1:\s*(\d+),\s*y1:\s*(\d+),\s*x2:\s*(\d+),\s*y2:\s*(\d+)\s*$/;
 const POSITION_WORDS = new Set([
@@ -221,7 +221,7 @@ export function parseDominantColorsOutput(stdout) {
     if (paletteHeader !== null) {
         const colors = [];
         for (const line of lines.slice(2)) {
-            const row = /^(#[0-9A-Fa-f]{6})\s+(\d+(?:\.\d+)?)%\s+#+$/.exec(line.trim());
+            const row = /^(#[0-9A-Fa-f]{6})\s+(\d+(?:\.\d+)?)%(?:\s+#+)?$/.exec(line.trim());
             if (row === null)
                 throw new VisionToolkitError('output', `dominant_colors: unexpected palette row: ${line.trim()}`);
             colors.push({ color: (row[1] ?? '').toUpperCase(), sharePct: Number(row[2]) });
@@ -289,10 +289,15 @@ export function parseDominantColorsOutput(stdout) {
 }
 /** Parse the local Chrome screenshot summary. */
 export function parseHtmlScreenshotOutput(stdout) {
-    const wrote = /^wrote\s+(.+?)\s+\((\d+)x(\d+)\)\s*$/.exec(stdout.trim());
+    const wrote = /^wrote\s+(.+?)\s+\((\d+)x(\d+)(?:;\s*pageHeight=(\d+))?\)\s*$/.exec(stdout.trim());
     if (wrote === null)
         throw new VisionToolkitError('output', 'html_screenshot: upstream did not report a written PNG');
-    return { outputPath: wrote[1] ?? '', width: Number(wrote[2]), height: Number(wrote[3]) };
+    return {
+        outputPath: wrote[1] ?? '',
+        width: Number(wrote[2]),
+        height: Number(wrote[3]),
+        ...(wrote[4] === undefined ? {} : { pageHeight: Number(wrote[4]) }),
+    };
 }
 const REQUIRED_TOOLS = ['glance', 'ground', 'detect', 'crop', 'trace'];
 /** Whether one candidate root carries every required upstream bin script. */
@@ -363,20 +368,24 @@ const VISION_MODEL_GUARD = [
     '        vision_client.describe_image=original_describe',
 ].join('\n');
 const HTML_SCREENSHOT_GUARD = [
-    'import runpy,subprocess,sys,tempfile',
+    'import os,runpy,subprocess,sys,tempfile',
     'script=sys.argv[1]',
     'sys.argv=[script,*sys.argv[2:]]',
-    'original_run=subprocess.run',
+    'original_popen=subprocess.Popen',
     'with tempfile.TemporaryDirectory(prefix="dsh-vision-chrome-") as profile:',
-    '    def guarded_run(command,*args,**kwargs):',
+    '    original_profile=os.environ.get("DSH_VISION_CHROME_PROFILE")',
+    '    os.environ["DSH_VISION_CHROME_PROFILE"]=profile',
+    '    def guarded_popen(command,*args,**kwargs):',
     '        command=list(command)',
     '        command[1:1]=["--use-mock-keychain",f"--user-data-dir={profile}","--incognito","--disable-background-networking","--proxy-server=http://127.0.0.1:9","--proxy-bypass-list=<-loopback>"]',
-    '        return original_run(command,*args,**kwargs)',
-    '    subprocess.run=guarded_run',
+    '        return original_popen(command,*args,**kwargs)',
+    '    subprocess.Popen=guarded_popen',
     '    try:',
     '        runpy.run_path(script,run_name="__main__")',
     '    finally:',
-    '        subprocess.run=original_run',
+    '        subprocess.Popen=original_popen',
+    '        if original_profile is None: os.environ.pop("DSH_VISION_CHROME_PROFILE",None)',
+    '        else: os.environ["DSH_VISION_CHROME_PROFILE"]=original_profile',
 ].join('\n');
 const LONG_OCR_PINNED_GLANCE = [
     'import runpy,sys',
@@ -389,6 +398,108 @@ const LONG_OCR_PINNED_GLANCE = [
     'namespace["main"].__globals__["resolve_glance_command"]=lambda:[sys.executable,"-c",guard,str(glance)]',
     'namespace["main"]()',
 ].join('\n');
+/**
+ * Lossless-first Pillow compression ladder. Images that fit after a lossless
+ * re-encode keep their pixels; only when that cannot reach the configured
+ * byte/pixel budget does the helper switch to quality reduction and, as a
+ * last resort, downscaling. The helper always writes one file and prints one
+ * JSON line so the Node side can validate the result without trusting stderr.
+ */
+const COMPRESS_IMAGE_SCRIPT = [
+    'import json,math,os,sys',
+    'from PIL import Image',
+    'src,dest,max_bytes,max_pixels=sys.argv[1],sys.argv[2],int(sys.argv[3]),int(sys.argv[4])',
+    'min_edge=64',
+    'qualities=(90,75,60,45)',
+    'max_steps=4',
+    'def ok(w,h,size):',
+    '    return w>=1 and h>=1 and w*h<=max_pixels and size<=max_bytes',
+    'def save_candidate(im,path,fmt,meta,**kwargs):',
+    '    if fmt in ("PNG","JPEG","WEBP"):',
+    '        exif=meta.get("exif")',
+    '        icc=meta.get("icc")',
+    '        if exif is not None: kwargs["exif"]=exif',
+    '        if icc is not None: kwargs["icc_profile"]=icc',
+    '    im.save(path,format=fmt,**kwargs)',
+    '    with Image.open(path) as saved:',
+    '        return os.path.getsize(path),(saved.format or "unknown").lower(),saved.mode',
+    'def has_alpha(im):',
+    '    return im.mode in ("RGBA","LA") or (im.mode=="P" and "transparency" in im.info)',
+    'def flatten(im):',
+    '    if im.mode=="RGBA":',
+    '        bg=Image.new("RGB",im.size,(255,255,255));bg.paste(im,mask=im.getchannel("A"));return bg',
+    '    if im.mode=="LA":',
+    '        bg=Image.new("RGB",im.size,(255,255,255));bg.paste(im.convert("RGBA"),mask=im.getchannel("A"));return bg',
+    '    if im.mode=="P" and "transparency" in im.info:',
+    '        rgba=im.convert("RGBA");bg=Image.new("RGB",im.size,(255,255,255));bg.paste(rgba,mask=rgba.getchannel("A"));return bg',
+    '    return im.convert("RGB")',
+    'def lossless_savers(im,fmt,meta):',
+    '    savers=[]',
+    '    if fmt=="png":',
+    '        savers.append(("png-optimized","png",False,lambda:save_candidate(im,dest,"PNG",meta,optimize=True)))',
+    '    elif fmt=="gif":',
+    '        savers.append(("gif-optimized","gif",False,lambda:save_candidate(im,dest,"GIF",meta,optimize=True)))',
+    '    else:',
+    '        savers.append(("png-optimized","png",False,lambda:save_candidate(im,dest,"PNG",meta,optimize=True)))',
+    '    if fmt!="webp":',
+    '        savers.append(("webp-lossless","webp",False,lambda:save_candidate(im,dest,"WEBP",meta,lossless=True,quality=100,method=6)))',
+    '    return savers',
+    'def lossy_savers(im,alpha,fmt,meta):',
+    '    savers=[]',
+    '    if fmt in ("jpeg","jpg") and not alpha:',
+    '        savers.append(("jpeg-q95","jpeg",True,lambda:save_candidate(im,dest,"JPEG",meta,quality=95,optimize=True,progressive=True)))',
+    '    if alpha:',
+    '        for q in qualities:',
+    '            savers.append(("webp-q%d"%q,"webp",True,lambda q=q:save_candidate(im,dest,"WEBP",meta,quality=q,method=6)))',
+    '        savers.append(("png-palette-256","png",True,lambda:save_candidate(im.quantize(colors=256),dest,"PNG",meta,optimize=True)))',
+    '        for q in qualities:',
+    '            savers.append(("jpeg-q%d-flatten"%q,"jpeg",True,lambda q=q:save_candidate(flatten(im),dest,"JPEG",meta,quality=q,optimize=True,progressive=True)))',
+    '    else:',
+    '        for q in qualities:',
+    '            savers.append(("jpeg-q%d"%q,"jpeg",True,lambda q=q:save_candidate(im,dest,"JPEG",meta,quality=q,optimize=True,progressive=True)))',
+    '        for q in qualities:',
+    '            savers.append(("webp-q%d"%q,"webp",True,lambda q=q:save_candidate(im,dest,"WEBP",meta,quality=q,method=6)))',
+    '    return savers',
+    'opened=Image.open(src)',
+    'try:',
+    '    source_format=(opened.format or "").lower()',
+    '    current=opened',
+    '    current.load()',
+    '    meta={"exif":opened.info.get("exif"),"icc":opened.info.get("icc_profile"),"animated":bool(getattr(opened,"is_animated",False)) and getattr(opened,"n_frames",1)>1}',
+    'except Exception as exc:',
+    '    opened.close()',
+    '    print(json.dumps({"ok":False,"error":"cannot decode image: %s"%exc}))',
+    '    sys.exit(0)',
+    'w,h=current.size',
+    'best=None',
+    'for step in range(max_steps+1):',
+    '    if w*h<=max_pixels:',
+    '        candidates=lossless_savers(current,source_format,meta)',
+    '        candidates.extend(lossy_savers(current,has_alpha(current),source_format,meta))',
+    '    else:',
+    '        candidates=[]',
+    '    for label,fmt,lossy,saver in candidates:',
+    '        try:',
+    '            size,saved_fmt,mode=saver()',
+    '        except Exception:',
+    '            continue',
+    '        if ok(w,h,size):',
+    '            print(json.dumps({"ok":True,"bytes":size,"width":w,"height":h,"format":fmt,"mode":mode,"lossy":lossy,"resized":step>0,"candidate":label,"source_animated":meta["animated"]}))',
+    '            sys.exit(0)',
+    '        if best is None or size<best[0]:',
+    '            best=(size,label,fmt,lossy,step>0)',
+    '    if step>=max_steps or min(w,h)<=min_edge:',
+    '        break',
+    '    pixel_ratio=math.sqrt(float(max_pixels)/(w*h)) if w*h>max_pixels else 1.0',
+    '    byte_ratio=math.sqrt((max_bytes*0.92)/max(1,best[0] if best else 1)) if best is not None else 1.0',
+    '    ratio=max(0.6,min(0.95,pixel_ratio*byte_ratio))',
+    '    nw=max(min_edge,int(w*ratio));nh=max(min_edge,int(h*ratio))',
+    '    if nw==w and nh==h:',
+    '        break',
+    '    current=current.resize((nw,nh),Image.LANCZOS);w,h=nw,nh',
+    'print(json.dumps({"ok":False,"error":"could not fit under %d bytes / %d pixels"%(max_bytes,max_pixels)}))',
+].join('\n');
+const COMPRESSED_FORMATS = new Set(['png', 'jpeg', 'gif', 'webp']);
 /** Adapter over one prepared pinned upstream runtime. */
 export class UpstreamAdapter {
     ctx;
@@ -431,20 +542,19 @@ export class UpstreamAdapter {
         const prepared = this.requirePrepared();
         const script = join(prepared.root, ...TOOL_PATHS[tool]);
         const env = {
-            HOME: prepared.cleanHome,
-            USERPROFILE: prepared.cleanHome,
-            LOCALAPPDATA: prepared.cleanHome,
-            PYTHONHOME: undefined,
-            PYTHONPATH: undefined,
-            VIRTUAL_ENV: undefined,
-            PYTHONDONTWRITEBYTECODE: '1',
-            PYTHONNOUSERSITE: '1',
+            ...isolatedPythonEnvironment(prepared.cleanHome),
             ...(options.env === undefined
                 ? {}
                 : {
                     VISION_API_KEY: options.env.VISION_API_KEY,
                     VISION_BASE_URL: options.env.VISION_BASE_URL,
                     VISION_MODEL: options.env.VISION_MODEL,
+                    VISION_API_PROTOCOL: options.env.VISION_API_PROTOCOL,
+                    VISION_ANTHROPIC_THINKING: options.env.VISION_ANTHROPIC_THINKING,
+                    ...(options.env.VISION_SSL_VERIFY === undefined
+                        ? {}
+                        : { VISION_SSL_VERIFY: options.env.VISION_SSL_VERIFY }),
+                    VISION_USER_AGENT: options.env.VISION_USER_AGENT,
                     LANG: options.env.LANG,
                     VISION_ENV_FILE: join(prepared.cleanHome, 'vision.env'),
                 }),
@@ -503,16 +613,7 @@ export class UpstreamAdapter {
                 },
                 graceMs: 2000,
                 signal: options.signal,
-                env: {
-                    HOME: prepared.cleanHome,
-                    USERPROFILE: prepared.cleanHome,
-                    LOCALAPPDATA: prepared.cleanHome,
-                    PYTHONHOME: undefined,
-                    PYTHONPATH: undefined,
-                    VIRTUAL_ENV: undefined,
-                    PYTHONDONTWRITEBYTECODE: '1',
-                    PYTHONNOUSERSITE: '1',
-                },
+                env: isolatedPythonEnvironment(prepared.cleanHome),
             });
         }
         catch (error) {
@@ -539,6 +640,61 @@ export class UpstreamAdapter {
             throw new VisionToolkitError('output', 'cannot read image dimensions: unexpected Python output', { cause: error });
         }
     }
+    /**
+     * Auto-compress one oversized image under the configured byte and pixel
+     * budgets. The Pillow helper prefers lossless re-encodes, then quality
+     * reduction, and only downscales when neither can reach the budget.
+     */
+    async compressImage(sourcePath, destPath, maxBytes, maxPixels, options) {
+        if (this.prepared === undefined)
+            await this.prepare();
+        const result = await this.runPythonCode(COMPRESS_IMAGE_SCRIPT, [sourcePath, destPath, String(maxBytes), String(maxPixels)], { signal: options.signal, maxBytes: 128 * 1024 });
+        if (result.outcome.exitCode !== 0) {
+            throw new VisionToolkitError('capacity', `image compression failed: ${result.stderr.trim() || 'Pillow compression failed'}`);
+        }
+        if (result.stdoutTruncated || result.stderrTruncated) {
+            throw new VisionToolkitError('capacity', 'image compression helper output exceeded the capture limit');
+        }
+        let parsed;
+        try {
+            parsed = JSON.parse(result.stdout);
+        }
+        catch {
+            throw new VisionToolkitError('capacity', 'image compression helper returned invalid output');
+        }
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            throw new VisionToolkitError('capacity', 'image compression helper returned invalid output');
+        }
+        const record = parsed;
+        if (record.ok !== true) {
+            const detail = typeof record.error === 'string' ? record.error : 'compression failed';
+            throw new VisionToolkitError('capacity', `cannot compress image under ${maxBytes} bytes: ${detail}`);
+        }
+        const { bytes, width, height, format, mode, lossy, resized, candidate, source_animated } = record;
+        if (typeof bytes !== 'number' || !Number.isInteger(bytes) || bytes < 1 || bytes > maxBytes
+            || typeof width !== 'number' || !Number.isInteger(width) || width < 1
+            || typeof height !== 'number' || !Number.isInteger(height) || height < 1
+            || width * height > maxPixels
+            || typeof format !== 'string' || !COMPRESSED_FORMATS.has(format)
+            || typeof mode !== 'string' || mode.length === 0
+            || typeof lossy !== 'boolean'
+            || typeof resized !== 'boolean'
+            || typeof candidate !== 'string' || candidate.length === 0
+            || typeof source_animated !== 'boolean') {
+            throw new VisionToolkitError('capacity', 'image compression helper returned invalid output');
+        }
+        return {
+            bytes,
+            width,
+            height,
+            format: format,
+            mode,
+            lossy,
+            resized,
+            candidate,
+            sourceAnimated: source_animated,
+        };
+    }
     async runPythonCode(code, args, options) {
         if (this.prepared === undefined)
             await this.prepare();
@@ -555,16 +711,7 @@ export class UpstreamAdapter {
                 },
                 graceMs: 2000,
                 signal: options.signal,
-                env: {
-                    HOME: prepared.cleanHome,
-                    USERPROFILE: prepared.cleanHome,
-                    LOCALAPPDATA: prepared.cleanHome,
-                    PYTHONHOME: undefined,
-                    PYTHONPATH: undefined,
-                    VIRTUAL_ENV: undefined,
-                    PYTHONDONTWRITEBYTECODE: '1',
-                    PYTHONNOUSERSITE: '1',
-                },
+                env: isolatedPythonEnvironment(prepared.cleanHome),
             });
         }
         catch (error) {
@@ -687,6 +834,9 @@ export class UpstreamAdapter {
         }
         if (/Missing config VISION_/i.test(result.stderr)) {
             return new VisionToolkitError('config', message);
+        }
+        if (/maxImagePixels|exceed(?:s|ing).*pixels/i.test(result.stderr)) {
+            return new VisionToolkitError('capacity', message);
         }
         if (/not found|only PNG|unsupported|cannot open|empty region|must be|expects|invalid colour|needs at least/i.test(result.stderr)) {
             return new VisionToolkitError('input', message);

@@ -24,16 +24,19 @@
       "path": "../../credentials/credentials"
     },
     {
-      "path": "../../util/environment"
+      "path": "../../util/launch-environment"
     },
     {
       "path": "../../settings/settings"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
       "path": "../../util/timeout"
+    },
+    {
+      "path": "../../identity/anonymous-user-id"
     }
   ]
 }

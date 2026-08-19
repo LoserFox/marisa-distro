@@ -1,6 +1,6 @@
 /** Package-owned scoped-dispatch invariants. @module @deepseek-ai/dsh-scope/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import { carrierKeyOf, isScopeCarrier } from '@deepseek-ai/dsh-scope'
 import { scopedSubjectResolverFor } from './scoped-events.generated.ts'
@@ -16,7 +16,7 @@ export const inject = ['invariants']
 const install: InvariantInstaller = (ctx, fail) => {
   ctx.on('internal/dispatch', (_mode, eventName, args, thisArg) => {
     const subjectOf = scopedSubjectResolverFor(eventName)
-    if (subjectOf === undefined) { return }
+    if (subjectOf === undefined) return
     if (!isScopeCarrier(thisArg)) {
       fail(
         `"${eventName}" is a scope-filtered event but was dispatched without a scope carrier — `

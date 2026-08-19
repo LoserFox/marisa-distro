@@ -13,16 +13,16 @@
  * @module @deepseek-ai/dsh-mcp-client
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { ToolListChangedNotificationSchema } from '@modelcontextprotocol/sdk/types.js'
-import { createTransport } from './transport.ts'
-import { syncTools } from './tools.ts'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
+import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import { RECONNECT_DEFAULTS, resolveReconnectPolicy, startConnection } from './connection.ts'
+import type { ReconnectConfig } from './connection.ts'
 // Side-effect type import: declaration-merges `ctx.tools` onto Context.
 import type {} from '@deepseek-ai/dsh-tools'
 
 export type { McpResult } from './tools.ts'
+export type { ReconnectConfig, ResolvedReconnectPolicy } from './connection.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'mcp-client'
@@ -33,14 +33,8 @@ export const inject = ['tools']
 /** Default timeout for individual MCP tool calls (ms). */
 const DEFAULT_TOOL_CALL_TIMEOUT_MS = 60_000
 
-/**
- * Valid `serverName`: 1–32 chars of `[A-Za-z0-9_-]`. Kept well under the
- * 64-char public-name budget so typical raw tool names survive unhashed.
- * Exported so upstream producers of Config inputs (repository-plugin's
- * `.mcp.json` prepare-time validation) reject the same names this registry
- * would.
- */
-export const SERVER_NAME_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
+/** Valid `serverName`, kept below the public tool-name budget. */
+const SERVER_NAME_PATTERN = /^[A-Za-z0-9_-]{1,32}$/
 
 /**
  * Live `serverName` reservations per app, keyed off `ctx.root` (multiple apps
@@ -72,6 +66,10 @@ export interface StdioConfig {
   cwd: string
   /** Per-tool-call timeout in milliseconds. */
   toolCallTimeoutMs: number
+  /** Fail plugin activation when the initial connection or tool synchronization fails. */
+  failOnStartupError: boolean
+  /** Automatic reconnect policy after a lost connection; omission uses the defaults. */
+  reconnect?: ReconnectConfig
 }
 
 /** Config for connecting to an MCP server over Streamable HTTP (SSE). */
@@ -90,10 +88,21 @@ export interface StreamableHttpConfig {
   headers: Record<string, string>
   /** Per-tool-call timeout in milliseconds. */
   toolCallTimeoutMs: number
+  /** Fail plugin activation when the initial connection or tool synchronization fails. */
+  failOnStartupError: boolean
+  /** Automatic reconnect policy after a lost connection; omission uses the defaults. */
+  reconnect?: ReconnectConfig
 }
 
 /** Configuration for one stdio or Streamable HTTP MCP server. */
 export type Config = StdioConfig | StreamableHttpConfig
+
+const Reconnect: z<ReconnectConfig> = z.object({
+  enabled: z.boolean().default(RECONNECT_DEFAULTS.enabled),
+  initialDelayMs: z.number().min(1).max(MAX_TIMER_DELAY_MS).default(RECONNECT_DEFAULTS.initialDelayMs),
+  maxDelayMs: z.number().min(1).max(MAX_TIMER_DELAY_MS).default(RECONNECT_DEFAULTS.maxDelayMs),
+  maxAttempts: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER).default(RECONNECT_DEFAULTS.maxAttempts),
+})
 
 export const Config = z.union([
   z.object({
@@ -104,6 +113,8 @@ export const Config = z.union([
     env: z.dict(String).default({}),
     cwd: z.string().default(''),
     toolCallTimeoutMs: z.number().default(DEFAULT_TOOL_CALL_TIMEOUT_MS),
+    failOnStartupError: z.boolean().default(false),
+    reconnect: Reconnect,
   }),
   z.object({
     transport: z.const('streamable-http'),
@@ -111,13 +122,28 @@ export const Config = z.union([
     url: z.string().required(),
     headers: z.dict(String).default({}),
     toolCallTimeoutMs: z.number().default(DEFAULT_TOOL_CALL_TIMEOUT_MS),
+    failOnStartupError: z.boolean().default(false),
+    reconnect: Reconnect,
   }),
 ]) as unknown as z<Config>
 
 // ---- Plugin apply ----
 
-export function apply(ctx: Context, config: Config): void {
-  // Reserve the namespace first: a duplicate `serverName` fails THIS instance
+/**
+ * Connect one MCP server and publish its initial tool generation before activation.
+ * This entry remains explicitly `async`: Cordis treats a prototype-bearing
+ * ordinary function as a constructor, whose returned Promise is not startup work.
+ * @param ctx - plugin context carrying the tool registry.
+ * @param config - resolved transport and server namespace configuration.
+ * @returns startup readiness after connection and initial tool discovery settle.
+ */
+export async function apply(ctx: Context, config: Config): Promise<void> {
+  // Fail loud at load: reconnect misconfiguration (including programmatic
+  // construction that bypassed Schemastery) rejects THIS instance before any
+  // effect registers.
+  const reconnect = resolveReconnectPolicy(config.reconnect, `mcp-client(${config.serverName}): reconnect`)
+
+  // Reserve the namespace next: a duplicate `serverName` fails THIS instance
   // at load with an actionable error and leaves the earlier instance intact.
   ctx.effect(() => {
     let names = activeServerNames.get(ctx.root)
@@ -134,49 +160,22 @@ export function apply(ctx: Context, config: Config): void {
     return () => void names.delete(config.serverName)
   }, 'mcp-client.serverName')
 
-  const transport = createTransport(config)
-  const client = new Client(
-    { name: 'dsh-mcp-client', version: '0.0.1' },
-    { capabilities: {} },
-  )
+  // The supervisor owns the client/transport generations, the reconnect
+  // loop, and the live tool registrations; disposal stops reconnection,
+  // quiesces in-flight work, and unregisters the current generation.
+  const connection = startConnection(ctx, config, reconnect)
 
-  const opts = {
-    serverName: config.serverName,
-    toolCallTimeoutMs: config.toolCallTimeoutMs,
-  }
-
-  // Connect and set up tools. Errors during connect/first sync are logged,
-  // not thrown (the plugin simply has no tools registered). `ready` resolves
-  // to an accessor for the CURRENT disposer generation, so the effect
-  // disposer below always unregisters the live set, not the first one.
-  const ready = (async () => {
-    await client.connect(transport)
-
-    let disposers = await syncTools(client, ctx, opts, new Map())
-
-    client.setNotificationHandler(
-      ToolListChangedNotificationSchema,
-      async () => {
-        ctx.logger.info(`mcp-client(${config.serverName}): tool list changed, re-syncing`)
-        try {
-          disposers = await syncTools(client, ctx, opts, disposers)
-        } catch (error) {
-          // Fetch-phase failure: the previous generation is still registered
-          // and `disposers` still owns it — keep serving the last good list.
-          ctx.logger.error(`mcp-client(${config.serverName}): tool re-sync failed: ${String(error)}`)
-        }
-      },
-    )
-
-    return () => { return disposers }
-  })().catch((error: unknown) => {
-    ctx.logger.error(`mcp-client(${config.serverName}): failed to connect: ${String(error)}`)
-    return () => new Map<string, () => void>()
-  })
-
-  ctx.effect(() => async () => {
-    const live = await ready
-    for (const dispose of live().values()) dispose()
-    try { await client.close() } catch { /* transport already gone */ }
+  ctx.effect(() => {
+    return () => connection.dispose()
   }, 'mcp-client.connection')
+
+  // Block plugin activation on the initial connection + tool discovery so
+  // Cordis consumers observe the tools immediately after the fiber activates.
+  // When failOnStartupError is true, a failed initial attempt rejects the
+  // fiber (Cordis rolls it back); otherwise the error is logged and the
+  // supervisor enters its reconnect loop.
+  const outcome = await connection.ready
+  if (outcome.error !== undefined && config.failOnStartupError) {
+    throw new Error(`mcp-client(${config.serverName}): initial connection or tool synchronization failed`, { cause: outcome.error })
+  }
 }

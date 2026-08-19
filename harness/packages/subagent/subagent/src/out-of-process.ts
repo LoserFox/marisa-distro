@@ -37,7 +37,9 @@ export const NO_START_CAPABILITIES: SubagentCapabilities = Object.freeze({
  * @param value - the configured value.
  */
 export function assertPositiveFinite(prefix: string, name: string, value: number): void {
-  if (!Number.isFinite(value) || value <= 0) throw new Error(`${prefix}: ${name} must be a positive finite number`)
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${prefix}: ${name} must be a positive finite number`)
+  }
 }
 
 /**
@@ -72,7 +74,9 @@ export function assertUsableCwd(prefix: string, label: string, cwd: string): str
   if (!isAbsolute(cwd)) {
     throw new Error(`${prefix}: ${label} must be an absolute path: ${cwd}`)
   }
-  if (!isEnterableDirectory(cwd)) throw new Error(`${prefix}: ${label} is not an accessible directory: ${cwd}`)
+  if (!isEnterableDirectory(cwd)) {
+    throw new Error(`${prefix}: ${label} is not an accessible directory: ${cwd}`)
+  }
   return cwd
 }
 

@@ -6,9 +6,10 @@
 // client; THIS spec pins the same flow through HTTP RPC + SSE + the host
 // gateway), reload replays everything from the log (zero further model
 // calls), and the theme scenario proves the shipped dark palette actually
-// cascades: attribute -> alias token flip -> painted surface change. Per the
-// lane's scope ruling there is no theme/layout golden (aria is color-blind);
-// the hero's waiting state gets the one golden here.
+// cascades: attribute -> alias token flip -> painted surface change. No
+// theme/layout golden: aria snapshots are color-blind (lane scope: the
+// browser-e2e-lane Agent Note); the hero's waiting state gets the one golden
+// here.
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
@@ -112,8 +113,8 @@ describe('web e2e: lifecycle & chrome (workspace flow / reload / dark mode)', ()
       const planButton = activePage.getByRole('button', { name: 'Plan mode on, press to turn off' })
       await planButton.waitFor({ timeout: 10_000 })
       // The golden encodes an empty composer, and the button arriving does not
-      // mean the submitted text is gone yet: under load the capture caught a
-      // textbox still holding `/plan`.
+      // mean the submitted text is gone yet: under load the capture can catch
+      // a textbox still holding `/plan`.
       await expect.poll(() => input.inputValue(), { timeout: 10_000 }).toBe('')
       const planSnapshot = await captureStableAria(activePage, '[class*="frame"]', activeScaffold.workspaceCwd)
       await compareOrRefreshGolden(PLAN_ACTIVE_EXPECTED, planSnapshot, MODE)
@@ -196,8 +197,13 @@ describe('web e2e: lifecycle & chrome (workspace flow / reload / dark mode)', ()
   it.skipIf(MODE === 'record')('materialized a real Workspace and Session over the wire', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-lifecycle-materialize'))
     // Browser: the sidebar tree now carries the auto-created workspace group
-    // with its one session, and the opened session is the selected row.
-    await expect.poll(() => page.getByText('1 session', { exact: true }).count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(1)
+    // with its one session, and the opened session is the selected row. The
+    // compact layout dropped group session counts, so the group row itself is
+    // the barrier.
+    await expect.poll(
+      () => page.locator('[role="treeitem"][aria-expanded]').filter({ hasText: 'workspace' }).count(),
+      { timeout: 15_000 },
+    ).toBeGreaterThanOrEqual(1)
     await expect.poll(() => page.locator('[role="treeitem"][aria-selected="true"]').count(), { timeout: 10_000 }).toBe(1)
     await expect.poll(() => page.getByText('LIGHTHOUSE', { exact: true }).count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(1)
     // Host: the session's durable header cwd is the folder the workspace
@@ -232,7 +238,7 @@ describe('web e2e: lifecycle & chrome (workspace flow / reload / dark mode)', ()
 
   it.skipIf(MODE === 'record')('cascades the dark theme from the body attribute to painted surfaces', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-lifecycle-dark'))
-    // This scenario pins the ThemeService's DOM contract seam directly (the
+    // This scenario pins the ThemeRuntime's DOM contract directly (the
     // body[data-ds-dark-theme] attribute -> stylesheet cascade); the REAL
     // user gesture above it (Settings -> Appearance cubes) is owned by
     // settings-chrome.e2e.ts. Driving the attribute here keeps the cascade

@@ -3,11 +3,12 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import type {
@@ -15,12 +16,12 @@ import type {
   SDKMessage,
   SDKSystemMessage,
 } from '@anthropic-ai/claude-agent-sdk'
-import { Context } from 'cordis'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Context } from '@deepseek-ai/cordis'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import SubagentService from '@deepseek-ai/dsh-subagent'
-import type { SubprocessHandle } from '@deepseek-ai/dsh-subprocess'
-import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
+import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
+import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import * as claudeCode from '../src/index.ts'
 import {
   startMessagesFixture,
@@ -86,11 +87,27 @@ const roots: string[] = []
 const fixtures: MessagesFixture[] = []
 const contexts: Context[] = []
 
+// Ambient Anthropic model env leaks into the real CLI and overrides the
+// fixture settings.json on developer machines; delete it for this file and
+// restore it after, like the workspace-context USERPROFILE isolation.
+const ambientAnthropicModel = process.env.ANTHROPIC_MODEL
+const ambientAnthropicSmallFastModel = process.env.ANTHROPIC_SMALL_FAST_MODEL
+
+beforeAll(() => {
+  delete process.env.ANTHROPIC_MODEL
+  delete process.env.ANTHROPIC_SMALL_FAST_MODEL
+})
+
+afterAll(() => {
+  if (ambientAnthropicModel !== undefined) process.env.ANTHROPIC_MODEL = ambientAnthropicModel
+  if (ambientAnthropicSmallFastModel !== undefined) process.env.ANTHROPIC_SMALL_FAST_MODEL = ambientAnthropicSmallFastModel
+})
+
 afterEach(async () => {
   await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose()))
   await Promise.all(fixtures.splice(0).map(fixture => fixture.close()))
   for (const root of roots.splice(0)) {
-    rmSync(root, { recursive: true, force: true })
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
   observedSdkMessages.length = 0
 })
@@ -98,9 +115,11 @@ afterEach(async () => {
 interface RealHarness {
   readonly ctx: Context
   readonly handles: SubprocessHandle[]
+  readonly spawnSpecs: SubprocessSpawnSpec[]
   readonly parent: Agent
   readonly workspace: string
   readonly env: Record<string, string>
+  readonly executable: string
 }
 
 async function realHarness(behavior: MessagesBehavior): Promise<{
@@ -112,9 +131,17 @@ async function realHarness(behavior: MessagesBehavior): Promise<{
   const workspace = join(root, 'workspace')
   const claudeConfig = join(root, 'claude-config')
   const xdgConfig = join(root, 'xdg')
+  const nativeBin = join(root, 'native&%literal%!bang!bin')
   mkdirSync(workspace)
   mkdirSync(claudeConfig)
   mkdirSync(xdgConfig)
+  mkdirSync(nativeBin)
+  const executable = join(nativeBin, process.platform === 'win32' ? 'claude.cmd' : 'claude')
+  if (process.platform === 'win32') {
+    writeFileSync(executable, `@echo off\r\n"${claudeBin}" %*\r\n`)
+  } else {
+    symlinkSync(claudeBin, executable)
+  }
   writeFileSync(
     join(claudeConfig, 'settings.json'),
     `${JSON.stringify({ model: settingsModel }, null, 2)}\n`,
@@ -122,6 +149,7 @@ async function realHarness(behavior: MessagesBehavior): Promise<{
   const fixture = await startMessagesFixture(behavior)
   fixtures.push(fixture)
   const env = {
+    PATH: `${nativeBin}${delimiter}${process.env.PATH ?? ''}`,
     ANTHROPIC_API_KEY: fakeKey,
     ANTHROPIC_BASE_URL: fixture.baseUrl,
     CLAUDE_CONFIG_DIR: claudeConfig,
@@ -138,11 +166,13 @@ async function realHarness(behavior: MessagesBehavior): Promise<{
   }
   const ctx = new Context()
   contexts.push(ctx)
-  await ctx.plugin(SubagentService)
-  await ctx.plugin(LocalSubprocessService)
+  await ctx.plugin(SubagentRuntime)
+  await ctx.plugin(LocalSubprocessRuntime)
   const handles: SubprocessHandle[] = []
+  const spawnSpecs: SubprocessSpawnSpec[] = []
   const spawn = ctx.subprocess.spawn.bind(ctx.subprocess)
   vi.spyOn(ctx.subprocess, 'spawn').mockImplementation((spec) => {
+    spawnSpecs.push(spec)
     const handle = spawn(spec)
     handles.push(handle)
     return handle
@@ -153,7 +183,7 @@ async function realHarness(behavior: MessagesBehavior): Promise<{
     session: { header: { cwd: workspace } },
   } as unknown as Agent
   return {
-    harness: { ctx, handles, parent, workspace, env },
+    harness: { ctx, handles, spawnSpecs, parent, workspace, env, executable },
     fixture,
   }
 }
@@ -182,7 +212,7 @@ function startRequest(
   })
 }
 
-describe('real Claude Agent SDK 0.3.220 and Claude Code 2.1.220', {
+describe('real Claude Agent SDK 0.3.220 and its distributed Claude Code 2.1.220 fixture', {
   timeout: 60_000,
 }, () => {
   it('inherits host settings and sends the exact task and fake key to local Messages', async () => {
@@ -195,7 +225,7 @@ describe('real Claude Agent SDK 0.3.220 and Claude Code 2.1.220', {
     expect(sdkPackage.version).toBe('0.3.220')
     expect(sdkPackage.claudeCodeVersion).toBe('2.1.220')
     expect(sdkPackage.optionalDependencies[platformPackage]).toBe('0.3.220')
-    const version = await execFileAsync(claudeBin, ['--version'], {
+    const version = await execFileAsync(process.platform === 'win32' ? claudeBin : harness.executable, ['--version'], {
       env: { ...process.env, ...harness.env },
     })
     expect(version.stdout.trim()).toBe('2.1.220 (Claude Code)')
@@ -212,6 +242,18 @@ describe('real Claude Agent SDK 0.3.220 and Claude Code 2.1.220', {
         message.type === 'system' && message.subtype === 'init',
     )
     expect(initMessage?.claude_code_version).toBe('2.1.220')
+    if (process.platform === 'win32') {
+      expect(harness.spawnSpecs[0]?.argv.slice(0, 6)).toEqual([
+        'cmd.exe', '/d', '/v:off', '/s', '/c', '%DSH_CLAUDE_CODE_EXECUTABLE%',
+      ])
+      const batchExecutable = harness.spawnSpecs[0]?.env?.DSH_CLAUDE_CODE_EXECUTABLE
+      expect(batchExecutable?.startsWith('"')).toBe(true)
+      expect(batchExecutable?.endsWith('"')).toBe(true)
+      expect(batchExecutable?.slice(1, -1).toLowerCase())
+        .toBe(harness.executable.toLowerCase())
+    } else {
+      expect(harness.spawnSpecs[0]?.argv[0]).toBe(harness.executable)
+    }
 
     expect(fixture.requests).toHaveLength(1)
     const recorded = fixture.requests[0]!
@@ -223,7 +265,7 @@ describe('real Claude Agent SDK 0.3.220 and Claude Code 2.1.220', {
     const messageTexts = (
       recorded.body.messages as Array<{ content?: unknown }>
     ).flatMap((message): unknown[] =>
-      !Array.isArray(message.content) ? [] : message.content as unknown[])
+      Array.isArray(message.content) ? message.content as unknown[] : [])
       .filter((block): block is { type: string; text: string } =>
         typeof block === 'object'
         && block !== null

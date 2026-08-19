@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-零依赖的原子文件替换，供绝不允许在磁盘上留下不完整、被符号链接劫持或权限过宽内容的文件型存储共用：用户设置文档（`dsh-settings-local`）与凭据存储（`dsh-credentials-local`）。
+零依赖的原子文件替换，供绝不允许在磁盘上留下不完整、被符号链接劫持或权限过宽内容的文件型存储共用：用户设置文档（`dsh-settings-file`）与凭据存储（`dsh-credentials-local`）。
 
 ## 接口面
 
@@ -20,7 +20,7 @@ await withFileLock('/home/u/.dsh/settings.yaml', async () => {
 })
 ```
 
-`writeFileAtomic` 提交一份已经渲染好的字符串。契约按故障利用它的先后顺序列出：
+`writeFileAtomic` 提交一份已经渲染好的字符串。约定按故障利用它的先后顺序列出：
 
 - **独占创建临时文件**（`wx` + 随机后缀）：open 拒绝跟随预先埋在可猜测临时路径上的符号链接。
 - **全新 inode 携带 `mode` 走完 rename**：替换权限过宽的旧文件时直接收窄，不存在 chmod 竞态。`mode` 为必填，让权限决策始终可见于每个调用点（与所有新建 inode 一样受进程 umask 影响）。

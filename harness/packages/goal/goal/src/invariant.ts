@@ -1,6 +1,6 @@
 /** Package-owned durable goal-stream invariants. @module @deepseek-ai/dsh-goal/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import { applyGoalEvent, emptyGoalFoldState } from './fold.ts'
@@ -48,7 +48,7 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     return state
   }
   /* v8 ignore next -- session/event always follows list() or session/created seeding */
-  const stateFor = (session: Session): GoalFoldState => { return states.get(session) ?? seed(session) }
+  const stateFor = (session: Session): GoalFoldState => states.get(session) ?? seed(session)
 
   for (const session of ctx.sessions.list()) seed(session)
   ctx.on('session/created', (session) => { seed(session) }, { global: true })

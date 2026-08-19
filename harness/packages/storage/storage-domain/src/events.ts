@@ -33,7 +33,7 @@ export interface DomainChangedDeleted extends DomainChangedBase {
 /** One durable domain change; a closed union — switch on `operation`. */
 export type DomainChanged = DomainChangedPut | DomainChangedDeleted
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Events {
     /**
      * A domain record or the global singleton changed, emitted once per write

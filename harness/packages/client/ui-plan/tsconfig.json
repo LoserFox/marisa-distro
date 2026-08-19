@@ -9,13 +9,13 @@
   ],
   "references": [
     {
+      "path": "../../api/remotes/tsconfig.client.json"
+    },
+    {
       "path": "../../../vendor/cordis"
     },
     {
       "path": "../runtime"
-    },
-    {
-      "path": "../connection"
     },
     {
       "path": "../locale"
@@ -36,7 +36,7 @@
       "path": "../../plan/plan-mode"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -6,9 +6,16 @@
  */
 
 import { expect } from 'vitest'
-import { FiberState, Inject, RegistryService } from 'cordis'
-import type { Context, Plugin } from 'cordis'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import { FiberState, Inject, RegistryService, ValidationError } from '@deepseek-ai/cordis'
+import type { Context, Plugin } from '@deepseek-ai/cordis'
+import { AttachmentStore } from '@deepseek-ai/dsh-attachment'
+import type {
+  ImageAttachmentLimits,
+  ImageAttachmentRef,
+  SaveImageAttachment,
+  StoredImageAttachment,
+} from '@deepseek-ai/dsh-attachment'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 declare global {
   interface ImportMeta {
@@ -17,7 +24,7 @@ declare global {
   }
 }
 
-/** Loader-safe shape shared by every package invariant companion. */
+/** Loader-safe exports shared by every package invariant companion. */
 export interface TestInvariantCompanion {
   readonly name: string
   readonly inject: readonly string[]
@@ -40,7 +47,7 @@ export const testInvariantCompanions: Readonly<Record<string, () => Promise<Test
 
 /** Manual-topology suites whose names cannot follow the focused invariant convention. */
 const MANUAL_INVARIANT_TEST_EXCEPTIONS = [
-  '/packages/support/invariants/tests/service.spec.ts',
+  '/packages/runtime-diagnostics/invariants/tests/service.spec.ts',
   '/packages/examples/agent-spine-demo/tests/agent-core.spec.ts',
 ] as const
 
@@ -102,6 +109,29 @@ export function usesManualInvariantTree(testPath: string): boolean {
 }
 
 const ALL_COMPANION_TESTS = ['/scripts/test-invariants.spec.ts'] as const
+const ATTACHMENT_COMPANION = '../packages/attachment/attachment-local/src/invariant.ts'
+
+class TestAttachmentStore extends AttachmentStore {
+  readonly imageLimits: ImageAttachmentLimits = {
+    maxImageBytes: 1,
+    maxImagesPerMessage: 1,
+    maxMessageImageBytes: 1,
+    maxImagePixels: 1,
+    mediaTypes: ['image/png'],
+  }
+
+  validateImage(_input: SaveImageAttachment): Promise<void> {
+    return Promise.reject(new Error('test invariant attachment store does not validate images'))
+  }
+
+  saveImage(_input: SaveImageAttachment): Promise<ImageAttachmentRef> {
+    return Promise.reject(new Error('test invariant attachment store does not save images'))
+  }
+
+  readImage(_ref: ImageAttachmentRef): Promise<StoredImageAttachment> {
+    return Promise.reject(new Error('test invariant attachment store does not read images'))
+  }
+}
 
 /**
  * Select the package companions that an ordinary test root must register.
@@ -144,10 +174,13 @@ function startInvariantHost(root: Context): InvariantHost {
   // awaits ready, so none starts ahead of its package checks. Tests plugging
   // a companion directly must await an earlier root plugin first — the
   // duplicate-mount failure otherwise is loud (owner name already reserved).
-  const serviceFiber = mount(InvariantService, { enabled: true })
+  const serviceFiber = mount(InvariantRegistry, { enabled: true })
   const testPath = expect.getState().testPath ?? ''
   const companionPaths = testInvariantCompanionPaths(testPath)
   const ready = requireActive(serviceFiber, 'invariant service').then(async () => {
+    const attachmentFiber = companionPaths.includes(ATTACHMENT_COMPANION)
+      ? mount(TestAttachmentStore)
+      : undefined
     const companions = await Promise.all(companionPaths.map(async (path) => {
       const load = testInvariantCompanions[path]
       if (load === undefined) {
@@ -163,7 +196,12 @@ function startInvariantHost(root: Context): InvariantHost {
       fiber: mount(companion),
       path,
     }))
-    await Promise.all(companionFibers.map(({ fiber, path }) => { return requireActive(fiber, path) }))
+    await Promise.all([
+      ...(attachmentFiber === undefined
+        ? []
+        : [requireActive(attachmentFiber, 'test attachment store')]),
+      ...companionFibers.map(({ fiber, path }) => requireActive(fiber, path)),
+    ])
     root.provide(TEST_INVARIANT_READY_SERVICE, true)
   })
   const host = { byCallback, barrierOwners, ready }
@@ -210,22 +248,25 @@ function withInvariantReadiness(plugin: Plugin, callback: PluginCallback): Plugi
 function joinInvariantStartup(
   fiber: PluginFiber,
   invariantReady: Promise<void>,
-  disposeInitialFailure = false,
+  disposePendingValidationFailure = false,
 ): PluginFiber {
   // RegistryService returns a thenable wrapper whose context still points to
   // the raw Fiber. Calling inherited await() on the wrapper would return and
   // assimilate that thenable, accidentally following later plugin startup.
   const rawFiber = fiber.ctx.fiber
-  const initialized = disposeInitialFailure
-    ? rawFiber.await().catch(async (error: unknown) => {
-      // Config validation is the only failure recorded while a gated fiber
-      // is initially PENDING. Dispose it even if queued readiness publication
-      // changes its state before this rejection handler runs.
-      await rawFiber.dispose()
+  const readiness = invariantReady.then(async () => {
+    try {
+      return await rawFiber.await()
+    } catch (error) {
+      // Config resolves only after the readiness injection activates. Dispose
+      // validation failures owned by an initially pending target; ordinary
+      // callback failures remain inspectable.
+      if (disposePendingValidationFailure && error instanceof ValidationError) {
+        await rawFiber.dispose()
+      }
       throw error
-    })
-    : Promise.resolve()
-  const readiness = initialized.then(() => invariantReady).then(() => rawFiber.await())
+    }
+  })
   const joined = Object.create(fiber) as PluginFiber
   joined.then = readiness.then.bind(readiness)
   return joined

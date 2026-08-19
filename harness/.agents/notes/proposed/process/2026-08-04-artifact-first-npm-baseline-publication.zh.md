@@ -23,7 +23,7 @@ monorepo 中可运行的源码并不能证明发布后的包可运行。workspac
 pack 阶段按以下顺序执行：
 
 1. 将 ref 解析成不可变 commit，采集 UTC 时间戳，从该 commit 的根 manifest 派生版本，并显示 commit、时间戳、版本、tag、注册表和输出路径。`pack` 与 `release` 此时都会在昂贵操作开始前等待 Enter；自动化可用 `--yes` 跳过该确认。
-2. 在隔离的 detached worktree 中安装 frozen lockfile，并在暂存发布 manifest 之前运行源码 manifest 发布约束；调用方工作树中的未提交文件和旧构建输出不得参与发布。
+2. 在隔离的 detached worktree 中安装 frozen lockfile，并在暂存前运行源码 manifest 发布约束；调用方工作树中的未提交文件和旧构建输出不得参与发布。
 3. 将所有目标 manifest 暂存为派生版本，移除发布时的 `private` 标记，并把 `dependencies`、`devDependencies`、`optionalDependencies` 与 `peerDependencies` 中的内部 workspace 依赖全部改写为同一精确版本。
 4. 完整构建目标 commit，再运行 publint 和已构建包不变式。
 5. 为目标集合中的每个包执行 pack，但不执行任何注册表写入。
@@ -38,13 +38,13 @@ pack 阶段按以下顺序执行：
 
 已提交的 pack 命令实现了固定 commit 暂存、内部依赖精确固化、静态与 tarball payload 检查、不可变 manifest，以及把每个发布 tarball 都作为本地顶层依赖的隔离 npm 安装。它在输出 publish 命令前，用普通 Node 运行安装后的 `dsh --version` 与 `dsh --dump-default-config` 入口，再在 POSIX PTY 中启动安装后的默认 TUI，等待其 `main-session-` 就绪信号，并通过 `/exit` 退出。Publish 支持按 integrity 恢复，将只读注册表验证与认证身份检查分离，并以完整的远端 integrity 和 dist-tag 验证结束。
 
-拉取请求 CI 不会调用 pack 命令；安装态入口探测属于本地发布检查，而不是合并门禁。免凭据 CI 执行、其他每个 bin 与公开运行时入口的包自有探测、workflow artifact 传递及受保护 publish job 仍属于提案范围。
+PR（Pull Request） CI 不会调用 pack 命令；安装态入口探测属于本地发布检查，而不是合并门禁。免凭据 CI 执行、其他每个 bin 与公开运行时入口的包自有探测、workflow artifact 传递及受保护 publish job 仍属于提案范围。
 
-## 发布 payload 契约
+## 发布 payload 约定
 
 发布包只携带消费方需要的构建产物。`package.json#files` 禁止包含 `src` 和 `lib/types/**/*.d.ts.map`；tarball 内容门禁还要独立确认不存在任何 `package/src/**` 与 `package/**/*.d.ts.map`，避免 manifest pattern 或 pack 行为绕过静态约束。运行时 JS、声明文件 `.d.ts`、配置、资源、worker 文件和 bundle 动态 chunk 必须按实际入口闭包收齐。
 
-源码 manifest 可以保留 `exports["./src/*"]`，供本仓库的源码平面解析使用；该 export 不代表源码会进入发布 payload，也不属于已发布包的消费方契约。静态门禁必须分别检查源码平面与发布 payload，不能通过删除 source export 来掩盖错误的 workspace 解析，也不能通过发布 `src` 来修补缺失的构建产物。
+源码 manifest 可以保留 `exports["./src/*"]`，供本仓库的源码平面解析使用；该 export 不代表源码会进入发布 payload，也不属于已发布包的消费方约定。静态门禁必须分别检查源码平面与发布 payload，不能通过删除 source export 来掩盖错误的 workspace 解析，也不能通过发布 `src` 来修补缺失的构建产物。
 
 每个 tarball 必须不含 `workspace:` specifier，并且所有指向本次发布集合的内部依赖与对等依赖（peer dependency）都必须精确等于本次派生版本，禁止使用 `^`、`~` 或其他 semver 范围跨越 commit 基线。除了明确仅供源码平面使用的 `exports["./src/*"]`，package manifest 中声明的每个消费方入口都必须指向 tarball 内存在的文件；动态 import、运行时拼接路径和非 export 资源不能只靠 manifest 检查，必须由安装后执行覆盖。
 
@@ -52,7 +52,7 @@ pack 阶段按以下顺序执行：
 
 集成测试在全部 tarball 生成后、任何 publish 之前运行。它在 monorepo 外创建一个全新临时项目，通过本次 release manifest 中的本地 `.tgz` 文件安装声明依赖闭包，并从安装目录执行。测试必须使用普通 Node 与包管理器生成的 `node_modules`；禁止 tsx、tsconfig paths、workspace link、仓库源码路径、工作树 `lib/` 和已发布注册表中的同版本包参与解析。测试还要断言关键模块与 bin 的真实路径位于临时消费方内。
 
-安装使用本次发布选择的客户端行为。注册表上传必须使用 `npm` CLI，以满足私有注册表只接受 npm 客户端的策略；构建编排仍可使用 pnpm。tarball 测试不得先把这些包发布到真实注册表，也不得在测试后重新 pack。
+安装使用本次发布选择的客户端行为。注册表上传必须使用 `npm` CLI（命令行界面），以满足私有注册表只接受 npm 客户端的策略；构建编排仍可使用 pnpm。tarball 测试不得先把这些包发布到真实注册表，也不得在测试后重新 pack。
 
 测试至少覆盖以下执行面：
 
@@ -73,13 +73,13 @@ npm 不提供多包原子事务，上传仍会逐包发生。编排器通过幂�
 
 ## GitHub Actions 集成
 
-GitHub Actions 分为无凭据的 pack-and-test job 与受保护的 publish job。前者检出精确 commit，调用与本地相同的 pack 入口，运行 tarball 消费方测试，并上传完整 release bundle 作为 workflow artifact。后者依赖前者成功，从 workflow artifact 下载 bundle、重新校验 manifest 和校验和，再调用同一个 publish 入口；它不能检出后重新构建。
+GitHub Actions 分为无凭据的 pack-and-test job 与受保护的 publish job。前者检出精确 commit，调用与本地相同的 pack 入口，运行 tarball 消费方测试，并上传完整 release bundle 作为工作流产物。后者依赖前者成功，从工作流产物下载 bundle、重新校验 manifest 和校验和，再调用同一个 publish 入口；它不能检出后重新构建。
 
 PR 与普通 push 可以运行无凭据的 pack-and-test 信号，从而在合并前发现 payload 回归。实际私有注册表发布先通过 `workflow_dispatch` 提供，输入只包括目标 ref；UTC 时间戳由 pack job 生成，基础版本、短 SHA、tag、注册表和包清单都由仓库状态或受版本控制的配置派生。稳定发布触发方式不在本基线提案范围内。
 
-注册表 token 只注入 publish job，并由受保护 GitHub Environment 控制人工批准、允许的分支或 tag 以及并发。pack-and-test job 不得读取发布凭据。workflow artifact 的保留期可以较短，但 publish job 必须使用同一 workflow run 生成的 bundle，不能按版本号从不受信任的位置寻找 tarball。
+注册表 token 只注入 publish job，并由受保护 GitHub Environment 控制人工批准、允许的分支或 tag 以及并发。pack-and-test job 不得读取发布凭据。工作流产物的保留期可以较短，但 publish job 必须使用同一 workflow run 生成的 bundle，不能按版本号从不受信任的位置寻找 tarball。
 
-## Alternatives considered
+## 考虑过的替代方案
 
 **从 workspace 直接递归 publish。** 不采用，因为命令会把 pack 与注册表写入交错，无法在第一次写入前证明整个集合完整，也容易让 workspace 解析与调用方工作树状态影响发布结果。
 
@@ -87,13 +87,13 @@ PR 与普通 push 可以运行无凭据的 pack-and-test 信号，从而在合�
 
 **只运行 `dsh --help`。** 不采用，因为 Commander 可以在加载 TUI、Web 或 headless 动态入口之前输出帮助并退出。它无法证明默认生产启动路径完整。
 
-**把 `src` 和声明映射一起发布以降低漏文件风险。** 不采用，因为源码平面不是生产运行时的后备路径；扩大 payload 会掩盖 bundle 闭包错误，并把本地调试产物变成无意的发布契约。
+**把 `src` 和声明映射一起发布以降低漏文件风险。** 不采用，因为源码平面不是生产运行时的后备路径；扩大 payload 会掩盖 bundle 闭包错误，并把本地调试产物变成无意的发布约定。
 
 **要求真正的跨包原子发布。** 不采用，因为 npm 注册表没有相应事务。不可变 release bundle、发布前全量验证、integrity 比对与幂等恢复提供可实现的边界，同时明确保留部分上传短暂可见的限制。
 
-**在批准后由发布 job 重新构建。** 不采用，因为测试通过的 tarball 与实际上传的 tarball 将不再具有内容身份。workflow artifact 与校验和必须把测试输入直接传给发布步骤。
+**在批准后由发布 job 重新构建。** 不采用，因为测试通过的 tarball 与实际上传的 tarball 将不再具有内容身份。工作流产物与校验和必须把测试输入直接传给发布步骤。
 
-## Acceptance criteria
+## 验收标准
 
 - 一个 pack 入口从确定 commit 发现 `packages/*/*` 和 `apps/*` 的全部目标包，以 UTC 秒级时间戳与短 commit 生成并显示版本，再等待 Enter；它在任何注册表写入前生成完整 release bundle，并输出一个可复制的 publish 命令；`release` 在 pack 后再次等待，`--yes` 跳过两次确认。
 - 静态 manifest 门禁和 tarball 内容门禁都拒绝发布 `src` 与 `.d.ts.map`，同时保留源码 manifest 中的 `exports["./src/*"]`。
@@ -103,9 +103,9 @@ PR 与普通 push 可以运行无凭据的 pack-and-test 信号，从而在合�
 - publish 可在部分成功后用同一 manifest 安全重跑；相同 integrity 被跳过，不同 integrity 被拒绝，最终验证要求所有版本与 tag 一致。
 - GitHub Actions 的无凭据 job 生成并测试 bundle，受保护 job 上传完全相同的 bundle，发布 token 只存在于后者。
 
-## Risks
+## 风险
 
-全量 pack、安装和启动会增加 CI 时间与 workflow artifact 体积。实现应缓存外部依赖和 pnpm store，但不得缓存或复用目标包的已安装 workspace 输出；并行执行安全的消费方 probe 可以降低时延。
+全量 pack、安装和启动会增加 CI 时间与工作流产物体积。实现应缓存外部依赖和 pnpm store，但不得缓存或复用目标包的已安装 workspace 输出；并行执行安全的消费方 probe 可以降低时延。
 
 把所有 tarball 都安装为临时项目的顶层依赖可能掩盖未声明的内部依赖。测试生成器应按被测应用的声明式递归闭包安装，并结合现有依赖门禁；对依赖面接近全集的 `@deepseek-ai/dsh`，仍需依靠 package manifest 与静态图检查发现未声明边。
 

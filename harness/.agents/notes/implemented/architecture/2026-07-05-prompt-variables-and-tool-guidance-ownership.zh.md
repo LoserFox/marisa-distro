@@ -8,9 +8,9 @@ Status: implemented
 
 组装后的系统提示词存在四个缺陷，同属一类：harness 已知的事实在别处被手工重述，然后漂移。
 
-**模型无法知道自己的名字。** `AgentOptions.model` 驱动每个请求，但没有任何提示词文本携带它——也不可能携带：`dsh-system-prompt` 中的 section 是上下文全局的，而模型名称是 per-agent 的，`assemble()` 根本不接受任何 per-agent 输入。
+**模型无法知道自己的名字。** `AgentOptions.model` 驱动每个请求，但没有任何提示词文本携带它——也不可能携带：`dsh-system-prompt` 中的 section 是上下文全局的，而模型名称因 agent（智能体）而异，`assemble()` 根本不接受任何 per-agent 输入。
 
-**工具指导是 leaf YAML 中的手写行文。** bash/subagent/todo_write 的使用指导存放在 coding-agent 和 ACP persona 字符串里——两份漂移的副本（ACP 那份已经被删减）——而 `dsh-tool-fs` 和 `dsh-tool-web` 则通过 `ctx.systemPrompt.section()` 贡献各自的指导。加载或卸载一个工具插件意味着手动编辑每个部署的 persona，旧终端欢迎横幅也手动枚举了工具集。
+**工具指导是 leaf YAML 中的手写行文。** shell/subagent/todo_write 的使用指导存放在 coding-agent 和 ACP（Agent Client Protocol）的 persona 字符串里——两份漂移的副本（ACP 那份已经被删减）——而 `dsh-tool-fs` 和 `dsh-tool-web` 则通过 `ctx.systemPrompt.section()` 贡献各自的指导。加载或卸载一个工具插件意味着手动编辑每个部署的 persona，旧终端欢迎横幅也手动枚举了工具集。
 
 **Persona 渲染在工具指导之后。** agent loop（智能体循环）将 `agent.options.systemPrompt` 字符串拼接在已组装的 section 之后，于是模型先读到「Use the read tool…」再读到「You are a coding agent」——与 identity-first 约定（Claude Code、Codex）相反，且是 section 流水线之外的第二条组合路径。
 
@@ -18,7 +18,7 @@ Status: implemented
 
 ## 决策
 
-**一条原则：提示词中的每个事实恰好有一个归属方。** 模型名称和工作区是配置/会话事实 → harness 将它们暴露为变量，persona 引用它们。每个工具的语义和何时使用 → 工具的 `description`。description 无法承载的跨调用习惯 → 包的提示词 section。harness 来源标识 → 静态的 `harness:identity` section。部署角色与行为 → 部署的 persona。
+**一条原则：提示词中的每个事实恰好有一个归属方。** 模型名称和工作区是配置/会话事实 → harness 将它们暴露为变量，persona 引用它们。每个工具的语义和何时使用 → 工具的 `description`。description 无法承载的跨调用习惯 → 包的提示词 section。产品名称和 SDK 身份说明 → 静态的 `harness:identity` section。部署角色与行为 → 部署的 persona。
 
 ### 组装上下文
 
@@ -36,7 +36,7 @@ Status: implemented
 
 ### 工具指导归属
 
-每个工具的语义和选择指导放在工具 description 中。提示词 section 只承载跨调用习惯，例如检查 bash 退出标记或优先使用文件系统工具而非 shell 命令。`todo_write` 和 subagent 工具不需要 section，因为它们的 description 包含完整契约。部署 persona 只包含角色和行为。
+每个工具的语义和选择指导放在工具 description 中。提示词 section 只承载跨调用习惯，例如检查 bash 退出标记或优先使用文件系统工具而非 shell 命令。`todo_write` 和 subagent 工具不需要 section，因为它们的 description 包含完整约定。部署 persona 只包含角色和行为。
 
 ### Subagent 对话历史描述符
 
@@ -46,9 +46,9 @@ Status: implemented
 
 - **循环自行组合一行 identity 文本**：在必须保持精简的那个包（「用插件，不改循环」）中硬编码面向模型的行文，且在 section 流水线之外构成第二条组合路径。（identity 确实以代码字面量交付——但作为 `dsh-system-prompt` 注册的普通 section，其 `system-prompt/assemble` waterfall 仍是部署需要移除它时的逃生阀。）
 - **通过 `agent/request` waterfall 注入模型名称**：提示词文本会在两处组合，更早渲染的 persona 也可能与最终已路由 header 不一致。拥有延迟路由的请求插件还必须拥有该模型在提示词中更早出现的声明。
-- **在每个 persona 中手写模型名称**：与上方一行的 `model:` 键重复，配置修改后静默失实；正是本 Agent Note 要治愈的病症。
+- **在每个 persona 中手写模型名称**：与上方一行的 `model:` 键重复，配置修改后静默失实；正是本决策要治愈的病症。
 - **宽松插值（未知引用保留原样或替换为空）**：一个拼写错误 `{{modle}}`（或一个空洞）会被发送给模型，直到 transcript（文本记录）审查时才会被发现。
-- **在配置中为每个 subagent 实例编写措辞**：面向模型的行文回到每个部署 × 实例中，重蹈 P2 病症。**根据提供方名称选择措辞**：`providerName` 本身是配置，重命名提供方后会静默获得错误的措辞。
+- **在配置中为每个 subagent 实例编写措辞**：面向模型的行文回到每个部署 × 实例中，重蹈在 leaf YAML 中手写指导的漂移。**根据提供方名称选择措辞**：`providerName` 本身是配置，重命名提供方后会静默获得错误的措辞。
 - **在 `apply` 时解析提供方（加载顺序要求）**与**仅用 section 承载 subagent 措辞（在 assemble 时惰性解析）**：提供方生命周期事件的替代方案；两者均在[提供方生命周期事件 Agent Note](2026-07-05-subagent-provider-lifecycle-events.md)中被否决。
 
 ## 不在范围内
@@ -58,7 +58,7 @@ Status: implemented
 
 ## 交付的不变式
 
-- tui-agent 的提示词通过一条组装路径依次渲染 identity、带插值模型名的 persona，然后是 fs/bash/web 指导。
+- tui-agent 的提示词通过一条组装路径依次渲染 identity、带插值模型名的 persona，然后是 fs/shell/web 指导。
 - fork 和 fresh subagent 的描述反映提供方是否继承已完成的对话轮次；工具随提供方生命周期变化而出现、消失和重新措辞。
 - 未知、无值、格式错误或不平衡的变量引用会指明 section 名称并抛出异常；重复的 section、变量和工具注册同样抛出异常。
 - 快照回放与提示词无关：它按轮次和步骤索引已记录的分片流，不比较发出的请求。

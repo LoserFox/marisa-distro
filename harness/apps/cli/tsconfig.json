@@ -18,7 +18,10 @@
       "path": "../../vendor/include"
     },
     {
-      "path": "../../packages/ui/app-boot"
+      "path": "../../packages/boot/app-boot"
+    },
+    {
+      "path": "../../packages/boot/cmdline"
     },
     {
       "path": "../../packages/bundle/base"
@@ -48,67 +51,25 @@
       "path": "../../packages/core/tools"
     },
     {
-      "path": "../../packages/util/paths"
+      "path": "../../packages/util/launch-environment"
+    },
+    {
+      "path": "../../packages/util/home-paths"
     },
     {
       "path": "../../packages/mcp/mcp-client"
     },
     {
-      "path": "../../packages/support/loader-smoke"
+      "path": "../../packages/test-support/loader-smoke"
     },
     {
       "path": "../../packages/session-query/session-query-sqlite"
     },
     {
-      "path": "../../packages/bash/bash-env"
+      "path": "../../packages/shell/shell-env"
     },
     {
-      "path": "../../packages/bash/tool-bash"
-    },
-    {
-      "path": "../../packages/client/connection"
-    },
-    {
-      "path": "../../packages/client/hmr"
-    },
-    {
-      "path": "../../packages/client/runtime"
-    },
-    {
-      "path": "../../packages/client/ui-theme"
-    },
-    {
-      "path": "../../packages/client/ui-settings"
-    },
-    {
-      "path": "../../packages/client/ui-settings-general"
-    },
-    {
-      "path": "../../packages/client/ui-models"
-    },
-    {
-      "path": "../../packages/client/ui-permission"
-    },
-    {
-      "path": "../../packages/client/locale"
-    },
-    {
-      "path": "../../packages/client/ui-layout"
-    },
-    {
-      "path": "../../packages/client/ui-sidebar"
-    },
-    {
-      "path": "../../packages/client/ui-conversation"
-    },
-    {
-      "path": "../../packages/client/ui-plan"
-    },
-    {
-      "path": "../../packages/client/ui-trajectory"
-    },
-    {
-      "path": "../../packages/client/ui-question"
+      "path": "../../packages/shell/tool-bash"
     }
   ]
 }

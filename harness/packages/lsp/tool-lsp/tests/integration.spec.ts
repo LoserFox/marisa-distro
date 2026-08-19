@@ -3,13 +3,14 @@ import { mkdtemp, mkdir, rm, writeFile, realpath } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
-import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
+import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
+import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import Lsp from '@deepseek-ai/dsh-lsp'
-import * as LspLocal from '@deepseek-ai/dsh-lsp-local'
-import * as TimeoutPolicy from '@deepseek-ai/dsh-timeout-policy'
+import * as LspLocal from '@deepseek-ai/dsh-lsp-stdio'
+import * as TimeoutPolicy from '@deepseek-ai/dsh-tool-call-timeout-policy'
 import * as ToolLsp from '@deepseek-ai/dsh-tool-lsp'
 
 /**
@@ -48,9 +49,10 @@ function serverScript(hang: boolean): string {
 async function mount(hang: boolean, timeoutMs?: number): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(Lsp)
-  await ctx.plugin(LocalSubprocessService)
+  await ctx.plugin(LocalFileSystem, { cwd: process.cwd() })
+  await ctx.plugin(LocalSubprocessRuntime)
   await ctx.plugin(LspLocal, {
     servers: {
       inline: {

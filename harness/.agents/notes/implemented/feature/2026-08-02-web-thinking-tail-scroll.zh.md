@@ -12,7 +12,7 @@ Web Think 行在结算与流式 block 中都把 reasoning 首行渲染成折叠�
 
 只有 reasoning block 是当前流式尾部、且仍处于折叠态的 Think 行会跟随实时输出。其摘要使用最新的非空行，而不是结算后的首行；已有单行摘要元素成为程序化横向滚动区，每次文本更新后钉到 `scrollWidth - clientWidth`。这里刻意直接赋值 `scrollLeft`，通过真实 delta 推进而不虚构独立的跑马灯速度：token 快则移动快，模型停顿则停止，短文本因滚动范围为零而保持静止。
 
-该行为由已有呈现组件拥有。`AssistantMarkdown` 只在 Think 行运行时选择最新行；`ToolRow` 已经拥有折叠／展开状态，因此由它决定摘要是否追随行内末端。不改变 session、wire、持久事件或模型可见契约。展开会移除折叠摘要，并让完整 reasoning 正文进入普通页面流。该行结算后恢复稳定首行，同时把摘要重置到左端。其他工具摘要与已结算 Think 行保留已有省略号行为。
+该行为由已有呈现组件拥有。`AssistantMarkdown` 只在 Think 行运行时选择最新行；`ToolRow` 已经拥有折叠／展开状态，因此由它决定摘要是否追随行内末端。不改变 session、wire、持久事件或模型可见约定。展开会移除折叠摘要，并让完整 reasoning 正文进入普通页面流。该行结算后恢复稳定首行，同时把摘要重置到左端。其他工具摘要与已结算 Think 行保留已有省略号行为。
 
 ## 曾考虑的替代方案
 
@@ -28,4 +28,4 @@ Web Think 行在结算与流式 block 中都把 reasoning 首行渲染成折叠�
 
 ## 测试
 
-`packages/client/ui-conversation/tests/reasoning-row.spec.tsx` 固定最新行选择、算出的右端滚动位置，以及结算后恢复首行和 `scrollLeft = 0`。`apps/web/tests/lifecycle-chrome.e2e.ts` 中的 keyless 完整 Chromium 场景以可观察节奏回放真实录制的 reasoning chunks，把视口收窄到摘要溢出，并断言实时折叠 Think 行到达真实浏览器的滚动边界。其结算态 replay golden 保持不变，证明历史摘要契约仍然稳定。
+`packages/client/ui-conversation/tests/reasoning-row.client.spec.tsx` 固定最新行选择、算出的右端滚动位置，以及结算后恢复首行和 `scrollLeft = 0`。`apps/web/tests/lifecycle-chrome.e2e.ts` 中的无密钥组装态 Chromium 场景以可观察节奏回放真实录制的 reasoning chunks，把视口收窄到摘要溢出，并断言实时折叠 Think 行到达真实浏览器的滚动边界。其结算态 replay golden 保持不变，证明历史摘要约定仍然稳定。

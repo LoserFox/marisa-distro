@@ -9,7 +9,7 @@ import { check } from './verify-settings-schema.mjs'
 
 function makeTree(configSrc) {
   const root = mkdtempSync(join(tmpdir(), 'vsch-'))
-  const p = join(root, '.dsh-plugin', 'src', 'config.mjs')
+  const p = join(root, 'lib', 'src', 'config.mjs')
   mkdirSync(dirname(p), { recursive: true })
   writeFileSync(p, configSrc)
   return root

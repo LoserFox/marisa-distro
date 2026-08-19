@@ -3,7 +3,7 @@
  * @module @deepseek-ai/dsh-client-hmr/invariant
  */
 
-import type { Context, Fiber } from 'cordis'
+import type { Context, Fiber } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-client-hmr'
@@ -40,7 +40,7 @@ const install: InvariantInstaller = (ctx, fail) => {
       return
     }
     const baseline = baselines.get(fiber)
-    if (baseline === undefined) { return }
+    if (baseline === undefined) return
     await Promise.resolve()
     await fiber.await()
     const remaining = statWatchers()

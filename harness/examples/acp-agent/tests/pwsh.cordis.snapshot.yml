@@ -14,8 +14,8 @@
 - id: bash
   name: '@deepseek-ai/dsh-pwsh-local'
 
-- id: bash-env
-  name: '@deepseek-ai/dsh-bash-env'
+- id: shell-env
+  name: '@deepseek-ai/dsh-shell-env'
 
 - id: acp-agent
   name: '@deepseek-ai/dsh-acp-demo'
@@ -27,7 +27,7 @@
     workspaceContext: false
     skills:
       enabled: false
-    # task_output/task_kill stay mounted (the bundle's toolTasks default) so
+    # job_output/job_kill stay mounted (the bundle's toolJobs default) so
     # background pwsh runs are readable and killable.
     goals: false
     # The pwsh tool replaces the bundle's bash tool in this composition.

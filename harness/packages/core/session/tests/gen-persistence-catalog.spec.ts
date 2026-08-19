@@ -35,7 +35,7 @@ const make = (files: Record<string, string>): string => {
 
 /** A merge-form declaration file wrapping `members` in the session module. */
 const merge = (members: string): string =>
-  `declare module '@deepseek-ai/dsh-session' {\n  interface SessionEventMap {\n${members}\n  }\n}\n`
+  `declare module '@deepseek-ai/dsh-session/types' {\n  interface SessionEventMap {\n${members}\n  }\n}\n`
 
 afterEach(() => {
   while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true })
@@ -89,16 +89,16 @@ describe('gen-persistence-catalog collectLogEvents', () => {
   it('hard-errors on an extends clause (inherited keys would escape the catalog)', () => {
     expect(() => collectLogEvents(make({
       'packages/group/fix/src/types.ts':
-        'interface Extra { \'fix/hidden\': { turn: number } }\ndeclare module \'@deepseek-ai/dsh-session\' {\n  interface SessionEventMap extends Extra {\n    /** Declared directly. */\n    \'fix/direct\': { turn: number }\n  }\n}\n',
+        'interface Extra { \'fix/hidden\': { turn: number } }\ndeclare module \'@deepseek-ai/dsh-session/types\' {\n  interface SessionEventMap extends Extra {\n    /** Declared directly. */\n    \'fix/direct\': { turn: number }\n  }\n}\n',
     }))).toThrow(/uses extends; inherited keys would join keyof SessionEventMap without a catalog row/)
   })
 
   it('extracts a member declaration-merged via the session module', () => {
     const events = collectLogEvents(make({
-      'packages/group/fix/src/types.ts': merge('    /** Merged provenance. */\n    \'fix/merged\': { id: string }'),
+      'packages/group/fix/src/types.ts': merge('    /** Merged event source record. */\n    \'fix/merged\': { id: string }'),
     }))
     expect(events).toHaveLength(1)
-    expect(events[0]).toMatchObject({ name: 'fix/merged', doc: 'Merged provenance.' })
+    expect(events[0]).toMatchObject({ name: 'fix/merged', doc: 'Merged event source record.' })
   })
 
   it('collapses a newline-separated multi-line payload to a valid one-line fragment', () => {
@@ -271,7 +271,7 @@ describe('gen-persistence-catalog annotateSurface + render', () => {
   })
 
   it('hard-errors on a union member naming no declared event', () => {
-    expect(() => { return annotateSurface([entry('fix/marker')], ['fix/ghost']) })
+    expect(() => annotateSurface([entry('fix/marker')], ['fix/ghost']))
       .toThrow(/'fix\/ghost' name no declared log event/)
   })
 

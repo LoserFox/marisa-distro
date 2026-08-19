@@ -3,7 +3,7 @@
  * @module @deepseek-ai/dsh-command-goal
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { CommandInvocation, CommandResult } from '@deepseek-ai/dsh-commands'
 import { GoalError } from '@deepseek-ai/dsh-goal'
 import type { GoalPhase, GoalRef, GoalView } from '@deepseek-ai/dsh-goal'
@@ -35,7 +35,7 @@ function parseGoalCommand(rawInput: string): GoalCommand {
   if (input.length === 0) return { kind: 'show' }
   const control = input.toLowerCase()
   if (control === 'clear') return { kind: 'clear' }
-  if (control === 'pause') { return { kind: 'pause' } }
+  if (control === 'pause') return { kind: 'pause' }
   if (control === 'resume') return { kind: 'resume' }
   if (control === 'edit') return { kind: 'invalid-edit' }
   if (/^edit(?=\s)/iu.test(input)) return { kind: 'edit', objective: input.slice(4).trim() }
@@ -76,7 +76,7 @@ function commandHint(goal: GoalView): string {
 function renderGoal(title: string, goal: GoalView): CommandResult {
   const reason = goal.phase === 'blocked' ? goal.blockedReason : undefined
   /* v8 ignore next -- durable replay guarantees every blocked goal carries its validated reason */
-  if (goal.phase === 'blocked' && reason === undefined) { throw new TypeError('blocked goal is missing its reason') }
+  if (goal.phase === 'blocked' && reason === undefined) throw new TypeError('blocked goal is missing its reason')
   const blocker = reason === undefined ? [] : [`Blocker: ${reason.code}: ${reason.message}`]
   return {
     kind: 'success',

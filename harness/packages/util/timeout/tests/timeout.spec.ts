@@ -39,7 +39,7 @@ describe('clampTimeout', () => {
   })
 
   it('rejects a non-finite hint with the caller-provided name', () => {
-    expect(() => { return clampTimeout(Number.NaN, 100, 200, 'bash-local: request.timeoutMs') })
+    expect(() => clampTimeout(Number.NaN, 100, 200, 'bash-local: request.timeoutMs'))
       .toThrow(/bash-local: request\.timeoutMs must be a positive finite number/)
     expect(() => clampTimeout(Number.POSITIVE_INFINITY, 100, 200))
       .toThrow(/timeoutMs must be a positive finite number/)
@@ -229,6 +229,28 @@ describe('idleWatchdog', () => {
     await expect(secondNext).rejects.toBe(stableSignal.reason)
   })
 
+  it('rearms outstanding demand on an out-of-band activity pulse', async () => {
+    vi.useFakeTimers()
+    const pending = Promise.withResolvers<IteratorResult<number>>()
+    const watchdog = idleWatchdog(undefined, 100, 'LLM_STREAM_IDLE_TIMEOUT')
+    watchdog.pulse()
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(watchdog.signal.aborted).toBe(false)
+
+    const next = watchdog.next({ next: () => pending.promise })
+    await vi.advanceTimersByTimeAsync(99)
+    watchdog.pulse()
+    await vi.advanceTimersByTimeAsync(99)
+    expect(watchdog.signal.aborted).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(timeoutOf(watchdog.signal, 'LLM_STREAM_IDLE_TIMEOUT')).toMatchObject({ timeoutMs: 100 })
+    pending.reject(watchdog.signal.reason)
+    await expect(next).rejects.toBe(watchdog.signal.reason)
+
+    watchdog[Symbol.dispose]()
+    watchdog.pulse()
+  })
+
   it('keeps an earlier upstream abort distinct from its own timeout', async () => {
     vi.useFakeTimers()
     const upstream = new AbortController()
@@ -255,7 +277,7 @@ describe('idleWatchdog', () => {
   })
 
   it('rejects invalid bounds and concurrent iterator demand', async () => {
-    expect(() => { return idleWatchdog(undefined, 0, 'IDLE') }).toThrow(/positive finite/)
+    expect(() => idleWatchdog(undefined, 0, 'IDLE')).toThrow(/positive finite/)
     expect(() => idleWatchdog(undefined, Number.NaN, 'IDLE')).toThrow(/positive finite/)
     expect(() => idleWatchdog(undefined, MAX_TIMER_DELAY_MS + 1, 'IDLE'))
       .toThrow(`no greater than ${MAX_TIMER_DELAY_MS}`)

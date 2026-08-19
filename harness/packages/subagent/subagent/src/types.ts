@@ -37,9 +37,10 @@ export interface SubagentRunInfo {
   /** Unique identity shared with the paired terminal event. */
   readonly runId: SubagentRunId
   /**
-   * Provider provenance for this run or Activation epoch. The named provider
-   * may be absent when an accepted run becomes ready or a persisted Activation
-   * cold-resumes, because neither lifecycle depends on continued registration.
+   * Provider name recorded when the child was first created. The provider may
+   * be absent when an accepted one-shot run becomes ready or a persisted
+   * Activation cold-resumes, because neither lifecycle depends on continued
+   * registration.
    */
   readonly provider: string
   /** The child agent's id. */
@@ -55,7 +56,7 @@ export interface SubagentRunInfo {
 export interface SubagentRunEndInfo {
   /** Unique identity shared with the paired start event. */
   readonly runId: SubagentRunId
-  /** The same provider provenance carried by the paired start event. */
+  /** The same provider name carried by the paired start event. */
   readonly provider: string
   /** The child agent's id. */
   readonly id: SessionId
@@ -63,7 +64,11 @@ export interface SubagentRunEndInfo {
   readonly local: boolean
   /** The terminal stop reason. */
   readonly stopReason: SubagentResult['stopReason']
-  /** The child's final assistant output, absent on infrastructure rejection. */
+  /**
+   * The child's final assistant output, selected by the same rule as
+   * {@link SubagentResult.output}; absent on infrastructure rejection or when
+   * the child produced none.
+   */
   readonly lastAssistantMessage?: ContentBlock[]
 }
 
@@ -144,7 +149,7 @@ export interface SubagentStartRequest {
 }
 
 /**
- * Provider-facing one-shot request after {@link SubagentService.start} resolves
+ * Provider-facing one-shot request after {@link SubagentRuntime.start} resolves
  * the durable child descriptor.
  */
 export interface ResolvedSubagentStartRequest extends SubagentStartRequest {
@@ -212,14 +217,20 @@ export type SubagentStopReason = SubagentStopReasonMap[keyof SubagentStopReasonM
  * The terminal outcome of a subagent run, resolved by {@link SubagentRun.result}.
  */
 export interface SubagentResult {
-  /** The child's final assistant output (the last assistant message's content). */
+  /**
+   * The child's final assistant output is the content of its last non-empty
+   * assistant message. Empty-content messages, including usage-only messages,
+   * are skipped. Without a non-empty message, the output is its accumulated
+   * assistant text stream, or `[]` when the child produced neither.
+   */
   readonly output: ContentBlock[]
   /**
    * The structured result after a requested `outputSchema` was successfully
    * satisfied. Requesting a schema does not guarantee presence: a provider can
    * end with `stopReason: 'error'` when the child fails or finishes without a
-   * valid capture. Shape is validated against the request schema by the
-   * provider; `unknown` here because the seam is schema-agnostic.
+   * valid capture. The structured value is validated against the requested
+   * output schema by the provider; `unknown` here because the seam is
+   * schema-agnostic.
    */
   readonly structured?: unknown
   /** Why the run ended. A non-`completed` reason means `output` may be partial. */
@@ -266,7 +277,10 @@ export interface SubagentRun {
 /**
  * One registered transport for running child agents. Providers are trusted
  * same-process implementations; callers treat descriptors and returned values
- * as borrowed immutable data.
+ * as borrowed immutable data. The service may call one provider concurrently
+ * for distinct children. Providers isolate operation-local mutable state; a
+ * shared capacity controller may delay an operation but must not couple its
+ * settlement or cleanup to a sibling.
  */
 export interface SubagentProvider {
   /** Unique registry name (e.g. `spawn`, `fork`, `acp`). */
@@ -287,13 +301,14 @@ export interface SubagentProvider {
    * initial turn. Before fulfillment, the provider owns setup and cleans any
    * unpublished partial resources before rejecting. Ownership transfers on
    * fulfillment; subsequent turn or infrastructure failure settles through
-   * the returned run.
+   * the returned run. Distinct starts may overlap; cancellation, failure,
+   * result settlement, and disposal remain independent for each run.
    */
   start(request: ResolvedSubagentStartRequest): Promise<SubagentRun>
   /**
    * OPTIONAL (continuable-creation capability): contribute the detached
    * creation inputs that distinguish this provider's continuable children —
-   * today only whether the child session is seeded with parent history. Method
+   * only whether the child session is seeded with parent history. Method
    * presence IS the capability: the service rejects continuable starts on
    * providers without it, while a provider that has it may still serve
    * ordinary one-shot delegations.
@@ -302,6 +317,8 @@ export interface SubagentProvider {
    * continuation manager owns identity reservation, composition, Agent
    * creation, prompt delivery, cold resume, ownership, and disposal, so a
    * provider never sees the child's Agent, handle, turns, or teardown.
+   * Distinct preparations may overlap; each follows its own signal and returns
+   * data belonging only to `request.sessionId`.
    */
   prepareContinuable?(request: ContinuableCreateRequest): Promise<ContinuableCreateSpec>
 }

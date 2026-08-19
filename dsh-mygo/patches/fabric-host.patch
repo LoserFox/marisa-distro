@@ -1,0 +1,659 @@
+diff --git a/.gitignore b/.gitignore
+index 3d0fd8e..c616bea 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,6 +1,9 @@
+ CLAUDE.local.md
+ .env
+ node_modules/
++# Test fixtures that must mimic an installed package tree.
++!apps/cli/tests/fixtures/node_modules/
++!apps/cli/tests/fixtures/node_modules/**
+ lib/
+ *.tsbuildinfo
+ pnpm-debug.log
+diff --git a/apps/cli/package.json b/apps/cli/package.json
+index fdd4740..038079b 100644
+--- a/apps/cli/package.json
++++ b/apps/cli/package.json
+@@ -80,7 +80,9 @@
+     "commander": "^15.0.0",
+     "@deepseek-ai/cordis": "workspace:^",
+     "js-yaml": "^4.2.0",
+-    "node-addon-require-builtin": "^0.1.4"
++    "node-addon-require-builtin": "^0.1.4",
++    "cordis-fabric": "github:dsh-external/fabric#main&path:/packages/cordis-fabric",
++    "cordis-fabric-dsh": "github:dsh-external/fabric#main&path:/packages/cordis-fabric-dsh"
+   },
+   "devDependencies": {
+     "@deepseek-ai/dsh-agent": "workspace:^",
+diff --git a/apps/cli/src/profile-boot.ts b/apps/cli/src/profile-boot.ts
+index 19c4abb..720345e 100644
+--- a/apps/cli/src/profile-boot.ts
++++ b/apps/cli/src/profile-boot.ts
+@@ -37,6 +37,8 @@ const SHIPPED_PRESET_ROOT = fileURLToPath(new URL('../config/agent-presets/', im
+ import { DSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
+ import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
+ import { createProcessShutdown, type ProcessShutdown } from './process-shutdown.ts'
++import { installFabricBootstrap, checkFabricRequiredPatches } from 'cordis-fabric-dsh'
++import type { FabricProfileRows } from 'cordis-fabric-dsh'
+ 
+ const NAME = 'dsh'
+ 
+@@ -102,6 +104,9 @@ export function prepareProfile(name: string, userLayer = true): Profile {
+   return profile
+ }
+ 
++/** Read-only row index of a profile composition before launcher flag patches. */
++export type ProfileRows = FabricProfileRows
++
+ /** One profile's patch layers (application order) and the row index of its pre-flag composition. */
+ interface ComposedProfile {
+   profile: Profile
+@@ -245,7 +250,7 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
+   ])
+   // Cloned for the same insert-aliasing reason as composeLive: the boot
+   // application must not mutate the objects later reloads recompose from.
+-  const ctx = await boot(NAME, rootConfig, structuredClone(allPatches(composed)), (hostCtx) => {
++  const ctx = await boot(NAME, rootConfig, structuredClone(allPatches(composed)), async (hostCtx) => {
+     app.current = hostCtx
+     // Before any config-tree entry mounts, so plugins resolve all launch-time
+     // environment values from the same immutable provenance snapshot.
+@@ -256,8 +261,17 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
+       args: options.args,
+       exit: code => void shutdown.shutdown(code),
+     })
++    // Load-time transformation hooks must precede any target module import;
++    // the prepare phase runs after Loader installation and before the
++    // config-tree entries mount.
++    await installFabricBootstrap(composed.rows, (message) => { hostCtx.logger.warn(message) })
+   })
+   app.current = ctx
++  // The config-tree entries mounted with boot()'s completion, so every
++  // target module the Fabric hooks rewrite has been imported: a required
++  // patch that bound nothing is a misconfiguration and fails the launch
++  // loud, naming the patch id, instead of shipping an inert transform.
++  await checkFabricRequiredPatches(composed.rows)
+   // A surface can dispose the whole tree while boot or this post-boot watcher
+   // setup is still in flight — a signal, or a fast one-shot's appExit. Loader
+   // presence and fiber state own liveness; the initial check skips a tree
+diff --git a/apps/cli/tests/fabric-bootstrap-runner.mjs b/apps/cli/tests/fabric-bootstrap-runner.mjs
+new file mode 100644
+index 0000000..2adf26d
+--- /dev/null
++++ b/apps/cli/tests/fabric-bootstrap-runner.mjs
+@@ -0,0 +1,39 @@
++/**
++ * Child-process harness for the CLI Fabric bootstrap spec.
++ *
++ * The launcher's `installFabricBootstrap` imports `cordis-fabric`
++ * through the package root, which resolves to the built `lib/` half — the
++ * same resolution a source-mode or built `dsh` launch performs. The runtime
++ * registry must come from that same half, so this runner imports the package
++ * root too: mixing `src` and `lib` would split the bridge listeners across
++ * two module instances and no handler would ever see a transformed call.
++ */
++
++import { existsSync } from 'node:fs'
++import { createRequire } from 'node:module'
++import { fileURLToPath } from 'node:url'
++import { runtime } from 'cordis-fabric'
++import { installFabricBootstrap } from 'cordis-fabric-dsh/profile-bootstrap'
++
++const require = createRequire(import.meta.url)
++const fixturePath = fileURLToPath(new URL('./fixtures/node_modules/fabric-bootstrap-fixture/index.cjs', import.meta.url))
++
++const target = {
++  module: 'fabric-bootstrap-fixture',
++  versionRange: '^1.0.0',
++  filePath: 'index.cjs',
++  functionQuery: { methodName: 'add', kind: 'Sync' },
++}
++
++const rows = new Map([
++  ['cordis-fabric', { config: { fabric: { patches: [{ id: 'boot/add', target, operation: 'before' }] } } }],
++])
++
++await installFabricBootstrap(rows)
++const mod = require(fixturePath)
++runtime.register({ id: 'boot/add', target, operation: 'before', priority: 0, enabled: false })
++runtime.enable('boot/add', (call) => { call.arguments[0] = call.arguments[0] * 10 })
++const actual = mod.add(2, 3)
++const ok = actual === 23
++console.log(`${ok ? 'PASS' : 'FAIL'} bootstrap add(2,3): ${JSON.stringify(actual)}`)
++if (!ok) process.exitCode = 1
+diff --git a/apps/cli/tests/fabric-bootstrap.spec.ts b/apps/cli/tests/fabric-bootstrap.spec.ts
+new file mode 100644
+index 0000000..9a21c7c
+--- /dev/null
++++ b/apps/cli/tests/fabric-bootstrap.spec.ts
+@@ -0,0 +1,46 @@
++import { spawnSync } from 'node:child_process'
++import { existsSync } from 'node:fs'
++import { join } from 'node:path'
++import { fileURLToPath } from 'node:url'
++import { describe, expect, it } from 'vitest'
++import { installFabricBootstrap } from 'cordis-fabric-dsh/profile-bootstrap'
++
++const runner = fileURLToPath(new URL('./fabric-bootstrap-runner.mjs', import.meta.url))
++// Vitest runs from the repository root; the bootstrap resolves the package
++// root to its built lib half, so this suite requires `pnpm run build`.
++const fabricLib = join(process.cwd(), 'packages/extensions/cordis-fabric/lib/index.js')
++describe.skipIf(!existsSync(fabricLib))('cordis-fabric host bootstrap', () => {
++  it('installs transformation hooks from the composed cordis-fabric row', () => {
++    const result = spawnSync(process.execPath, ['--import', 'tsx/esm', runner], {
++      cwd: fileURLToPath(new URL('../..', import.meta.url)),
++      encoding: 'utf8',
++      env: { ...process.env },
++    })
++    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
++    expect(result.stdout).toContain('PASS bootstrap add(2,3): 23')
++  })
++
++  it('no-ops when the composed rows carry no cordis-fabric row or patches', async () => {
++    await expect(installFabricBootstrap(new Map())).resolves.toBeUndefined()
++    await expect(installFabricBootstrap(new Map([['cordis-fabric', { config: {} }]]))).resolves.toBeUndefined()
++  })
++
++  it('reads config.fabric.patches without a deprecation warning', async () => {
++    const warnings: string[] = []
++    await installFabricBootstrap(
++      new Map([['cordis-fabric', { config: { fabric: { patches: [] } } }]]),
++      (message) => { warnings.push(message) },
++    )
++    expect(warnings).toEqual([])
++  })
++
++  it('honors the deprecated config.patches key with a warning', async () => {
++    const warnings: string[] = []
++    await installFabricBootstrap(
++      new Map([['cordis-fabric', { config: { patches: [] } }]]),
++      (message) => { warnings.push(message) },
++    )
++    expect(warnings).toHaveLength(1)
++    expect(warnings[0]).toContain('config.patches is deprecated')
++  })
++})
+diff --git a/apps/cli/tests/fixtures/node_modules/fabric-bootstrap-fixture/index.cjs b/apps/cli/tests/fixtures/node_modules/fabric-bootstrap-fixture/index.cjs
+new file mode 100644
+index 0000000..03b9692
+--- /dev/null
++++ b/apps/cli/tests/fixtures/node_modules/fabric-bootstrap-fixture/index.cjs
+@@ -0,0 +1,7 @@
++'use strict'
++
++module.exports = {
++  add(a, b) {
++    return a + b
++  },
++}
+diff --git a/apps/cli/tests/fixtures/node_modules/fabric-bootstrap-fixture/package.json b/apps/cli/tests/fixtures/node_modules/fabric-bootstrap-fixture/package.json
+new file mode 100644
+index 0000000..2421fc0
+--- /dev/null
++++ b/apps/cli/tests/fixtures/node_modules/fabric-bootstrap-fixture/package.json
+@@ -0,0 +1,7 @@
++{
++  "name": "fabric-bootstrap-fixture",
++  "version": "1.0.0",
++  "private": true,
++  "type": "commonjs",
++  "main": "index.cjs"
++}
+diff --git a/knip.json b/knip.json
+index 3017292..aafac74 100644
+--- a/knip.json
++++ b/knip.json
+@@ -737,7 +737,8 @@
+         "tests/**/*.ts"
+       ],
+       "ignoreDependencies": [
+-        "@deepseek-ai/.+"
++        "@deepseek-ai/.+",
++        "fabric-bootstrap-fixture"
+       ]
+     },
+     "packages/client/modules": {
+diff --git a/packages/client/tsdown.client.ts b/packages/client/tsdown.client.ts
+index 13df9f3..8acdc30 100644
+--- a/packages/client/tsdown.client.ts
++++ b/packages/client/tsdown.client.ts
+@@ -100,7 +100,7 @@ export function clientBundle(
+     const face = buildFace(env?.DSH_BUILD_FACE)
+     const client = clientConfig(id, face === undefined
+       ? 'src/client/index.ts'
+-      : 'lib/types/client/index.js')
++      : 'lib/types/client/index.js', options)
+     const node = [lib, ...(options.companions ?? [])]
+     if (face === 'host') return options.hostPhase === true ? node : [SKIP_WORKSPACE_BUILD]
+     if (face === 'client') return options.hostPhase === true ? [client] : [...node, client]
+@@ -137,6 +137,8 @@ interface ClientBundleOptions {
+   readonly companions?: readonly UserConfig[]
+   /** Overrides for the package's primary Node-side library config. */
+   readonly lib?: UserConfig
++  /** Optional source transform applied before browser bundling. */
++  readonly transform?: (code: string, id: string, addWatchFile?: (file: string) => void) => { code: string; map?: string } | null
+ }
+ 
+ type BuildFace = 'host' | 'client' | undefined
+@@ -167,7 +169,7 @@ function clientLibraryConfig(
+   }
+ }
+ 
+-function clientConfig(id: string, entry: string): UserConfig {
++function clientConfig(id: string, entry: string, options: ClientBundleOptions = {}): UserConfig {
+   return {
+     name: `${id}/client`,
+     entry: { client: entry },
+@@ -258,7 +260,19 @@ function clientConfig(id: string, entry: string): UserConfig {
+           `export default ${JSON.stringify(classMap)};`,
+         ].join('\n')
+       },
+-    }],
++    }, ...(options.transform
++      ? [{
++        // Opt-in source transform (e.g. the Fabric browser transform):
++        // rewrites matching modules before bundling and forwards watch files.
++        name: 'dsh-client-source-transform',
++        transform: {
++          filter: { id: /\.(?:[cm]?js|mjs|ts|tsx)$/ },
++          handler(this: { addWatchFile(id: string): void }, code: string, moduleId: string) {
++            return options.transform!(code, moduleId, file => this.addWatchFile(file)) ?? null
++          },
++        },
++      }]
++      : [])],
+     outputOptions: {
+       entryFileNames: 'client.js',
+       // The map is served from /plugins/<scoped-package>/client.js.map. The
+diff --git a/packages/extensions/tool-cordis/src/api-catalog.ts b/packages/extensions/tool-cordis/src/api-catalog.ts
+index 5a81280..3f5a010 100644
+--- a/packages/extensions/tool-cordis/src/api-catalog.ts
++++ b/packages/extensions/tool-cordis/src/api-catalog.ts
+@@ -562,6 +562,116 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
+       },
+     ],
+   },
++  {
++    key: 'fabric',
++    summary: 'The Fabric registry service.',
++    methods: [
++      {
++        signature: 'register(patch: FabricPatch): PatchId',
++        jsDoc: '/**\n * Register a patch and enable its handler for the current fiber.\n *\n * Every registration is an effect on the calling fiber: disposing the\n * fiber disables and removes the patch, so transformed code falls back to\n * the original body. The disposer only removes the entry while this fiber\n * still owns it — a same-owner re-registration (an HMR generation taking\n * its plugin\'s patch back) transfers fiber ownership, so the previous\n * generation\'s cleanup becomes a no-op instead of unregistering the newer\n * registration. Registering an id already owned by a different plugin\n * fails loud: a patch id is exclusive to one owner.\n * @param patch - validated patch descriptor.\n * @returns the registered patch id.\n * @throws when the id is already registered by a different plugin owner.\n */',
++      },
++      {
++        signature: 'list(): FabricPatchInfo[]',
++        jsDoc: '/**\n * Ordered diagnostic snapshot of all registered patches.\n * @returns the patch infos sorted by priority then id.\n */',
++      },
++      {
++        signature: 'disable(id: string): void',
++        jsDoc: '/**\n * Disable a patch\'s handler; transformed code delegates to the original\n * body until the patch is enabled again.\n * @param id - the patch id.\n */',
++      },
++      {
++        signature: 'enable(id: string, handler: FabricHandler): void',
++        jsDoc: '/**\n * Enable a previously disabled patch with a fresh handler binding.\n * @param id - the patch id.\n * @param handler - the trusted runtime handler.\n */',
++      },
++      {
++        signature: 'remove(id: string): void',
++        jsDoc: '/**\n * Remove a patch entirely; transformed code delegates to the original body\n * until the patch is registered again. The registering fiber\'s effect\n * still owns the entry, so a removal here cannot be undone by a later\n * fiber disposal (the disposer no-ops once the entry is gone).\n * @param id - the patch id.\n */',
++      },
++      {
++        signature: 'owns(id: string, fiber: unknown): boolean',
++        jsDoc: '/**\n * Whether the entry for a patch id is still owned by the given fiber —\n * the ownership check a cooperative disposer (e.g. the compat facade\'s\n * observer) runs before disabling, so a stale generation\'s cleanup cannot\n * disable a newer generation\'s registration that took the entry over.\n * @param id - the patch id.\n * @param fiber - the fiber token the registration was made on.\n * @returns true while the entry exists and is owned by that fiber.\n */',
++      },
++      {
++        signature: 'bindings(id?: PatchId): readonly FabricBinding[]',
++        jsDoc: '/**\n * Snapshot of load-time bindings: the files the transformation hooks\n * actually rewrote for one patch — the ground truth the `required` check\n * and this package\'s diagnostics are built on.\n * @param id - the patch id; when omitted, every recorded binding across\n * patches, flattened in patch-id order.\n * @returns the recorded binding records.\n */',
++      },
++    ],
++  },
++  {
++    key: 'fabricAgent',
++    summary: 'Cooperative Mod-facing Agent lifecycle API.',
++    methods: [
++      {
++        signature: 'onCreated(listener: (agent: Agent) => void): () => boolean',
++        jsDoc: '/**\n * Observe a live agent being created.\n * @param listener - called with the created agent.\n * @returns the exact `ctx.on()` disposer removing this listener.\n */',
++      },
++      {
++        signature: 'onDisposed(listener: (agent: Agent) => void): () => boolean',
++        jsDoc: '/**\n * Observe a live agent being disposed.\n * @param listener - called with the disposed agent.\n * @returns the exact `ctx.on()` disposer removing this listener.\n */',
++      },
++      {
++        signature: 'onStatus(listener: (agent: Agent, status: AgentStatus) => void): () => boolean',
++        jsDoc: '/**\n * Observe an agent\'s idle/running status transitions.\n * @param listener - called with the agent and its new status.\n * @returns the exact `ctx.on()` disposer removing this listener.\n */',
++      },
++      {
++        signature: 'inject(agent: Agent, message: UserMessage): void',
++        jsDoc: '/**\n * Inject a logged, model-visible user message into one agent\'s context.\n *\n * The message goes through `agent.inject()`, the Agent\'s own durable\n * injection path: anything this API contributes to a model request is\n * reconstructable from the session log. No provider request is assembled\n * here.\n * @param agent - the live agent to inject into.\n * @param message - the sourced user message to append.\n */',
++      },
++    ],
++  },
++  {
++    key: 'fabricCommands',
++    summary: 'Cooperative Mod-facing command registry API.',
++    methods: [
++      {
++        signature: 'register(definition: CommandDefinition): () => void',
++        jsDoc: '/**\n * Register one human command through the authoritative registry.\n * @param definition - discovery metadata and direct UI handler.\n * @returns the exact effect disposer that unregisters this definition.\n */',
++      },
++      {
++        signature: 'list(agent: Agent): readonly CommandDescriptor[]',
++        jsDoc: '/**\n * List the effective immutable command descriptors for one agent.\n * @param agent - exact receiving agent and scoped-layer key.\n * @returns name-sorted descriptors after scoped shadowing.\n */',
++      },
++    ],
++  },
++  {
++    key: 'fabricPrompt',
++    summary: 'Cooperative Mod-facing system-prompt registry API.',
++    methods: [
++      {
++        signature: 'section(section: PromptSection): () => void',
++        jsDoc: '/**\n * Register an ordered system section.\n * @param section - the section to register.\n * @returns the exact effect disposer that unregisters it.\n */',
++      },
++      {
++        signature: 'context(context: PromptContext): () => void',
++        jsDoc: '/**\n * Register an ordered, cache-safe dynamic context contribution.\n * @param context - the context contribution to register.\n * @returns the exact effect disposer that unregisters it.\n */',
++      },
++      {
++        signature: 'tools(provider: (context: AssembleContext) => ToolProviderResult): () => void',
++        jsDoc: '/**\n * Register a tool-schema provider.\n * @param provider - evaluated for each assembly with its context.\n * @returns the exact effect disposer that unregisters it.\n */',
++      },
++      {
++        signature: 'variable(name: string, provider: (context: AssembleContext) => string | undefined): () => void',
++        jsDoc: '/**\n * Register a prompt variable.\n * @param name - the `[a-z][a-z0-9_]*` reference name.\n * @param provider - evaluated for each assembly; returning `undefined` makes a referencing section fail.\n * @returns the exact effect disposer that unregisters it.\n */',
++      },
++    ],
++  },
++  {
++    key: 'fabricTools',
++    summary: 'Cooperative Mod-facing tool registry API.',
++    methods: [
++      {
++        signature: 'register(definition: ToolDefinition): () => void',
++        jsDoc: '/**\n * Register one tool through the authoritative registry.\n * @param definition - tool schema, execution, and optional finalization/presentation callbacks.\n * @returns the exact disposer that unregisters the tool.\n */',
++      },
++      {
++        signature: 'onPreExecute(listener: (exec: ToolExecution, next: () => Promise<PreToolDecision>) => Promise<PreToolDecision>): () => boolean',
++        jsDoc: '/**\n * Observe or gate dispatch through `tools/pre-execute`.\n * @param listener - the waterfall listener; call `next()` to delegate, return without it to veto.\n * @returns the exact `ctx.on()` disposer removing this listener.\n */',
++      },
++      {
++        signature: 'onPostExecute( listener: ( exec: ToolExecution, result: Readonly<ToolExecutionResult>, next: () => Promise<PostToolDecision>, ) => Promise<PostToolDecision>, ): () => boolean',
++        jsDoc: '/**\n * Observe or shape a normalized dispatch outcome through `tools/post-execute`.\n * @param listener - the waterfall listener; call `next()` to accept the result unchanged.\n * @returns the exact `ctx.on()` disposer removing this listener.\n */',
++      },
++    ],
++  },
+   {
+     key: 'fs',
+     summary: 'Abstract filesystem provider.',
+@@ -3029,6 +3139,54 @@ export const TYPE_API: readonly TypeApiEntry[] = [
+     name: 'EpochHeader',
+     declaration: 'export interface EpochHeader {\n    config: LlmCallConfig;\n    adapterDefaults?: LlmCallConfigAdapterDefaults;\n    system?: string;\n    tools?: ToolSchema[];\n}',
+   },
++  {
++    name: 'FabricAfterHandler',
++    declaration: 'export type FabricAfterHandler = (call: FabricCall) => unknown;',
++  },
++  {
++    name: 'FabricAroundHandler',
++    declaration: 'export type FabricAroundHandler = (call: FabricCall, invoke: FabricInvoke) => unknown;',
++  },
++  {
++    name: 'FabricBeforeHandler',
++    declaration: 'export type FabricBeforeHandler = (call: FabricCall) => void;',
++  },
++  {
++    name: 'FabricBinding',
++    declaration: 'export interface FabricBinding {\n    module: string;\n    file: string;\n    nodes: number;\n}',
++  },
++  {
++    name: 'FabricCall',
++    declaration: 'export interface FabricCall {\n    arguments: unknown[];\n    self: unknown;\n    moduleVersion?: string;\n    result?: unknown;\n}',
++  },
++  {
++    name: 'FabricHandler',
++    declaration: 'export type FabricHandler = FabricBeforeHandler | FabricAfterHandler | FabricAroundHandler | FabricReplaceHandler;',
++  },
++  {
++    name: 'FabricInvoke',
++    declaration: 'export type FabricInvoke = () => unknown;',
++  },
++  {
++    name: 'FabricOperation',
++    declaration: 'export type FabricOperation = \'before\' | \'after\' | \'around\' | \'replace\';',
++  },
++  {
++    name: 'FabricPatch',
++    declaration: 'export interface FabricPatch {\n    id: PatchId;\n    target: FabricTarget;\n    operation: FabricOperation;\n    required?: boolean;\n    priority?: number;\n    handler: FabricHandler;\n}',
++  },
++  {
++    name: 'FabricPatchInfo',
++    declaration: 'export interface FabricPatchInfo {\n    id: PatchId;\n    target: FabricTarget;\n    operation: FabricOperation;\n    priority: number;\n    enabled: boolean;\n    bindings?: readonly FabricBinding[];\n}',
++  },
++  {
++    name: 'FabricReplaceHandler',
++    declaration: 'export type FabricReplaceHandler = (call: FabricCall, invoke: FabricInvoke) => unknown;',
++  },
++  {
++    name: 'FabricTarget',
++    declaration: 'export interface FabricTarget {\n    module: string;\n    versionRange: string;\n    filePath?: string | RegExp;\n    filePaths?: string[];\n    functionQuery?: FunctionQuery;\n    astQuery?: string;\n    index?: number | null;\n}',
++  },
+   {
+     name: 'FileDiff',
+     declaration: 'export interface FileDiff {\n    path: string;\n    oldText: string | null;\n    newText: string;\n}',
+@@ -3473,6 +3631,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
+     name: 'OneShotSubagentDescriptorData',
+     declaration: 'export interface OneShotSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'one-shot\';\n    readonly label?: string;\n}',
+   },
++  {
++    name: 'PatchId',
++    declaration: 'export type PatchId = string;',
++  },
+   {
+     name: 'PermissionSelect',
+     declaration: 'export interface PermissionSelect {\n    options: PresetOption[];\n    currentValue: string;\n}',
+diff --git a/pnpm-workspace.yaml b/pnpm-workspace.yaml
+index e8d8ee5..21ae2d7 100644
+--- a/pnpm-workspace.yaml
++++ b/pnpm-workspace.yaml
+@@ -37,6 +37,12 @@ peerDependencyRules:
+ # is a hard install error). Every such package MUST be listed; we deny by
+ # default and only allow scripts we need. esbuild (native binary) and lefthook
+ # (git hooks) genuinely need theirs.
++# The Fabric trio resolves from git subdirectory specs and builds itself
++# through its prepare scripts; pnpm 11 allowBuilds only accepts exact
++# git+url#commit keys (the commit changes on every push), so the git
++# installs are allowed wholesale.
++dangerouslyAllowAllBuilds: true
++
+ allowBuilds:
+   esbuild: true
+   lefthook: true
+diff --git a/scripts/client-bundle-source-transform.spec.ts b/scripts/client-bundle-source-transform.spec.ts
+new file mode 100644
+index 0000000..8a4f1c1
+--- /dev/null
++++ b/scripts/client-bundle-source-transform.spec.ts
+@@ -0,0 +1,66 @@
++/**
++ * The client bundle preset's opt-in source transform receives the plugin's
++ * addWatchFile as its third argument, so file-backed transforms (the Fabric
++ * watched patches file) join the Rolldown watch graph and a backing-file
++ * change invalidates every module's transform result.
++ */
++import { describe, expect, it } from 'vitest'
++import { clientBundle } from '../packages/client/tsdown.client.ts'
++
++interface TransformPlugin {
++  name: string
++  transform?: {
++    filter: { id: RegExp }
++    handler(this: { addWatchFile(id: string): void }, code: string, id: string): unknown
++  }
++}
++
++type SourceTransform = (code: string, id: string, addWatchFile?: (file: string) => void) => { code: string } | null
++
++function transformPlugin(transform: SourceTransform): TransformPlugin {
++  const resolveConfigs = clientBundle('@deepseek-ai/dsh-client-test', ['lib/types/index.js', 'lib/types/invariant.js'], { transform })
++  const configs = resolveConfigs({ env: {} })
++  const clientConfig = configs.at(-1) as { plugins: TransformPlugin[] }
++  const plugin = clientConfig.plugins.find(candidate => candidate.name === 'dsh-client-source-transform')
++  if (plugin === undefined) throw new Error('source transform plugin missing from client config')
++  return plugin
++}
++
++describe('client bundle source transform', () => {
++  it('forwards code, id, and a working addWatchFile to the transform', () => {
++    const seen: Array<{ code: string; id: string }> = []
++    const watched: string[] = []
++    const plugin = transformPlugin((code, id, addWatchFile) => {
++      seen.push({ code, id })
++      addWatchFile?.('/repo/fabric.patches.json')
++      return { code: `${code}\n// transformed` }
++    })
++    const hook = plugin.transform
++    if (hook === undefined) throw new Error('transform hook missing')
++
++    const output = hook.handler.call({ addWatchFile: id => watched.push(id) }, 'export const x = 1', '/repo/src/index.ts')
++
++    expect(seen).toEqual([{ code: 'export const x = 1', id: '/repo/src/index.ts' }])
++    expect(watched).toEqual(['/repo/fabric.patches.json'])
++    expect(output).toEqual({ code: 'export const x = 1\n// transformed' })
++  })
++
++  it('maps a null transform result to null (module untouched)', () => {
++    const plugin = transformPlugin(() => null)
++    const hook = plugin.transform
++    if (hook === undefined) throw new Error('transform hook missing')
++    expect(hook.handler.call({ addWatchFile: () => {} }, 'export const x = 1', '/repo/src/index.ts')).toBeNull()
++  })
++
++  it('keeps the hook off non-source ids', () => {
++    const plugin = transformPlugin(() => null)
++    const filter = plugin.transform?.filter.id
++    if (filter === undefined) throw new Error('transform filter missing')
++    for (const id of ['/repo/a.ts', '/repo/a.tsx', '/repo/a.js', '/repo/a.mjs', '/repo/a.cjs']) {
++      expect(filter.test(id), id).toBe(true)
++    }
++    for (const id of ['/repo/a.css', '/repo/a.json', '/repo/a.svg']) {
++      expect(filter.test(id), id).toBe(false)
++    }
++  })
++})
+diff --git a/scripts/dev-web-fabric.spec.ts b/scripts/dev-web-fabric.spec.ts
+new file mode 100644
+index 0000000..8a97ab0
+--- /dev/null
++++ b/scripts/dev-web-fabric.spec.ts
+@@ -0,0 +1,81 @@
++/**
++ * End-to-end proof of the Fabric browser build trigger: a client bundle
++ * whose tsdown config wires `clientBundle(..., { transform: createWatchedBrowserTransform(...) })`
++ * rebuilds under watch mode when the patches file (not any source module)
++ * changes, because the transform registers the file in the watch graph
++ * through the preset-forwarded addWatchFile. The rewritten bundle is what
++ * the client-hmr chain (stat poll → rebuilt frame → fiber swap) delivers
++ * to the browser.
++ *
++ * The fixture's tsdown.config.ts mirrors a real client package's config and
++ * imports the preset and the Fabric factory by absolute path, exactly as
++ * `scripts/dev-web.ts` drives package configs in workspace mode.
++ */
++import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
++import { tmpdir } from 'node:os'
++import { join } from 'node:path'
++import { expect, it } from 'vitest'
++import type { TsdownBundle } from 'tsdown'
++import { watchClientPlugins } from './dev-web.ts'
++
++it('rebuilds a client bundle when the watched Fabric patches file changes', async () => {
++  const root = await mkdtemp(join(tmpdir(), 'dsh-dev-web-fabric-'))
++  let bundles: TsdownBundle[] = []
++  try {
++    await symlink(join(import.meta.dirname, '..', 'node_modules'), join(root, 'node_modules'), 'dir')
++    await writeFile(join(root, 'package.json'), JSON.stringify({ name: '@dsh-test/dev-web-fabric', private: true, type: 'module' }))
++    await mkdir(join(root, 'src/client'), { recursive: true })
++    await writeFile(join(root, 'src/client/index.ts'), 'export function add(a: number, b: number): number { return a + b }\n')
++    await mkdir(join(root, 'lib/types/client'), { recursive: true })
++    await writeFile(join(root, 'lib/types/client/index.js'), 'export function add(a, b) { return a + b }\n')
++    const patchesPath = join(root, 'fabric.patches.json')
++    const patch = {
++      id: 'web/before-add',
++      target: {
++        module: '@dsh-test/dev-web-fabric',
++        versionRange: '^1.0.0',
++        filePath: 'client/index.js',
++        functionQuery: { functionName: 'add', kind: 'Sync' },
++      },
++      operation: 'before',
++    }
++    await writeFile(patchesPath, JSON.stringify([patch]))
++
++    const repoRoot = join(import.meta.dirname, '..')
++    await writeFile(join(root, 'tsdown.config.ts'), `
++import { clientBundle } from ${JSON.stringify(join(repoRoot, 'packages/client/tsdown.client.ts'))}
++import { createWatchedBrowserTransform, repoSourceResolver } from ${JSON.stringify(join(repoRoot, 'packages/extensions/cordis-fabric/src/browser-transform.ts'))}
++
++const fabric = createWatchedBrowserTransform(
++  ${JSON.stringify(patchesPath)},
++  repoSourceResolver('@dsh-test/dev-web-fabric', ${JSON.stringify(join(root, 'lib/types'))}, '1.0.0'),
++)
++
++export default clientBundle('@dsh-test/dev-web-fabric', ['lib/types/index.js'], { transform: fabric, hostPhase: true })({ env: { DSH_BUILD_FACE: 'client' } })[0]
++`)
++
++    bundles = await watchClientPlugins(root, ['.'], 50)
++
++    const bundlePath = join(root, 'lib/client.js')
++    await expect.poll(async () => {
++      try {
++        return (await readFile(bundlePath, 'utf8')).includes('__dshFabricBridge')
++      } catch {
++        return false
++      }
++    }, { timeout: 10_000 }).toBe(true)
++    expect(await readFile(bundlePath, 'utf8')).toContain('web/before-add')
++
++    // Let the watcher settle, then empty the patch set: the rebuild must
++    // re-run the transform (watch-file invalidation), so the bridge
++    // machinery disappears from the bundle without any source change.
++    await new Promise(resolve => setTimeout(resolve, 1_000))
++    await writeFile(patchesPath, '[]')
++    await expect.poll(async () => (await readFile(bundlePath, 'utf8')).includes('__dshFabricBridge'), {
++      timeout: 10_000,
++    }).toBe(false)
++  } finally {
++    for (const bundle of bundles) await bundle[Symbol.asyncDispose]()
++    await rm(root, { recursive: true, force: true })
++  }
++}, 30_000)
+diff --git a/tsconfig.client.json b/tsconfig.client.json
+index e599f76..d61dd4a 100644
+--- a/tsconfig.client.json
++++ b/tsconfig.client.json
+@@ -27,7 +27,8 @@
+     "packages/extensions/ui-cordis/src/css-modules.d.ts",
+     "packages/client/tsdown.client.ts",
+     "scripts/client-bundle-css.spec.ts",
+-    "scripts/client-bundle-purity.spec.ts"
++    "scripts/client-bundle-purity.spec.ts",
++    "scripts/client-bundle-source-transform.spec.ts"
+   ],
+   // A `*.host.spec.ts` covers the Host half of a split client package and
+   // belongs to the host aggregate, which excludes this program's `*.client.*`
+diff --git a/tsconfig.host.json b/tsconfig.host.json
+index 4590362..7913303 100644
+--- a/tsconfig.host.json
++++ b/tsconfig.host.json
+@@ -104,7 +104,8 @@
+     "packages/client/tsdown.client.ts",
+     "scripts/client-bundle-css.spec.ts",
+     "packages/typert/generator/tests/fixtures/**",
+-    "scripts/client-bundle-purity.spec.ts"
++    "scripts/client-bundle-purity.spec.ts",
++    "scripts/client-bundle-source-transform.spec.ts"
+   ],
+   "references": [
+     { "path": "./vendor/cosmokit" },

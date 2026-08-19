@@ -1,4 +1,4 @@
-# Agent Note: 消费方独立构建
+# Agent Note: CI 消费方独立构建
 
 Status: implemented
 

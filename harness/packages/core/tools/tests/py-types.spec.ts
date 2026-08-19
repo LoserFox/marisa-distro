@@ -166,6 +166,15 @@ describe('renderToolsSdkPy', () => {
     expect(text).toContain('tools: Tools')
   })
 
+  it('names both required call arguments, not just the program', () => {
+    // The schema requires `code` AND `description`; instructions that mention
+    // only the program let a model emit `{code}` alone and fail INVALID_ARGS.
+    const text = renderToolsSdkPy([bash])
+    expect(text).toContain('`code`')
+    expect(text).toContain('`description`')
+    expect(text).toContain('two required arguments')
+  })
+
   it('renders required as plain fields and optional as NotRequired, with per-field description comments', () => {
     const tool: ToolSdkSchema = {
       name: 'search',

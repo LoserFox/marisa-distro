@@ -86,7 +86,7 @@ const targetSessionParameter = {
 } as const
 
 function buildSessionFilters(args: SessionSearchArgs): SessionResultFilter[] {
-  const filters: Array<SessionResultFilter> = []
+  const filters: SessionResultFilter[] = []
   if (args.session_ids !== undefined) {
     assertNonEmptyArray('session_ids', args.session_ids)
     filters.push({ kind: 'id', values: args.session_ids.map(SessionId) })

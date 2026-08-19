@@ -1,6 +1,6 @@
 /** Package-owned LLM stream-protocol invariants. @module @deepseek-ai/dsh-llm/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { ContentBlockType, StreamChunk } from './types.ts'
 
@@ -13,7 +13,9 @@ export const inject = ['invariants']
 
 /** Require one chunk index to be a non-negative safe integer. */
 function validateIndex(index: number, fail: InvariantFailure): void {
-  if (!Number.isSafeInteger(index) || index < 0) fail(`LLM stream block index must be a non-negative safe integer, got ${index}`)
+  if (!Number.isSafeInteger(index) || index < 0) {
+    fail(`LLM stream block index must be a non-negative safe integer, got ${index}`)
+  }
 }
 
 /** Require a delta to address an open block of its matching type. */

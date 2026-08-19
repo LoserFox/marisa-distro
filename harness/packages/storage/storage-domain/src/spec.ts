@@ -65,7 +65,7 @@ export function domainTable<K extends string, V>(schema: ZodType<V>): DomainTabl
 }
 
 /**
- * Identity helper that pins a spec's literal types and validates its shape.
+ * Identity helper that pins a spec's literal types and validates its fields.
  * Misconfiguration fails loud at the owning package's module load, before any
  * medium is touched: a domain or table name outside `UNIT_NAME_RE`, a version
  * that is not a non-negative integer, or a global schema that accepts `null`
@@ -84,7 +84,9 @@ export function defineDomain<S extends DomainSpec>(spec: S): S {
     throw new Error(`domain '${spec.name}' version must be a non-negative integer, got ${spec.version}`)
   }
   for (const table of Object.keys(spec.tables)) {
-    if (!UNIT_NAME_RE.test(table)) throw new Error(`domain '${spec.name}' table name '${table}' must match ${UNIT_NAME_RE}`)
+    if (!UNIT_NAME_RE.test(table)) {
+      throw new Error(`domain '${spec.name}' table name '${table}' must match ${UNIT_NAME_RE}`)
+    }
   }
   if (spec.global !== undefined && spec.global.schema.safeParse(null).success) {
     throw new Error(

@@ -1,19 +1,21 @@
 /**
- * Client projection of generated TypeRT Remote descriptors. Contributions
+ * Client projection of generated Typert Remote descriptors. Contributions
  * install traced `remote.<namespace>` services; no JavaScript Proxy
  * participates in method lookup, invocation, or type exposure.
  */
 
-import { Service } from 'cordis'
-import type { Context } from 'cordis'
-import type { ConnectionHandle, RpcError } from '@deepseek-ai/dsh-client-connection/client'
+import { Service } from '@deepseek-ai/cordis'
+import type { Context, Events } from '@deepseek-ai/cordis'
+import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
 import type {
   InvocationDescriptor,
-  TypeRTClientRemote,
-  TypeRTCodec,
-  TypeRTDisposer,
-  TypeRTRemoteContribution,
-} from '@deepseek-ai/dsh-type-meta'
+  TypertClientRemote,
+  RemoteResult,
+  TypertCodec,
+  TypertDisposer,
+  TypertRemoteContribution,
+  TypertRemoteEvent,
+} from '@deepseek-ai/dsh-typert-protocol'
 
 interface MountToken {
   active: boolean
@@ -23,7 +25,7 @@ interface MountToken {
 interface ScopedProjection {
   readonly context: string
   readonly wire: string
-  readonly codec: TypeRTCodec
+  readonly codec: TypertCodec
   readonly parameterIndex?: number
 }
 
@@ -47,20 +49,20 @@ interface BoundContextIdentity {
 
 interface RemoteNamespaceHandle {
   readonly service: RemoteNamespaceService
-  readonly dispose: TypeRTDisposer
+  readonly dispose: TypertDisposer
 }
 
 /** Typed Remote service augmented by generated direct namespaces. */
-export type ClientRemote = TypeRTClientRemote
+export type ClientRemote = TypertClientRemote
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     /** Generated Remote namespaces selected by the Client assembly. */
     remote: ClientRemote
   }
 }
 
-/** Required Client services: the TypeRT registry and the existing Connection carrier. */
+/** Required Client services: the Typert registry and the existing Connection carrier. */
 export const inject = ['typert', 'connection']
 
 /**
@@ -71,17 +73,31 @@ export function apply(ctx: Context): void {
   new ClientRemoteService(ctx)
 }
 
-class ClientRemoteService extends Service implements TypeRTClientRemote {
+/** One subscribed listener after `$on` erased its per-event argument list. */
+type RemoteEventListener = (...args: never[]) => void
+
+/**
+ * One subscription, identified by the registration rather than by its listener:
+ * two fibers may subscribe the same function object to the same event, and each
+ * disposer must retire only its own registration.
+ */
+interface RemoteEventSubscription {
+  readonly listener: RemoteEventListener
+}
+
+class ClientRemoteService extends Service implements TypertClientRemote {
   private readonly ownerCtx: Context
   private readonly namespaces = new Map<string, RemoteNamespaceHandle>()
+  private readonly subscriptions = new Map<string, RemoteEventSubscription[]>()
   private mutations = Promise.resolve()
 
   constructor(ctx: Context) {
     super(ctx, 'remote')
     this.ownerCtx = ctx
+    ctx.effect(() => () => { this.subscriptions.clear() }, 'api-gateway.client.subscriptions')
   }
 
-  async $mount(contribution: TypeRTRemoteContribution): ReturnType<TypeRTClientRemote['$mount']> {
+  async $mount(contribution: TypertRemoteContribution): ReturnType<TypertClientRemote['$mount']> {
     const callerCtx = this.ctx
     const owned = callerCtx.effect(async () => {
       const dispose = await this.enqueue(() => this.mountContribution(callerCtx, contribution))
@@ -89,6 +105,64 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     }, `api-gateway.client.$mount(${JSON.stringify(contribution.package)})`)
     await owned
     return async () => { await owned() }
+  }
+
+  $on<Event extends TypertRemoteEvent>(
+    event: Event,
+    listener: Events[Event],
+  ): ReturnType<TypertClientRemote['$on']> {
+    // The table is keyed by the runtime event name, so the argument list this
+    // signature pins per event cannot survive in it; `$deliver` restores it
+    // from the frame the Host emitted for that same name.
+    const subscription: RemoteEventSubscription = { listener }
+    const owned = this.ctx.effect(() => {
+      const listeners = this.listeners(event)
+      listeners.push(subscription)
+      return () => {
+        const at = listeners.indexOf(subscription)
+        /* v8 ignore next -- listener */
+        if (at >= 0) listeners.splice(at, 1)
+      }
+    }, `api-gateway.client.$on(${JSON.stringify(event)})`)
+    return () => { void owned() }
+  }
+
+  /**
+   * Deliver one forwarded event in registration order, isolating a listener
+   * that fails either synchronously or by rejecting a returned promise; see
+   * {@link TypertClientRemote.$dispatch} for the caller contract.
+   */
+  $dispatch(event: string, args: readonly unknown[]): void {
+    const listeners = this.subscriptions.get(event)
+    if (listeners === undefined) return
+    // Snapshot: a listener may subscribe or dispose during delivery, and this
+    // round's recipients are the ones registered when the frame arrived.
+    for (const { listener } of [...listeners]) {
+      const report = (error: unknown): void => {
+        console.error(`client api: Remote event ${JSON.stringify(event)} listener threw:`, error)
+      }
+      try {
+        /* oxlint-disable-next-line typescript/no-confusing-void-expression --
+         * The declared return is void, so nobody awaits an async listener; the
+         * runtime value is still a promise, and reading it is the only way to
+         * keep its rejection inside this containment instead of surfacing as an
+         * unhandled one. */
+        const settled: unknown = listener(...args as never[])
+        if (settled instanceof Promise) settled.catch(report)
+      } catch (error) {
+        report(error)
+      }
+    }
+  }
+
+  /** Subscriptions for one event name; empty arrays are retained, bounded by the Host's selection. */
+  private listeners(event: string): RemoteEventSubscription[] {
+    let listeners = this.subscriptions.get(event)
+    if (listeners === undefined) {
+      listeners = []
+      this.subscriptions.set(event, listeners)
+    }
+    return listeners
   }
 
   private enqueue<T>(operation: () => T | Promise<T>): Promise<T> {
@@ -99,11 +173,11 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
 
   private async mountContribution(
     callerCtx: Context,
-    contribution: TypeRTRemoteContribution,
-  ): Promise<TypeRTDisposer> {
+    contribution: TypertRemoteContribution,
+  ): Promise<TypertDisposer> {
     this.validateContribution(contribution)
     const disposeRemote = callerCtx.typert.remotes.register(contribution)
-    const installed: TypeRTDisposer[] = []
+    const installed: TypertDisposer[] = []
     try {
       for (const descriptor of contribution.descriptors) installed.push(await this.install(descriptor))
     } catch (error) {
@@ -117,7 +191,7 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     }
   }
 
-  private validateContribution(contribution: TypeRTRemoteContribution): void {
+  private validateContribution(contribution: TypertRemoteContribution): void {
     const direct = new Map<string, Set<string>>()
     const scoped = new Map<string, Set<string>>()
     const add = (
@@ -161,9 +235,9 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     }
   }
 
-  private async install(descriptor: InvocationDescriptor): Promise<TypeRTDisposer> {
+  private async install(descriptor: InvocationDescriptor): Promise<TypertDisposer> {
     const token: MountToken = { active: true, abort: new AbortController() }
-    const installed: TypeRTDisposer[] = []
+    const installed: TypertDisposer[] = []
     try {
       if (descriptor.invocation.kind === 'direct') {
         installed.push(await this.installDirect(descriptor, token))
@@ -185,7 +259,7 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     }
   }
 
-  private async installDirect(descriptor: InvocationDescriptor, token: MountToken): Promise<TypeRTDisposer> {
+  private async installDirect(descriptor: InvocationDescriptor, token: MountToken): Promise<TypertDisposer> {
     const namespace = await this.namespace(descriptor.namespace)
     try {
       namespace.service.installDirect(descriptor, token)
@@ -203,7 +277,7 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     descriptor: InvocationDescriptor,
     projection: ScopedProjection,
     token: MountToken,
-  ): Promise<TypeRTDisposer> {
+  ): Promise<TypertDisposer> {
     const namespace = await this.namespace(descriptor.namespace)
     try {
       namespace.service.installScoped(descriptor, projection, token)
@@ -255,7 +329,7 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     scoped: ScopedMethod | undefined,
     callerCtx: Context,
     values: readonly unknown[],
-  ): Promise<unknown> {
+  ): Promise<RemoteResult<unknown>> {
     if (scoped !== undefined) {
       const binder = this.ownerCtx.typert.contexts.getClient(scoped.projection.context)
       const identity = binder?.identity(callerCtx)
@@ -286,9 +360,9 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     callerCtx: Context,
     values: readonly unknown[],
     boundIdentity?: BoundContextIdentity,
-  ): Promise<unknown> {
+  ): Promise<RemoteResult<unknown>> {
     const endpoint = endpointOf(descriptor)
-    if (!token.active) throw new Error(`client api: Remote method ${endpoint} is no longer mounted`)
+    if (!token.active) return withdrawn(endpoint)
     const expected = descriptor.parameters.length - (projection?.parameterIndex === undefined ? 0 : 1)
     const hasCallerSignal = descriptor.cancellation !== undefined && values.length === expected + 1
     if (values.length !== expected && !hasCallerSignal) {
@@ -318,7 +392,8 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     let valueIndex = 0
     descriptor.parameters.forEach((parameter, parameterIndex) => {
       if (parameterIndex === projection?.parameterIndex) return
-      args[parameter.wire] = parse(parameter.codec, values[valueIndex], endpoint, parameter.wire)
+      const value = parse(parameter.codec, values[valueIndex], endpoint, parameter.wire)
+      if (value !== undefined) args[parameter.wire] = value
       valueIndex += 1
     })
     const connection = this.ownerCtx.get('connection') as ConnectionHandle | undefined
@@ -327,10 +402,16 @@ class ClientRemoteService extends Service implements TypeRTClientRemote {
     const signal = callerSignal === undefined
       ? token.abort.signal
       : AbortSignal.any([token.abort.signal, callerSignal])
-    const result = await connection.rpc.call('/api', endpoint, { args }, signal)
-    if (!mountActive(token)) throw new Error(`client api: Remote method ${endpoint} was withdrawn during invocation`)
-    if (!result.ok) throw remoteFailure(endpoint, result.error)
-    return parse(descriptor.result, result.value, endpoint, 'result')
+    try {
+      const result = await connection.rpc.call('/api', endpoint, { args }, signal)
+      if (!mountActive(token)) return withdrawn(endpoint)
+      if (!result.ok) return { ok: false, error: result.error }
+      return { ok: true, value: parse(descriptor.result, result.value, endpoint, 'result') }
+    } catch (error) {
+      // Carrier throws (offline, abort, a rejected result payload) are outcomes
+      // of the call, not assembly faults, so they join the same error branch.
+      return carrierFailure(endpoint, error)
+    }
   }
 }
 
@@ -339,7 +420,7 @@ type InvokeRemote = (
   scoped: ScopedMethod | undefined,
   callerCtx: Context,
   args: readonly unknown[],
-) => Promise<unknown>
+) => Promise<RemoteResult<unknown>>
 
 class RemoteNamespaceService extends Service {
   private readonly methods = new Map<string, RemoteMethodRecord>()
@@ -394,7 +475,7 @@ class RemoteNamespaceService extends Service {
       Object.defineProperty(this, method, {
         configurable: true,
         enumerable: true,
-        get: function (this: RemoteNamespaceService): (...args: unknown[]) => Promise<unknown> {
+        get: function (this: RemoteNamespaceService): (...args: unknown[]) => Promise<RemoteResult<unknown>> {
           const callerCtx = this.ctx
           const current = this.methods.get(method)
           const direct = current?.direct
@@ -476,13 +557,13 @@ function requireStrictDescriptor(descriptor: InvocationDescriptor): void {
   }
 }
 
-function requireStrictCodec(codec: TypeRTCodec, endpoint: string, field: string): void {
+function requireStrictCodec(codec: TypertCodec, endpoint: string, field: string): void {
   if (codec.mode !== 'strict') {
     throw new Error(`client api: generated Remote ${endpoint} field ${JSON.stringify(field)} has no strict codec`)
   }
 }
 
-function parse(codec: TypeRTCodec, value: unknown, endpoint: string, field: string): unknown {
+function parse(codec: TypertCodec, value: unknown, endpoint: string, field: string): unknown {
   if (codec.mode !== 'strict') {
     throw new Error(`client api: generated Remote ${endpoint} field ${JSON.stringify(field)} has no strict codec`)
   }
@@ -493,6 +574,15 @@ function parse(codec: TypeRTCodec, value: unknown, endpoint: string, field: stri
   }
 }
 
-function remoteFailure(endpoint: string, error: RpcError): Error {
-  return new Error(`client api: ${endpoint} failed: ${error.code}: ${error.message}`, { cause: error })
+/** The namespace retired before or during the call, so no request outcome exists. */
+function withdrawn(endpoint: string): RemoteResult<never> {
+  return internalFailure(`client api: Remote method ${endpoint} is no longer mounted`)
+}
+
+function carrierFailure(endpoint: string, error: unknown): RemoteResult<never> {
+  return internalFailure(`client api: ${endpoint} failed: ${error instanceof Error ? error.message : String(error)}`)
+}
+
+function internalFailure(message: string): RemoteResult<never> {
+  return { ok: false, error: { code: 'internal', message, details: {} } }
 }

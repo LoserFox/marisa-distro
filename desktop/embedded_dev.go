@@ -6,6 +6,10 @@
 
 package main
 
+// installForm 是本构建的安装形态标记，随子进程环境注入后端（MARISA_INSTALL_FORM）。
+// dev 形态：无内嵌后端，MARISA_VERSION 为空串，更新检查插件自动隐身。
+const installForm = "dev"
+
 // ensureBackend is a no-op in the dev build: returns ("", nil) so main keeps
 // DSH_WEB_CMD untouched.
 func ensureBackend() (string, error) {

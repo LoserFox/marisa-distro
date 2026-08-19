@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { Context } from '@deepseek-ai/cordis'
+import { access, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import LlmService, { INVALID_CREDENTIAL_CODE } from '@deepseek-ai/dsh-llm'
+import LlmRuntime, { INVALID_CREDENTIAL_CODE } from '@deepseek-ai/dsh-llm'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { CredentialsLocal } from '@deepseek-ai/dsh-credentials-local'
+import { LocalCredentialProvider } from '@deepseek-ai/dsh-credentials-local'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
-import { SettingsLocal } from '@deepseek-ai/dsh-settings-local'
+import { FileSettingsProvider } from '@deepseek-ai/dsh-settings-file'
 import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek'
 import { assemble } from './assemble.ts'
 import { closeMockServers, mockServer, textEvents } from './mock-server.ts'
@@ -35,20 +35,21 @@ interface Harness {
 }
 
 /**
- * Real dynamic composition: llm + settings-local + credentials-local +
+ * Real dynamic composition: llm + settings-file + credentials-local +
  * llm-deepseek over one temp harness home. `watch: false` keeps every change
  * flowing through the in-process write path, which is deterministic; external
  * file watching is the providers' own covered concern.
  */
 async function boot(dir: string, config: object): Promise<Harness> {
+  vi.stubEnv('DSH_HOME', dir)
   const ctx = new Context()
   cleanups.push(async () => {
     await ctx.fiber.dispose()
   })
-  await ctx.plugin(LlmService)
-  const settingsFiber = ctx.plugin(SettingsLocal, { path: join(dir, 'settings.yaml'), watch: false })
+  await ctx.plugin(LlmRuntime)
+  const settingsFiber = ctx.plugin(FileSettingsProvider, { path: join(dir, 'settings.yaml'), watch: false })
   await settingsFiber
-  await ctx.plugin(CredentialsLocal, { path: join(dir, '.credentials.yaml'), watch: false })
+  await ctx.plugin(LocalCredentialProvider, { path: join(dir, '.credentials.yaml'), watch: false })
   await ctx.plugin(LlmDeepSeek, config)
   return { ctx, settingsFiber }
 }
@@ -86,9 +87,11 @@ describe('request-level dynamic configuration', () => {
 
     const keyless = await prompt(ctx)
     expect(keyless.finish).toMatchObject({ kind: 'error', failure: { code: 'MISSING_CREDENTIAL' } })
+    await expect(access(join(dir, '.anonymous-user-id'))).rejects.toMatchObject({ code: 'ENOENT' })
     await ctx.credentials.set(KEY_REF, 'sk-arrived')
     await prompt(ctx)
     expect(server.headers[0]?.authorization).toBe('Bearer sk-arrived')
+    await expect(access(join(dir, '.anonymous-user-id'))).resolves.toBeUndefined()
   })
 
   it('rejects a stored credential no header can carry, never echoing it in the failure', async () => {
@@ -117,7 +120,7 @@ describe('request-level dynamic configuration', () => {
     await expect(ctx.llm.listModels('deepseek-official')).resolves.toHaveLength(2)
     await ctx.settings.update(NS, { models: [{ id: 'settings-model', name: 'From Settings' }] })
     await expect(ctx.llm.listModels('deepseek-official')).resolves.toEqual([
-      { provider: 'deepseek-official', id: 'settings-model', name: 'From Settings' },
+      { provider: 'deepseek-official', id: 'settings-model', name: 'From Settings', inputModalities: ['text'] },
     ])
   })
 
@@ -156,7 +159,7 @@ describe('request-level dynamic configuration', () => {
     await expect(ctx.llm.listModels('deepseek-official')).resolves.toHaveLength(2)
     await ctx.settings.update(NS, { models: [{ id: 'recovered' }] })
     await expect(ctx.llm.listModels('deepseek-official')).resolves.toEqual([
-      { provider: 'deepseek-official', id: 'recovered', name: 'recovered' },
+      { provider: 'deepseek-official', id: 'recovered', name: 'recovered', inputModalities: ['text'] },
     ])
   })
 

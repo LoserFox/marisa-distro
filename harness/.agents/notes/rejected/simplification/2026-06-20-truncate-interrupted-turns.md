@@ -21,7 +21,7 @@ This makes the persisted turn boundary simple: a completed `turn/end` is the che
 - `TurnEndReasonMap` drops the `interrupted` variant.
 - `interruptedTurnClosers()` and its tests disappear.
 - The persistence coordinator's repair hook truncates backend-specific torn/open tail state without appending closers.
-- [Session persistence docs](../../../../packages/session-persistence/session-persistence/README.md) say load returns the last completed turn, plus no partial final turn.
+- [Session persistence docs](../../../../packages/session/session-persistence/README.md) say load returns the last completed turn, plus no partial final turn.
 - Snapshot and contract tests update together with the behavior they pin.
 - The session format version and recorded fixtures are refreshed; non-current stored logs are rejected per the pre-release format policy, with no migration path.
 

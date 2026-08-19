@@ -56,7 +56,7 @@ vi.mock('../src/workspace.ts', () => ({
 }))
 
 const { typertPlugin } = await import('../src/tsdown-plugin.ts')
-const roots: Array<string> = []
+const roots: string[] = []
 
 afterEach(() => {
   discovered.mockClear()

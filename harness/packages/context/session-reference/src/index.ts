@@ -5,8 +5,8 @@
  * @module @deepseek-ai/dsh-session-reference
  */
 
-import { Context, Service } from 'cordis'
-import z from 'schemastery'
+import { Context, Service } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, UserMessage } from '@deepseek-ai/dsh-llm'
@@ -50,9 +50,9 @@ user explicitly repeats them.
 `
 const PROMPT_SUFFIX = '\n</referenced-sessions>'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    sessionReferences: SessionReferenceService
+    sessionReferenceResolver: SessionReferenceResolver
   }
 }
 
@@ -67,7 +67,7 @@ interface RenderedSource {
 }
 
 /** Exact-read consumer that prepares immutable cross-session message context. */
-export class SessionReferenceService extends Service {
+export class SessionReferenceResolver extends Service {
   static inject = ['sessionQuery']
   static Config: z<Config> = z.object({
     maxReferences: z.number().step(1).min(1).max(MAX_REFERENCES).default(MAX_REFERENCES),
@@ -78,7 +78,7 @@ export class SessionReferenceService extends Service {
   private readonly config: Required<Config>
 
   constructor(ctx: Context, config: Config = {}) {
-    super(ctx, 'sessionReferences')
+    super(ctx, 'sessionReferenceResolver')
     this.config = {
       maxReferences: config.maxReferences ?? MAX_REFERENCES,
       candidateLimit: config.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT,
@@ -134,7 +134,7 @@ export class SessionReferenceService extends Service {
       signal,
     )
     return inspected.map(({ record, index }, observationIndex) => {
-      const observation: SessionTitleObservationResult = observations[observationIndex] as SessionTitleObservationResult
+      const observation = observations[observationIndex] as SessionTitleObservationResult
       return {
         record,
         index,
@@ -300,4 +300,4 @@ function cancelled(signal: AbortSignal): SessionReferenceError {
   return new SessionReferenceError('session reference preparation was cancelled', 'SESSION_REFERENCE_CANCELLED', { cause: signal.reason })
 }
 
-export default SessionReferenceService
+export default SessionReferenceResolver

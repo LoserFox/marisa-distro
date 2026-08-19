@@ -21,7 +21,12 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
 
   // The sidebar renders from the boot graph: every inject layer activated.
   const tree = await screen.findByRole('tree', { name: 'Sessions' }, { timeout: 10_000 })
-  await within(tree).findByText('4 sessions')
+  // The compact layout dropped group session counts; the fixture workspace
+  // group row renders immediately with its sessions beneath it.
+  const fixtureGroup = (await within(tree).findAllByText('fixture'))
+    .map(el => el.closest<HTMLElement>('[role="treeitem"]'))
+    .find(el => el?.getAttribute('aria-expanded') !== null)
+  if (fixtureGroup === undefined) throw new Error('fixture Workspace group missing')
 
   // The resident fixture has both a question and an approval; composer routing
   // exposes the question first, and the assembled workspace plugin mirrors that
@@ -38,7 +43,6 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
   await waitFor(() => {
     expect(document.querySelector('[data-sample="bash"]')).not.toBeNull()
   }, { timeout: 10_000 })
-
   // Resolve the resident approval so the ordinary composer bar (which owns
   // ContextMeter) resumes without replacing the session shell. This minimal
   // boot graph intentionally does not mount the separate question UI plugin.
@@ -87,7 +91,7 @@ it('boots the built plugin graph and renders a fixture session end to end', asyn
   }, { timeout: 10_000 })
   // Expand the web_search row to prove its WebBlock card renders end to end.
   const webToggle = webSearchRow.querySelector('[data-expandable]')
-  if (webToggle !== null) { act(() => { fireEvent.click(webToggle) }) }
+  if (webToggle !== null) act(() => { fireEvent.click(webToggle) })
   await waitFor(() => {
     expect(webSearchRow.querySelector('[data-web]')).not.toBeNull()
   }, { timeout: 10_000 })

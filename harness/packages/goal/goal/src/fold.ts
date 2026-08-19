@@ -72,7 +72,7 @@ function nonNegativeInteger(value: unknown, field: string): number {
 /** Decode one canonical blocker explanation. */
 function decodeBlockReason(value: unknown): GoalBlockReason {
   if (!isRecord(value) || Object.keys(value).sort().join(',') !== 'code,message') {
-    throw new Error('goal change goal.blockedReason has an invalid shape')
+    throw new Error('goal change goal.blockedReason must have exactly code and message fields')
   }
   if (typeof value['code'] !== 'string' || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value['code'])) {
     throw new Error('goal change goal.blockedReason.code must be lower-kebab-case')
@@ -102,7 +102,7 @@ function decodeSnapshot(value: unknown): GoalSnapshot {
     ? 'blockedReason,id,maxGoalRounds,objective,phase,revision'
     : 'id,maxGoalRounds,objective,phase,revision'
   if (Object.keys(value).sort().join(',') !== expectedKeys) {
-    throw new Error('goal change goal has an invalid shape')
+    throw new Error(`goal change goal for phase ${phase} must have exactly ${expectedKeys} fields`)
   }
   return {
     id: GoalId(value['id']),
@@ -117,7 +117,7 @@ function decodeSnapshot(value: unknown): GoalSnapshot {
 /** Decode and validate one ref. */
 function decodeRef(value: unknown): GoalRef {
   if (!isRecord(value) || Object.keys(value).sort().join(',') !== 'id,revision') {
-    throw new Error('goal clear tombstone has an invalid shape')
+    throw new Error('goal clear tombstone must have exactly id and revision fields')
   }
   if (typeof value['id'] !== 'string' || value['id'].length === 0) {
     throw new Error('goal clear tombstone id must be a non-empty string')
@@ -139,7 +139,7 @@ export function decodeGoalChange(value: unknown): GoalChangeMeta | undefined {
   if (value['operation'] === 'clear') {
     const allowed = ['cleared', 'clearedAt', 'kind', 'operation', 'version']
     if (Object.keys(value).sort().join(',') !== allowed.sort().join(',')) {
-      throw new Error('goal clear change has an invalid shape')
+      throw new Error(`goal clear change must have exactly ${allowed.sort().join(',')} fields`)
     }
     return {
       kind: 'goal/change',
@@ -155,7 +155,7 @@ export function decodeGoalChange(value: unknown): GoalChangeMeta | undefined {
   }
   const allowed = ['createdAt', 'goal', 'kind', 'operation', 'roundsStarted', 'updatedAt', 'version']
   if (Object.keys(value).sort().join(',') !== allowed.sort().join(',')) {
-    throw new Error('goal snapshot change has an invalid shape')
+    throw new Error(`goal snapshot change must have exactly ${allowed.sort().join(',')} fields`)
   }
   const createdAt = nonNegativeInteger(value['createdAt'], 'createdAt')
   const updatedAt = nonNegativeInteger(value['updatedAt'], 'updatedAt')
@@ -343,7 +343,7 @@ export function foldGoal(events: readonly SessionEvent[]): FoldedGoal {
     ...state.goal === undefined ? {} : { goal: { ...state.goal } },
     roundsStarted: state.roundsStarted,
     ...state.createdAt === undefined ? {} : { createdAt: state.createdAt },
-    ...state.updatedAt !== undefined ? { updatedAt: state.updatedAt } : {},
+    ...state.updatedAt === undefined ? {} : { updatedAt: state.updatedAt },
     ...state.lastRef === undefined ? {} : { lastRef: { ...state.lastRef } },
   }
 }

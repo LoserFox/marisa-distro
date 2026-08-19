@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 import { computeHunkDiffs, diffsFromMeta, DIFF_CONTEXT } from '../src/diff.ts'
 import type { JsonValue } from '@deepseek-ai/dsh-session'
 
-const lines = (n: number): string => Array.from({ length: n }, (_, i) => { return `line${i + 1}` }).join('\n') + '\n'
+const lines = (n: number): string => Array.from({ length: n }, (_, i) => `line${i + 1}`).join('\n') + '\n'
 
 describe('computeHunkDiffs', () => {
   it('a single-line change yields one hunk with ±context lines on both sides', () => {

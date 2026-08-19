@@ -196,7 +196,7 @@ describe('jsonrpc-agent keyless smoke', () => {
     expect(exitCode, stderr).toBe(1)
     expect(stdout).toBe('')
     expect(stderr).toContain('plugin tree failed to load')
-    expect(stderr).toContain('failed to apply loader entry jsonrpc (@deepseek-ai/dsh-jsonrpc)')
+    expect(stderr).toContain('failed to apply loader entry sdk-jsonrpc-server (@deepseek-ai/dsh-sdk-jsonrpc-server)')
     expect(stderr).toContain('sometimes')
   }, 30_000)
 })

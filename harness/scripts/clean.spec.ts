@@ -84,7 +84,7 @@ describe('RepositoryCleaner', () => {
     }))
     write(join(externalProject, 'src/index.ts'), 'export {}\n')
     write(join(externalProject, 'lib/types/index.js'))
-    symlinkSync(externalProject, join(root, 'linked'), process.platform !== 'win32' ? 'dir' : 'junction')
+    symlinkSync(externalProject, join(root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir')
 
     await expect(new RepositoryCleaner(root).clean()).rejects.toThrow('outside repository')
 

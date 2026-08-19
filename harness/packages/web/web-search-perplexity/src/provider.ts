@@ -114,7 +114,7 @@ export class PerplexitySearchProvider implements WebSearchProvider {
           model: this.options.model,
           max_tokens: this.options.maxTokens,
           messages: [{ role: 'user', content: request.query }],
-          ...this.options.searchRecency === undefined ? {} : { search_recency_filter: this.options.searchRecency },
+          ...this.options.searchRecency !== undefined ? { search_recency_filter: this.options.searchRecency } : {},
         }),
         ...signal !== undefined ? { signal } : {},
       })
@@ -153,7 +153,7 @@ export class PerplexitySearchProvider implements WebSearchProvider {
 }
 
 // These two predicates are intentionally local: exporting generic internals
-// from the public web seam would cost more API surface than these pure checks.
+// from the public web seam would add more API than these pure checks.
 /* jscpd:ignore-start */
 /** True for a fetch/`AbortSignal` abort, surfaced as `WEB_ABORTED`. */
 function isAbortError(error: unknown): boolean {

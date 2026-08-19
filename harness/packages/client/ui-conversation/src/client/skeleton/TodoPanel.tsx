@@ -6,7 +6,7 @@
 // framework-free. Visual: figma 772:51905 / 772:52972 / 772:53419.
 
 import { useId, useState } from 'react'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 // The domain's client-namespace pure-type outlet: one import edge delivers
 // the `todos` projection-key merge (single source, no consumer-side restated

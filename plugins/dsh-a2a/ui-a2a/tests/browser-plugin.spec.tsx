@@ -54,12 +54,9 @@ function apiClient(initial: A2aSnapshot = {
   let snapshot = initial
   let revision = initial.revision
   const calls: string[] = []
-  const waiters = new Set<(next: number) => void>()
   const commit = (next: WithoutRevision<A2aSnapshot>): void => {
     revision += 1
     snapshot = { ...next, revision } as A2aSnapshot
-    for (const resolve of waiters) resolve(revision)
-    waiters.clear()
   }
   const api: A2aApiClient = {
     snapshot: async () => { calls.push('snapshot'); return ok(snapshot) },
@@ -79,17 +76,6 @@ function apiClient(initial: A2aSnapshot = {
       commit({ ...snapshot, projects: [...snapshot.projects, project] })
       return ok({ project })
     },
-    watch: async ({ revision: seen }, signal) => {
-      if (seen !== revision) return ok({ revision })
-      return new Promise((resolve) => {
-        const finish = (next: number): void => {
-          waiters.delete(finish)
-          resolve(ok({ revision: next }))
-        }
-        waiters.add(finish)
-        signal?.addEventListener('abort', () => { finish(revision) }, { once: true })
-      })
-    },
   }
   const rpc: A2aRpcTransport = {
     call: async (_channel, endpoint, payload, signal) => {
@@ -101,7 +87,7 @@ function apiClient(initial: A2aSnapshot = {
             ? await api.projectCreate(a2aRequestSchemas.projectCreate.parse(payload))
             : endpoint === A2A_RPC_ENDPOINTS.disconnect
               ? await api.disconnect(a2aRequestSchemas.disconnect.parse(payload))
-              : await api.watch(a2aRequestSchemas.watch.parse(payload), signal)
+              : (() => { throw new Error(`unknown endpoint ${endpoint}`) })()
       return { ok: true, value }
     },
   }
@@ -109,7 +95,11 @@ function apiClient(initial: A2aSnapshot = {
 }
 
 function directory(client = apiClient()): { directory: A2aDirectory; client: ReturnType<typeof apiClient> } {
-  return { directory: new A2aDirectory(client.api, SID), client }
+  const events: PluginEventStream = {
+    subscribe: () => () => {},
+    close: () => {},
+  }
+  return { directory: new A2aDirectory(client.api, SID, events), client }
 }
 
 function composerStore() {

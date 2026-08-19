@@ -1,6 +1,6 @@
 /** Package-owned subagent registry and lifecycle invariants. @module @deepseek-ai/dsh-subagent/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { SubagentProvider, SubagentRunEndInfo, SubagentRunInfo } from './types.ts'
 
@@ -29,14 +29,14 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
 
   ctx.on('internal/dispatch', (_mode, eventName, args) => {
     if (eventName === 'subagent/provider-added') {
-      const provider: SubagentProvider = args[0] as SubagentProvider
+      const provider = args[0] as SubagentProvider
       if (provider.name.length === 0) fail('subagent provider names must be non-empty')
       if (providers.has(provider.name)) fail(`subagent/provider-added repeated ${JSON.stringify(provider.name)}`)
       stagedProviders.add(provider)
       return
     }
     if (eventName === 'subagent/provider-removed') {
-      const providerName: string = args[0] as string
+      const providerName = args[0] as string
       if (!providers.has(providerName)) fail(`subagent/provider-removed names unknown provider ${JSON.stringify(providerName)}`)
       stagedRemovals.add(providerName)
       return
@@ -45,7 +45,7 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
       const info = args[0] as SubagentRunInfo
       // Provider availability is an admission-time relationship. A published
       // one-shot run may outlive provider removal, and a cold-resumed Activation
-      // carries durable provider provenance without dispatching through it.
+      // records the initial provider name without dispatching through it.
       if (info.provider.length === 0 || String(info.runId).length === 0 || String(info.id).length === 0) {
         fail('subagent/start provider, runId, and child id must be non-empty')
       }

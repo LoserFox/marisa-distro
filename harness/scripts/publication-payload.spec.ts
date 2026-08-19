@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  hasTypeRTRemoteNavigation,
+  hasTypertRemoteNavigation,
   isForbiddenPublicationFile,
   validateTarballPayload,
 } from './publication-payload.ts'
@@ -29,6 +29,9 @@ describe('publication payload policy', () => {
     String.raw`src\index.ts`,
     'lib/types/index.d.ts.map',
     './lib/types/index.d.ts.map',
+    'lib/typert.remote-client.d.ts.map',
+    'lib/client.js.map',
+    './lib/client.js.map',
   ])('rejects static manifest path %s', (file) => {
     expect(isForbiddenPublicationFile(file)).toBe(true)
   })
@@ -40,11 +43,19 @@ describe('publication payload policy', () => {
     ])).toThrow('fixture.tgz publishes source file package/src/index.ts')
   })
 
-  it('rejects declaration maps in packed tarballs', () => {
+  it('rejects source maps in packed tarballs', () => {
     expect(validateFixtureTarball([
       'package/package.json',
       'package/lib/types/index.d.ts.map',
-    ])).toThrow('fixture.tgz publishes declaration map package/lib/types/index.d.ts.map')
+    ])).toThrow('fixture.tgz publishes source map package/lib/types/index.d.ts.map')
+    expect(validateFixtureTarball([
+      'package/package.json',
+      'package/lib/typert.remote-client.d.ts.map',
+    ])).toThrow('fixture.tgz publishes source map package/lib/typert.remote-client.d.ts.map')
+    expect(validateFixtureTarball([
+      'package/package.json',
+      'package/lib/client.js.map',
+    ])).toThrow('fixture.tgz publishes source map package/lib/client.js.map')
   })
 
   it('accepts a clean packed tarball', () => {
@@ -56,21 +67,8 @@ describe('publication payload policy', () => {
     ])).not.toThrow()
   })
 
-  it('allows only the TypeRT declaration map and its navigable source tree when requested', () => {
-    const policy = { typeRTRemoteNavigation: true }
-    expect(isForbiddenPublicationFile('src/index.ts', policy)).toBe(false)
-    expect(isForbiddenPublicationFile('lib/typert.remote-client.d.ts.map', policy)).toBe(false)
-    expect(isForbiddenPublicationFile('lib/types/index.d.ts.map', policy)).toBe(true)
-    expect(() => {
-      validateTarballPayload([
-        'package/lib/typert.remote-client.d.ts.map',
-        'package/src/index.ts',
-      ], 'fixture.tgz', policy)
-    }).not.toThrow()
-  })
-
   it('recognizes only the canonical Host-for-Client export pair', () => {
-    expect(hasTypeRTRemoteNavigation({
+    expect(hasTypertRemoteNavigation({
       exports: {
         './remote': {
           types: './lib/typert.remote-client.d.ts',
@@ -78,6 +76,6 @@ describe('publication payload policy', () => {
         },
       },
     })).toBe(true)
-    expect(hasTypeRTRemoteNavigation({ exports: { './remote': './lib/remote.js' } })).toBe(false)
+    expect(hasTypertRemoteNavigation({ exports: { './remote': './lib/remote.js' } })).toBe(false)
   })
 })

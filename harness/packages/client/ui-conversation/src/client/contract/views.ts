@@ -14,14 +14,14 @@ export interface ViewTab { id: string; label: string }
 
 /**
  * Per-session state shared by conversation, chat-view, and details slots.
- * Unknown persisted view ids fall back to the first registered view.
+ * Unknown persisted view ids fall back to the stable Chat view.
  */
 export interface ChatStoreState {
   /** Details-linkage channel (conversation writes, details reads). */
   selection: SelectionTarget | null
   /** Composer draft (persisted; survives session switches and reloads). */
   draft: string
-  /** Active conversation view id ('conversation.view' entry id); null falls back to the first view. */
+  /** Active conversation view id ('conversation.view' entry id); null falls back to Chat. */
   view: string | null
   /**
    * One-shot inspect handoff: chat writes the call to reveal, the trajectory

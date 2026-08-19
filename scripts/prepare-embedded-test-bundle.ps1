@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$Output = (Join-Path $PSScriptRoot '..\desktop\bundle\backend.zip')
+  [string]$Output = (Join-Path $PSScriptRoot '..\desktop\bundle\backend.tar.zst')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,7 +16,14 @@ try {
   [System.IO.File]::WriteAllText((Join-Path $staging 'VERSION'), "ci-test`n", [System.Text.UTF8Encoding]::new($false))
   [System.IO.File]::WriteAllText((Join-Path $staging 'LINKS.json'), "[]`n", [System.Text.UTF8Encoding]::new($false))
   [System.IO.File]::WriteAllText((Join-Path $staging 'launcher.cmd'), "@echo off`r`nexit /b 0`r`n", [System.Text.UTF8Encoding]::new($false))
-  Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $outputPath -CompressionLevel Optimal
+  $tarszst = Join-Path $PSScriptRoot '..\desktop\bundle\tarszst'
+  if (-not (Test-Path -LiteralPath $tarszst)) {
+    throw "tarszst helper is required: $tarszst"
+  }
+  & go run $tarszst $staging $outputPath
+  if ($LASTEXITCODE -ne 0) {
+    throw "tarszst failed with exit code $LASTEXITCODE"
+  }
   Write-Host "embeddedbundle test fixture written: $outputPath"
 } finally {
   Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue

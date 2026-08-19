@@ -6,11 +6,11 @@ Status: implemented
 
 ## 问题
 
-`dsh-llm` 拥有一套提供方无关的流式词汇：`StreamChunk` 协议（`block-start`、`text-delta`、`reasoning-delta`、`tool-call-delta`、`block-end`、`usage`、`finish`）以及内容块类型（[内容块词汇](2026-06-11-content-block-vocabulary.md)）。如果词汇仅针对单个适配器定义，就有可能将该适配器的特异行为固化到「中立」契约中：唯一实现碰巧做了什么，什么就成为事实上的规范；在第二个提供方到来之前，抽象层未经验证——而届时修复这种泄漏的代价已经很高。
+`dsh-llm` 拥有一套提供方无关的流式词汇：`StreamChunk` 协议（`block-start`、`text-delta`、`reasoning-delta`、`tool-call-delta`、`block-end`、`usage`、`finish`）以及内容块类型（[内容块词汇](2026-06-11-content-block-vocabulary.md)）。如果词汇仅针对单个适配器定义，就有可能将该适配器的特异行为固化到「中立」约定中：唯一实现碰巧做了什么，什么就成为事实上的规范；在第二个提供方到来之前，抽象层未经验证——而届时修复这种泄漏的代价已经很高。
 
 ## 决策
 
-从一开始就针对同一份契约交付**两个**适配器，刻意基于不同的内部实现构建：
+从一开始就针对同一份约定交付**两个**适配器，刻意基于不同的内部实现构建：
 
 - `dsh-llm-deepseek`：直接 `fetch` + 仓库内翻译逻辑对接 DeepSeek API；SSE（Server-Sent Events）分帧委托给 `eventsource-parser`（[已归档的 SSE 解析器替换](../../archived/simplification/2026-07-26-eventsource-parser-for-deepseek-sse.md)）。孪生身份在于自行持有 fetch/translate 内部实现而非委托给完整的提供方 SDK，不在于手写传输层管道。
 - `dsh-llm-pi-ai`：通过 `@earendil-works/pi-ai` 库访问同一端点（该库有自己的事件词汇）。

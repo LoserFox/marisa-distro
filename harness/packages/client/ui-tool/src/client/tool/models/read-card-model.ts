@@ -66,7 +66,7 @@ export function readCardModel(block: ToolCallBlock, sessionCwd?: string): ReadCa
   if (result === null) return null
   // Lines arrive frozen off the snapshot; copy into the primitive's own line
   // shape so the card never holds a reference into the runtime's cache.
-  const lines: Array<ReadBlockLine> = result.lines.map(line => ({ number: line.number, text: line.text }))
+  const lines: ReadBlockLine[] = result.lines.map(line => ({ number: line.number, text: line.text }))
   return {
     label: result.title ?? relativizeToCwd(result.path, sessionCwd),
     lines,

@@ -1,7 +1,10 @@
 node_modules/
-lib/
 dist/
 *.tgz
+# lib/ is intentionally COMMITTED (bundle build artifact): git-source installs and the
+# npm-release workflow publish it as-is (the DSH toolchain is local-only).
+!lib/
+
 .DS_Store
 # per-slot tsconfig materialized by the A/B snapshot rotation (dsh-snapshot-ab)
 tsconfig.ab.json

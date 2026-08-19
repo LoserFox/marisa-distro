@@ -29,17 +29,17 @@ Status: implemented
 - **保留摘要器系统提示词但复用其余部分**——否决：system 槽位正是提供方最先做缓存的 token 区域，因此一个不同的摘要器系统提示词无论后面跟着什么都会使整个前缀失效。只有把指令移离前端才能恢复缓存。
 - **只发送被遮蔽区域而不带 `system`/`tools` 头部**——否决：头部不同的序列在第一个 token 处仍然与已缓存请求分叉，因此缓存效果并不更好，反而丢失了摘要所需的框架。
 - **从摘要请求中省略 `tools`**（模型从不调用任何工具）——否决：工具 schema 是已缓存 token 序列的一部分；省略它们会让后续每个 token 失去对齐，破坏复用。
-- **为快照回放专门建立一个发出 `assistant/chunk` 的摘要子会话**——否决：持久的 `compact/summary` 事件会记录成功本地调用的位置和完整输出，而显式调用标记可防止回放把模板或远程输出当作本地流。
+- **为快照回放专门建立一个发出 `assistant/chunk` 的摘要子会话**——否决：持久的 `compaction/summary` 事件会记录成功本地调用的位置和完整输出，而显式调用标记可防止回放把模板或远程输出当作本地流。
 
 ## 后果
 
-- **`dsh-compact-basic`** 拥有 `SummarizationInput`；受保护的 `summarize(input, agent, signal?)` 钩子签名发生变化（发布前可接受），并且 `region.ts` 新增了 `buildSummarizationInput`，它在 header 前缀之后对被遮蔽的 seq 折叠 `deriveEventMessage`。
-- **移除无用的渲染表面。** 旧的拍平路径（`renderTranscript` / `renderContentBlocks` 及其在 `dsh-compact` 中的 spec）已无消费方，连同其导出一并删除。
-- **README 的 Model Experience** 现在把 `dsh-compact-basic` 的辅助请求记述为回放的前缀加上一条尾部压缩指令消息，并把其 KV Cache 效果记述为复用已预热的对话前缀。
+- **`dsh-compaction-basic`** 拥有 `SummarizationInput`；受保护的 `summarize(input, agent, signal?)` 钩子签名发生变化（发布前可接受），并且 `region.ts` 新增了 `buildSummarizationInput`，它在 header 前缀之后对被遮蔽的 seq 折叠 `deriveEventMessage`。
+- **移除无用的渲染表面。** 旧的拍平路径（`renderTranscript` / `renderContentBlocks` 及其在 `dsh-compaction` 中的 spec）已无消费方，连同其导出一并删除。
+- **README 的 Model Experience** 现在把 `dsh-compaction-basic` 的辅助请求记述为回放的前缀加上一条尾部压缩指令消息，并把其 KV Cache 效果记述为复用已预热的对话前缀。
 - **带框架的检查点输出未改变**，因此落地的 `user/message` 和每个对话请求快照都不受影响；只有辅助请求的形状发生了变化。
 
 ## 测试
 
-- **单元：** `compact-basic.spec.ts` 断言辅助调用转发 `system`/`tools`/前导消息，并把压缩指令作为最后一条消息追加，且 `compactRegion` 回放最新的已路由 header 前缀。现有的内容断言通过回放的消息而非 transcript 字符串来读取摘要器输入。
+- **单元：** `compaction-basic.spec.ts` 断言辅助调用转发 `system`/`tools`/前导消息，并把压缩指令作为最后一条消息追加，且 `compactRegion` 回放最新的已路由 header 前缀。现有的内容断言通过回放的消息而非 transcript 字符串来读取摘要器输入。
 - **循环：** `compact-loop-repro.spec.ts` 依据摘要请求尾部 user 消息中的压缩指令对其分类，溢出恢复测试则继续在真实循环中固定对话请求与摘要请求的数量。
-- **快照：** 无密钥回放会从带标记的 `compact/summary` 重建一条规范成功流；[compaction-seam Agent Note](../feature/2026-06-18-compaction-capability-seam.md) 负责持久标记契约。
+- **快照：** 无密钥回放会从带标记的 `compaction/summary` 重建一条规范成功流；[compaction-seam Agent Note](../feature/2026-06-18-compaction-capability-seam.md) 负责持久标记约定。

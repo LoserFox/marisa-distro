@@ -7,8 +7,8 @@
  * nor Fetch-Metadata to reads (images and navigations — those
  * headers go only to trustworthy destinations), so an unmarked request may
  * still be a rebound browser read and Host is the one header rebinding cannot
- * forge. Non-browser and remote clients pass the same fence via loopback, the
- * CLI-derived LAN IP literals, or a declared `trustedHosts` authority.
+ * forge. Non-browser and remote clients pass the same fence via loopback,
+ * deployment-derived LAN IP literals, or a declared `trustedHosts` authority.
  * Network reachability and authentication stay out of scope: binding policy
  * belongs to the webserver config, and this fence is not an auth layer.
  */
@@ -105,7 +105,7 @@ export function isTrustedApiRequest(request: ApiTrustRequest, trustedHosts: read
   if (host === undefined) return false
   const hostUrl = parseAuthority(host)
   if (hostUrl === undefined) return false
-  if (!isLoopbackHostname(hostUrl.hostname) && !isTrustedAuthority(hostUrl, trustedHosts)) { return false }
+  if (!isLoopbackHostname(hostUrl.hostname) && !isTrustedAuthority(hostUrl, trustedHosts)) return false
   // Cross-site fence: modern browsers label the initiator relationship on
   // every fetch; an explicit cross-site marker is refused regardless of Origin.
   if (header(request.headers, 'sec-fetch-site') === 'cross-site') return false

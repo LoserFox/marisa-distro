@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-04-web-latency-throughput-metrics.md
 2026-08-04-web-latency-throughput-metrics.md: 4d7627a9a38127259f1ba07121cea7282f794f2e
-2026-08-04-web-latency-throughput-metrics.zh.md: 09e59242b799a3f4d03b9e0259f1a5a0d85f6a53
+2026-08-04-web-latency-throughput-metrics.zh.md: f0089cb45775f2dc9701a7256119f04e4709dd76

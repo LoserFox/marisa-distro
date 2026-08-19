@@ -147,6 +147,31 @@ describe('TrackStore.createCapture — durable per-session marker', () => {
     }
   })
 
+  it('dedupeRequirementBySession: one requirement capture per session, durable', async () => {
+    const h = await createPluginHarness()
+    try {
+      const sid = 'session-req-xyz'
+      const first = await h.store.createCapture(
+        makeCapture({ content: 'pr merge 吧，tag 发布 npm', source: 'session', sourceSessionId: sid, tags: ['auto', 'requirement'] }),
+        { dedupeRequirementBySession: true },
+      )
+      expect(first.status).toBe('created')
+      // Marker persisted, independent of the todo marker.
+      expect(await h.store.isSessionRequirementCaptured(sid)).toBe(true)
+      expect(await h.store.isSessionTodoCaptured(sid)).toBe(false)
+      // A second long message in the SAME session (e.g. after a restart where
+      // the in-memory gate died) is deduped by the durable marker.
+      const second = await h.store.createCapture(
+        makeCapture({ content: '另一个同样长的需求', source: 'session', sourceSessionId: sid, tags: ['auto', 'requirement'] }),
+        { dedupeRequirementBySession: true },
+      )
+      expect(second.status).toBe('duplicate')
+      expect(await h.store.listCaptures()).toHaveLength(1)
+    } finally {
+      await h.dispose()
+    }
+  })
+
   it('persists the marker to disk (survives a process restart)', async () => {
     const h = await createPluginHarness()
     try {

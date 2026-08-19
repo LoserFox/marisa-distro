@@ -26,4 +26,4 @@ The loop reads the action after the waterfall settles, closes the failed turn, a
 
 Recovery ownership, asynchronous repair, and the retry decision share one typed return path. The live-agent interface and concrete loop lose the idle resummon capability and retry-window state. Callers cannot restart arbitrary failed non-request work without submitting a later prompt, while transient and context-overflow policies retain numbered retry turns, durable-history reconstruction, finite private budgets, and cancellation precedence.
 
-Focused agent-loop tests pin retry chaining, terminal fallthrough, recovery failure, and cancellation races. The llm-retry and compact-basic suites pin their policy-owned action returns, and the ACP, goal-session, and plan-mode integrations pin successor-turn adoption.
+Focused agent-loop tests pin retry chaining, terminal fallthrough, recovery failure, and cancellation races. The llm-retry and compaction-basic suites pin their policy-owned action returns, and the ACP, goal-round-driver, and plan-mode integrations pin successor-turn adoption.

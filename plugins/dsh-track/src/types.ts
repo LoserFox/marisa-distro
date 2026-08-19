@@ -38,6 +38,25 @@ export interface Capture {
   createdAt: string
   /** Issue id when this capture was promoted. */
   promotedToIssueId?: string
+  /**
+   * Soft-delete tombstone (2026-08-18): deletion marks, it never removes —
+   * a deleted capture keeps its full record and is only hidden from default
+   * listings. Deletion is a strong user negation; the row stays queryable.
+   */
+  deletedAt?: string
+}
+
+/**
+ * Evidence pointer from a semantic node back to the raw session log
+ * (Layer 0 — the immutable fact layer). kind='span' cites the evidence
+ * span that produced the node; kind='prompt' cites the originating user
+ * request message.
+ */
+export interface IssueCitation {
+  sessionId: string
+  seqStart: number
+  seqEnd: number
+  kind: 'span' | 'prompt'
 }
 
 /** Issue state (Linear-compatible subset). */
@@ -73,6 +92,34 @@ export interface Issue {
   /** Sessions that executed this issue (one issue, many sessions). */
   linkedSessionIds: string[]
   /**
+   * Semantic node kind (genealogy Layer 1): requirement (a work thread that
+   * grew from user intent), problem (a defect/pain discovered while doing
+   * something else — the '做 A 时发现 B' node), decision, task (mechanical
+   * execution), investigation. Populated by the sync v2 pipeline from the
+   * candidate kind; absent on legacy issues.
+   */
+  semanticKind?: 'requirement' | 'problem' | 'decision' | 'task' | 'investigation'
+  /**
+   * Source authority (invariant #3): where the requirement's content came from.
+   * user_explicit — verbatim user intent; user_confirmed — user accepted a
+   * proposal; agent_proposed — the model suggested it (only proposed, never
+   * treated as confirmed); system_inferred — deterministic rules.
+   */
+  origin?: 'user_explicit' | 'user_confirmed' | 'agent_proposed' | 'system_inferred'
+  /**
+   * Evidence pointers back to Layer 0 (the raw session log): every semantic
+   * edge/claim must cite its source (sessionId, seqRange) so the graph stays
+   * explainable. The first citation is also stored as sourceSpan.
+   */
+  citations?: IssueCitation[]
+  /** The originating evidence span (first citation, shorthand). */
+  sourceSpan?: IssueCitation
+  /** Inducted project id (see track_project_* — group of sessions by cwd). */
+  projectId?: string
+  /** Issue this one supersedes (evolution edge — supersedes keeps both nodes,
+   *  the older stays visible with state canceled/archived). */
+  supersedesIssueId?: string
+  /**
    * Message id of the user prompt that originated this issue (best-effort).
    * Set by `track_create_issue` (the current session's latest explicit user
    * request), by capture promotion (the capture's source message), and by
@@ -107,6 +154,19 @@ export interface Issue {
    * changes without the user (the confirmation-gate principle).
    */
   pendingConfirm?: { to: 'done' | 'canceled' | 'review'; reason: string; at: number }
+  /**
+   * Soft-delete tombstone (2026-08-18): deletion marks, it never removes —
+   * a deleted issue keeps its full record (title, description, evidence
+   * ledger, links) and is only hidden from default listings. Deletion is a
+   * strong user negation: the row stays queryable (includeDeleted), the
+   * `user-delete` evidence signal is recorded in the ledger, and an audit
+   * entry is appended. The identifier is never reused.
+   */
+  deletedAt?: string
+  /** Who deleted the issue ('user' from the panel/API; agent/auto reserved). */
+  deletedBy?: 'user' | 'agent' | 'auto'
+  /** Optional user-stated reason for the deletion. */
+  deletedReason?: string
 }
 
 /** One piece of lifecycle evidence (the state machine's input). */
@@ -134,6 +194,8 @@ export type LifecycleSignal =
   | 'activity'       // file write/edit or shell activity (heartbeat, weak)
   | 'model-propose'  // model explicitly proposed a state via track_update_issue_state
   | 'timeout'        // wall-clock: no lastProgressAt for the abandonment window
+  | 'commit-observed' // an implements/landed-in commit link landed inside the evidence window (P0: Output-first — done proposals require it)
+  | 'user-delete'    // user deleted the issue (strong negation — recorded into the ledger before tombstoning)
 
 /** Machine-proposed lifecycle state (attached to an Issue as `inferred`). */
 export interface IssueInferred {
@@ -164,12 +226,153 @@ export interface Epic {
 /** Relation edge in the capture↔issue↔session↔epic graph. */
 export interface Link {
   id: string
-  fromType: 'capture' | 'issue' | 'session' | 'epic'
+  fromType: 'capture' | 'issue' | 'session' | 'epic' | 'decision' | 'commit' | 'project'
   fromId: string
-  toType: 'capture' | 'issue' | 'session' | 'epic'
+  toType: 'capture' | 'issue' | 'session' | 'epic' | 'decision' | 'commit' | 'project'
   toId: string
-  kind: 'relates' | 'blocks' | 'derives' | 'belongs'
+  kind: 'relates' | 'blocks' | 'derives' | 'belongs' | 'spawned-by' | 'supersedes' | 'executed-in' | 'raised-in' | 'forked-from' | 'landed-in' | 'implements'
   createdAt: string
+  /**
+   * Bi-temporal light: when the relation became true in the world (event
+   * time — e.g. the session start for executed-in, the commit author date
+   * for landed-in). Absent on legacy links.
+   */
+  eventTime?: number
+  /** When track ingested this relation (ingestion time, ISO). Defaults to createdAt. */
+  ingestedAt?: string
+  /**
+   * How this edge was derived: trailer | commit-window | title-overlap |
+   * identity | session-link | session-lineage | user | promotion |
+   * decision-record. This is the METHOD (mechanism), not the evidence
+   * strength — see evidenceKind/confidence for the quality of the relation.
+   * (2026-08-18: the old 'deterministic' default conflated idempotent-hash
+   * with evidence quality; methods are now explicit per link.)
+   */
+  linkMethod?: string
+  /**
+   * Evidence strength of this relation (2026-08-18, aligned with
+   * Better Harness): declared (reviewed explicit ref/trailer — the only
+   * provenance) > observed (typed host evidence) > candidate (time-window /
+   * title-overlap heuristics awaiting review) > unmapped. Absent on legacy
+   * links written before grading — treat as candidate.
+   */
+  evidenceKind?: 'declared' | 'observed' | 'candidate' | 'unmapped'
+  /** Evidence confidence in [0,1]. Absent on legacy links. */
+  confidence?: number
+  /**
+   * Fixed human-readable limitations of what this link does NOT prove
+   * (the UI never upgrades weak-evidence wording).
+   */
+  limitations?: string[]
+}
+
+/**
+ * M1 event-graph — the deterministic execution tree of one session.
+ *
+ * Nodes cover the conversation's structural facts (turns / steps / tool calls /
+ * user requests / assistant replies); edges express containment (session→turn→
+ * step→tool) and provenance (user message → the turn it provoked). Every node
+ * and edge carries a GraphCitation (sessionId + seq range) that points back
+ * into the raw session.jsonl — the source-of-truth chain for the genealogy
+ * vision (docs/genealogy-vision.md).
+ * @module @fakechris/dsh-track/types
+ */
+
+/** Node kinds in the per-session execution graph. */
+export type GraphNodeKind =
+  | 'session'       // the session root (header facts)
+  | 'turn'          // turn/start
+  | 'step'          // step/start
+  | 'tool'          // tool/call (+ paired tool/result)
+  | 'user-message'  // user/message (a user request)
+  | 'assistant'     // assistant/message (a model reply)
+
+/** Edge kinds in the per-session execution graph. */
+export type GraphEdgeKind =
+  | 'contains'   // session→turn, turn→step, turn→assistant, session→user-message
+  | 'invokes'    // step→tool (or turn→tool when the log has no step)
+  | 'provoked'   // user-message→turn: this request opened this turn's work
+
+/** Exact log range a node/edge cites (inclusive). */
+export interface GraphCitation {
+  /** Session owning the cited log range. */
+  sessionId: string
+  /** First event seq of the source range (inclusive). */
+  seqStart: number
+  /** Last event seq of the source range (inclusive). */
+  seqEnd: number
+}
+
+/** One node of the per-session execution graph. */
+export interface GraphNode {
+  /** Deterministic id (gn_<hash>) — stable across rebuilds of the same log. */
+  id: string
+  kind: GraphNodeKind
+  /** Short display title (truncated text / turn label / tool name). */
+  title: string
+  /** Exact raw-log range this node covers. */
+  citation: GraphCitation
+  /** Turn number this node belongs to, when derivable. */
+  turn?: number
+  /** Step number within the turn, when derivable. */
+  step?: number
+  /** Tool name for kind === 'tool'. */
+  toolName?: string
+  /** Tool call id — pairs tool/call with tool/result. */
+  callId?: string
+  /** user/message data.id — the web panel's jump-back target. */
+  messageId?: string
+  /** Whether the paired tool/result carried an error-ish payload. */
+  toolError?: boolean
+  /** Turn outcome (from turn/end reason.kind) — the calendar-yarn ✓/⊘/✕. */
+  outcome?: 'completed' | 'aborted' | 'error' | 'blocked'
+  /** Header facts on the session root node only. */
+  parentSessionId?: string
+  origin?: 'subagent'
+  agentLabel?: string
+  /** Epoch ms when the node's first event occurred. */
+  createdAt: number
+}
+
+/** One edge of the per-session execution graph. */
+export interface GraphEdge {
+  /** Deterministic id (ge_<hash>). */
+  id: string
+  kind: GraphEdgeKind
+  fromId: string
+  toId: string
+  /** Exact raw-log range this edge cites. */
+  citation: GraphCitation
+}
+
+/** The complete per-session execution graph — stored under key = sessionId. */
+export interface SessionGraph {
+  /** Session id — also the KV record key. */
+  sessionId: string
+  /** Header facts (id/cwd/parentSession/origin/delegationDepth/createdAt). */
+  header: {
+    id: string
+    cwd?: string
+    parentSession?: string
+    origin?: 'subagent'
+    delegationDepth?: number
+    agentPreset?: string
+    createdAt: number
+    /** Repos this session's tool calls touched (repo-touch project induction). */
+    repos?: Array<{ url: string; root: string; name: string }>
+    /** Sorted tool-call seq -> repo url index (requirement-level attribution). */
+    repoTouch?: Array<{ seq: number; url: string }>
+  }
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  /** Highest event seq folded into the graph. */
+  seqEnd: number
+  /** Epoch ms of the last event folded into the graph (activity window end). */
+  lastActivityAt: number
+  /** Epoch ms when this graph was built. */
+  builtAt: number
+  /** Builder schema version (bump on breaking shape changes). */
+  version: number
 }
 
 /** Decision point: AI-raised, user-answered, persisted to the KV decisions table. */
@@ -207,8 +410,12 @@ export interface Decision {
   /** Message id of that motivation request (`user/message` `data.id`) —
    *  the panel's deep link target when jumping back to the conversation. */
   contextMessageId?: string
+  /** Evidence pointer to the raise turn in the raw log (best-effort). */
+  citation?: { sessionId: string; seqStart: number; seqEnd: number }
   /** Id of a previous decision of the same topic that this one supersedes. */
   supersedesDecisionId?: string
+  /** QOC evaluation criteria — the yardsticks used to pick the option (cost, complexity, privacy...). */
+  criteria?: string[]
   createdAt: string
 }
 
@@ -231,6 +438,47 @@ export interface TrackGlobal {
    * restart (the 2026-08-13 duplicate-capture bug).
    */
   autoTodoSessions?: Record<string, string>
+  /**
+   * Durable per-session marker for the G2 REQUIREMENT capture (one long user
+   * request per session, survives restarts — the in-memory set dies with the
+   * web process and caused re-captures after every restart).
+   */
+  autoRequirementSessions?: Record<string, string>
+  /** Durable per-session event-graph build marker: sessionId → ISO build time.
+   *  Progress/observability only — freshness is judged by the stored graph's
+   *  seqEnd vs the log length, so a stale marker never blocks a rebuild. */
+  graphBuiltSessions?: Record<string, string>
+  /** Runtime-tunable auto-maintenance knobs (defaults when absent). */
+  config?: TrackConfig
+}
+
+/**
+ * Auto-maintenance configuration — tunable at runtime via the panel settings
+ * (gear ⚙ in the Track panel) or POST /api/track/config. Missing fields fall
+ * back to DEFAULT_TRACK_CONFIG, so a partial write is safe.
+ */
+export interface TrackConfig {
+  /** Days a canceled proposal may sit in pendingConfirm before auto-confirm
+   *  (garbage collection for abandoned work; 0 = never auto-confirm). */
+  autoCancelPendingDays: number
+  /** Days between scheduled sync passes over the lastSync workspaces
+   *  (0 = disabled). LLM-engine (v2) runs are memory/cost heavy — default v1. */
+  syncIntervalDays: number
+  /** Session cap per workspace per scheduled sync (memory guard). */
+  syncMaxSessions: number
+  /** Scheduled-sync engine: 'v1' (deterministic, zero LLM) or 'v2' (LLM). */
+  syncEngine: 'v1' | 'v2'
+  /** Token-similarity threshold for AUTO near-duplicate merge (0..1). */
+  nearDupThreshold: number
+}
+
+/** Defaults: 14d auto-cancel grace (“至少两周”), weekly v1 sync capped at 10. */
+export const DEFAULT_TRACK_CONFIG: TrackConfig = {
+  autoCancelPendingDays: 14,
+  syncIntervalDays: 7,
+  syncMaxSessions: 10,
+  syncEngine: 'v1',
+  nearDupThreshold: 0.6,
 }
 
 /**
@@ -243,7 +491,7 @@ export interface TrackGlobal {
 export interface AuditEntry {
   id: string
   /** The tool that ran: capture_thought | report_decision_point | track_create_issue | track_sync_history | track_usage | track_backfill_captures | track_respond_decision | track_list_decisions | track_attach_issue | track_update_issue_state | track_issue_evidence. */
-  tool: 'capture_thought' | 'report_decision_point' | 'track_create_issue' | 'track_sync_history' | 'track_usage' | 'track_backfill_captures' | 'track_respond_decision' | 'track_list_decisions' | 'track_attach_issue' | 'track_update_issue_state' | 'track_issue_evidence'
+  tool: 'capture_thought' | 'report_decision_point' | 'track_create_issue' | 'track_sync_history' | 'track_usage' | 'track_backfill_captures' | 'track_respond_decision' | 'track_list_decisions' | 'track_attach_issue' | 'track_update_issue_state' | 'track_issue_evidence' | 'track_session_graph' | 'track_genealogy' | 'track_git_artifacts' | 'track_evolution_brief' | 'track_delete_issue' | 'track_delete_capture'
   /** Epoch ms of the invocation. */
   ts: number
   /** Owning agent session id when available. */
@@ -292,11 +540,92 @@ export interface LlmUsageRecord {
   reasoningTokens?: number
 }
 
+/**
+ * A Project (genealogy Layer 1 grouping): sessions whose cwd belongs to one
+ * workspace/repository. Inducted deterministically from graph headers
+ * (header.cwd) + the repo's git remote — the '归纳到几个项目' dimension.
+ */
+export interface Project {
+  /** Stable id: track_project_<hash(cwd)> — deterministic across re-runs. */
+  id: string
+  /** Project display name (basename of the cwd). */
+  name: string
+  /** Absolute workspace path (also the identity key). */
+  path: string
+  /** Git remote origin URL, when readable from <path>/.git/config. */
+  repoUrl?: string
+  /** Sessions inducted into this project (graph docs with this cwd). */
+  sessionIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * A git commit artifact (genealogy Layer 1 Artifact node / Layer 0 code
+ * anchor). Scanned from a project's git log and linked to sessions (by
+ * activity time window) and issues (by title token overlap).
+ */
+export interface CommitArtifact {
+  /** Stable id: track_commit_<hash(sha)> — deterministic across scans. */
+  id: string
+  /** Git commit sha (full 40-hex). */
+  sha: string
+  /** Project id the commit belongs to (projectIdFor(cwd)). */
+  projectId: string
+  /** Repo cwd the commit was scanned from. */
+  repo: string
+  /** Author date, epoch ms (display). */
+  authorAt: number
+  /** Committer date, epoch ms (production-time correlation — P2). */
+  committedAt: number
+  /** Commit subject line (first line of the message). */
+  subject: string
+  /** Commit message body (bounded) — source of typed trailers (P2). */
+  body?: string
+  /**
+   * Typed trailers parsed from the body (P2 explicit channel):
+   * `Track-Issue: INV-12` / `Harness-Session: <session-id>`.
+   */
+  trailers?: Array<{ key: string; value: string }>
+  createdAt: string
+}
+
+/**
+ * One extraction run — the durable record of what the sync pipeline inferred
+ * (Ledger-first: candidates are knowledge, not throwaway intermediates).
+ * Keeps a compact projection of the candidates so a re-run never loses the
+ * richer intermediate view that got flattened into Issues.
+ */
+export interface ExtractionRun {
+  /** Deterministic id: track_extract_<hash(workspace, at)>. */
+  id: string
+  /** Workspace cwd the run scanned. */
+  workspace: string
+  /** Sync engine ('v1' | 'v2'). */
+  engine: 'v1' | 'v2'
+  /** Model route used for LLM synthesis, when any. */
+  model?: string
+  scannedSessions: number
+  spanCount: number
+  /** Compact candidate projection: id, span, kind, authority, title, confidence. */
+  candidates: Array<{
+    id: string
+    sessionId: string
+    seqStart: number
+    seqEnd: number
+    kind: string
+    authority: string
+    title: string
+    confidence: number
+  }>
+  createdAt: string
+}
+
 /** KV unit descriptor for the track unit. */
 export const TRACK_UNIT = {
   name: 'track',
   version: 1,
-  tables: ['captures', 'issues', 'epics', 'links', 'decisions', 'audit', 'usage'],
+  tables: ['captures', 'issues', 'epics', 'links', 'decisions', 'audit', 'usage', 'graph', 'projects', 'commits', 'extractions'],
   hasGlobal: true,
 } as const
 

@@ -6,7 +6,7 @@ English | [中文](2026-08-06-token-surface-unpriced-replace-compatibility.zh.md
 
 ## Problem
 
-The `contextPressure` and `contextBreakdown` projections keep a running surface-token total plus at most one pending shadow-price claim, so their persisted checkpoints stay O(1) over a session's life. Current replace producers append a `compact/summary` or `compact/prune` metering event immediately before the replacement; its `shadowedTokenCount` prices the exact replaced range, and `foldSurfaceProjection` turns that into the signed delta.
+The `contextPressure` and `contextBreakdown` projections keep a running surface-token total plus at most one pending shadow-price claim, so their persisted checkpoints stay O(1) over a session's life. Current replace producers append a `compaction/summary` or `compaction/prune` metering event immediately before the replacement; its `shadowedTokenCount` prices the exact replaced range, and `foldSurfaceProjection` turns that into the signed delta.
 
 Sessions recorded before the shadow-price protocol log replacements with no adjacent metering event. The O(1) state cannot reconstruct the replaced range's price, and the fold treated every unpriced replacement as a contract violation and threw — so replaying such a session died at its first replacement (`token surface: replace at seq … has no adjacent shadow price`), leaving the session permanently unopenable.
 

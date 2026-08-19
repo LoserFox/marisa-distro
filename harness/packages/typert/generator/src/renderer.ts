@@ -128,7 +128,7 @@ export class TypeGraphRenderer {
       case 'infer': return `infer ${this.renderTypeParameter(node.parameter, false, references)}`
       case 'mapped': {
         const readonly = node.readonly === 'preserve' ? '' : node.readonly === 'remove' ? '-readonly ' : 'readonly '
-        const optional = node.optional !== 'preserve' ? node.optional === 'remove' ? '-?' : '?' : ''
+        const optional = node.optional === 'preserve' ? '' : node.optional === 'remove' ? '-?' : '?'
         if (node.parameter.constraint === undefined) {
           throw new TypeGraphRenderError(`mapped type parameter ${node.parameter.name} has no constraint`)
         }
@@ -234,7 +234,7 @@ export class TypeGraphRenderer {
 
   /**
    * Find the transitive declaration closure referenced by members.
-   * @param memberIds - business-surface member ids.
+   * @param memberIds - business-API member ids.
    * @returns declarations in graph order, excluding no roots implicitly.
    */
   declarationClosureForMembers(memberIds: readonly string[]): TypeDeclarationModel[] {

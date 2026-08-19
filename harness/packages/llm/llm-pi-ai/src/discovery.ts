@@ -111,7 +111,7 @@ async function readBounded(response: Response, url: string): Promise<string> {
       const { done, value } = await reader.read()
       if (done) break
       total += value.byteLength
-      if (total > MAX_RESPONSE_BYTES) { throw oversized() }
+      if (total > MAX_RESPONSE_BYTES) throw oversized()
       chunks.push(value)
     }
   } finally {

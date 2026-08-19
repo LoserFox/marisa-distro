@@ -8,7 +8,7 @@
 // `[data-input-backdrop]` div underneath it, which also carries the claim-token
 // highlight, the chips and the ghost hint.
 //
-// Two layers can only stay together by moving together. They now do: both sit
+// Two layers can only stay together by moving together. They do: both sit
 // inside `[data-input-scroll]`, the composer's single scrolling box, and are as
 // tall as the whole draft — so one offset, applied by the browser, moves the
 // caret and the words in the same frame. Scrolling the textarea and assigning
@@ -24,7 +24,7 @@
 //
 // Only a real engine can show any of this. Scrolling is layout: jsdom reports
 // `scrollHeight === clientHeight` for every element and never scrolls one, so
-// the unit spec in packages/client/ui-conversation/tests/input-bar.spec.tsx can
+// the unit spec in packages/client/ui-conversation/tests/input-bar.client.spec.tsx can
 // only assert that one scrollport contains both layers.
 //
 // Zero model calls: a fresh workspace's blank session already carries a live
@@ -64,12 +64,12 @@ const DRAFT = Array.from({ length: DRAFT_LINES }, (_unused, index) => {
 }).join('\n')
 
 /**
- * A draft ending in a newline: the shape where the two layers reserve their
+ * A draft ending in a newline, where the two layers reserve their
  * final line box on different terms. A textarea keeps one for the caret after a
  * final newline; `white-space: pre-wrap` collapses a text node's trailing
  * newline and generates none. The hidden auto-grow mirror carries the newline
  * and so decides the height for both, which is why the backdrop needs no
- * padding of its own — but only a draft of this shape can show it.
+ * padding of its own — but only a draft with a trailing newline can show it.
  */
 const DRAFT_TRAILING_NEWLINE = `${DRAFT}\n`
 
@@ -164,7 +164,7 @@ function measureComposer(page: Page): Promise<ComposerMetrics> {
     // ends, which is before any scroll event could have run a listener.
     const before = gap()
     const restore = scroll.scrollTop
-    scroll.scrollTop = restore !== 0 ? 0 : 120
+    scroll.scrollTop = restore === 0 ? 120 : 0
     const gapShiftOnScroll = Math.abs(gap() - before)
     scroll.scrollTop = restore
     const box = scroll.getBoundingClientRect()
@@ -192,7 +192,7 @@ function measureComposer(page: Page): Promise<ComposerMetrics> {
  * Absolute glyph coordinates are deliberately absent: they depend on font
  * metrics and would make the fixture fail on a machine that measures text
  * differently — a golden that needs re-recording per platform documents the
- * platform, not the change. What is recorded is the cap, the caret-to-glyph
+ * platform, not the behavior. What is recorded is the cap, the caret-to-glyph
  * relation, and which lines are on screen, each a comparison that survives any
  * layout keeping the coupling.
  * @param top - metrics with the draft scrolled to its start.
@@ -297,10 +297,10 @@ describe('web e2e: composer draft scrolling', () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-composer-draft-scroll-wrap-width'))
     // A layer that breaks lines somewhere else puts the words under the wrong
     // caret, and an 8px difference is worth 2 to 5 lines on a wrap-sensitive
-    // draft. The three now share a containing block — the scrollport — so a
-    // scrollbar that consumes layout space costs them the same width; before,
-    // only the textarea scrolled, and WebKit reserved gutter space for it alone
-    // (768 against 776) while chromium and firefox did not.
+    // draft. All three share a containing block — the scrollport — so a
+    // scrollbar that consumes layout space costs them the same width; with
+    // only the textarea scrolling, WebKit reserves gutter space for it alone
+    // (768 against 776) while chromium and firefox do not.
     const metrics = await measureComposer(page)
     expect(metrics.backdropWrapWidth).toBe(metrics.inputWrapWidth)
     // The mirror decides the box height, so it belongs in the same equality —
@@ -315,7 +315,7 @@ describe('web e2e: composer draft scrolling', () => {
     // The reported symptom, isolated. A scroll offset changes and the caret's
     // distance to its own glyphs is re-read before the task ends — before any
     // `scroll` listener could have run. With the layers on one scrollport the
-    // browser moved both, so the distance is unchanged; with the glyph layer
+    // browser moves both, so the distance is unchanged; with the glyph layer
     // catching up in a listener it is off by the whole delta until a later
     // frame, which is a caret flying away from its text mid-gesture.
     const metrics = await measureComposer(page)
@@ -348,9 +348,10 @@ describe('web e2e: composer draft scrolling', () => {
   it('typing at the end of a scrolled draft brings the caret back into view', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-composer-draft-scroll-edit'))
     // The other way the box moves, and the one that depends on the browser: the
-    // textarea no longer scrolls, so revealing the caret after an edit is a
-    // scroll-into-view that has to walk up to the scrollport. Scroll away from
-    // the caret first, so the edit has somewhere to bring it back from.
+    // textarea holds no scroll offset of its own, so revealing the caret after
+    // an edit is a scroll-into-view that has to walk up to the scrollport.
+    // Scroll away from the caret first, so the edit has somewhere to bring it
+    // back from.
     const input = page.locator('textarea:enabled').first()
     await input.press('End')
     await input.hover()
@@ -368,9 +369,9 @@ describe('web e2e: composer draft scrolling', () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-composer-draft-scroll-paste'))
     // The composer suppresses the native paste — the machine owns the draft and
     // the undo log — and restores the caret programmatically, which reveals
-    // nothing on its own: measured in chromium and WebKit, the view stayed
-    // where it was while the caret sat at the end of the pasted block. The
-    // restore now scrolls it into view, and this is the case that proves it.
+    // nothing on its own: in chromium and WebKit the view stays put while the
+    // caret sits at the end of the pasted block, so the restore scrolls it
+    // into view; this case pins it.
     const input = page.locator('textarea:enabled').first()
     await input.fill('one short line')
     await input.press('End')
@@ -380,7 +381,7 @@ describe('web e2e: composer draft scrolling', () => {
       const data = new DataTransfer()
       data.setData('text/plain', text)
       el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
-      // Ending in a newline is the shape the engines disagree on: the caret
+      // The engines disagree when the draft ends in a newline: the caret
       // lands on a line with nothing on it, where chromium reports no client
       // rects at all for the collapsed position.
     }, `\n${DRAFT}\n`)
@@ -400,7 +401,7 @@ describe('web e2e: composer draft scrolling', () => {
 
   it('a draft ending in a newline scrolls to its true end, not a line above it', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-composer-draft-scroll-trailing-newline'))
-    // The layers reserve a final line box on different terms, so this shape is
+    // The layers reserve a final line box on different terms, so the trailing-newline case is
     // the one that separates a height every layer agrees on from a box measured
     // one line short of the caret's own last position.
     const input = page.locator('textarea:enabled').first()
@@ -452,7 +453,7 @@ describe('web e2e: composer draft scrolling', () => {
       const data = new DataTransfer()
       data.setData('text/plain', text)
       el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
-      // The ordinary shape — not ending in a newline — so the collapsed branch
+      // The ordinary case, without a trailing newline, so the collapsed branch
       // of the reveal keeps a real engine under it; the case above owns the
       // after-newline branch.
     }, `\n${DRAFT}`)

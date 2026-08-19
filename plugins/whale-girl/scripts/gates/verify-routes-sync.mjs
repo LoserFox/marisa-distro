@@ -22,14 +22,14 @@ function readPrefix(routesSrc) {
 export function check(root = ROOT) {
   const errors = []
   const consumers = [
-    { file: '.dsh-plugin/client/index.mjs', label: 'client/index.mjs' },
-    { file: '.dsh-plugin/index.mjs', label: 'index.mjs' },
-    { file: '.dsh-plugin/src/assets.mjs', label: 'src/assets.mjs' },
+    { file: 'lib/client/index.mjs', label: 'client/index.mjs' },
+    { file: 'lib/index.mjs', label: 'index.mjs' },
+    { file: 'lib/src/assets.mjs', label: 'src/assets.mjs' },
   ]
-  const routesSrc = readFileSync(join(root, '.dsh-plugin', 'src', 'routes.mjs'), 'utf8')
+  const routesSrc = readFileSync(join(root, 'lib', 'src', 'routes.mjs'), 'utf8')
   const prefix = readPrefix(routesSrc)
   if (prefix === null) {
-    errors.push('.dsh-plugin/src/routes.mjs 未定义 ROUTE_PREFIX（路由单一来源缺失）')
+    errors.push('lib/src/routes.mjs 未定义 ROUTE_PREFIX（路由单一来源缺失）')
     return { ok: false, errors }
   }
   // 路由前缀字面量（引号包住的 ROUTE_PREFIX 路径）——routes.mjs 内部允许，消费文件禁止。

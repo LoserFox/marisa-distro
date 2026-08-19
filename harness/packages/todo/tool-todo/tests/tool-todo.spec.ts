@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import type { TodoItem } from '@deepseek-ai/dsh-session'
 import { type Agent } from '@deepseek-ai/dsh-agent'
@@ -13,7 +13,7 @@ import * as tool from '../src/index.ts'
 const testToolSignal = new AbortController().signal
 
 /**
- * Drives the REAL plugin body: mounts `dsh-tool-todo` on a real `ToolRegistry`
+ * Drives the REAL plugin body: mounts `dsh-tool-todo` on a real `ToolRuntime`
  * and invokes the registered `todo_write` tool through `ctx.tools.execute`,
  * with a fake parent Agent carrying a real `Session` — so the append the tool
  * makes is observable on a genuine session log (only the agent wrapper is a
@@ -29,7 +29,7 @@ function agentWithSession(id = 'parent-1'): Agent & { session: Session } {
 async function setup(allowParallelInProgress: boolean): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(tool, { allowParallelInProgress })
   return ctx
 }
@@ -67,7 +67,7 @@ describe('dsh-tool-todo', () => {
   it('appends a todo/write event carrying the whole list to the calling session', async () => {
     const ctx = await setup(true)
     const agent = agentWithSession('writer')
-    const todos: Array<TodoItem> = [
+    const todos: TodoItem[] = [
       { content: 'plan', status: 'in_progress' },
       { content: 'build', status: 'pending' },
     ]
@@ -212,7 +212,7 @@ describe('dsh-tool-todo', () => {
   it('unregisters the tool when its contributing fiber is disposed (HMR-safety)', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     const fiber = await ctx.plugin(tool, { allowParallelInProgress: true })
     expect(ctx.tools.schemas().some(s => s.name === 'todo_write')).toBe(true)
     await fiber.dispose()

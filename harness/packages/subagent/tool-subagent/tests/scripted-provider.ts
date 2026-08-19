@@ -1,6 +1,6 @@
 /** Package-local scripted child boundary for deterministic tool-subagent tests. */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import type {
@@ -33,6 +33,8 @@ export interface Config {
   inheritsParentContext?: boolean
   /** Structured value returned when the request asks for one. */
   structured?: unknown
+  /** Observes each start; the child's result additionally waits for the returned promise. */
+  onStart?: (request: SubagentStartRequest) => Promise<void> | void
 }
 
 /** Scripted provider whose result aborts if its signal or disposer wins first. */
@@ -49,7 +51,7 @@ class ScriptedSubagentProvider implements SubagentProvider {
   }
 
   async start(request: SubagentStartRequest): Promise<SubagentRun> {
-    if (request.signal.aborted) { throw new Error('scripted subagent start aborted before publication') }
+    if (request.signal.aborted) throw new Error('scripted subagent start aborted before publication')
     const reply = this.config.reply ?? 'scripted subagent reply'
     const output: ContentBlock[] = [{ type: 'text', text: reply }]
     const wantsStructured = request.outputSchema !== undefined && this.capabilities.outputSchema
@@ -68,9 +70,10 @@ class ScriptedSubagentProvider implements SubagentProvider {
       ...wantsStructured ? { structured: this.config.structured ?? { reply } } : {},
       stopReason: state.cancelled ? 'aborted' : stopReason,
     })
-    const result = new Promise<SubagentResult>((resolve) => {
+    const gate = Promise.resolve(this.config.onStart?.(request))
+    const result = gate.then(() => new Promise<SubagentResult>((resolve) => {
       setTimeout(() => { resolve(resultFor()) }, 0)
-    }).finally(() => {
+    })).finally(() => {
       request.signal.removeEventListener('abort', onAbort)
     })
 

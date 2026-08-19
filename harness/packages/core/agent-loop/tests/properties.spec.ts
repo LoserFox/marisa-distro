@@ -10,13 +10,13 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import LlmService from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime from '@deepseek-ai/dsh-llm'
 import { createUserMessage, LlmAdapter } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
@@ -37,10 +37,10 @@ class EchoAdapter extends LlmAdapter {
 
 async function harness() {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, { agents: [] })
   ctx.llm.registerAdapter(['mock'], new EchoAdapter())
@@ -122,7 +122,7 @@ describe('agent loop scheduling properties', () => {
           expect(userMessageTexts(agent)).toEqual(texts)
           // This failure-free fixture maps every item to an independent turn.
           expect(turnNumbers(agent)).toEqual(texts.map((_, i) => i + 1))
-          expect(turnEndNumbers(agent)).toEqual(texts.map((_, i) => { return i + 1 }))
+          expect(turnEndNumbers(agent)).toEqual(texts.map((_, i) => i + 1))
           expect(userMessageCountsByTurn(agent)).toEqual(texts.map(() => 1))
           expect(trace).toEqual(['running', 'idle'])
           assertLegalStatusTrace(trace)

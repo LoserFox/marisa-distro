@@ -4,7 +4,7 @@
 # replay overlay for `DSH_SNAPSHOT=replay`. A config patch replaces the whole app
 # config, so unchanged base fields are restated below.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -25,4 +25,4 @@
             Verify your work by running the code or tests. Keep answers brief and factual.
       - insert:
           - id: code-runtime
-            name: '@deepseek-ai/dsh-code-runtime-worker'
+            name: '@deepseek-ai/dsh-code-runtime-worker-thread'

@@ -1,5 +1,5 @@
 /**
- * The JS seam over the prebuilt `landlock-run` launcher: resolve the
+ * The JavaScript API over the prebuilt `landlock-run` launcher: resolve the
  * binary for this host, build its grant argv, and run its functional probe.
  *
  * This module owns the launcher's CLI contract (`docs/cli-contract.md`) so
@@ -61,7 +61,7 @@ export interface LauncherGrants {
  * deliberately not checked either way: {@link probe} is the single
  * availability signal (a missing binary probes `unusable` the same way an
  * unenforcing kernel does).
- * @param resolvePackageJson - test seam over `require.resolve` (the default
+ * @param resolvePackageJson - test hook over `require.resolve` (the default
  *   covers real installs); receives the platform package's `package.json`
  *   specifier and returns its absolute path, throwing when unresolvable.
  * @returns the absolute launcher path to probe and exec.

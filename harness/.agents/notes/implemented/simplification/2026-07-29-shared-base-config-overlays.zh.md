@@ -6,11 +6,11 @@ Status: implemented
 
 ## 问题
 
-`dsh` 交付了两棵完整的配置树，其中 43 个配置项完全相同。`apps/cli/cordis.yml` 以 74 个平铺配置项组合 web surface，而 TUI 启动的是 `examples/tui-agent/cordis.yml`——其中单独一行 `@deepseek-ai/dsh-tui-demo` 挂载了十二个插件，并把它们的配置重新声明为自己那份二十个键、仅作透传的 `Config`。
+`dsh` 交付了两棵完整的配置树，其中有 43 个共享配置项。`apps/cli/cordis.yml` 以 74 个平铺配置项组合 web surface，而 TUI 启动的是 `examples/tui-agent/cordis.yml`——其中单独一行 `@deepseek-ai/dsh-tui-demo` 挂载了十二个插件，并把它们的配置重新声明为自己那份二十个键、仅作透传的 `Config`。
 
 这两份文件都名不副实。`examples/tui-agent` 并不是示例：`apps/cli/src/tui.ts` 把它硬编码为产品的默认配置；它还拥有 TUI 的 PTY 冒烟测试、八个终端快照场景，以及被 `cordis-agent` 叶节点 import 的 PTY harness。`dsh-tui-demo` 也不是 demo——它就是应用本身，由交付的二进制从 `packages/examples/` 中挂载。
 
-真正决定性的问题是重复。43 个共享配置项中，38 个逐字节相同，5 个因各 surface 的正当理由而不同；因此每次能力改动都必须改两处，而且可能无声漂移。该组合包还反转了一个默认值：`composeTuiApp` 读取 `config.goals ?? {}`，于是交付的 TUI 挂载了 goals、`tool-goal`、`goal-session` 和 `/goal`——尽管没有任何配置键要求它们。
+真正决定性的问题是重复。43 个共享配置项中，38 个逐字节相同，5 个因各 surface 的正当理由而不同；因此每次能力改动都必须改两处，而且可能无声漂移。该组合包还反转了一个默认值：`composeTuiApp` 读取 `config.goals ?? {}`，于是交付的 TUI 挂载了 goals、`tool-goal`、`goal-round-driver` 和 `/goal`——尽管没有任何配置键要求它们。
 
 ## 决策
 
@@ -20,11 +20,11 @@ Status: implemented
 
 优先级即列表顺序，逐配置项后写者胜：base，然后是 surface overlay，接着是 `--config` overlay 或个人 `~/.dsh/config.yaml`，最后是启动器自身的 flag 与 profile patch。
 
-`--config <path>` 现在应用一个 overlay 来**取代**个人 overlay，因此 demo 或测试用的树绝不会继承用户的 provider 与 model。`--config-replace <path>` 则把某个文件作为整棵树启动，同时绕过 base、surface overlay 与个人 overlay；这正是旧 `--config` 的行为，所以像 `examples/web-cordis` 这样的树改用了新 flag。两个 flag 都会在 `/resume` 的 execve 交接中保留，否则 resume 会静默更换 agent。
+`--config <path>` 现在应用一个 overlay 来**取代**个人 overlay，因此 demo 或测试用的树绝不会继承用户的提供方与 model。`--config-replace <path>` 则把某个文件作为整棵树启动，同时绕过 base、surface overlay 与个人 overlay；这正是旧 `--config` 的行为，所以像 `examples/web-cordis` 这样的树改用了新 flag。两个 flag 都会在 `/resume` 的 execve 交接中保留，否则恢复时会静默更换 agent（智能体）。
 
-patch 会整体替换目标配置项的 `config` 而不合并，这决定了拆分方式：取值因 surface 而异的配置项住在 overlay 中，绝不住在 base 里，从而没有任何配置项会被三层同时 patch。因此会话身份根本不能经由配置键传递——它迁移到了 `dsh-agent-loop` 的 `CONFIGURED_AGENT_IDENTITIES_KEY`，正如启动器持有身份的记录所述。
+patch 会整体替换目标配置项的 `config` 而不合并。因此，取值因 surface 而异的配置项住在 overlay 中，绝不住在 base 里，从而没有任何配置项会被三层同时 patch。会话身份根本不能经由配置键传递——它迁移到了 `dsh-agent-loop` 的 `CONFIGURED_AGENT_IDENTITIES_KEY`，正如启动器持有身份的记录所述。
 
-`examples/tui-agent`、`examples/cordis-agent`、`examples/code-mode` 与 `packages/examples/tui-demo` 均被删除。TUI 测试迁往 `apps/cli/tests/`，cordis 工具集的 e2e 迁入 `packages/cordis/tool-cordis/tests/`，受支持的 Code Mode demo 则保留为 `examples/acp-agent/code-mode.cordis.yml` 中的 ACP overlay。
+`examples/tui-agent`、`examples/cordis-agent`、`examples/code-mode` 与 `packages/examples/tui-demo` 均被删除。TUI 测试迁往 `apps/cli/tests/`，cordis 工具集的 e2e 迁入 `packages/extensions/tool-cordis/tests/`，受支持的 Code Mode demo 则保留为 `examples/acp-agent/code-mode.cordis.yml` 中的 ACP（Agent Client Protocol）overlay。
 
 ## 备选方案
 
@@ -38,16 +38,16 @@ patch 会整体替换目标配置项的 `config` 而不合并，这决定了拆�
 
 ## 影响
 
-指名 `@deepseek-ai/dsh-tui-demo`、或 patch `tui-agent` 配置项的 overlay 与 `--config` 树将不再可解析。overlay 现在要 patch 拥有对应键的那一行：模型路由在 `agent-loop`，人设在 `system-prompt`，呈现设置在 `tui`。
+指名 `@deepseek-ai/dsh-tui-demo` 或 patch `tui-agent` 配置项的 overlay 或 `--config` 树将不再可解析。overlay 现在要 patch 拥有对应键的那一行：模型路由在 `agent-loop`，人设在 `system-prompt`，呈现设置在 `tui`。
 
-若某个 patch 的 `id` 不匹配任何配置项，Loader 仍只告警而不报错。这是有意为之：同一份个人 overlay 会跨 surface 共用，而 `insert` 配置项按设计本就不匹配任何目标，因此仅在 `web` 下存在的配置项不能让 TUI 启动失败。
+若某个 patch 的 `id` 不匹配任何配置项，它仍为空操作而不报错。这是有意为之：同一份个人 overlay 会跨 surface 共用，而 `insert` 配置项按设计本就不匹配任何目标，因此仅在 `web` 下存在的配置项不能让 TUI 启动失败。
 
-`dsh web` 新增 `--config`，作为一份额外 overlay 传入 `AppCLIEntry`。Web 保留沙箱化 Bash 与文件系统提供方，以及审批、权限预设、目录选择和浏览器权限界面；覆盖层会禁用共享的本地提供方，因为补丁可以禁用条目但不能删除条目。TUI 查询索引使用进程唯一的临时数据库，因为 SQLite 后端要求单写入者所有权。该索引是每个进程重新构建的可丢弃派生数据；`/resume` 直接列出底层语料，不依赖索引复用。`AppCLIEntry` 在为自身 patch 合并恢复配置项默认值时会同时读取 base 与其 surface overlay，因为 flag 覆盖必须保留同一配置项上 overlay 的其他字段。
+`dsh web` 新增 `--config`，作为一份额外 overlay 传入 `AppCLIEntry`。Web 保留沙箱化 Bash 与文件系统提供方，以及审批、权限预设、目录选择和浏览器权限界面；覆盖层会禁用共享的本地提供方，因为补丁可以禁用条目但不能删除条目。TUI 查询索引使用每个进程独有的临时数据库，因为 SQLite 后端要求单写入者所有权。该索引是每个进程重新构建的可丢弃派生数据；`/resume` 直接列出底层语料，不依赖索引复用。`AppCLIEntry` 在为自身 patch 合并恢复配置项默认值时会同时读取 base 与其 surface overlay，因为 flag 覆盖必须保留同一配置项上 overlay 的其他字段。
 
 ## 验证
 
-组合的正确性通过用真实 Loader 启动每棵树并检查已就绪的条目来核对，而不是靠阅读 YAML：两个界面都能稳定完成且没有未加载项；Web 会以沙箱化 Bash 与文件系统提供方启动 `httpServer`。Code Mode 继续由 ACP overlay 与程序化 TUI 快照覆盖，而不再维护独立交付的 TUI 应用。
+组合的正确性通过用真实 Loader 启动每棵树并检查已就绪的条目来核对，而不是靠阅读 YAML：两个界面都能完全就绪，且没有未加载项；Web 会以沙箱化 Bash 与文件系统提供方启动 `httpServer`。Code Mode 继续由 ACP overlay 与程序化 TUI 快照覆盖，而不再维护独立交付的 TUI 应用。
 
-全部八个终端快照场景在迁移后逐字节重放一致，14 个用例的 PTY 冒烟测试全部通过，其中两个用例断言个人 overlay 能触达一个 **insert 进来的**配置项——这正是 vendored `plugin-include` 修复所启用的行为（[`vendor/README.md`](../../../../vendor/README.md) 本地修改第 8 条，由 `packages/ui/app-boot/tests/config-reload.spec.ts` 覆盖）。
+全部八个终端快照场景在迁移后逐字节重放一致，14 个用例的 PTY 冒烟测试全部通过，其中两个用例断言个人 overlay 能触达一个 **insert 进来的**配置项——这正是 vendored `plugin-include` 修复所启用的行为（[`vendor/README.md`](../../../../vendor/README.md) 本地修改第 8 条，由 `packages/boot/app-boot/tests/config-reload.spec.ts` 覆盖）。
 
-平铺过程暴露出三处潜伏缺陷，均在此一并修复：TUI 曾在构造时一次性捕获可选的 `sessionQuery` 服务，因此在挂载竞争中胜出时会永久禁用 `/resume`；交付的会话存储根目录曾静默退回项目本地的 `./.sessions`；`--config-replace` 曾在 resume 交接中被丢弃。
+平铺过程暴露出三处潜伏缺陷，均在此一并修复：TUI 曾在构造时一次性捕获可选的 `sessionQuery` 服务，因此在挂载竞争中胜出时会永久禁用 `/resume`；交付的会话存储根目录曾静默退回项目本地的 `./.sessions`；`--config-replace` 曾在恢复交接中被丢弃。

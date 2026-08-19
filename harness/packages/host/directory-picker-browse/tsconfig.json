@@ -1,5 +1,5 @@
 {
-  "extends": "../../../tsconfig.base.client.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/types",
@@ -15,22 +15,7 @@
       "path": "../directory-picker"
     },
     {
-      "path": "../../support/invariants"
-    },
-    {
-      "path": "../../client/ui-slots"
-    },
-    {
-      "path": "../../client/ui-primitives"
-    },
-    {
-      "path": "../../client/locale"
-    },
-    {
-      "path": "../../client/runtime"
-    },
-    {
-      "path": "../../client/ui-workspace"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

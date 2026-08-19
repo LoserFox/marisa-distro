@@ -6,8 +6,8 @@
  * @module @deepseek-ai/dsh-tool-web
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-web'
 import { applyWebSearchTool, WEB_SEARCH_MAX_RESULTS } from './search.ts'
 import { applyWebFetchTool } from './fetch.ts'
@@ -58,7 +58,7 @@ export const Config: z<Config> = z.object({
   fetchMaxOutputChars: z.number().default(DEFAULT_FETCH_MAX_OUTPUT_CHARS),
 })
 
-/** The shape after schemastery applies its defaults to every field. */
+/** Complete config after schemastery applies every field default. */
 type ResolvedConfig = Required<Config>
 
 /** Configured count, timeout, and character caps must be positive integers. */
@@ -73,7 +73,7 @@ function assertPositiveInteger(name: string, value: number): void {
  * that wants only one disables the other in config. Each tool's cooperative
  * timeout budget (`fetchTimeoutMs`/`searchTimeoutMs`, default 30000) is resolved
  * here and attached to the tool as `ToolDefinition.timeoutMs` for
- * `@deepseek-ai/dsh-timeout-policy` to enforce. The tools' disposers are
+ * `@deepseek-ai/dsh-tool-call-timeout-policy` to enforce. The tools' disposers are
  * fiber-scoped (the effect-based registries clean up on dispose), so no manual
  * teardown is needed.
  */

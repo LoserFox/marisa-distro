@@ -42,7 +42,7 @@ The schema enforces type/required/enum. Beyond that, `execute` rejects empty or 
 
 ## Testing
 
-Four tiers, designed up front:
+Four tiers:
 - **Unit** — the session event (append/snapshot-clone/last-write-wins/not-on-surface); the tool (schema shape, arg validation via the real `ctx.tools.execute`, value validation, the event append + replacement, no-agent rejection, `presentCall`, HMR-safety); and TUI folding.
 - **Real-Loader path** — the plugin run through `Loader.unwrapExports`, asserting the namespace export shape survives (it HAS `inject`, so a stray default would crash at load — postmortem/0001).
 - **Full-loop integration** — a scripted mock model calls `todo_write` through the real agent loop; the `todo/write` event lands and a second call replaces it.

@@ -1,6 +1,6 @@
 /**
- * Real-composition guard for the dynamic-configuration chain: LlmService,
- * settings-local, credentials-local, and llm-deepseek boot from a test-only
+ * Real-composition guard for the dynamic-configuration chain: LlmRuntime,
+ * settings-file, credentials-local, and llm-deepseek boot from a test-only
  * cordis.yml through the actual Loader + Include path, external edits of
  * settings.yaml and the credentials document hot-publish through their providers, and the very
  * next request carries the fresh base URL and credential. The same adapter
@@ -13,14 +13,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
-import Include from '@cordisjs/plugin-include'
-import LlmService from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
+import Include from '@deepseek-ai/cordis-plugin-include'
+import LlmRuntime from '@deepseek-ai/dsh-llm'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import CredentialsLocal from '@deepseek-ai/dsh-credentials-local'
+import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
-import SettingsLocal from '@deepseek-ai/dsh-settings-local'
+import FileSettingsProvider from '@deepseek-ai/dsh-settings-file'
+import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
 import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek'
 import { assemble } from './assemble.ts'
 import { closeMockServers, mockServer, textEvents } from './mock-server.ts'
@@ -47,6 +48,7 @@ async function loadComposition(
   // exactly as the previous process left them.
   const fresh = options.reuseRoot === undefined
   root = options.reuseRoot ?? await mkdtemp(join(tmpdir(), 'dsh-llm-composition-'))
+  vi.stubEnv('DSH_HOME', root)
   const settingsPath = join(root, 'settings.yaml')
   const credentialsPath = join(root, '.credentials.yaml')
   if (options.withDynamic && fresh) {
@@ -61,7 +63,7 @@ async function loadComposition(
     ...options.withDynamic
       ? [
         '- id: settings',
-        "  name: '@deepseek-ai/dsh-settings-local'",
+        "  name: '@deepseek-ai/dsh-settings-file'",
         '  config:',
         `    path: ${JSON.stringify(settingsPath)}`,
         '    debounceMs: 10',
@@ -85,9 +87,9 @@ async function loadComposition(
   await ctx.plugin(Loader)
   ctx.loader.builtins.include = Include
   const modules = new Map<string, unknown>([
-    ['test-llm-service', LlmService],
-    ['@deepseek-ai/dsh-settings-local', SettingsLocal],
-    ['@deepseek-ai/dsh-credentials-local', CredentialsLocal],
+    ['test-llm-service', LlmRuntime],
+    ['@deepseek-ai/dsh-settings-file', FileSettingsProvider],
+    ['@deepseek-ai/dsh-credentials-local', LocalCredentialProvider],
     ['@deepseek-ai/dsh-llm-deepseek', LlmDeepSeek],
   ])
   ctx.loader.internal = {
@@ -115,6 +117,7 @@ describe('llm-deepseek real dynamic composition', () => {
     expect(ctx.get('settings')!.describe().map(entry => entry.ns)).toEqual([NS])
     await assemble(ctx, { model: 'deepseek-v4-flash', messages: [] })
     expect(serverA.headers[0]?.authorization).toBe('Bearer boot-key')
+    expect(serverA.headers[0]?.['x-deepseek-harness-user-id']).toBe(getOrCreateAnonymousUserId())
 
     // External edits, exactly as a user or the web UI would leave them on disk.
     await writeFile(settingsPath, `llm-deepseek:\n  baseURL: ${serverB.url}\n`)
@@ -132,7 +135,7 @@ describe('llm-deepseek real dynamic composition', () => {
   })
 
   it('keeps a stored key writable and rotatable across a real restart', async () => {
-    // No ambient DEEPSEEK_API_KEY: the shipped surfaces no longer hoist
+    // No ambient DEEPSEEK_API_KEY: the shipped surfaces do not hoist
     // the credentials document into process.env, so a stored key must stay file-sourced.
     vi.stubEnv('DEEPSEEK_API_KEY', '')
     const first = await mockServer([{ kind: 'sse', events: textEvents }])

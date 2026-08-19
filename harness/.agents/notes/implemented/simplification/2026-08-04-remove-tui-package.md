@@ -8,13 +8,13 @@ English | [中文](2026-08-04-remove-tui-package.zh.md)
 
 Removing the implicit `dsh` terminal application left `@deepseek-ai/dsh-tui` without a shipped composition. The package still carried a terminal renderer, interactive command and question adapters, extension overlays, snapshot fixtures, a patched `pi-tui` dependency, and SDK scaffolding that advertised TUI as a supported application interface. Keeping that surface required maintaining a product-sized frontend whose only remaining consumer was the project generator itself.
 
-The package also made the repository's supported application inventory misleading. Current runnable products use Web, ACP, JSON-RPC, or one-shot CLI front doors, while the SDK continued to offer a terminal choice that no example or product command exercised.
+The package also made the repository's supported application inventory misleading. Current runnable products use Web, ACP, JSON-RPC, or one-shot CLI entry points, while the SDK continued to offer a terminal choice that no example or product command exercised.
 
 ## Decision
 
 The `packages/ui/tui` package is deleted without a compatibility package or alias. Its source, package tests, terminal snapshots, dependency declarations, patched `pi-tui` artifact, workspace references, generated service catalog entry, and documentation are removed together. Generic host and agent-loop capabilities remain unchanged.
 
-The SDK run-interface union now contains only `acp` and `embed`. `create-sdk` defaults to ACP, generated templates contain no terminal startup, resume, session-environment, or model-argument branch, and the builtin `ask-user` feature is removed because neither remaining generated interface supplies a `UserInteractionProvider`. Host applications may still mount the provider-neutral `dsh-user-interaction`, `dsh-commands`, and presentation seams directly.
+The SDK project toolchain that remained as the TUI package's final consumer is deleted by the [toolchain removal decision](2026-08-11-remove-sdk-project-toolchain.md). Host applications may still mount the provider-neutral `dsh-user-questions`, `dsh-commands`, and presentation services directly.
 
 This decision supersedes the reusable-package retention in [the explicit-config `dsh` entrypoint decision](../../archived/simplification/2026-08-03-explicit-config-dsh-entrypoint.md) and the current applicability of the archived TUI implementation notes. Their historical records remain frozen, but they are not authority for the supported package or application inventory.
 
@@ -22,7 +22,7 @@ This note consolidates the deleted package-only records that could not remain cu
 
 ## Verification
 
-Repository searches and generated catalogs contain no TUI package, dependency patch, SDK interface option, service key, or package link. Focused SDK tests cover ACP and embedded creation, configuration, templates, and snapshots. The ordinary source build, typecheck, lint, hygiene, documentation gates, and remaining assembled snapshot suites run without the deleted workspace.
+Repository searches and generated catalogs contain no TUI package, dependency patch, service key, or package link. The ordinary source build, typecheck, lint, hygiene, documentation gates, and remaining assembled snapshot suites run without the deleted workspace.
 
 ## Alternatives considered
 
@@ -34,6 +34,6 @@ Repository searches and generated catalogs contain no TUI package, dependency pa
 
 ## Consequences
 
-DeepSeek Harness has no terminal UI package or generated TUI application. Existing imports, `cordis.yml` rows, SDK `--interface=tui` requests, and projects that depend on the package fail instead of being translated. Web remains the shipped interactive surface; ACP, JSON-RPC, and one-shot CLI remain the non-Web front doors.
+DeepSeek Harness has no terminal UI package. Existing imports and `cordis.yml` rows that depend on the package fail instead of being translated. Web remains the shipped interactive surface; ACP, JSON-RPC, and one-shot CLI remain the non-Web entry points.
 
-The provider-neutral command, user-interaction, approval, tool-presentation, PTY, and session-projection capabilities remain available to other hosts. Reintroducing a terminal frontend requires a named product or deployment, an explicit package boundary, a concrete interaction provider, and assembled lifecycle and transcript acceptance for that frontend.
+The provider-neutral command, user-questions, approval, tool-presentation, PTY, and session-projection capabilities remain available to other hosts. Reintroducing a terminal frontend requires a named product or deployment, an explicit package boundary, a concrete interaction provider, and assembled lifecycle and transcript acceptance for that frontend.

@@ -14,13 +14,13 @@ Status: implemented
 
 `SessionPreparation` 持有一个精确的未发布 `Session`，直至发布或回滚。它属于 Session 生命周期，不属于 agent 生命周期或激活机制。新建流程包装 `SessionStore.prepare()` 的结果；持久化恢复则从 `SessionPersistence.prepare()` 取得准备对象。
 
-agent loop（智能体循环）通过同一条设置与发布流水线消费这两种形式：先取得准备对象，围绕 `preparation.session` 构建私有 agent 上下文，等待可选设置完成，再发布该精确 Session 和 agent，并在所有退出路径上 dispose 准备对象。发布后，实时生命周期由现有 Session 与 agent 存储接管；`SessionPreparation` 本身不负责任何 agent 行为。
+agent loop（智能体循环）通过同一条设置与发布流水线消费这两种形式：先取得准备对象，围绕 `preparation.session` 构建私有 agent 上下文，等待可选设置完成，再发布该精确 Session 和 agent，并在所有退出路径上对准备对象执行 dispose（资源释放）。发布后，实时生命周期由现有 Session 与 agent 存储接管；`SessionPreparation` 本身不负责任何 agent 行为。
 
-该机制细化了 [agent 生命周期与所有权决策](2026-06-18-agent-lifecycle-and-ownership-seams.md)中的发布边界，但不替换其所有权模型。
+该机制细化了 [agent 生命周期与所有权决策](2026-06-18-agent-lifecycle-and-ownership-contracts.md)中的发布边界，但不替换其所有权模型。
 
 ## 持久化准备生命周期
 
-使用协调器的持久化实现会将一个冷源加载为准备完成的 Session。后端转移新鲜、彼此无别名的元数据和事件，以及标识这些精确值的来源限定 revision；Session 恢复路径直接验证并冻结这些对象图，不再复制。协调器计算中断轮次的 closer，并且只构造一次精确的未发布 Session。其不可变 header 与平衡逻辑事件日志构成读取方借用的 `SessionInspection`，revision 则保留在持久化内部。
+使用协调器的持久化实现会将一个冷源加载为准备完成的 Session。后端转移新鲜、彼此无别名的元数据和事件，以及标识这些精确值的来源限定 revision；Session 恢复路径直接验证并冻结这些对象图，不再复制。协调器计算中断轮次的 closer，并且只构造一次精确的未发布 Session。其不可变 header 与已配平的逻辑事件日志构成读取方借用的 `SessionInspection`，revision 则保留在持久化内部。
 
 `inspect(id, signal?)` 不修改存储。合成 closer 只存在于准备完成的内存视图中，撕裂的物理尾部保持不变。同 id 调用方共享进行中的冷读。准备完成后，该对象可以进入每个协调器自己的 LRU；第一方后端可配置容量，默认保留五个。协调器复用保留源之前会读取该 id 的当前 revision；如果不匹配，就淘汰处于就绪阶段的源并重新完成冷实体化。已经进入提交或为恢复而预留的源仍由其所有者独占，因此并发检查会借用该不可变视图，直至发布或释放。
 
@@ -43,11 +43,11 @@ agent loop（智能体循环）通过同一条设置与发布流水线消费这�
 - 缓存属于单个持久化协调器，而不是进程全局 Session map。实时 Session 由现有存储持有，绝不占用准备容量。
 - 新建流程绝不认领相同 id 的冷持久化准备对象。持久化冲突仍会被拒绝。
 - 第三方持久化实现继续获得通过 `load()` 实现的抽象 `prepare()` 回退。它们使用相同发布接口，但只有覆盖准备流程后才能复用精确对象。
-- Revision 校验在复用点和修复提交点建立新鲜性，但不会为后端增加跨进程 writer 排他。持久日志在一次读取与复核往返内保持不变后，重试才能收敛，因此持续的外部写入可能延迟准备。
+- Revision 校验在复用点和修复提交点建立新鲜度，但不会为后端增加跨进程 writer 排他。持久日志在一次读取与复核往返内保持不变后，重试才能收敛，因此持续的外部写入可能延迟准备。
 
 ## 验证
 
-共享持久化契约覆盖无变更且已配平的冷检查与后续修复。`persistence.spec.ts` 与 `preparations.spec.ts` 覆盖同 id 进行中读取共享、检查与准备之间的精确 Session 复用、在历史读取与恢复前由 revision 触发刷新、修复只提交一次、独占预留、设置失败后释放、就绪项 LRU 淘汰、预留期间拒绝 append，以及只允许发布预留 Session。后端测试覆盖完整读取与轻量读取使用同一 revision 身份。agent loop 与 continuable subagent 测试覆盖统一发布流水线，以及取消和拆卸期间从检查到恢复的路径。
+共享持久化约定规定冷检查不得修改存储且须保持配平，并覆盖后续修复。`persistence.spec.ts` 与 `preparations.spec.ts` 覆盖同 id 进行中读取共享、检查与准备之间的精确 Session 复用、在历史读取与恢复前由 revision 触发刷新、修复只提交一次、独占预留、设置失败后释放、就绪项 LRU 淘汰、预留期间拒绝 append，以及只允许发布预留 Session。后端测试覆盖完整读取与轻量读取使用同一 revision 身份。agent loop 与 continuable subagent 测试覆盖统一发布流水线，以及取消和清理期间从检查到恢复的路径。
 
 ## 考虑过的替代方案
 

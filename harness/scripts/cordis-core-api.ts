@@ -23,10 +23,10 @@ export interface CordisCoreApiPage {
   sections: CordisCoreApiSection[]
 }
 
-/** Explicit editorial grouping for the pinned Cordis core surface. */
+/** Explicit editorial grouping for the pinned Cordis core API. */
 export const CORDIS_CORE_API_PAGES: CordisCoreApiPage[] = [
   {
-    out: 'docs/cordis-catalog/core/context.md',
+    out: 'docs/cordis-api/context.md',
     title: 'Context',
     intro: 'The context is the core Cordis object: every service, event, and lifecycle API is reached through `ctx`. Event methods are documented on [Events](events.md), effects and the current fiber on [Fiber](fiber.md), and plugin loading on [Registry](registry.md).',
     sections: [
@@ -35,9 +35,9 @@ export const CORDIS_CORE_API_PAGES: CordisCoreApiPage[] = [
     ],
   },
   {
-    out: 'docs/cordis-catalog/core/events.md',
+    out: 'docs/cordis-api/events.md',
     title: 'Events',
-    intro: 'The event-dispatch API mixed into every context. Harness event declarations and their dispatch modes are generated separately in the [Cordis events catalog](../events.md).',
+    intro: 'The event-dispatch API mixed into every context. Harness event declarations and their dispatch modes are generated into each owning [subsystem page](../subsystems/core.md).',
     sections: [
       { kind: 'context-merge', file: 'vendor/cordis/src/events.ts' },
       { kind: 'decl', file: 'vendor/cordis/src/events.ts', symbol: 'EventOptions' },
@@ -45,7 +45,7 @@ export const CORDIS_CORE_API_PAGES: CordisCoreApiPage[] = [
     ],
   },
   {
-    out: 'docs/cordis-catalog/core/fiber.md',
+    out: 'docs/cordis-api/fiber.md',
     title: 'Fiber',
     intro: 'A fiber is one loaded plugin instance: its lifecycle state, validated config, and registered effects. `ctx.fiber` is the current fiber, and `ctx.effect()` delegates to it.',
     sections: [
@@ -59,7 +59,7 @@ export const CORDIS_CORE_API_PAGES: CordisCoreApiPage[] = [
     ],
   },
   {
-    out: 'docs/cordis-catalog/core/registry.md',
+    out: 'docs/cordis-api/registry.md',
     title: 'Registry',
     intro: 'Plugin loading and dependency injection.',
     sections: [
@@ -69,7 +69,7 @@ export const CORDIS_CORE_API_PAGES: CordisCoreApiPage[] = [
     ],
   },
   {
-    out: 'docs/cordis-catalog/core/service.md',
+    out: 'docs/cordis-api/service.md',
     title: 'Service',
     intro: 'The base class for context services. A subclass loaded as a plugin registers itself as `ctx.<name>`.',
     sections: [
@@ -357,7 +357,7 @@ function declarationPaste(ctx: RenderContext, rel: string, symbol: string): { do
 
 function sourceLink(source: string): string {
   const [file, line] = source.split(':')
-  return `[Source](../../../${file}${line === undefined ? '' : `#L${line}`})`
+  return `[Source](../../${file}${line === undefined ? '' : `#L${line}`})`
 }
 
 function unlink(text: string): string {

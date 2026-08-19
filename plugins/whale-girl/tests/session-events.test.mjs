@@ -3,7 +3,7 @@
 // 若实现回退到 kind，本测试拒绝。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseTurnEvent } from '../.dsh-plugin/src/session-events.mjs'
+import { parseTurnEvent } from '../lib/src/session-events.mjs'
 
 const turn = (type, data) => ({ type, seq: 1, time: 1, data })
 

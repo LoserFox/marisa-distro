@@ -1,12 +1,12 @@
-# 事故复盘（postmortem） 0001：ACP（Agent Client Protocol）服务器在连接时崩溃——`export default` 丢弃了插件的 `inject`
+# 事故复盘（postmortem）0001：ACP（Agent Client Protocol）服务器在连接时崩溃——`export default` 丢弃了插件的 `inject`
 
 [English](0001-acp-default-export-drops-inject.md) | 中文
 
-Status: resolved (fix in PR（Pull Request） #41 `feat/acp-2-bridge`)
+状态：已解决；修复见 PR（Pull Request）#41 `feat/acp-2-bridge`
 
 ## 摘要
 
-两个集成错误在单元测试全覆盖的情况下仍然导致 ACP 崩溃：一个默认导出使 Loader 丢弃了 `inject`，一个经可追踪代理的可选服务查找在 shadow 边界上失败。手动挂载的测试绕过了这两条路径。修复方案增加了无需 API key 的真实 Loader 覆盖率，并为插件导出和可选服务访问制定了包级规则。
+两个集成错误在单元测试全覆盖的情况下仍然导致 ACP 崩溃：一个默认导出使 Loader 丢弃了 `inject`，一个经可追踪代理的可选服务查找在 shadow 边界上失败。手动挂载的测试绕过了这两条路径。修复方案增加了无需 API key 的真实 Loader 测试覆盖，并为插件导出和可选服务访问制定了包级规则。
 
 ## 概述
 
@@ -18,15 +18,15 @@ ACP 服务器无法创建或加载任何一个会话——而这正是编辑器�
 
 ## 时间线
 
-- bridge（RFC 010）落地时附带完整的单元测试套件（codec、内存传输、基于属性的协议形状测试、失败路径、HMR（热模块替换））、一个需要 key 的真实 API e2e 测试，以及一个无需 key 的 stdout 纯净性 e2e 测试。全部绿色，100% 覆盖率。
+- bridge（RFC 010）落地时有一套完整的单元测试，覆盖 codec、内存传输、生成的协议消息、失败路径和 HMR（热模块替换）；另有一个需要 key 的真实 API e2e 测试和一个无需 key 的 stdout 纯净性 e2e 测试。全部绿色，100% 覆盖率。
 - 真实 Zed 会话在 `session/new` 上立即失败，报错 `cannot get property "agents" without inject`。
-- 调查最初追踪了一个 Cordis「traceable/shadow」理论（看似合理，且该机制确实存在——见 Bug #2），随后在 vendor 目录中的 `reflect.ts` 里对实际 fiber 遍历做了插桩，并运行了真实子进程。跟踪结果显示，异常在 `apply()` 第 179 行、*插件加载时*抛出，位于 ROOT fiber 且没有 shadow——推翻了 shadow 理论对 `session/new` 的解释。
+- 调查最初沿着一个 Cordis「traceable/shadow」理论展开（看似合理，且该机制确实存在——见 Bug #2），随后在 vendor 目录中的 `reflect.ts` 里对实际 fiber 遍历做了插桩，并运行了真实子进程。跟踪结果显示，异常在 `apply()` 第 179 行、*插件加载时*抛出，位于 ROOT fiber 且没有 shadow——推翻了 shadow 理论对 `session/new` 的解释。
 - 找到根因 #1：一行多余的 `export default apply`。删除后 `session/new` 修复。
 - 删除后暴露了 Bug #2：`session/load` 仍然在 `sessionPersistence` 上抛错——这是一个真正不同的机制（shadow 遍历），通过隔离修复并重新运行真实子进程得到确认。
 
 ## 根因 #1——`export default apply` 丢弃了插件的 `inject`（导致 `session/new` 崩溃）
 
-`packages/acp/acp/src/index.ts` 是一个*命名空间插件*：它将 `name`、`inject`、`Config` 和 `apply` 作为独立的命名导出——与仓库中其他所有插件（`invariants`、`llm-deepseek`、`tool-bash`、`tui` 等）形状相同。但它*还*多了一行其他插件都没有的代码：
+`packages/acp/acp/src/index.ts` 是一个*命名空间插件*：它将 `name`、`inject`、`Config` 和 `apply` 作为独立的命名导出，仓库中其他所有插件（`invariants`、`llm-deepseek`、`tool-bash`、`tui` 等）也是如此。但它*还*多了一行其他插件都没有的代码：
 
 ```ts ignore-check
 export const name = 'acp'
@@ -47,11 +47,11 @@ unwrapExports(exports: any) {
 }
 ```
 
-存在默认导出时，`exports.default ?? exports` 解析为**裸 `apply` 函数**。裸函数没有 `inject`、没有 `name`、没有 `Config` 属性——这些作为*兄弟*命名导出存在于模块命名空间上，而 unwrap 到 `.default` 把整个命名空间丢弃了。Loader 随后基于空的 `inject` 构建了插件的 fiber。
+存在默认导出时，`exports.default ?? exports` 解析为**裸 `apply` 函数**。裸函数没有 `inject`、没有 `name`、没有 `Config` 属性——这些作为*同级*命名导出存在于模块命名空间上，而 unwrap 到 `.default` 把整个命名空间丢弃了。Loader 随后基于空的 `inject` 构建了插件的 fiber。
 
 因此 `apply` 在一个**没有注入任何服务**的 fiber 中运行。第一行 `const agents = ctx.agents` 遍历 fiber 树（ROOT → Include → Loader → ROOT），在所有 fiber 的 store 中都找不到 `agents`，到达根 fiber（`runtime === null`）后抛出 `cannot get property "agents" without inject`。崩溃发生在*加载时*，而非后续的请求处理器中——请求只是恰好触发了加载。
 
-**修复：** 删除 `export default apply`。Loader 随后使用模块命名空间，正确识别 `inject`/`name`/`Config`，`apply` 在一个真正授予了声明服务的 fiber 中运行。
+**修复：**删除 `export default apply`。Loader 随后使用模块命名空间，正确识别 `inject`/`name`/`Config`，`apply` 在一个确实注入了所声明服务的 fiber 中运行。
 
 ## 根因 #2——可选服务读取通过可追踪 shadow 触发 inject 守卫（导致 `session/load` 崩溃）
 
@@ -84,14 +84,14 @@ if (!ctx.fiber.runtime) return ctx.reflect.get(prop, false)   // ← direct glob
 
 `ctx.reflect.get(name, false)` 是基于 isolate symbol 的全局服务 store 直接查找——完全忽略 fiber 拓扑，能找到服务。因此从顶层测试读取可以成功；而从真实插件 fiber 内部、经由 shadow 到达时则抛错。bridge 恰好是后者。
 
-**修复：** 使用 `ctx.get('sessionPersistence')` 读取可选服务，该方法使用全局 isolate-keyed store 同时保留活跃状态检查。对于插件声明注入集中的服务，直接属性读取仍然适用。
+**修复：**使用 `ctx.get('sessionPersistence')` 读取可选服务，该方法使用全局 isolate-keyed store 同时保留活跃状态检查。对于插件声明注入集中的服务，直接属性读取仍然适用。
 
 ## 为什么所有测试都没有捕获（真正的失败）
 
 两个 bug 都源于同一个根本流程缺口：**没有任何测试通过插件的真实加载路径或真实调用拓扑来驱动它。**
 
 - 内存 harness 通过手动构建插件对象来挂载 bridge：`ctx.plugin({ name, inject, apply })`。这手动提供了 `inject`，因此永远无法复现 Bug #1——`unwrapExports` 只被 *Loader* 调用，`ctx.plugin` 从不调用它。即使 `ctx.plugin(NamespaceImport)` 也无法捕获。
-- 同一个 harness 将所有内容平铺挂载在一个根上下文上，因此从中触达的 `AgentLoop` 恢复要么运行在顶层（`!runtime` 绕过），要么通过一个 origin 仍然解析在 root 上的 shadow——掩盖了 Bug #2 的祖先遍历失败。
+- 同一个 harness 将所有内容平铺挂载在一个根上下文上，因此从中触达的 `AgentLoop` 恢复要么运行在顶层（`!runtime` 绕过），要么经由 shadow 运行，而该 shadow 的 origin 仍然解析到 root——掩盖了 Bug #2 的祖先遍历失败。
 - 唯一的无 key e2e 发送 `initialize` 并检查 stdout 纯净性。`initialize` 从不触达 factory，因此两个 bug 都安然通过。
 - 唯一驱动 `session/new`/`session/load` 的测试需要 key 才能运行，因此 CI（无 key）跳过了它——而本地它之所以「通过」，只是因为一个陈旧的已构建 `lib/`（包含旧代码）恰好满足了模块解析。
 

@@ -4,8 +4,8 @@
  * @module @deepseek-ai/dsh-tool-session-query
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
@@ -88,14 +88,14 @@ export function apply(ctx: Context, config: Config): void {
     description: 'Read the authorized session lineage around one session, including complete visible ancestor and descendant relationships.',
     parameters: toolInput.targetSessionParameter,
     output: TEXT_OUTPUT,
-    isConcurrencySafe: () => { return true },
+    isConcurrencySafe: () => true,
     execute: (args, exec) => operations.executeSessionTrace(ctx, args, exec),
     presentCall: presentation.presentSessionTraceCall,
   }))
 
   ctx.tools.register(defineTool({
     name: 'session_event_trace',
-    description: 'Read every direct replacement and provenance relationship for one event in an authorized session.',
+    description: 'Read every direct replacement and relationship to a cited source event for one event in an authorized session.',
     parameters: {
       ...toolInput.targetSessionParameter,
       seq: { type: 'integer', required: true, description: 'Target event sequence number.' },

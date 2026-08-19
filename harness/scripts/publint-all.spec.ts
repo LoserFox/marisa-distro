@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const repositoryRoot = fileURLToPath(new URL('..', import.meta.url))
 const runner = fileURLToPath(new URL('./publint-all.ts', import.meta.url))
-const roots: Array<string> = []
+const roots: string[] = []
 
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })

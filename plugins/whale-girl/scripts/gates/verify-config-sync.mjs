@@ -38,8 +38,8 @@ function flatten(obj, prefix = '') {
 /** 校验配置默认值单一来源。返回 { ok, errors }。 */
 export function check(root = ROOT) {
   const errors = []
-  const configSrc = readFileSync(join(root, '.dsh-plugin', 'src', 'config.mjs'), 'utf8')
-  const clientSrc = readFileSync(join(root, '.dsh-plugin', 'client', 'index.mjs'), 'utf8')
+  const configSrc = readFileSync(join(root, 'lib', 'src', 'config.mjs'), 'utf8')
+  const clientSrc = readFileSync(join(root, 'lib', 'client', 'index.mjs'), 'utf8')
 
   const defaults = extractNumericLeaf(configSrc, 'DEFAULTS')
   const clientDefaults = extractNumericLeaf(clientSrc, 'CFG_DEFAULTS')

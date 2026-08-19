@@ -2,10 +2,10 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { StreamChunk } from '@deepseek-ai/dsh-llm'
-import SettingsLocal from '@deepseek-ai/dsh-settings-local'
+import FileSettingsProvider from '@deepseek-ai/dsh-settings-file'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -45,8 +45,8 @@ async function home(): Promise<string> {
 /** The dormant composition plus a real settings service, as the product mounts it. */
 async function bootWithSettings(dir: string, config: LlmPiAi.Config): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
-  await ctx.plugin(SettingsLocal, { path: join(dir, 'settings.yaml'), watch: false })
+  await ctx.plugin(LlmRuntime)
+  await ctx.plugin(FileSettingsProvider, { path: join(dir, 'settings.yaml'), watch: false })
   await ctx.plugin(LlmPiAi, config)
   return ctx
 }
@@ -69,7 +69,7 @@ function gateway(baseURL: string, overrides: Record<string, unknown> = {}): LlmP
 
 async function harness(config: LlmPiAi.Config): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(LlmPiAi, config)
   return ctx
 }
@@ -100,7 +100,7 @@ describe('hand-declared providers', () => {
     const ctx = await harness(gateway(`${server.url}/v1`))
 
     expect(await ctx.llm.listModels('acme-gateway')).toEqual([
-      { provider: 'acme-gateway', id: 'acme-large', name: 'Acme Large' },
+      { provider: 'acme-gateway', id: 'acme-large', name: 'Acme Large', inputModalities: ['text'] },
     ])
     const info = await ctx.llm.resolveModelInfo('acme-gateway', 'acme-large')
     expect(info).toMatchObject({
@@ -184,6 +184,108 @@ describe('hand-declared providers', () => {
     // the model's capability and stops there.
     expect(resolved.get('acme-gateway')?.configuredMaxTokens.get('bare')).toBeUndefined()
     expect(resolved.get('acme-gateway')?.configuredMaxTokens.get('sized')).toBe(512)
+  })
+
+  it('takes a model’s declared modalities, then the catalog’s, then the route’s', () => {
+    const vision = getBuiltinModels('anthropic').find(model => model.input.includes('image'))
+    if (vision === undefined) throw new Error('the installed catalog ships no anthropic vision model')
+    const resolved = resolveProfiles({
+      'acme-gateway': {
+        api: 'openai-completions',
+        baseURL: 'https://acme.test',
+        // One route, two modality sets: the entry field is what says so.
+        models: [{ id: 'bare' }, { id: 'seeing', input: ['text', 'image'] }, { id: 'deaf', input: ['text'] }],
+      },
+      'seeing-gateway': {
+        api: 'openai-completions',
+        baseURL: 'https://seeing.test',
+        // A gateway whose undescribed models all take images says so once
+        // rather than on every entry; an entry still outranks it.
+        defaultInput: ['text', 'image'],
+        models: [{ id: 'bare' }, { id: 'deaf', input: ['text'] }],
+      },
+      // The route value is a fallback, never an override: a catalog model
+      // keeps what the catalog records even under a narrower route default,
+      // exactly as it keeps its own contextWindow.
+      'anthropic': { defaultInput: ['text'] },
+    })
+    const inputOf = (route: string, id: string): readonly string[] | undefined =>
+      resolved.get(route)?.piProvider.getModels().find(model => model.id === id)?.input
+
+    expect(inputOf('acme-gateway', 'bare')).toEqual(['text'])
+    expect(inputOf('acme-gateway', 'seeing')).toEqual(['text', 'image'])
+    expect(inputOf('acme-gateway', 'deaf')).toEqual(['text'])
+    expect(inputOf('seeing-gateway', 'bare')).toEqual(['text', 'image'])
+    expect(inputOf('seeing-gateway', 'deaf')).toEqual(['text'])
+    expect(inputOf('anthropic', vision.id)).toEqual(vision.input)
+  })
+
+  it('carries a written modality declaration all the way to the seam’s model metadata', async () => {
+    // The resolver-level cases above cannot see a break between the settings
+    // document and `LlmModelInfo`, so each rung is asserted once more through
+    // a written section, the plugin's own registration, and `ctx.llm`.
+    const dir = await home()
+    const ctx = await bootWithSettings(dir, {})
+    await ctx.settings.update(settingsNamespace('llm-pi-ai'), {
+      providers: {
+        'acme-gateway': {
+          api: 'openai-completions',
+          baseURL: 'https://acme.test/v1',
+          models: [{ id: 'bare' }, { id: 'seeing', input: ['text', 'image'] }],
+        },
+        'vision-gateway': {
+          api: 'openai-completions',
+          baseURL: 'https://vision.test/v1',
+          defaultInput: ['text', 'image'],
+          models: [{ id: 'bare' }, { id: 'deaf', input: ['text'] }],
+        },
+        'anthropic': { defaultInput: ['text'] },
+      },
+    })
+
+    const listed = async (provider: string): Promise<Record<string, readonly string[] | undefined>> =>
+      Object.fromEntries((await ctx.llm.listModels(provider)).map(model => [model.id, model.inputModalities]))
+
+    expect(await listed('acme-gateway')).toEqual({ bare: ['text'], seeing: ['text', 'image'] })
+    expect(await listed('vision-gateway')).toEqual({ bare: ['text', 'image'], deaf: ['text'] })
+    expect((await ctx.llm.resolveModelInfo('acme-gateway', 'seeing')).inputModalities).toEqual(['text', 'image'])
+
+    // A catalog vision model keeps what the catalog records even under a
+    // narrower route default: the route value is a fallback, not an override.
+    const vision = getBuiltinModels('anthropic').find(model => model.input.includes('image'))
+    if (vision === undefined) throw new Error('the installed catalog ships no anthropic vision model')
+    expect((await ctx.llm.resolveModelInfo('anthropic', vision.id)).inputModalities).toEqual(vision.input)
+  })
+
+  it('reads an entry’s empty modality list as no answer, and the route’s as unserviceable', () => {
+    // Absent and empty are the same request on an entry, exactly as they are
+    // for the route's `models` list — which matters because the config schema
+    // materializes `[]` for an absent array, so an entry naming a catalog
+    // model without declaring modalities must keep the catalog's rather than
+    // describe a model that accepts nothing.
+    const [catalogModel] = getBuiltinModels('deepseek')
+    if (catalogModel === undefined) throw new Error('the installed catalog ships no deepseek model')
+    const resolved = resolveProfiles({
+      'deepseek': { baseURL: 'https://catalog.test', models: [{ id: catalogModel.id, input: [] }] },
+      'acme-gateway': {
+        api: 'openai-completions',
+        baseURL: 'https://acme.test',
+        models: [{ id: 'bare', input: [] }],
+      },
+    })
+    expect(resolved.get('acme-gateway')?.piProvider.getModels()[0]?.input).toEqual(['text'])
+    expect(resolved.get('deepseek')?.piProvider.getModels()[0]?.input).toEqual(catalogModel.input)
+
+    // Nothing sits below the route value, so its empty list states no answer
+    // anything could take, and is refused where it is written.
+    expect(() => resolveProfiles({
+      'acme-gateway': {
+        api: 'openai-completions',
+        baseURL: 'https://acme.test',
+        defaultInput: [],
+        models: [{ id: 'bare' }],
+      },
+    })).toThrow(/defaultInput must name at least one modality/)
   })
 
   it('rejects a model the route cannot identify', () => {
@@ -830,5 +932,40 @@ describe('configurable-provider directory', () => {
 
     await ctx.settings.replace(settingsNamespace('llm-pi-ai'), {})
     expect(ctx.llm.listConfigurableProviders()).toHaveLength(catalogOnly)
+  })
+
+  it('withholds a catalog route this adapter cannot authenticate', async () => {
+    const ctx = await harness({})
+    const offered = ctx.llm.listConfigurableProviders().map(entry => entry.provider)
+
+    // `openai-codex` is the one installed provider that authenticates through
+    // OAuth alone. pi-ai resolves OAuth only from a *stored* credential, this
+    // adapter constructs its collection with no credential store, and nothing
+    // here runs a login flow — so every request on such a route fails with
+    // `Provider is not configured` before it goes out. Offering it would put a
+    // provider on the settings page that no amount of configuration can make
+    // work.
+    expect(offered).not.toContain('openai-codex')
+    // A provider that offers OAuth *beside* an api-key method keeps its entry:
+    // the key is a path this adapter can serve.
+    expect(offered).toContain('anthropic')
+    expect(offered).toContain('openai')
+  })
+
+  it('still lists a withheld route a stored profile names, as a catalog route', async () => {
+    // Withholding the offer must not strand a profile someone already stored:
+    // the route keeps its entry so a configuration surface can edit or delete
+    // it, and `declared` still answers catalog membership rather than the
+    // offer, so the page does not mislabel it as a route this deployment
+    // invented.
+    const ctx = await harness({ providers: { 'openai-codex': { apiKeyEnv: KEY_ENV } } })
+
+    expect(ctx.llm.listConfigurableProviders()).toContainEqual({
+      provider: 'openai-codex',
+      displayName: 'openai-codex',
+      settingsNs: 'llm-pi-ai',
+      settingsPath: ['providers', 'openai-codex'],
+      declared: false,
+    })
   })
 })

@@ -1,5 +1,5 @@
 /**
- * The LSP capability seam (`ctx.lsp`): a language-server provider registry and per-query,
+ * Service Definition for the LSP capability seam (`ctx.lsp`): a language-server provider registry and per-query,
  * order-independent selection over normalized goToDefinition/findReferences/goToImplementation/
  * hover queries.
  *
@@ -11,7 +11,7 @@
  * @module @deepseek-ai/dsh-lsp
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
 import type { LspProviderId } from './brand.ts'
 import type {
@@ -35,7 +35,7 @@ export type {
   LspService,
 } from './types.ts'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     lsp: LspService
   }
@@ -91,7 +91,9 @@ export class Lsp extends Service implements LspService {
     // Validate and conflict-check everything BEFORE any mutation: an invalid or conflicting
     // registration must publish nothing (fail-loud, all-or-nothing).
     const id = provider.id
-    if (id.trim() === '') throw new LspError('an LSP provider id must be a non-empty string', 'LSP_INVALID_PROVIDER')
+    if (id.trim() === '') {
+      throw new LspError('an LSP provider id must be a non-empty string', 'LSP_INVALID_PROVIDER')
+    }
     if (this.providerIds.has(id)) {
       throw new LspError(`an LSP provider with id "${id}" is already registered`, 'LSP_CONFLICT')
     }

@@ -5,7 +5,7 @@ import type { AppIdentity } from '@deepseek-ai/dsh-llm'
 
 const manifest = createRequire(import.meta.url)('../package.json') as { version: string }
 
-/** A white-label identity exercising every override seam. */
+/** A white-label identity exercising every override hook. */
 const forkIdentity: AppIdentity = {
   product: 'fork-agent',
   version: '9.9.9',
@@ -21,7 +21,7 @@ describe('APP_IDENTITY', () => {
     expect(APP_IDENTITY).toEqual({
       product: 'deepseek-harness',
       version: manifest.version,
-      url: 'https://github.com/deepseek-ai/deepseek-harness-sdk',
+      url: 'https://github.com/deepseek-ai/deepseek-harness',
     })
   })
 })
@@ -29,7 +29,7 @@ describe('APP_IDENTITY', () => {
 describe('userAgent', () => {
   it('renders product/version with the +url comment', () => {
     expect(userAgent()).toBe(
-      `deepseek-harness/${manifest.version} (+https://github.com/deepseek-ai/deepseek-harness-sdk)`,
+      `deepseek-harness/${manifest.version} (+https://github.com/deepseek-ai/deepseek-harness)`,
     )
   })
 

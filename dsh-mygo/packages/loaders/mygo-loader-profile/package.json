@@ -1,0 +1,66 @@
+{
+  "name": "@r05en1cu/dsh-mygo-loader-profile",
+  "description": "mygo profile LoaderAdapter: the P3 profile install face (pnpm + dsh.bundle reconcile) as the built-in LoaderAdapter execution surface",
+  "version": "0.2.0-rc.7",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omdsh-dev/dsh-mygo.git"
+  },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts",
+    "src"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -b && tsdown",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "verify:self-contained": "node scripts/verify-self-contained.mjs",
+    "prepare": "node scripts/prepare.mjs",
+    "prepack": "node -e \"const fs=require('fs'); if(!fs.existsSync('lib/index.js')||!fs.existsSync('lib/types/index.d.ts')){console.error('lib 缺失：请先在仓库内构建（pnpm run build：tsc -b + tsdown）'); process.exit(1)}\""
+  },
+  "dependencies": {
+    "@r05en1cu/dsh-mygo": "workspace:^",
+    "@deepseek-ai/dsh-app-boot": "^0.1.0-rc.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@r05en1cu/dsh-mygo": "workspace:^",
+    "@r05en1cu/dsh-mygo-api": "workspace:^",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "author": "r05En1cU",
+  "maintainers": [
+    "r05En1cU"
+  ]
+}

@@ -1,7 +1,7 @@
 /** Session-fork boundaries, lineage, and inherited model routing. */
 
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry, { agentEvents } from '@deepseek-ai/dsh-agent'
 import type { Agent, AgentHandle, CreateAgentOptions } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
@@ -9,7 +9,7 @@ import type { LlmCallConfig } from '@deepseek-ai/dsh-llm'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import UserInteractionService from '@deepseek-ai/dsh-user-interaction'
+import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import type { Workspace } from '@deepseek-ai/dsh-workspace'
 import type { RpcRequest } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
@@ -27,8 +27,8 @@ async function composed(workspaces: readonly Workspace[] = []): Promise<Context>
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt, { persona: '' })
   await ctx.plugin(AgentRegistry)
-  await ctx.plugin(UserInteractionService)
-  ctx.provide('workspace', { list: () => workspaces } as never)
+  await ctx.plugin(UserQuestionService)
+  ctx.provide('workspaceRegistry', { list: () => workspaces } as never)
   ctx.agents.setFactory({
     createAgent: async (ownerCtx: Context, options: CreateAgentOptions): Promise<AgentHandle> => {
       const session = ctx.sessions.create(options.sessionId, {
@@ -82,9 +82,8 @@ function liveAgent(
 }
 
 const api = (ctx: Context) => createApiProxy(ctx, {
-  defaultTarget: () => ({ provider: 'default-provider', model: 'default-model' }),
+  defaultModelSelection: () => ({ provider: 'default-provider', model: 'default-model' }),
   cwd: '/tmp',
-  workspaceRoot: '/tmp',
 })
 
 describe('sessions.fork', () => {
@@ -254,7 +253,7 @@ describe('sessions.fork', () => {
     await ctx.fiber.dispose()
   })
 
-  it('installs the latest logged model target before the child can run', async () => {
+  it('installs the latest logged model selection before the child can run', async () => {
     const ctx = await composed()
     const source = liveAgent(ctx, 'session-routed', 1)
     source.append('request/header', {

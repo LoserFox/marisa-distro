@@ -1,9 +1,15 @@
 - banner:
   - navigation "Session hierarchy":
     - button "workspace" [disabled]
+  - img
+  - text: Standard mode
+  - button "Session log":
+    - text: Session log
+    - img
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
+- group "Command input": /goal 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的
 - 'button "goal Goal created Status: active Objective: 做两个turn，每个turn输出随机一个包的文件结构。注意你做完一个turn之后，直接输出内容，停止，我们的系统会帮你再开一个turn，你看着做一个类似的 Rounds: 0/256 Activation: armed Commands: /goal edit <objective>, /goal pause, /goal clear"':
   - img
   - img
@@ -74,6 +80,10 @@
 - code: "session-reference/ ├── README.md # 包说明文档 ├── package.json # 包元数据与依赖声明 ├── src/ │ ├── index.ts # 入口，导出公共 API │ └── uri.ts # 会话引用 URI 相关实现 └── tests/ └── session-reference.spec.ts # 单元测试"
 - paragraph: 这是一个很典型的轻量 TypeScript 包结构：入口 + 实现 + 测试。这一轮到此结束，等系统开启下一个 turn。
 - button "Copy":
+  - img
+- button "Good response":
+  - img
+- button "Bad response":
   - img
 - button "Branch into a new conversation":
   - img
@@ -165,7 +175,7 @@
   - text: 、
   - code: token-meter
   - text: 、
-  - code: skill-local
+  - code: skill-filesystem
   - text: ），文件结构则用
   - code: find
   - text: 实际列出文件后整理输出，均已排除
@@ -180,9 +190,13 @@
   - text: 如果你还想看剩下两个包（
   - code: ui-conversation
   - text: 、
-  - code: skill-local
+  - code: skill-filesystem
   - text: ）的结构，或者其他格式的输出（比如带文件大小的树形图），随时告诉我。
 - button "Copy":
+  - img
+- button "Good response":
+  - img
+- button "Bad response":
   - img
 - button "Branch into a new conversation":
   - img

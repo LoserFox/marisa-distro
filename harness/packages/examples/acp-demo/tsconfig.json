@@ -18,7 +18,7 @@
       "path": "../../../vendor/loader"
     },
     {
-      "path": "../../ui/app-boot"
+      "path": "../../boot/app-boot"
     },
     {
       "path": "../../acp/acp"
@@ -36,16 +36,16 @@
       "path": "../agent-spine-demo"
     },
     {
-      "path": "../../context/workspace-context"
+      "path": "../../context/agent-instructions"
     },
     {
-      "path": "../../session-persistence/session-checkpoint-policy"
+      "path": "../../session/session-checkpoint-policy"
     },
     {
-      "path": "../../session-persistence/session-persistence-jsonl"
+      "path": "../../session/session-persistence-jsonl"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

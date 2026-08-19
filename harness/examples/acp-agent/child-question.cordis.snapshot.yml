@@ -2,7 +2,7 @@
 # seam, model-facing tool, and tripwire provider while replacing DeepSeek with
 # per-session replay.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -42,8 +42,8 @@
                   models:
                     - id: deepseek-v4-flash
                     - id: deepseek-v4-pro
-          - id: user-interaction
-            name: '@deepseek-ai/dsh-user-interaction'
+          - id: user-questions
+            name: '@deepseek-ai/dsh-user-questions'
           - id: tool-ask-user
             name: '@deepseek-ai/dsh-tool-ask-user'
           - id: child-question-tripwire

@@ -78,7 +78,7 @@ describe('web e2e: plan review takeover round trip', () => {
     // presence is a STABLE waiting state (it stays until answered), so a plain
     // waitFor is race-free.
     const card = page.locator('[data-plan-review-key]')
-    await card.waitFor({ timeout: MODE !== 'record' ? 30_000 : 120_000 })
+    await card.waitFor({ timeout: MODE === 'record' ? 120_000 : 30_000 })
     // The plan-review request must NOT land on the generic question flow.
     expect(await page.locator('[data-question-key]').count()).toBe(0)
     await expect.poll(() => card.getByText('Plan review').count(), { timeout: 10_000 }).toBeGreaterThan(0)

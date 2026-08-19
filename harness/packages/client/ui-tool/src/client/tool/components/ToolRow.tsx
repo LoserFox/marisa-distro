@@ -187,7 +187,7 @@ export function ToolRow({
   }
   // The code variant's program renders through CodeBlock (shiki), so only its
   // output joins the IN/OUT card; every other variant's input does too.
-  const cardBody = variant !== 'code' ? body : null
+  const cardBody = variant === 'code' ? null : body
   // The state substitution rides the idle icon slot, so an expandable error
   // row keeps DisclosureRow's icon→chevron hover preview (its default) instead
   // of losing it with the icon.

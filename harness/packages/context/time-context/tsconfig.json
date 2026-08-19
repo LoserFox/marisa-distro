@@ -28,10 +28,10 @@
       "path": "../../core/agent"
     },
     {
-      "path": "../../support/loader-smoke"
+      "path": "../../test-support/loader-smoke"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
       "path": "../../core/session"

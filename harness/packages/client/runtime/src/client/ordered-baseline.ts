@@ -18,7 +18,7 @@ export function mergeOrderedBaseline<T>(
 
   const merged = current
     .map(value => baselineByKey.get(keyOf(value)))
-    .filter((value): value is T => { return value !== undefined })
+    .filter((value): value is T => value !== undefined)
   const mergedKeys = new Set(merged.map(keyOf))
 
   for (let index = 0; index < baseline.length; index++) {

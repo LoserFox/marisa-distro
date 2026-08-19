@@ -7,7 +7,7 @@ import {
 } from '@deepseek-ai/dsh-code-runtime'
 
 /**
- * The seam owns the portable-identifier exclusion sets so every backend
+ * The Service Definition owns the portable-identifier exclusion sets so every backend
  * enforces one contract: a namespace list valid on one backend is valid on
  * all. These assertions pin the shared membership backends import rather than
  * re-declare.

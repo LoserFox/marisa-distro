@@ -2,6 +2,20 @@
 
 All notable user-facing changes to agent-vision-toolkit are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Let the shared Python vision client call either Chat Completions or Responses APIs, including optional reasoning effort and explicit `store: false` data handling.
+- Add native Anthropic Messages requests with protocol-specific authentication, image sources, optional thinking control, and text-block response extraction.
+- Rewrite OpenAI Chat Completions `image_url` blocks through the existing vision-description pipeline with a host-neutral channel note.
+
+### Fixed
+
+- Send a browser-compatible, configurable User-Agent from the shared Python vision client so Cloudflare-backed OpenAI-compatible endpoints do not reject the default `Python-urllib` signature.
+- Honor `Retry-After` and retry Anthropic 529 overload responses.
+- Allow trusted internal endpoints with self-signed certificates or MITM proxies to opt out of TLS certificate verification through `VISION_SSL_VERIFY`, while preserving verification by default.
+
 ## [0.1.0] - 2026-08-07
 
 ### Added

@@ -19,20 +19,25 @@ import {
   collectReferenceTargets, createReferenceTargets, renderBlocks, renderFootnoteSection,
   wrapBlockChildren,
 } from './render.tsx'
-import type { MarkdownCodeLabels, MarkdownRenderContext, ReferenceTargets } from './render.tsx'
+import type { MarkdownCodeLabels, MarkdownFileMentions, MarkdownRenderContext, ReferenceTargets } from './render.tsx'
 import 'katex/dist/katex.min.css'
 import css from './MarkdownText.module.css'
 
-export type { MarkdownCodeLabels } from './render.tsx'
+export type { MarkdownCodeLabels, MarkdownFileMentions } from './render.tsx'
 
 /** One settled full render: parse with math, resolve references, append the footnote section. */
-function renderSettled(text: string, codeLabels: MarkdownCodeLabels | undefined): ReactNode[] {
+function renderSettled(
+  text: string,
+  codeLabels: MarkdownCodeLabels | undefined,
+  fileMentions: MarkdownFileMentions | undefined,
+): ReactNode[] {
   const root = parseGfmWithMath(text)
   const targets = createReferenceTargets()
   collectReferenceTargets(root.children, targets)
   const context: MarkdownRenderContext = {
     streaming: false,
     codeLabels,
+    fileMentions,
     targets,
     footnoteOrder: [],
     footnoteCounts: new Map(),
@@ -96,6 +101,7 @@ class StreamingRenderer {
       const frozenContext: MarkdownRenderContext = {
         streaming: true,
         codeLabels: this.codeLabels,
+        fileMentions: undefined,
         targets: frameTargets,
         footnoteOrder: this.frozenFootnoteOrder,
         footnoteCounts: this.frozenFootnoteCounts,
@@ -113,6 +119,7 @@ class StreamingRenderer {
     const tailContext: MarkdownRenderContext = {
       streaming: true,
       codeLabels: this.codeLabels,
+      fileMentions: undefined,
       targets: frameTargets,
       footnoteOrder: [...this.frozenFootnoteOrder],
       footnoteCounts: new Map(this.frozenFootnoteCounts),
@@ -137,28 +144,33 @@ class StreamingRenderer {
  * the finalize swap) and parses incrementally across chunks; `codeLabels`
  * forwards localized copy-button labels to fence CodeBlocks — pass a
  * reference-stable object (memoized per locale revision), because a new
- * identity discards the streaming render cache mid-message.
+ * identity discards the streaming render cache mid-message. `fileMentions`
+ * links inline-code tokens its resolver recognizes as real files; this is
+ * the single streaming gate — it applies to settled renders only, because a
+ * streaming message's vocabulary is not final and frozen cached elements
+ * must not bake in handlers that could go stale.
  * @returns A GFM document with TeX math rendered through KaTeX; raw HTML,
  * relative links, and unsafe protocols are disabled, while absolute HTTP(S)
  * images render directly.
  */
-export const MarkdownText = memo(function MarkdownText({ text, streaming = false, codeLabels }: {
+export const MarkdownText = memo(function MarkdownText({ text, streaming = false, codeLabels, fileMentions }: {
   text: string
   streaming?: boolean
   codeLabels?: MarkdownCodeLabels | undefined
+  fileMentions?: MarkdownFileMentions | undefined
 }) {
   const streamRef = useRef<StreamingRenderer | null>(null)
   const streamLabelsRef = useRef<MarkdownCodeLabels | undefined>(codeLabels)
   const children = useMemo(() => {
     if (!streaming) {
       streamRef.current = null
-      return renderSettled(text, codeLabels)
+      return renderSettled(text, codeLabels, fileMentions)
     }
     if (streamRef.current === null || streamLabelsRef.current !== codeLabels) {
       streamRef.current = new StreamingRenderer(codeLabels)
       streamLabelsRef.current = codeLabels
     }
     return streamRef.current.render(text)
-  }, [text, streaming, codeLabels])
+  }, [text, streaming, codeLabels, fileMentions])
   return <div className={css.markdown}>{children}</div>
 })

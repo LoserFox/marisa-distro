@@ -1,4 +1,4 @@
-# Decision: 开放性窄缝——ctx.pet 服务 + client CustomEvent 契约
+# Decision: 开放性窄缝——whale-girl.pet 服务 + client CustomEvent 契约
 
 Status: implemented
 
@@ -8,17 +8,17 @@ dsh-pet 是积累型宠物，账本语义（零负反馈、纯向上积累、XP/
 
 ## Decision
 
-- **Node half `ctx.provide('pet', { snapshot, onSignal })`**：
+- **Node half `ctx.provide('whale-girl.pet', { snapshot, onSignal })`**：
   - `snapshot()` 返回只读 `{ pet, activity }`（账本快照 + 活动派生）——不暴露任何写面（账本语义由 dsh-pet 独占，防第三方破坏积累不变量）。
   - `onSignal(fn)` 订阅账本信号：`celebrate`（任务完成）、`levelUp`（升级）、`failure`（失败）、`session`（new/resume）；返回退订函数。
-  - 其他插件 `inject: ['pet']` 消费；服务缺席时消费方应容忍（dsh-pet 自己处理 sessions 缺席即先例）。
+  - 其他插件 `inject: ['whale-girl.pet']` 消费；服务缺席时消费方应容忍（dsh-pet 自己处理 sessions 缺席即先例）。服务名带 `whale-girl.` 前缀（与 DSH 生态 `remote.commands` 同款命名），避免与第三方插件的通用服务名撞名，见 [2026-08-15-pet-service-namespace](../bug-fix/2026-08-15-pet-service-namespace.md)。
 - **src/signals.mjs 信号器**：轻量发布/订阅，零宿主依赖可单测；订阅者异常隔离（单个抛错不影响其余与宠物本体）。5 条单测（订阅/退订/异常隔离/空安全/size）。
 - **client CustomEvent 契约**（document 冒泡，第三方 bundle 零耦合驱动显示层）：
   - `dsh-pet:say` `{ text }` → 气泡说话
   - `dsh-pet:fx` `{ type: 'hearts' }` → 爱心爆发
   - `dsh-pet:status` `{ text }` → 状态卡 note 覆盖（2.5s 恢复）
   - detail 校验后消费；dispose 时移除监听。
-- **端到端实证**：临时消费插件 `inject: ['pet']` 成功注入（snapshot 返回 {pet,activity}、onSignal 可用），无 web 错误；验证后清理（不入库）。
+- **端到端实证**：临时消费插件 `inject: ['whale-girl.pet']` 成功注入（snapshot 返回 {pet,activity}、onSignal 可用），无 web 错误；验证后清理（不入库）。
 
 ## Alternatives considered
 

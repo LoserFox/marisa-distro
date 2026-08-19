@@ -37,7 +37,7 @@ const NS = 'workspace'
 /**
  * Required services (cordis fiber inject). The target slots are declared by
  * the ui-sidebar / ui-conversation applies, whose activation order relative
- * to this one is NOT constrained: dshClient.inject edges are informational
+ * to this one is NOT constrained: dsh.client.inject edges are informational
  * (loading/prefetch metadata, never apply sequencing) and neither owner
  * provides a waitable service. apply therefore depends on each slot
  * declaration through `slots.inject()` instead of assuming order.
@@ -62,14 +62,14 @@ export function apply(ctx: ClientContext): void {
   // Stable per-surface occupancy sources (the renderer's hook cache keys by
   // source identity): true while the surface's directory-flow hole is filled.
   const flowSource = (hole: 'sidebar.workspaces.directoryFlow' | 'conversation.hero.workspace.directoryFlow'): HostObservable<boolean> => ({
-    getSnapshot: () => { return ctx.slots.entries(hole).length > 0 },
+    getSnapshot: () => ctx.slots.entries(hole).length > 0,
     subscribe: listener => ctx.slots.subscribe(hole, listener),
   })
   const browserFlowSource = flowSource('sidebar.workspaces.directoryFlow')
   const pickerFlowSource = flowSource('conversation.hero.workspace.directoryFlow')
   const browserInjected = (): WorkspaceBrowserInjected => ({
-    // Explicit group actions keep their target; unscoped New Session rides
-    // the runtime's shared action (recent-Workspace projection inside).
+    // Explicit group actions keep their target; unscoped New Session inherits
+    // the current Session Workspace before the recent-Workspace fallback.
     startSession: (workspaceId) => { ctx.workspaces.startSession(workspaceId) },
     open: (sessionId) => { ctx.sessions.open(sessionId) },
     searchSessions,
@@ -91,6 +91,9 @@ export function apply(ctx: ClientContext): void {
     },
     renameWorkspace: async (workspaceId, title) => { await ctx.workspaces.rename(workspaceId, title) },
     deleteWorkspace: async (workspaceId) => { await ctx.workspaces.delete(workspaceId) },
+    insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
+      await ctx.workspaces.insertBefore(workspaceId, beforeWorkspaceId)
+    },
     archiveSession: async (sessionId) => { await ctx.workspaces.archiveSession(sessionId) },
     insertSessionBefore: async (workspaceId, sessionId, beforeSessionId) => {
       await ctx.workspaces.insertSessionBefore(workspaceId, sessionId, beforeSessionId)

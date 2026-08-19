@@ -61,7 +61,7 @@ export function callConfigEquals(a: LlmCallConfig, b: LlmCallConfig): boolean {
 /**
  * Mark one exact request object as assembled by dsh-agent-loop.
  * @param request - loop-owned request envelope before LLM dispatch.
- * @returns the same request object with process-local loop provenance.
+ * @returns the same request object marked as created by the process-local agent loop.
  */
 export function markAgentLoopRequest<T extends GenerateOptions>(request: T): T {
   AGENT_LOOP_REQUESTS.add(request)

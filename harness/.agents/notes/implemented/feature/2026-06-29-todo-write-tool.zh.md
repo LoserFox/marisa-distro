@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-harness 为模型提供了 bash 和 subagent 工具，却没有办法记录结构化的任务列表。todo 列表有两个同等重要的用途：引导模型规划多步骤工作并保持当前活跃任务明确；同时为交互式宿主提供实时进度清单。调研的所有参考编码 agent（智能体），包括 claude-code、opencode、codex、oh-my-pi 和 pi，都提供了某种形式的此功能；本 harness 此前没有。
+harness 为模型提供了 bash 和 subagent 工具，却没有办法记录结构化的任务列表。todo 列表有两个同等重要的用途：引导模型规划多步骤工作并保持当前活跃工作明确；同时为交互式宿主提供实时进度清单。调研的所有参考编码 agent（智能体），包括 claude-code、opencode、codex、oh-my-pi 和 pi，都提供了某种形式的此类功能；本 harness 此前没有。
 
 ## 决策
 
@@ -14,7 +14,7 @@ harness 为模型提供了 bash 和 subagent 工具，却没有办法记录结�
 
 ### 整列表替换，三态 status
 
-模型每次调用发送完整列表；新列表替换旧列表（回放时 last-write-wins）。这是 claude-code V1、opencode 和 codex `update_plan` 共同采用的形状，也是模型训练最多的形状——没有逐项 id，没有 delta 协议。`status` 恰好是 `pending | in_progress | completed`，与 codex `update_plan` 相同的三元组；在 bridge 还把 todo 列表投影为 `plan` 更新时，它也与 ACP `PlanEntryStatus` 1:1 对应，该映射已随[仅面向自动化的 ACP 契约](../simplification/2026-07-23-acp-automation-only-protocol.md)退役。
+模型每次调用发送完整列表；新列表替换旧列表（回放时 last-write-wins）。这是 claude-code V1、opencode 和 codex `update_plan` 共同采用的形状，也是模型训练最多的形状——没有逐项 id，没有 delta 协议。`status` 恰好是 `pending | in_progress | completed`，与 codex `update_plan` 相同的三元组；在 bridge 还把 todo 列表投影为 `plan` 更新时，它也与 ACP `PlanEntryStatus` 1:1 对应，该映射已随[仅面向自动化的 ACP 约定](../simplification/2026-07-23-acp-automation-only-protocol.md)退役。
 
 ### 状态在会话日志上，而非服务
 
@@ -34,7 +34,7 @@ claude-code V1 的条目是 `{ content, status, activeForm }`；后来（V2）�
 
 ### 校验：低成本的中间路线
 
-schema 强制 type/required/enum。在此之上，`execute` 拒绝为空或重复的 `content`，并在 `allowParallelInProgress` 为 `false` 时拒绝超过一个活跃任务。排序和保持列表最新仍通过工具描述交给模型。被拒绝的写入返回 `isError` 结果，使模型自行修正。必填的部署策略及持久日志不变式独立于该策略这一约定，由[并行 in-progress Agent Note](2026-07-26-todo-parallel-in-progress.md) 负责。
+schema 强制 type/required/enum。在此之上，`execute` 拒绝为空或重复的 `content`，并在 `allowParallelInProgress` 为 `false` 时拒绝超过一个活跃任务。排序和保持列表最新仍通过工具描述交给模型。被拒绝的写入返回 `isError` 结果，使模型自行修正。必须采用的部署策略，以及持久不变式独立于该策略这一点，均由[并行 in-progress Agent Note](2026-07-26-todo-parallel-in-progress.md)负责。
 
 ## 为何没有 cordis-catalog 条目 / 没有 `@mode`
 
@@ -42,9 +42,9 @@ schema 强制 type/required/enum。在此之上，`execute` 拒绝为空或重�
 
 ## 测试
 
-四个层级，预先设计：
+四个层级：
 - **单元测试**——会话事件（append/snapshot-clone/last-write-wins/not-on-surface）；工具（schema 形状、通过真实 `ctx.tools.execute` 的参数校验、值校验、事件追加与替换、非 agent 拒绝、`presentCall`、HMR（热模块替换）安全性）；以及 TUI 折叠。
-- **真实 Loader 路径**——插件通过 `Loader.unwrapExports` 运行，断言命名空间导出形状存活（它有 `inject`，因此一个意外的 default 导出会在加载时崩溃——事故复盘（postmortem）0001）。
+- **真实 Loader 路径**——插件通过 `Loader.unwrapExports` 运行，断言命名空间导出形状存活（它有 `inject`，因此一个意外的 default 导出会在加载时崩溃——postmortem/0001）。
 - **全循环集成**——一个脚本化的 mock 模型通过真实 agent loop（智能体循环）调用 `todo_write`；`todo/write` 事件落地，第二次调用替换它。
 - **恢复/回放**——持久化的 `todo/write` 折叠回当前任务列表。
 - **带密钥 e2e + 快照**——真实提示词诱导 `todo_write`；组装后的快照固定日志事件和交互式渲染。
@@ -57,4 +57,4 @@ schema 强制 type/required/enum。在此之上，`execute` 拒绝为空或重�
 
 ## 后果
 
-todo 列表是持久、可回放的会话状态：交互式宿主从最新持久化的 `todo/write` 重新推导它，日志（而非插件内存）是唯一真源。整列表替换意味着每次更新一次工具调用，last-write-wins；没有需要协调的 delta 协议。事件不进入模型 surface，因此 todo 更新永远不会扰动推导出的模型历史——模型只看到自己的工具调用和结果。
+todo 列表是持久、可回放的会话状态：交互式宿主从最新持久化的 `todo/write` 重新推导它，日志（而非插件内存）是唯一真源。整列表替换意味着每次更新需调用一次工具，last-write-wins；没有需要协调的 delta 协议。事件不进入模型 surface，因此 todo 更新永远不会扰动推导出的模型历史——模型只看到自己的工具调用和结果。

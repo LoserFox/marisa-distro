@@ -97,6 +97,6 @@ function invalidUri(uri: string, cause?: unknown): SessionReferenceError {
   return new SessionReferenceError(
     `invalid session reference URI ${JSON.stringify(uri)}`,
     'SESSION_REFERENCE_INVALID_REFERENCE',
-    cause !== undefined ? { cause } : undefined,
+    cause === undefined ? undefined : { cause },
   )
 }

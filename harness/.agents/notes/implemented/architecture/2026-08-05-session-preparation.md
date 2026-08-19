@@ -16,7 +16,7 @@ Fresh creation and persisted resume also reached the same publication boundary t
 
 The Agent loop consumes both forms through one setup-and-publication pipeline: it acquires the preparation, builds the private Agent context around `preparation.session`, awaits optional setup, publishes that exact Session and Agent, and disposes the preparation on every exit. Publication transfers the live lifecycle to the existing Session and Agent stores; `SessionPreparation` itself owns no Agent behavior.
 
-This refines the publication boundary from the [Agent lifecycle and ownership decision](2026-06-18-agent-lifecycle-and-ownership-seams.md) without replacing its ownership model.
+This refines the publication boundary from the [Agent lifecycle and ownership decision](2026-06-18-agent-lifecycle-and-ownership-contracts.md) without replacing its ownership model.
 
 ## Persisted preparation lifecycle
 

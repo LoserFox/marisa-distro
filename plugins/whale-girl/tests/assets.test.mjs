@@ -1,8 +1,8 @@
 // src/assets.mjs 单测（node:test）。归属：路径净化/MIME 改动跑本文件。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { sanitizeAssetPath, contentTypeFor } from '../.dsh-plugin/src/assets.mjs'
-import { ASSETS_PATH } from '../.dsh-plugin/src/routes.mjs'
+import { sanitizeAssetPath, contentTypeFor } from '../lib/src/assets.mjs'
+import { ASSETS_PATH } from '../lib/src/routes.mjs'
 
 test('合法相对路径通过', () => {
   assert.equal(sanitizeAssetPath(ASSETS_PATH + '/idle.png'), 'idle.png')

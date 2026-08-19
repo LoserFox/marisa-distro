@@ -2,7 +2,7 @@
 
 [English](index.md) | 中文
 
-本教程会创建一个最小的 Harness 插件，并将其加载到 Web UI 中。请从已完成[快速开始](../../guide/quickstart.md)的仓库检出开始。
+本教程会创建一个最小的 Harness 插件，并将其加载到 Web UI 中。请从已完成[从源码运行路径](../../../../README.md#run-from-source)的仓库检出开始。
 
 ## 创建本地项目
 
@@ -17,7 +17,7 @@ mkdir -p scratch-plugin/src
 在 Harness 中，插件是一个导出 `apply` 函数的 TypeScript 模块。框架在加载时调用 `apply`，传入一个 `ctx`（上下文对象），你通过 `ctx` 注册能力：
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 export const name = 'my-plugin'
 
@@ -26,14 +26,14 @@ export function apply(ctx: Context) {
 }
 ```
 
-这就是完整结构。
+这就是完整配置。
 
 ## 创建插件文件
 
 创建 `scratch-plugin/src/my-plugin.ts`：
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 export const name = 'hello-plugin'
 
@@ -45,18 +45,20 @@ export function apply(ctx: Context) {
 
 ## 注册到 cordis.yml
 
-创建 `scratch-plugin/cordis.yml`，作为插入本地插件的 Web 覆盖层：
+在仓库根目录运行 `pwd`，然后创建 `scratch-plugin/cordis.yml`，作为插入本地插件的 Web 覆盖层。请将下文的 `/absolute/path/to/deepseek-harness` 替换为命令打印的路径：
 
 ```yaml
 - insert:
     - id: hello
-      name: './src/my-plugin.ts'
+      name: '/absolute/path/to/deepseek-harness/scratch-plugin/src/my-plugin.ts'
 ```
+
+插件路径必须是绝对路径。patch 文件只贡献配置，不会改变 loader 解析模块路径时使用的 profile 目录。
 
 使用该覆盖层启动 Web UI：
 
 ```sh
-pnpm run dsh web --patch ./scratch-plugin/cordis.yml
+pnpm dsh web --patch ./scratch-plugin/cordis.yml
 ```
 
 打开 `http://127.0.0.1:3080`。启动期间，终端会打印 `[hello-plugin] plugin loaded!`。
@@ -68,7 +70,7 @@ pnpm run dsh web --patch ./scratch-plugin/cordis.yml
 如果你有需要手动清理的资源（比如一个网络连接），用 `ctx.effect()` 告诉框架怎么清理：
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 export function apply(ctx: Context) {
   ctx.effect(() => {
@@ -87,7 +89,7 @@ export function apply(ctx: Context) {
 如果你的插件需要使用其他服务（如 `tools`、`llm`），需要声明 `inject`：
 
 ```ts ignore-check
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 export const name = 'my-tool-plugin'
 export const inject = ['tools']
@@ -107,7 +109,7 @@ export function apply(ctx: Context) {
 ### 对象形式
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 export default {
   name: 'my-plugin',
@@ -121,7 +123,7 @@ export default {
 ### 类形式
 
 ```ts
-import { Service, type Context } from 'cordis'
+import { Service, type Context } from '@deepseek-ai/cordis'
 
 export default class MyService extends Service {
   static inject = ['tools']
@@ -137,5 +139,6 @@ export default class MyService extends Service {
 
 ## 下一步
 
-- [开发一个工具](./tool.md) — 详细了解工具定义 DSL
+- [开发一个工具](./tool.md) — 了解工具定义 DSL
 - [插件配置](./config.md) — 让插件接受用户配置
+- [Cordis 框架教程](../../../cordis-tutorial/index.md) — 底层的插件框架，在临时目录中动手构建，无需 API 密钥

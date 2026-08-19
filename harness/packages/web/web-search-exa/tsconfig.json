@@ -9,7 +9,7 @@
   ],
   "references": [
     {
-      "path": "../../util/environment"
+      "path": "../../util/launch-environment"
     },
     {
       "path": "../../../vendor/cosmokit"
@@ -24,7 +24,7 @@
       "path": "../web"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -6,14 +6,14 @@ Status: implemented
 
 ## 问题
 
-快照层（`pnpm run test:snapshot`）会启动真实 `acp-agent` 子进程，通过 [`dsh-llm-replay`](../../../../packages/support/llm-replay) 回放已记录会话，并将规范化后的自动化协议输出 + 重新持久化的会话日志与已提交预期输出进行 diff。大多数场景通过这条真实进程边界测试组装后的后端行为。
+快照层（`pnpm run test:snapshot`）会启动真实 `acp-agent` 子进程，通过 [`dsh-llm-replay`](../../../../packages/test-support/llm-replay) 回放已记录会话，并将规范化后的自动化协议输出 + 重新持久化的会话日志与已提交预期输出进行 diff。大多数场景通过这条真实进程边界测试组装后的后端行为。
 
 该层最初为每个进程只有一个会话而构建，这一假设硬编码在两处：
 
 - **`dsh-llm-replay` 没有做任何键控。** 它用一个全局游标，将第 N 次 `llm/stream` 调用对应到单一录制序列的第 N 条。当父 agent（智能体）和一个进程内 subagent 在同一个上下文上同时流式输出时，调用交错，单一游标会把子 agent 的脚本发给父 agent（反之亦然）。
 - **harness 只收集一份日志。** `findSessionLog` 遍历 sessions 根目录，返回找到的第一个 `.jsonl`。subagent 作为第二个 `Session` 运行并拥有自己的日志，因此子 agent 的 transcript（文本记录）被静默丢弃。
 
-这就是 [subagent seam Agent Note](../feature/2026-06-21-subagent-capability-seam.md)中通过 `TODO(subagent-snapshots)` 推迟的工作：进程内后端（PR2）落地时已有单元 + e2e 覆盖，但在这套基础设施落地前，完整 transcript 快照层无法表达嵌套 agent 形状。本 Agent Note 就是该堆叠式后续工作。
+这就是 [subagent seam Agent Note](../feature/2026-06-21-subagent-capability-seam.md) 中通过 `TODO(subagent-snapshots)` 推迟的工作：进程内后端落地时已有单元 + e2e 覆盖，但在这套基础设施落地前，完整 transcript 快照层无法表达嵌套 agent 形状。
 
 ## 决策
 
@@ -45,14 +45,14 @@ Status: implemented
 
 新增两个嵌套场景，均对真实 API 录制：
 
-- **`subagent-spawn`**：父 agent 通过 `subagent` 工具将一个子任务委派给一个新 spawn 的子 agent（2 个会话）。
-- **`subagent-multi`**：父 agent 委派两个子任务，各自交给自己的 spawn 子 agent（3 个会话），以三份并行脚本和同一父 agent 下两个子会话的 `createdAt` 排序来压测逐会话键控。
+- **`subagent-spawn-in-process`**：父 agent 通过 `subagent` 工具将一个子任务委派给一个新 spawn 的子 agent（2 个会话）。
+- **`subagent-multi`**：父 agent 委派两个子任务，各自交给自己的 spawn 子 agent（3 个会话），以三份独立的逐会话脚本和同一父 agent 下两个子会话的 `createdAt` 排序来压测逐会话键控。
 
 两者均在默认门禁中以 keyless 方式回放。
 
 ## 后果
 
 - `TODO(subagent-snapshots)` 延期项已解决：嵌套 agent 的 transcript 现在是快照层的一等形态。
-- `GenerateOptions.sessionId` 是一个小而诚实的 core-seam 新增，在回放之外同样有用（遥测、请求路由）。
+- `GenerateOptions.sessionId` 是一个小而诚实的 core API 新增，在回放之外同样有用（遥测、请求路由）。
 - `subagent` 工具绑定到单一提供方，因此 `subagent-multi` 中的两个子 agent 都是 spawn（全新创建）。键控按会话路由而非按后端路由，因此对 fork 同样正确。但脚本*派生*逻辑此前不正确：fork 子会话的日志以种子化的父前缀（父会话的 `assistant/chunk` 事件）开头，如果从完整日志派生脚本，就会把父 agent 的响应当作子 agent 的来回放。这一正确性缺口通过持久化种子边界来弥合——见[持久化 seed 边界以确保 fork 子会话回放正确路由](2026-06-22-fork-child-replay-seed-boundary.md)——录制的 fork 与混合 spawn+fork 场景现在通过一份 transcript 同时验证两种传输方式（见[记录 fork 与混合 spawn+fork 快照场景](../../archived/testing/2026-06-22-fork-snapshot-scenarios.md)）。
-- 进程外（ACP（Agent Client Protocol））subagent 是完全不同的回放形态（每个子 agent 是自己的进程、有自己的回放），作为 `TODO(acp-subagent-replay)` 记录在 PR3 计划中。
+- 进程外（ACP（Agent Client Protocol））subagent 是完全不同的回放形态（每个子 agent 是自己的进程、有自己的回放），作为 `TODO(acp-subagent-replay)` 记录在 `subagent-acp` 中。

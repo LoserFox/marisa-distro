@@ -1,12 +1,12 @@
-import type { Context } from 'cordis'
-import { Credentials } from '../src/index.ts'
+import type { Context } from '@deepseek-ai/cordis'
+import { CredentialProvider } from '../src/index.ts'
 import type { CredentialInfo, CredentialRef, ResolvedCredential } from '../src/index.ts'
 
 /**
  * In-memory credentials provider for interface and consumer tests: one
  * always-writable `memory` source seeded from plugin config.
  */
-export class MemoryCredentials extends Credentials {
+export class MemoryCredentials extends CredentialProvider {
   private readonly store = new Map<string, string>()
 
   constructor(ctx: Context, seed: Record<string, string> = {}) {
@@ -26,7 +26,7 @@ export class MemoryCredentials extends Credentials {
     const configured = value !== undefined && value.length > 0
     return Promise.resolve({
       configured,
-      ...!configured ? {} : { source: 'memory' },
+      ...configured ? { source: 'memory' } : {},
       writable: true,
     })
   }

@@ -1,21 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
-import SubagentService from '@deepseek-ai/dsh-subagent'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { SubagentCapabilities, SubagentProvider, SubagentRun, SubagentStartRequest } from '@deepseek-ai/dsh-subagent'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
 import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
-import { WorkflowRunId, WorkflowService } from '@deepseek-ai/dsh-workflow'
+import { WorkflowRunId, WorkflowEngine } from '@deepseek-ai/dsh-workflow'
 import type { WorkflowResult, WorkflowRun, WorkflowStartRequest } from '@deepseek-ai/dsh-workflow'
 import * as toolRalph from '../src/index.ts'
 
 const testToolSignal = new AbortController().signal
 
-class StubEngine extends WorkflowService {
+class StubEngine extends WorkflowEngine {
   requests: WorkflowStartRequest[] = []
   cancels: string[] = []
   disposed = 0
@@ -77,19 +77,19 @@ interface SetupOptions {
 async function setup(options?: SetupOptions) {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
-  await ctx.plugin(SubagentService)
+  await ctx.plugin(ToolRuntime)
+  await ctx.plugin(SubagentRuntime)
   const provider = options?.provider === false ? undefined : options?.provider ?? new StubProvider()
   if (provider !== undefined) ctx.subagents.registerProvider(provider)
   await ctx.plugin(StubEngine)
   const config: toolRalph.Config = { subagentProvider: 'fresh' }
-  if (options?.config?.subagentProvider !== undefined) { config.subagentProvider = options.config.subagentProvider }
+  if (options?.config?.subagentProvider !== undefined) config.subagentProvider = options.config.subagentProvider
   if (options?.config?.maxRounds !== undefined) config.maxRounds = options.config.maxRounds
   if (options?.config?.maxHandoffChars !== undefined) config.maxHandoffChars = options.config.maxHandoffChars
   if (options?.config?.maxResultChars !== undefined) config.maxResultChars = options.config.maxResultChars
   const fiber = await ctx.plugin(toolRalph, config)
   const parent = { id: SessionId('caller'), options: {} } as unknown as Agent
-  return { ctx, engine: ctx.workflows as StubEngine, parent, fiber }
+  return { ctx, engine: ctx.workflowEngine as StubEngine, parent, fiber }
 }
 
 function execute(
@@ -396,7 +396,7 @@ describe('dsh-tool-ralph', () => {
   it('has the namespace-plugin export shape', () => {
     expect('default' in toolRalph).toBe(false)
     expect(toolRalph.name).toBe('tool-ralph')
-    expect(toolRalph.inject).toEqual(['tools', 'workflows', 'subagents', 'systemPrompt'])
+    expect(toolRalph.inject).toEqual(['tools', 'workflowEngine', 'subagents', 'systemPrompt'])
     const loader = Object.create(Loader.prototype) as Loader
     const unwrapped = loader.unwrapExports(toolRalph) as Record<string, unknown>
     expect(unwrapped).toBe(toolRalph)

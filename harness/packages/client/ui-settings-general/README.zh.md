@@ -2,11 +2,13 @@
 
 [English](README.md) | 中文
 
-设置界面无特定功能归属的文案与产品引导插件：在设置界面注册所有不属于单一功能的内容，包括外壳的触发器、标题栏与关闭控件内容、本地配置文件操作，「通用」分区及其 `settings.general.item` slot、`settings` 字典，以及第一个有序欢迎步骤。归具体功能所有的行（「权限」、「语言」、「外观」）、分区（「模型」）和条件式首次使用引导步骤仍由各自的功能包提供。
+设置外壳、无特定功能归属文案与持久化产品引导 namespace。它以触发控件和模态设置面板占用 `sidebar.settings`，把 `settings.section` 账本投影成导航、把 `settings.onboarding` 账本投影成每次只挂载一个步骤的引导流程，并在设置页面上注册所有不属于单一功能的内容：触发器、标题栏与关闭控件内容、本地配置文件操作，「通用」分区及其 `settings.general.item` slot，以及 `settings` 字典。它渲染进的那些 slot 类型归 ui-settings——设置领域底座——所有；只有外壳自身的契约类型放在这里，因为它们引用 ui-sidebar 的 slot 类型，而底座不得依赖任何 `ui-*` 包。归具体功能所有的行（「权限」、「语言」、「外观」）、分区（「模型」）和条件式首次使用引导步骤仍由各自的功能包提供。
 
-回环浏览器通过 `settings.describe` 加载提供方的 `hasDocument` 能力，且只有在 Host 确认可准备好一份由提供方持有的本地文档时才渲染**打开配置文件**。该操作发送无路径参数且仅限回环访问的 `settings.openDocument` 请求；Host 会再次解析提供方路径、在文档缺失时将其创建出来，并交给原生文本编辑器（macOS 上使用 `open -t`，绕过浏览器文件关联；Linux 和 Windows 上使用桌面文件关联；WSL 上经 `wslpath -w` 转换后使用 Windows 文件关联）。打开失败时该操作仍可使用，并渲染本地化错误。临时读取失败或 Host 拓扑变化后，重新打开对话框或重新连接会刷新可用性。远程浏览器从不注册该操作，也从不发起这项特权 settings 读取。
+外壳不自带引导文案：所有文本都来自注册方。导航 label 可以是跟随语言的 thunk，因此导航投影经 `resolveSlotLabel` 解析，并在分区账本更新或 locale revision 变化时重新渲染（`ctx.get('locale')` 可选读取，无硬 locale 依赖）。首次使用引导记录按升序投影，每次只挂载一个步骤；可见步骤自行持有弹窗框架和应用根节点 `inert` 生命周期。已挂载但仍在判定私有事实的步骤渲染 null，因此判定期间不绘制也不阻塞任何内容。当前注册方会收到该条目的 id、`complete()` 和 `openSection(id)` 回调；完成或跳过当前步骤后，所有权转交给下一项。持久化完成状态、能力就绪状态、文案、变更操作以及可见包装均由注册方持有，因此独立注册的流程无法堆叠，外壳也不会成为第二个配置事实来源。
 
-`src/onboarding-copy.ts` 是完整通知文案和 `WELCOME_NOTICE_VERSION` 的唯一可编辑来源；GUI 支持的两种 locale 都有意渲染同一份中文文案。宿主端在 user-settings seam 中注册 `ui-onboarding`。loopback 浏览器会比较 `welcomeNoticeVersion` 是否精确相等，仅在「继续」操作成功后写入当前值。该路径变更在不同标签页间幂等，并会保留同级设置；`host/settings-changed` 则让页面在通知被外部确认后，无需重新加载即可推进。非 loopback 浏览器不能访问受保护的 settings API：它仍会显示通知，但「继续」只推进当前浏览器进程，重新加载后会再次显示通知。版本不同时，系统也会有意重新显示通知。欢迎页保留原文的每个段落，仅强调最后一段中指定的句段，初始焦点落在标题上，并且没有关闭操作、Escape、点击遮罩或次要操作路径。其文案和确认状态均不会进入会话日志或模型请求。通知明确以 `DSH_TELEMETRY_DISABLED=1` 作为遥测关闭方式。
+回环浏览器通过 `settings.describe` 加载提供方的 `hasDocument` 能力，且只有在 Host 确认可准备好一份由提供方持有的本地文档时才渲染**打开配置文件**。该操作发送无路径参数且仅限回环访问的 `settings.openDocument` 请求；Host 会再次解析提供方路径、在文档缺失时将其创建出来，并交给原生文本编辑器（macOS 上使用 `open -t`，绕过浏览器文件关联；Linux 和 Windows 上使用桌面文件关联；WSL 上经 `wslpath -w` 转换后使用 Windows 文件关联）。打开失败时该操作仍可使用，并渲染本地化错误。临时读取失败或 Host 拓扑变化后，重新打开对话框或重新连接会刷新可用性。远程浏览器从不注册该操作，也从不发起这项特权设置读取。
+
+宿主端在用户设置 seam 中注册 `ui-onboarding`。`ui-settings-models` 提供的欢迎步骤通过既有公开 settings 边界读写其中的 `welcomeNoticeVersion`；外壳本身仍不持有产品策略。
 
 ## 模型体验
 

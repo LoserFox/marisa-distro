@@ -1,6 +1,6 @@
 // Web e2e scenarios: live-turn interactions — cancellation, error surfacing,
 // and transient-retry recovery, all through the real composition and wire.
-// The model seam is dsh-llm-replay with override sidecars: `hang` (+ a
+// The model adapter is dsh-llm-replay with override sidecars: `hang` (+ a
 // readyFile marker) makes mid-stream cancel deterministic by construction,
 // `throw` entries express provider failures by stable code, and `{ patches }`
 // augmentation injects a transient throw before the recorded success so
@@ -133,7 +133,7 @@ describe('web e2e: live-turn interactions (cancel / error / retry)', () => {
     const { settled } = await sendPrompt()
     // The marker IS the synchronization: the stream is provably parked in the
     // hang (prefix chunks delivered to the loop) before the stop click.
-    await expect.poll(() => { return existsSync(marker) }, { timeout: 15_000 }).toBe(true)
+    await expect.poll(() => existsSync(marker), { timeout: 15_000 }).toBe(true)
     await expect.poll(
       () => page.getByRole('status').filter({ hasText: 'Deep diving...' }).isVisible(),
       { timeout: 10_000 },

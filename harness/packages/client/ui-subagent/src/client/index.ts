@@ -3,17 +3,19 @@
  * candidates filtered from the session list snapshot's running children
  * (zero RPC; the list rides the plugin's root-context sessions service, the
  * scoped session comes from the per-call projection), pick inserts the
- * literal `@label ` text (decision 21: the draft carries plain text, chip
+ * literal `@label ` text (plain-text-reference decision, see
+ * .agents/notes/implemented/architecture/2026-07-25-web-input-machine-and-slash-pipeline.md:
+ * the draft carries plain text, chip
  * visuals are derived by scanning against the source lexicon, and the
  * prompt ships the same literal). Consumption semantics stay with future
- * business work (design ledger). No adjudication hooks: subagent
+ * business work. No adjudication hooks: subagent
  * references never enter command adjudication.
  */
 import type {
   ClientContext, SessionId, SubagentAddress,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ComposerChainProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { ClientSessionContext, SlashServiceContract, SlashSource } from '@deepseek-ai/dsh-client-ui-slash/client'
+import type { ClientSessionContext, InputTriggerServiceContract, InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import { SubagentCatalogAction, type SubagentCatalogInjected } from './SubagentCatalogAction.tsx'
 import {
   SubagentReadOnlyComposer, type SubagentReadOnlyMatch,
@@ -36,14 +38,18 @@ export type {
 } from './SubagentReadOnlyComposer.tsx'
 
 /** Required services for references, conversation slots, and session navigation. */
-export const inject = ['slash', 'sessions', 'slots', 'locale']
+export const inject = ['inputTriggers', 'sessions', 'slots', 'locale']
 
 /** Claim the composer for one-shot history or an unavailable continuation owner. */
 function selectReadOnlySubagent(owner: ComposerChainProps): SubagentReadOnlyMatch | null {
   const subagent = owner.session?.subagent
   if (subagent === undefined || subagent === null) return null
   if (subagent.address.mode === 'one-shot') return { reason: 'one-shot' }
-  return subagent.parentAvailable ? null : { reason: 'parent-unavailable' }
+  if (subagent.parentAvailable) return null
+  // A RUNNING parent-offline continuable child keeps the default composer:
+  // its input is disabled there, but the same primary Stop stays available so
+  // the child can be interrupted. Once it stops, this takeover returns.
+  return owner.session?.running === true ? null : { reason: 'parent-unavailable' }
 }
 
 /**
@@ -61,7 +67,7 @@ export function apply(ctx: ClientContext): void {
       .filter(child => child.parentId === session.sessionId && child.running && child.displayTitle.includes(query))
       .map(child => child.displayTitle)
   }
-  const source: SlashSource = {
+  const source: InputTriggerSource = {
     trigger: '@',
     name: 'subagent',
     candidates(session, { query }) {
@@ -76,21 +82,19 @@ export function apply(ctx: ClientContext): void {
       return sessions.list.subscribe(listener)
     },
     onPick({ candidate }) {
-      // Decision 21: plain-text reference — the literal lands in the draft
+      // Plain-text reference: the literal lands in the draft
       // and ships to the model verbatim (trailing space closes the token).
-      // Legacy path (decision 21), retained for the removal cut, no longer reached:
-      // return { insert: { source: 'subagent', ref: candidate.name, label: candidate.name, clipboardText: `@${candidate.name}` } }
       return { text: `@${candidate.name} ` }
     },
     codec: {
       clipboardText: ref => `@${ref}`,
       // TODO: serialize returns the raw label until the '@' consumption
-      // feature defines a model representation (design ledger).
+      // feature defines a model representation.
       serialize: ref => Promise.resolve(`@${ref}`),
     },
   }
-  const slash = ctx.get('slash') as SlashServiceContract
-  ctx.effect(() => slash.registerSource(source), 'ui-subagent: @ source')
+  const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract
+  ctx.effect(() => inputTriggers.registerSource(source), 'ui-subagent: @ source')
 
   const catalogActions = (_parentSessionId: SessionId): SubagentCatalogInjected => ({
     openChild(address: SubagentAddress) {

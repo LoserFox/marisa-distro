@@ -58,9 +58,10 @@ export function missingPrerequisites(layout, { desktop = false } = {}) {
 }
 
 export function buildBackendArgs(layout, { port = '0' } = {}) {
+  // rc7 CLI syntax: --profile is a launcher flag (dsh --profile marisa);
+  // the `web` subcommand does not accept it (rc7 sync, 2026-08-18).
   return [
     layout.cli,
-    'web',
     '--profile', 'marisa',
     '--patch', layout.overlay,
     '--dev',

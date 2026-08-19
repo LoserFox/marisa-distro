@@ -1,6 +1,11 @@
 - banner:
   - navigation "Session hierarchy":
     - button "Reply with a one-sentence description" [disabled]
+  - img
+  - text: Standard mode
+  - button "Session log":
+    - text: Session log
+    - img
   - tablist:
     - tab "Chat" [selected]
     - tab "Trajectory"
@@ -14,7 +19,7 @@
 - paragraph: partial
 - status: Deep diving...
 - button "2 queued messages"
-- textbox "Message the agent"
+- textbox "Cmd/Ctrl+Enter steers all queued messages"
 - button "Commands":
   - img
 - 'button "Access mode, current: Workspace Write"': Workspace Write

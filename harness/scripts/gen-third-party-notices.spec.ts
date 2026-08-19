@@ -46,8 +46,8 @@ describe('tierExternalDeps', () => {
     const { manifests, names } = workspace({
       // Root tooling and test infrastructure never ship, whichever section declares them.
       'package.json': { dependencies: { 'root-runtime-looking': '^1' }, devDependencies: { 'lint-tool': '^1' } },
-      'packages/support/loader-smoke/package.json': { name: '@deepseek-ai/dsh-loader-smoke', dependencies: { 'smoke-helper': '^1' } },
-      'packages/client/test-runtime/package.json': { name: '@deepseek-ai/dsh-client-test-runtime', dependencies: { 'test-lib': '^1' } },
+      'packages/test-support/loader-smoke/package.json': { name: '@deepseek-ai/dsh-loader-smoke', dependencies: { 'smoke-helper': '^1' } },
+      'packages/test-support/client-runtime/package.json': { name: '@deepseek-ai/dsh-client-test-runtime', dependencies: { 'test-lib': '^1' } },
       'website/package.json': { devDependencies: { 'site-tool': '^1' } },
       // A plugin package's runtime dependency ships even when no app mounts it by default.
       'packages/mcp/mcp-client/package.json': { name: '@deepseek-ai/dsh-mcp-client', dependencies: { 'protocol-sdk': '^1' }, devDependencies: { 'protocol-fixture-server': '^1' } },
@@ -70,7 +70,7 @@ describe('tierExternalDeps', () => {
   it('keeps a package runtime when any shipping area declares it, and excludes workspace links', () => {
     const { manifests, names } = workspace({
       'package.json': { devDependencies: { shared: '^1' } },
-      'packages/ui/tui/package.json': { name: '@deepseek-ai/dsh-tui', dependencies: { shared: '^1', '@deepseek-ai/dsh-cli': 'workspace:^' } },
+      'packages/interaction/tui/package.json': { name: '@deepseek-ai/dsh-tui', dependencies: { shared: '^1', '@deepseek-ai/dsh-cli': 'workspace:^' } },
       'apps/cli/package.json': { name: '@deepseek-ai/dsh-cli' },
     })
 
@@ -134,13 +134,17 @@ describe('parseVendoredRows', () => {
     const rows = parseVendoredRows(readFileSync(resolve(root, 'vendor/README.md'), 'utf8'))
 
     expect(rows.length).toBeGreaterThan(0)
-    expect(rows).toContainEqual({ npmName: 'cordis', upstream: 'https://github.com/cordiverse/cordis' })
+    expect(rows).toContainEqual({
+      npmName: '@deepseek-ai/cordis',
+      upstreamName: 'cordis',
+      upstream: 'https://github.com/cordiverse/cordis',
+    })
     // The upstream column carries a trailing package path for some rows; it is not part of the URL.
     expect(rows.every(row => /^https:\/\/\S+$/.test(row.upstream))).toBe(true)
   })
 
-  it('yields nothing when the table shape changes, so the generator fails loud', () => {
-    expect(parseVendoredRows('| `cordis/` | cordis | 4.0.0 | https://example.com | `abc123` |\n')).toEqual([])
+  it('yields nothing when the table columns change, so the generator fails loud', () => {
+    expect(parseVendoredRows('| `cordis/` | `@deepseek-ai/cordis` | cordis | 4.0.0 | https://example.com | `abc123` |\n')).toEqual([])
   })
 
   it('covers every vendored directory, so no package can drop out of the notices', () => {
@@ -215,10 +219,10 @@ describe('parsePyprojectRequirements', () => {
     ].join('\n'))).toEqual(['pydantic', 'tomli', 'pytest'])
   })
 
-  it('accepts dependency-group includes and rejects unsupported requirement shapes', () => {
+  it('accepts dependency-group includes and rejects unsupported requirement forms', () => {
     expect(parsePyprojectRequirements('[dependency-groups]\nbase = ["pytest"]\nall = [{ include-group = "base" }]\n'))
       .toEqual(['pytest'])
-    expect(() => { return parsePyprojectRequirements('[project]\ndependencies = "pytest"\n') }).toThrow(/must be an array/)
+    expect(() => parsePyprojectRequirements('[project]\ndependencies = "pytest"\n')).toThrow(/must be an array/)
     expect(() => parsePyprojectRequirements('[dependency-groups]\ntest = [{ unknown = "pytest" }]\n')).toThrow(/unsupported requirement entry/)
   })
 })
@@ -227,7 +231,7 @@ describe('collectPythonDependencies', () => {
   it('excludes normalized local project names without exempting a third-party prefix', () => {
     const pyprojects = [
       '[project]\nname = "deepseek-harness-runtime-bin"\ndependencies = ["pydantic"]\n',
-      '[project]\nname = "deepseek-harness"\ndependencies = ["DeepSeek.Harness_Runtime-Bin", "deepseek-unrelated"]\n',
+      '[project]\nname = "deepseek-harness-sdk"\ndependencies = ["DeepSeek.Harness_Runtime-Bin", "deepseek-unrelated"]\n',
     ]
     expect(() => collectPythonDependencies(pyprojects)).toThrow(
       'python dependency deepseek-unrelated is missing from PYTHON_METADATA',

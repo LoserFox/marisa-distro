@@ -3,15 +3,15 @@
  * (`goToDefinition`/`findReferences`/`goToImplementation`/`hover`); it converts one-based UTF-16
  * cursor coordinates to the seam's zero-based positions, requires the session workspace with no
  * fallback, caps and renders results, and attaches a configurable timeout budget for
- * `dsh-timeout-policy` to enforce. It runtime-injects only `tools`, `lsp`, and `systemPrompt` and
+ * `dsh-tool-call-timeout-policy` to enforce. It runtime-injects only `tools`, `lsp`, and `systemPrompt` and
  * imports no provider.
  *
  * Namespace plugin (named exports, no default export).
  * @module @deepseek-ai/dsh-tool-lsp
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { assertNever } from '@deepseek-ai/dsh-llm'
 import { LspError } from '@deepseek-ai/dsh-lsp'
@@ -138,7 +138,7 @@ export function apply(ctx: Context, config: Config): void {
                   },
                 },
               },
-              resolvedWorkspaceRoot: { type: 'string', required: true },
+              resolvedWorkspaceUri: { type: 'string', required: true },
             },
           },
           {
@@ -167,7 +167,7 @@ export function apply(ctx: Context, config: Config): void {
       render: (_args, value) => {
         switch (value.kind) {
           case 'locations':
-            return [{ type: 'text', text: formatLocations(value.locations, value.resolvedWorkspaceRoot, resolved.maxLocations, resolved.maxResultChars) }]
+            return [{ type: 'text', text: formatLocations(value.locations, value.resolvedWorkspaceUri, resolved.maxLocations, resolved.maxResultChars) }]
           case 'hover':
             return [{ type: 'text', text: formatHover(value.hover, resolved.maxResultChars) }]
           /* v8 ignore next -- exhaustive over the output schema's closed union; unreachable. */
@@ -200,7 +200,7 @@ export function apply(ctx: Context, config: Config): void {
                 end: { line: location.range.end.line, character: location.range.end.character },
               },
             })),
-            resolvedWorkspaceRoot: result.resolvedWorkspaceRoot,
+            resolvedWorkspaceUri: result.resolvedWorkspaceUri,
           }
         case 'hover':
           return {

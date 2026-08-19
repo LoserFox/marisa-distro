@@ -1,7 +1,7 @@
 # Add Code Mode and Cordis tools to the base spawn/workflow stack, exercising
 # all four boundaries in one ACP snapshot.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:
@@ -22,6 +22,8 @@
             Verify your work by running the code or tests. Keep answers brief and factual.
       - insert:
           - id: code-runtime
-            name: '@deepseek-ai/dsh-code-runtime-worker'
+            name: '@deepseek-ai/dsh-code-runtime-worker-thread'
+          - id: cordis-host-runner
+            name: '@deepseek-ai/dsh-cordis-host-runner'
           - id: tool-cordis
             name: '@deepseek-ai/dsh-tool-cordis'

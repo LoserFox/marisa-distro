@@ -1,4 +1,4 @@
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import {
   CallId,
   LlmAdapter,
@@ -29,6 +29,10 @@ class CliMockAdapter extends LlmAdapter {
   }
 
   async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+    if (process.env.DSH_CLI_MOCK_FAILURE === '1') {
+      yield { type: 'finish', reason: { kind: 'error', failure: { code: 'SERVER', message: 'CLI mock provider failed' } } }
+      return
+    }
     const toolResult = options.messages.at(-1)?.content.find(block => block.type === 'tool-result')
     if (toolResult === undefined) {
       const args = JSON.stringify({ command: 'printf CLI_TOOL_ROUND_TRIP', description: 'Prove the CLI tool round trip.' })
@@ -61,6 +65,6 @@ export function apply(ctx: Context): void {
   ctx.llm.registerAdapter(['cli-mock'], new CliMockAdapter())
   ctx.on('agent/request', async ({ step }, next) => {
     const config = await next()
-    return step !== 2 ? config : { ...config, reasoningEffort: OFF }
+    return step === 2 ? { ...config, reasoningEffort: OFF } : config
   })
 }

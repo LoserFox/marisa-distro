@@ -6,14 +6,14 @@ English | [中文](2026-06-22-subagent-snapshot-replay.zh.md)
 
 ## Problem
 
-The snapshot tier (`pnpm run test:snapshot`) boots the real `acp-agent` subprocess, replays a recorded session through [`dsh-llm-replay`](../../../../packages/support/llm-replay), and diffs the normalized automation wire + re-persisted session log against committed expected outputs. Most scenarios exercise assembled backend behavior through that real process boundary.
+The snapshot tier (`pnpm run test:snapshot`) boots the real `acp-agent` subprocess, replays a recorded session through [`dsh-llm-replay`](../../../../packages/test-support/llm-replay), and diffs the normalized automation wire + re-persisted session log against committed expected outputs. Most scenarios exercise assembled backend behavior through that real process boundary.
 
 It was built for ONE session per process, and that assumption is wired into two places:
 
 - **`dsh-llm-replay` keyed nothing.** It served the Nth `llm/stream` call the Nth recorded entry from a single global cursor. With a parent agent AND an in-process subagent both streaming on one context, the calls interleave and the single cursor hands the child the parent's script (and vice versa).
 - **The harness harvested one log.** `findSessionLog` walked the sessions root and returned the FIRST `.jsonl` it found. A subagent runs as a second `Session` with its own log, so the child's transcript was silently dropped.
 
-This was the `TODO(subagent-snapshots)` deferral recorded in the [subagent seam Agent Note](../feature/2026-06-21-subagent-capability-seam.md): the in-process backends (PR2) shipped with unit + e2e coverage, but the full-transcript snapshot tier could not express a nested-agent shape until this infrastructure landed. This Agent Note is that stacked follow-up.
+This was the `TODO(subagent-snapshots)` deferral recorded in the [subagent seam Agent Note](../feature/2026-06-21-subagent-capability-seam.md): the in-process backends shipped with unit + e2e coverage, but the full-transcript snapshot tier could not express a nested-agent shape until this infrastructure landed.
 
 ## Decision
 
@@ -45,7 +45,7 @@ The alternative considered and rejected was a **call-ordered merge of the parent
 
 Two nested scenarios were added and recorded against the real API:
 
-- **`subagent-spawn`** — the parent delegates one subtask via the `subagent` tool to a fresh spawn child (2 sessions).
+- **`subagent-spawn-in-process`** — the parent delegates one subtask via the `subagent` tool to a fresh spawn child (2 sessions).
 - **`subagent-multi`** — the parent delegates two subtasks, each to its own spawn child (3 sessions), stressing the per-session keying with three concurrent scripts and the `createdAt` ordering of two children under one parent.
 
 Both replay keyless in the default gate.
@@ -53,6 +53,6 @@ Both replay keyless in the default gate.
 ## Consequences
 
 - The `TODO(subagent-snapshots)` deferral is resolved: nested-agent transcripts are now a first-class snapshot shape.
-- `GenerateOptions.sessionId` is a small, honest core-seam addition useful beyond replay (telemetry, request routing).
+- `GenerateOptions.sessionId` is a small, honest core API addition useful beyond replay (telemetry, request routing).
 - The `subagent` tool is bound to a single provider, so both children in `subagent-multi` are spawn (fresh). The keying routes by session, not by backend, so it is already correct for fork. The script *derivation* was not: a fork child's log begins with the seeded parent prefix (the parent's `assistant/chunk` events), so deriving its script from the whole log would replay the parent's responses as the child's. That correctness gap is closed by persisting a seed boundary — see [Persist the seed boundary so fork-child replay routes correctly](2026-06-22-fork-child-replay-seed-boundary.md) — and recorded fork + mixed spawn+fork scenarios now exercise both transports through one transcript (see [Record fork and mixed spawn+fork snapshot scenarios](../../archived/testing/2026-06-22-fork-snapshot-scenarios.md)).
-- Out-of-process (ACP) subagents are a different replay shape entirely (each child is its own PROCESS with its own replay), tracked as `TODO(acp-subagent-replay)` in the PR3 plan.
+- Out-of-process (ACP) subagents are a different replay shape entirely (each child is its own PROCESS with its own replay), tracked as `TODO(acp-subagent-replay)` in `subagent-acp`.

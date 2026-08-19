@@ -49,7 +49,7 @@ function fixture(options: {
     },
     files: ['lib/index.js', 'lib/invariant.js'],
     peerDependencies: options.invariantDependency === false ? {} : {
-      '@deepseek-ai/dsh-invariants': '^0.0.1',
+      '@deepseek-ai/dsh-invariants': 'workspace:^',
     },
     devDependencies: options.invariantDependency === false ? {} : {
       '@deepseek-ai/dsh-invariants': 'workspace:^',
@@ -57,7 +57,7 @@ function fixture(options: {
   }
   writeFileSync(join(dir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   writeFileSync(join(dir, 'tsconfig.json'), `${JSON.stringify({
-    references: options.invariantReference === false ? [] : [{ path: '../../support/invariants' }],
+    references: options.invariantReference === false ? [] : [{ path: '../../runtime-diagnostics/invariants' }],
   }, null, 2)}\n`)
   writeFileSync(join(dir, 'src/invariant.ts'), options.source ?? handwrittenInvariant(packageName))
   writeFileSync(
@@ -80,7 +80,7 @@ describe('package invariant gate', () => {
       references: [{ path: './tsconfig.host.json' }],
     }, null, 2)}\n`)
     writeFileSync(join(dir, 'tsconfig.host.json'), `${JSON.stringify({
-      references: [{ path: '../../support/invariants' }],
+      references: [{ path: '../../runtime-diagnostics/invariants' }],
     }, null, 2)}\n`)
 
     expect(collectPackageInvariantViolations(root)).toEqual([])

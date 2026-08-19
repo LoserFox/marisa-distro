@@ -1,27 +1,42 @@
 /**
- * Browser-local Composer submission policy. It owns the persisted busy-Enter
+ * Composer submission policy. It owns the live busy-Enter
  * preference and resolves keyboard gestures into queue/steer delivery modes;
  * Host and Agent keep the actual delivery-window authority.
  */
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
+import {
+  createSnapshotStore, type SettingsScope, type SnapshotStore,
+} from '@deepseek-ai/dsh-client-runtime/client'
 import type {
   BusyEnterBehavior, ComposerSubmitGesture, InputSubmitMode,
 } from '../contract/composer-submission.ts'
+import { BUSY_ENTER_FIELD, DEFAULT_BUSY_ENTER_BEHAVIOR } from '../../submission-settings.ts'
+import type { ConversationSettings } from '../../submission-settings.ts'
 
-/** localStorage key holding the busy-Enter preference. */
-export const BUSY_ENTER_STORAGE_KEY = 'dsh.conversation.busyEnter'
-
-/** Default preserves Enter-as-Queue for running conversations. */
-export const DEFAULT_BUSY_ENTER_BEHAVIOR: BusyEnterBehavior = 'queue'
+export { DEFAULT_BUSY_ENTER_BEHAVIOR } from '../../submission-settings.ts'
 
 /**
- * Persisted policy used by both the composer inject face and its Settings row.
+ * Busy-Enter policy used by both the composer inject face and its Settings row.
  * Direct `steer` is intentionally best-effort: AgentLoop turns a closed-window
  * submission into the next waking Queue item.
  */
 export class ComposerSubmissionPolicy {
   /** Reactive preference source for the Settings row. */
-  readonly busyEnter: SnapshotStore<BusyEnterBehavior> = createSnapshotStore(restoreBusyEnter())
+  readonly busyEnter: SnapshotStore<BusyEnterBehavior> = createSnapshotStore(DEFAULT_BUSY_ENTER_BEHAVIOR)
+  private readonly host: SettingsScope<ConversationSettings> | undefined
+
+  /**
+   * @param host - durable preference scope owned by the providing plugin;
+   * absent compositions stay process-local. The adoption subscription shares
+   * the scope's plugin lifetime — a disposed scope never publishes again, so
+   * the policy needs no release hook.
+   */
+  constructor(host?: SettingsScope<ConversationSettings>) {
+    this.host = host
+    if (host !== undefined) {
+      host.subscribe(() => { this.adopt(host) })
+      this.adopt(host)
+    }
+  }
 
   /**
    * Resolve one keyboard gesture without changing state.
@@ -38,40 +53,27 @@ export class ComposerSubmissionPolicy {
     if (!running || !steeringAvailable) return 'queue'
     const preferred = this.busyEnter.getSnapshot()
     if (gesture === 'enter') return preferred
-    return preferred !== 'queue' ? 'queue' : 'steer'
+    return preferred === 'queue' ? 'steer' : 'queue'
   }
 
   /**
-   * Change and persist the plain-Enter behavior used during busy state.
+   * Change the plain-Enter behavior used during busy state; the live value
+   * publishes before the durable write starts.
    * @param behavior - Queue or Steer.
    */
   setBusyEnter(behavior: BusyEnterBehavior): void {
     if (this.busyEnter.getSnapshot() === behavior) return
     this.busyEnter.set(behavior)
-    persistBusyEnter(behavior)
+    void this.host?.set(BUSY_ENTER_FIELD, behavior)
   }
-}
 
-/** Restore a valid preference; unavailable or corrupt storage uses Queue. */
-function restoreBusyEnter(): BusyEnterBehavior {
-  if (typeof localStorage === 'undefined') return DEFAULT_BUSY_ENTER_BEHAVIOR
-  let stored: string | null
-  try {
-    stored = localStorage.getItem(BUSY_ENTER_STORAGE_KEY)
-  } catch {
-    // Storage access can fail in privacy modes; the default remains usable.
-    return DEFAULT_BUSY_ENTER_BEHAVIOR
-  }
-  if (stored === 'queue' || stored === 'steer') return stored
-  return DEFAULT_BUSY_ENTER_BEHAVIOR
-}
-
-/** Persist a preference when browser storage is available. */
-function persistBusyEnter(behavior: BusyEnterBehavior): void {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(BUSY_ENTER_STORAGE_KEY, behavior)
-  } catch {
-    // A storage failure makes the preference session-only; input stays usable.
+  /**
+   * Adopt the scope's accepted durable behavior without writing it back.
+   * @param host - the constructor-narrowed scope driving this adoption.
+   */
+  private adopt(host: SettingsScope<ConversationSettings>): void {
+    const section = host.getSnapshot().value
+    if (section === undefined || this.busyEnter.getSnapshot() === section.busyEnter) return
+    this.busyEnter.set(section.busyEnter)
   }
 }

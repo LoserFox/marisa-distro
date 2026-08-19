@@ -45,13 +45,13 @@ describe.skipIf(!requiredArtifacts)('Goal Remote built LIB chain', () => {
     }).map(([key, path]) => [key, artifactUrl(path)]))
     const script = `
       import { createServer } from 'node:http'
-      import * as cordis from 'cordis'
+      import * as cordis from '@deepseek-ai/cordis'
 
       const urls = ${JSON.stringify(urls)}
       const { Context } = cordis
       const { default: AgentRegistry } = await import(urls.agent)
       const connectionHost = await import(urls.connectionHost)
-      const { default: TypertGatewayService } = await import(urls.apiGatewayHost)
+      const { default: TypertRemoteService } = await import(urls.apiGatewayHost)
       const { default: GoalService } = await import(urls.goal)
       const { TYPERT } = await import(urls.goalTypert)
       const { default: TypertRegistry } = await import(urls.registryHost)
@@ -59,7 +59,7 @@ describe.skipIf(!requiredArtifacts)('Goal Remote built LIB chain', () => {
 
       const routes = []
       const host = new Context()
-      host.provide('httpServer', {
+      host.provide('webServer', {
         register(route) {
           routes.push(route)
           return () => { routes.splice(routes.indexOf(route), 1) }
@@ -70,7 +70,7 @@ describe.skipIf(!requiredArtifacts)('Goal Remote built LIB chain', () => {
       await host.plugin({ inject: connectionHost.inject, apply: connectionHost.apply })
       await host.plugin(TypertRegistry)
       await host.plugin(AgentRegistry)
-      await host.plugin(TypertGatewayService)
+      await host.plugin(TypertRemoteService)
       await host.plugin(GoalService)
       host.typert.register(TYPERT)
 
@@ -123,7 +123,7 @@ describe.skipIf(!requiredArtifacts)('Goal Remote built LIB chain', () => {
         const handoff = handoffs.get(id)
         if (handoff === undefined) throw new Error('missing Client bundle handoff ' + id)
         return handoff.factory(specifier => {
-          if (specifier === 'cordis') return cordis
+          if (specifier === '@deepseek-ai/cordis') return cordis
           throw new Error('unexpected Client external ' + specifier)
         })
       }
@@ -147,19 +147,21 @@ describe.skipIf(!requiredArtifacts)('Goal Remote built LIB chain', () => {
       } catch {
         invalidRejected = true
       }
+      // Every generated method resolves to the RemoteResult envelope; the
+      // business values below are what the assertions pin.
       const rootResult = await client.remote.goals.create(rootAgent.id, { objective: 'root goal' })
       const rootEdit = await client.remote.goals.edit(
         rootAgent.id,
-        rootResult.ref,
+        rootResult.value.ref,
         { objective: 'edited root goal' },
       )
       const agentContext = client.extend({ builtAgentId: scopedAgent.id })
       const scopedResult = await agentContext.remote.goals.create({ objective: 'scoped goal', maxGoalRounds: 3 })
       const result = {
         invalidRejected,
-        rootResult,
-        rootEdit,
-        scopedResult,
+        rootResult: rootResult.value,
+        rootEdit: rootEdit.value,
+        scopedResult: scopedResult.value,
         rootGoal: host.goals.get(rootAgent)?.objective,
         scopedGoal: host.goals.get(scopedAgent)?.objective,
         rootEvents: rootAgent.session.events.length,

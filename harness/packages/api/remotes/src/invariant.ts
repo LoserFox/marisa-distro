@@ -1,7 +1,7 @@
 /** Package-owned invariant companion for `@deepseek-ai/dsh-api-remotes`. */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-api-remotes'
@@ -11,7 +11,7 @@ export const name = 'api-remotes-invariant'
 /** Service required before the companion can reserve package ownership. */
 export const inject = ['invariants']
 
-/** No runtime invariant: TypeRT and the Agent/Session registries own the observed relationships. */
+/** No runtime invariant: Typert and the Agent/Session registries own the observed relationships. */
 const install: InvariantInstaller = () => {}
 
 /**

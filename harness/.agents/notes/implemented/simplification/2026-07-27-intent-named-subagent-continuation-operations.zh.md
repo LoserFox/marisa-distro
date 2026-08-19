@@ -14,9 +14,9 @@ Status: implemented
 
 ## 决策
 
-`SubagentService` 分离四种执行意图：`start(name, request)` 返回普通的、由持有方负责的 one-shot run；`startContinuable(spec)` 建立持久化 child，并返回其 id 与已接受的初始 `MessageId`；`followup(parent, childId, content, { source, signal })` 发送后续 parent 内容；`reportFrom(child, content, { delivery, signal })` 将选定的 child 内容发送给其直接 parent。`followup` 与 `Agent.followup()` 一致，而 `SubagentRun.steer()` 仍是范围更窄的能力，仅向已确认仍在运行的 run 提供 steering。面向模型的工具保留稳定的 `send_message` 与 `report` 名称，并将路由委托给对应的意图方法。
+`SubagentRuntime` 分离四种执行意图：`start(name, request)` 返回普通的、由持有方负责的 one-shot run；`startContinuable(spec)` 建立持久化 child，并返回其 id 与已接受的初始 `MessageId`；`followup(parent, childId, content, { source, signal })` 发送后续 parent 内容；`reportFrom(child, content, { delivery, signal })` 将选定的 child 内容发送给其直接 parent。`followup` 与 `Agent.followup()` 一致，而 `SubagentRun.steer()` 仍是范围更窄的能力，仅向已确认仍在运行的 run 提供 steering（中途引导）。面向模型的工具保留稳定的 `send_message` 与 `report` 名称，并将路由委托给对应的意图方法。
 
-调用方请求与提供方请求相互分离。`SubagentStartRequest` 包含调用方提供的 one-shot 数据；`ResolvedSubagentStartRequest` 会在调用 `SubagentProvider.start()` 前加入由服务解析的描述符。创建可继续 child 时，管理器将 `ContinuableCreateRequest` 传给可选的 `SubagentProvider.prepareContinuable()`，且只接收分离的创建数据。`SubagentService.resume()` 与提供方恢复分发均不存在：继续执行管理器加载描述符、对 parent 进行鉴权，并负责 Agent 实体化、提示词投递、冷恢复与 teardown。
+调用方请求与提供方请求相互分离。`SubagentStartRequest` 包含调用方提供的 one-shot 数据；`ResolvedSubagentStartRequest` 会在调用 `SubagentProvider.start()` 前加入由服务解析的描述符。创建可继续 child 时，管理器将 `ContinuableCreateRequest` 传给可选的 `SubagentProvider.prepareContinuable()`，且只接收分离的创建数据。`SubagentRuntime.resume()` 与提供方恢复分发均不存在：继续执行管理器加载描述符、对 parent 进行鉴权，并负责 Agent 实体化、提示词投递、冷恢复与 teardown。
 
 `SessionStore.flush(session)` 是唯一的持久性屏障，并返回 `Promise<boolean>`。至少一个作用域内监听器成功参与后，它解析为 `true`；监听器快照为空时解析为 `false`；所有监听器结算后，如有失败，则以注册顺序最靠前的监听器错误拒绝。参与结果无法表明所选的持久化后端是否已经存储状态。普通检查点可以忽略该布尔值；继续执行管理器同样将最终 flush 视为 best-effort 屏障，有意忽略参与结果，记录拒绝日志，并仍会对 child 执行 dispose（资源释放）并释放所有权。
 

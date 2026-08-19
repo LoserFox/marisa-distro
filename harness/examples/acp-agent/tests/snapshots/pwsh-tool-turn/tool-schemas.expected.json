@@ -2,7 +2,7 @@
   "initial": [
     {
       "name": "pwsh",
-      "description": "Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. Each call runs in a fresh pwsh process: no state (cwd, variables, functions) persists between calls — pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\\...`); read environment variables with `$env:NAME`. Non-zero exits are reported as `[exit code: N]`. Current harness environment facts are exposed through managed `$env:DSH_*` variables; inspect them when needed. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. Set `run_in_background: true` for long-running commands: the call returns a task id immediately; read its output with `task_output` and stop it with `task_kill`.",
+      "description": "Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. Each call runs in a fresh pwsh process: no state (cwd, variables, functions) persists between calls — pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\\...`); read environment variables with `$env:NAME`. Non-zero exits are reported as `[exit code: N]`. Current harness environment facts are exposed through managed `$env:DSH_*` variables; inspect them when needed. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. Set `run_in_background: true` for long-running commands: the call returns a job id immediately; read its output with `job_output` and stop it with `job_kill`.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -24,7 +24,7 @@
           },
           "run_in_background": {
             "type": "boolean",
-            "description": "Run in the background and return a task id immediately (collect with task_output, stop with task_kill). No timeout applies."
+            "description": "Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies."
           }
         },
         "required": [
@@ -34,14 +34,14 @@
       }
     },
     {
-      "name": "task_kill",
-      "description": "Request cancellation of a running background task by task id. Returns immediately; the task settles as killed once its work actually stops.",
+      "name": "job_kill",
+      "description": "Request cancellation of a running background job by job id. Returns immediately; the task settles as killed once its work actually stops.",
       "parameters": {
         "type": "object",
         "properties": {
-          "task_id": {
+          "job_id": {
             "type": "string",
-            "description": "Task id returned by the tool that started the background work."
+            "description": "Job id returned by the tool that started the background work."
           },
           "reason": {
             "type": "string",
@@ -49,27 +49,27 @@
           }
         },
         "required": [
-          "task_id"
+          "job_id"
         ]
       }
     },
     {
-      "name": "task_list",
-      "description": "List your background tasks (running and finished) with their ids, kinds, and statuses.",
+      "name": "job_list",
+      "description": "List your background jobs (running and finished) with their ids, kinds, and statuses.",
       "parameters": {
         "type": "object",
         "properties": {}
       }
     },
     {
-      "name": "task_output",
-      "description": "Read a background task. Stream tasks return only output since the previous read; final-output tasks return their result after settlement. Every response ends with `[status: ...]`. Reads are non-blocking unless `wait: true`, which waits up to the configured cap.",
+      "name": "job_output",
+      "description": "Read a background job. Stream tasks return only output since the previous read; final-output tasks return their result after settlement. Every response ends with `[status: ...]`. Reads are non-blocking unless `wait: true`, which waits up to the configured cap.",
       "parameters": {
         "type": "object",
         "properties": {
-          "task_id": {
+          "job_id": {
             "type": "string",
-            "description": "Task id returned by the tool that started the background work."
+            "description": "Job id returned by the tool that started the background work."
           },
           "wait": {
             "type": "boolean",
@@ -81,7 +81,7 @@
           }
         },
         "required": [
-          "task_id"
+          "job_id"
         ]
       }
     }

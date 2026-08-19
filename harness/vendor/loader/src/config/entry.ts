@@ -1,9 +1,9 @@
-import { Context, Fiber, Inject } from 'cordis'
-import { deepEqual, isNullable } from 'cosmokit'
+import { Context, Fiber, Inject } from '@deepseek-ai/cordis'
+import { deepEqual, isNullable } from '@deepseek-ai/cosmokit'
 import { Loader } from '../index.ts'
 import { EntryGroup } from './group.ts'
 import { EntryTree } from './tree.ts'
-import { evaluate, interpolate } from './utils.ts'
+import { evaluate, isJsExpr } from './utils.ts'
 
 /** Serialized plugin entry options stored in loader config files. */
 export interface EntryOptions {
@@ -88,22 +88,27 @@ export class Entry {
   private _disabled(options: EntryOptions) {
     // group is always enabled
     if (options.group) return false
-    if (options.disabled) return true
+    if (this.disabledOf(options)) return true
     let entry = this.parent.ctx.fiber.entry
     while (entry) {
-      if (entry.options.disabled) return true
+      if (this.disabledOf(entry.options)) return true
       entry = entry.parent.ctx.fiber.entry
     }
     return false
   }
 
-  evaluate(expr: string) {
-    return evaluate(this.ctx, expr)
+  /**
+   * Effective disabled state: a `!!js` expression evaluates against the loader
+   * context. The raw node stays in the options, so write-back keeps the form.
+   */
+  private disabledOf(options: EntryOptions): boolean {
+    return isJsExpr(options.disabled)
+      ? Boolean(this.evaluate(options.disabled.__jsExpr))
+      : Boolean(options.disabled)
   }
 
-  _resolveConfig(plugin: any): [any, any?] {
-    if (plugin[EntryGroup.key]) return this.options.config
-    return interpolate(this.ctx, this.options.config)
+  evaluate(expr: string) {
+    return evaluate(this.ctx, expr)
   }
 
   private async _patchContext(diff: string[]) {
@@ -111,7 +116,7 @@ export class Entry {
       Object.setPrototypeOf(this.ctx, this.parent.ctx)
 
       if (this.fiber?.uid && (diff.includes('config') || this.options.group)) {
-        await this.fiber.update(this._resolveConfig(this.fiber.runtime!.callback), true)
+        await this.fiber.update(this.options.config, true)
       }
     })
   }
@@ -258,7 +263,15 @@ export class Entry {
       this._initTask = undefined
       if (!this.loader.getTasks().length) this.ctx.reflect.notify(['loader'])
     }
-    await this.fiber?.await()
+    await this._await()
+  }
+
+  async _await() {
+    try {
+      await this.fiber?.await()
+    } catch (error) {
+      throw updateError('apply', this.options, error)
+    }
   }
 
   private async _init() {
@@ -278,17 +291,13 @@ export class Entry {
   private async _start(plugin: any) {
     let fiber: Fiber | undefined
     try {
-      fiber = await this._create(plugin)
+      await this._patchContext([])
+      this.loader.showLog(this, 'apply')
+      fiber = this.fiber = this.ctx.registry.plugin(plugin, this.options.config, this.getOuterStack)
       await fiber.await()
     } catch (error) {
       await this._dispose(fiber)
       throw error
     }
-  }
-
-  private async _create(plugin: any): Promise<Fiber> {
-    await this._patchContext([])
-    this.loader.showLog(this, 'apply')
-    return this.fiber = this.ctx.registry.plugin(plugin, this._resolveConfig(plugin), this.getOuterStack)
   }
 }

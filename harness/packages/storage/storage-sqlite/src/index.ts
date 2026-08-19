@@ -5,8 +5,8 @@
  * @module @deepseek-ai/dsh-storage-sqlite
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { DatabaseSync } from 'node:sqlite'
 import { StorageError, UNIT_NAME_RE, storageBackendServiceKey } from '@deepseek-ai/dsh-storage'
 import type { KvFacet, KvUnit, KvUnitDescriptor, StorageBackend } from '@deepseek-ai/dsh-storage'
@@ -91,7 +91,7 @@ export class SqliteStorageBackend implements StorageBackend {
     // name rejects instead of racing past the guard during the awaits below.
     const pending = this.materializeUnit(descriptor)
     this.units.set(descriptor.name, pending)
-    pending.catch(() => { return this.units.delete(descriptor.name) })
+    pending.catch(() => this.units.delete(descriptor.name))
     return pending
   }
 

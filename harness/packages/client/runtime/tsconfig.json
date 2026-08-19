@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../attachment/attachment"
+    },
+    {
       "path": "../../../vendor/cordis"
     },
     {
@@ -18,22 +21,25 @@
       "path": "../web-react"
     },
     {
-      "path": "../connection"
-    },
-    {
       "path": "../../host/apiproxy"
     },
     {
-      "path": "../../ui/commands"
+      "path": "../../interaction/commands"
     },
     {
-      "path": "../../compact/compact"
+      "path": "../../core/agent"
     },
     {
-      "path": "../../session-projection/session-projection"
+      "path": "../../core/tools"
     },
     {
-      "path": "../../session-title/session-title"
+      "path": "../../compaction/compaction"
+    },
+    {
+      "path": "../../session/session-projection"
+    },
+    {
+      "path": "../../session/session-title"
     },
     {
       "path": "../../llm/llm"
@@ -42,13 +48,16 @@
       "path": "../../llm/llm-retry"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
-      "path": "../../typert/type-meta"
+      "path": "../../typert/protocol"
     },
     {
       "path": "../../typert/registry"
+    },
+    {
+      "path": "../../api/remotes/tsconfig.client.json"
     }
   ],
   "exclude": [

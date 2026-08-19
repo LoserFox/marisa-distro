@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { createUserMessage, CallId , createMessage } from '@deepseek-ai/dsh-llm'
 import SessionStore, { Session, SessionForkError, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, TurnEndReason } from '@deepseek-ai/dsh-session'
 
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     'test/log-only': { value: string }
-    /** Stands in for a plugin's open/close bracket (`compact/start`). */
+    /** Stands in for a plugin's open/close bracket (`compaction/start`). */
     'test/bracket-open': { id: string }
   }
 }
@@ -234,7 +234,7 @@ describe('SessionStore.fork', () => {
 
   it('rejects selected slices whose boundary is inside an open turn', async () => {
     const { ctx, sessions } = await setup()
-    const cases: Array<[string, (session: Session) => number]> = [
+    const cases: [string, (session: Session) => number][] = [
       ['turn/start', (session) => {
         session.append('turn/start', { turn: 1 })
         return lastSeq(session)

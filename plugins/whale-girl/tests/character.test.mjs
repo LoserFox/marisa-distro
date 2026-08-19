@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import {
   DEFAULT_ROLE_ID, ROLE_ID_RE, parseCharacters, listCharacters, defaultCharacter,
   getCharacter, stateOf, isKnownState,
-} from '../.dsh-plugin/client/character.mjs'
+} from '../lib/client/character.mjs'
 
 const OLD_MANIFEST = {
   states: { idle: { sheet: 'idle.png', frames: 3, fps: 2, loop: true } },

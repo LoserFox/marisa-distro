@@ -42,11 +42,11 @@ The rule applies to a value that was *provided*; deciding whether one was provid
 
 ### Where the rule lives
 
-`normalizeApiKey` is a module of the `dsh-llm` seam, beside [attribution.ts](../../../../packages/llm/llm/src/attribution.ts), which already owns shared header concerns. Both adapters depend on the seam and both need the rule, so it has two current consumers rather than a speculative one. It returns the trimmed value or a reason (`empty`, `illegalCharacters`).
+`normalizeApiKey` is a module of the `dsh-llm` Service Definition, beside [attribution.ts](../../../../packages/llm/llm/src/attribution.ts), which already owns shared header concerns. Both adapters depend on the seam and both need the rule, so it has two current consumers rather than a speculative one. It returns the trimmed value or a reason (`empty`, `illegalCharacters`).
 
-Both adapters also need the identical "refuse a stored credential" diagnosis, differing only by package prefix. `LlmError` is declared in the seam's `index.ts`, so `assertUsableApiKey(raw, pkg, ref)` lives there beside it and neither adapter carries a local copy. The predicate module stays dependency-free: importing `LlmError` into `api-key.ts` would cycle with `index.ts`'s re-export of it.
+Both adapters also need the identical "refuse a stored credential" diagnosis, differing only by package prefix. `LlmError` is declared in the Service Definition's `index.ts`, so `assertUsableApiKey(raw, pkg, ref)` lives there beside it and neither adapter carries a local copy. The predicate module stays dependency-free: importing `LlmError` into `api-key.ts` would cycle with `index.ts`'s re-export of it.
 
-The client cannot import any of this: client packages reference only client packages, so `packages/client/ui-models` mirrors the predicate in its own `apiKey.ts` and owns the localized messages, exactly as `validateDeepSeekModels` mirrors the host's `catalogModel` schema. Each side names the other in a comment.
+The client cannot import any of this: client packages reference only client packages, so `packages/client/ui-settings-models` mirrors the predicate in its own `apiKey.ts` and owns the localized messages, exactly as `validateDeepSeekModels` mirrors the host's `catalogModel` schema. Each side names the other in a comment.
 
 ### What each surface does
 
@@ -56,7 +56,7 @@ The client cannot import any of this: client packages reference only client pack
 | `llm-deepseek` `resolveApiKey` | Normalizes what the credentials seam or environment returns, rejecting with `INVALID_CREDENTIAL` naming the Models page and never echoing the key. |
 | `llm-pi-ai` `resolveApiKey` | Normalizes the credential and environment paths. A profile naming no credential still returns `undefined`, so ambient and OAuth routes are unaffected. |
 | `llm-pi-ai` `discoverModels` | Normalizes before building the header, so an illegal key is a credential fault rather than an unreachable endpoint. A probe carrying no key stays unauthenticated. |
-| `ui-models` | Mirrors the charset rule, adds the shape heuristic, trims `keyDraft` before probe and `credentials.set`, and fixes the `stringAt` emptiness test. A blank field remains a no-op that submits; a field holding only whitespace is a field-level failure. Submit **and the endpoint interrogation** are both gated, so a refused key never spends a round trip to be told what the field already says, and the failure renders on the field, matching the existing `modelFailure` pattern. |
+| `ui-settings-models` | Mirrors the charset rule, adds the shape heuristic, trims `keyDraft` before probe and `credentials.set`, and fixes the `stringAt` emptiness test. A blank field remains a no-op that submits; a field holding only whitespace is a field-level failure. Submit **and the endpoint interrogation** are both gated, so a refused key never spends a round trip to be told what the field already says, and the failure renders on the field, matching the existing `modelFailure` pattern. |
 
 `ProviderEditor` serves both the DeepSeek and pi-ai layouts, so one client change covers both providers. `CustomProviderCard` carries the same judgement for a hand-declared route.
 
@@ -64,9 +64,9 @@ The client cannot import any of this: client packages reference only client pack
 
 ## Alternatives considered
 
-**A validation module shared by client and host.** Rejected by the source-plane layout: client packages reference only client packages plus `vendor/cordis` and `support/invariants`, and widening that to reach a host package would collide the two `Context` merges the split exists to keep apart. Mirroring a one-line predicate with a test on each side is the established shape here.
+**A validation module shared by client and host.** Rejected by the source-plane layout: client packages reference only client packages plus `vendor/cordis` and `runtime-diagnostics/invariants`, and widening that to reach a host package would collide the two `Context` merges the split exists to keep apart. Mirroring a one-line predicate with a test on each side is the established shape here.
 
-**A per-adapter thrower in each of `llm-deepseek` and `llm-pi-ai`.** The first plan gave each adapter its own, differing only by the package prefix in the message, with a duplication-gate exemption to excuse the pair. Rejected before implementation: `LlmError` is declared in the seam, so the seam can own the diagnosis outright, and an exemption there would have hidden exactly the duplication it was covering for.
+**A per-adapter thrower in each of `llm-deepseek` and `llm-pi-ai`.** The first plan gave each adapter its own, differing only by the package prefix in the message, with a duplication-gate exemption to excuse the pair. Rejected before implementation: `LlmError` is declared in the Service Definition, so that package can own the diagnosis outright, and an exemption there would have hidden exactly the duplication it was covering for.
 
 **Sniffing the `TypeError` in the adapter's `catch`.** This would classify the ByteString failure after the fact, leaving the header construction itself unguarded. It depends on the wording of a Node error message, so it degrades silently across runtime versions, and it cannot help `llm-pi-ai`, whose request header is built inside the pi-ai SDK. Refusing the key before handing it over works for both adapters and for the discovery probe.
 
@@ -80,7 +80,7 @@ The client cannot import any of this: client packages reference only client pack
 
 A malformed key is refused at the field that holds it, and a malformed stored key fails as `INVALID_CREDENTIAL` with a message naming where to fix it and no fragment of the key. Because that code sits outside `DEFAULT_RETRYABLE_CODES`, a deterministic credential fault is no longer retried three times as a transport blip. `llm-pi-ai` discovery reports an illegal probe key as a credential fault instead of an unreachable endpoint.
 
-The shape heuristic can refuse a real key. The first draft matched any upper-case identifier followed by `=`, which review showed was broader than intended: an all-upper-case base64 key ending in padding (`ABCD==`) matched an assignment it does not resemble. Requiring a non-`=` character after the separator excludes padding, since base64 only ever pads at the end. What remains — an upper-case name, one `=`, then a value — is a shape no known provider issues, and the rule runs only in the browser, so a user who still hits it can set the credential through the environment. The residual cost is a confusing refusal for a key nobody has yet reported.
+The shape heuristic can refuse a real key. Matching any upper-case identifier followed by `=` would be broader than intended: an all-upper-case base64 key ending in padding (`ABCD==`) would match an assignment it does not resemble. Requiring a non-`=` character after the separator excludes padding, since base64 only ever pads at the end. What remains — an upper-case name, one `=`, then a value — is a shape no known provider issues, and the rule runs only in the browser, so a user who still hits it can set the credential through the environment. The residual cost is a confusing refusal for a key nobody has yet reported.
 
 Restricting to printable ASCII is stricter than the transport requires: a header value may carry `\x80`–`\xFF`. Admitting latin-1 would let `é` through to return an opaque 401 instead of a local, explained refusal, so the stricter rule is deliberate. A provider that issues latin-1 keys would need this rule widened.
 
@@ -96,6 +96,6 @@ The costliest way to get this wrong would have been to treat absence as invalidi
 
 `packages/llm/llm-deepseek/tests/` covers the stored-credential path end to end in `dynamic-config.spec.ts`, through the real credentials seam rather than a stub. `packages/llm/llm-pi-ai/tests/` covers the discovery probe, including that a probe with no key sends no `authorization` header.
 
-`packages/client/ui-models/tests/` pins `apiKeyFailure` over the same table plus the paste-shape cases, and drives both cards: a blank field submits without writing a credential, a whitespace-only field fails on the field, an illegal or wrapped key blocks submit and the interrogation alike, a padded key is trimmed before `credentials.set` and before an interrogation, and a hand-declared route can be created with no key at all.
+`packages/client/ui-settings-models/tests/` pins `apiKeyFailure` over the same table plus the paste-shape cases, and drives both cards: a blank field submits without writing a credential, a whitespace-only field fails on the field, an illegal or wrapped key blocks submit and the interrogation alike, a padded key is trimmed before `credentials.set` and before an interrogation, and a hand-declared route can be created with no key at all.
 
 The user-visible terminal state is pinned where it is actually assembled: `examples/headless-agent/tests/headless.snapshot.ts` runs the one-shot app against a stored key no header can carry, over the same keyless composition its missing-credential sibling uses, and records that the turn ends on `INVALID_CREDENTIAL` with an actionable message carrying neither the key nor the word `ByteString`. A package test could not have shown that, and the web e2e covers only the browser half.

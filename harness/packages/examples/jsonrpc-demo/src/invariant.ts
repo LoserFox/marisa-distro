@@ -1,16 +1,16 @@
 /**
- * Package-owned invariant companion for `@deepseek-ai/dsh-jsonrpc-demo`.
- * @module @deepseek-ai/dsh-jsonrpc-demo/invariant
+ * Package-owned invariant companion for `@deepseek-ai/dsh-sdk-jsonrpc-demo`.
+ * @module @deepseek-ai/dsh-sdk-jsonrpc-demo/invariant
  */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-jsonrpc-demo'
+const PACKAGE_NAME = '@deepseek-ai/dsh-sdk-jsonrpc-demo'
 
 /** Cordis companion plugin name. */
-export const name = 'jsonrpc-demo-invariant'
+export const name = 'sdk-jsonrpc-demo-invariant'
 /** Service required before the companion can reserve package ownership. */
 export const inject = ['invariants']
 

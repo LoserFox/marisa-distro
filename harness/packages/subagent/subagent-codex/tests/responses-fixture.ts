@@ -22,6 +22,13 @@ export type ResponsesBehavior =
     readonly name: string
     readonly arguments: Record<string, unknown>
   }
+  | {
+    readonly kind: 'advertisedFunctionCall'
+    readonly choices: readonly {
+      readonly name: string
+      readonly arguments: Record<string, unknown>
+    }[]
+  }
   | { readonly kind: 'hold' }
 
 /** Running package-private Responses fixture. */
@@ -86,7 +93,7 @@ function responseObject(text: string): Record<string, unknown> {
 }
 
 /**
- * Build the minimal Responses SSE event sequence consumed by Codex 0.146.0.
+ * Build the minimal Responses SSE event sequence consumed by Codex 0.147.0.
  * @param text - exact assistant answer.
  * @returns ordered response lifecycle events.
  */
@@ -218,6 +225,18 @@ function closeServer(server: Server): Promise<void> {
   })
 }
 
+function advertisedFunctionNames(body: Record<string, unknown>): Set<string> {
+  if (!Array.isArray(body.tools)) return new Set()
+  return new Set(body.tools.flatMap((tool): string[] => (
+    tool !== null
+    && typeof tool === 'object'
+    && (tool as Record<string, unknown>).type === 'function'
+    && typeof (tool as Record<string, unknown>).name === 'string'
+      ? [(tool as Record<string, unknown>).name as string]
+      : []
+  )))
+}
+
 /**
  * Start a loopback-only Responses SSE fixture.
  * @param script - one behavior per expected Responses request.
@@ -234,17 +253,26 @@ export async function startResponsesFixture(
     openResponses.add(response)
     response.on('close', () => { openResponses.delete(response) })
     void readRequest(request).then((body) => {
+      const parsedBody = JSON.parse(body) as Record<string, unknown>
       requests.push({
         method: request.method,
         path: request.url,
         headers: request.headers,
-        body: JSON.parse(body) as Record<string, unknown>,
+        body: parsedBody,
       })
       started.resolve(undefined)
       const behavior = behaviors.shift()
       if (behavior === undefined) {
         response.writeHead(500, { 'content-type': 'application/json' })
         response.end(JSON.stringify({ error: { message: 'fixture script exhausted' } }))
+        return
+      }
+      const advertisedCall = behavior.kind === 'advertisedFunctionCall'
+        ? behavior.choices.find(choice => advertisedFunctionNames(parsedBody).has(choice.name))
+        : undefined
+      if (behavior.kind === 'advertisedFunctionCall' && advertisedCall === undefined) {
+        response.writeHead(500, { 'content-type': 'application/json' })
+        response.end(JSON.stringify({ error: { message: 'none of the fixture function calls was advertised' } }))
         return
       }
       response.writeHead(200, {
@@ -254,9 +282,15 @@ export async function startResponsesFixture(
         'x-request-id': 'req_fixture',
       })
       if (behavior.kind === 'hold') return
-      const events = behavior.kind === 'complete'
-        ? completeResponsesEvents(behavior.text)
-        : functionCallEvents(behavior.name, behavior.arguments)
+      let events: Record<string, unknown>[]
+      if (behavior.kind === 'complete') {
+        events = completeResponsesEvents(behavior.text)
+      } else {
+        const call = behavior.kind === 'functionCall'
+          ? behavior
+          : advertisedCall!
+        events = functionCallEvents(call.name, call.arguments)
+      }
       for (const event of events) {
         response.write(`data: ${JSON.stringify(event)}\n\n`)
       }

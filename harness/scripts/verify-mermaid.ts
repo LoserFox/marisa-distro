@@ -26,7 +26,6 @@ const PATTERNS = [
   'AGENTS.md',
   'packages/AGENTS.md',
   '.agents/skills/**/*.md',
-  'skills/**/*.md',
 ]
 
 interface Block {
@@ -46,7 +45,9 @@ function extractMermaidBlocks(file: string): Block[] {
   const tree = fromMarkdown(source, { extensions: [gfm()], mdastExtensions: [gfmFromMarkdown()] })
   const out: Block[] = []
   const visit = (node: Nodes): void => {
-    if (node.type === 'code' && node.lang === 'mermaid') out.push({ file, line: node.position?.start.line ?? 0, source: node.value })
+    if (node.type === 'code' && node.lang === 'mermaid') {
+      out.push({ file, line: node.position?.start.line ?? 0, source: node.value })
+    }
     if ('children' in node) {
       for (const child of node.children) visit(child)
     }
@@ -83,7 +84,9 @@ const mermaid = (await import('mermaid')).default
 // maxEdges: mermaid's default 500-edge render guard; the module graph grows
 // with every package edge and crossed it legitimately. Raise the guard here
 // (a secure config settable only via initialize) rather than trimming edges.
-mermaid.initialize({ startOnLoad: false, maxEdges: 1000 })
+// The graph passed 1000 the same way it passed 500, so the headroom doubles
+// again rather than being set to whatever the current count happens to be.
+mermaid.initialize({ startOnLoad: false, maxEdges: 2000 })
 for (const block of blocks) {
   try {
     await mermaid.parse(block.source, { suppressErrors: false })

@@ -8,11 +8,11 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import LlmService from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId, TurnEndReason } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { defineContentToolFixture, TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineContentToolFixture, TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { MockAdapter, textResponse, toolCallResponse } from './mock-adapter.ts'
@@ -23,10 +23,10 @@ function driverDone(agent: Agent): Promise<void> {
 
 async function harness(adapter: MockAdapter) {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, { agents: [] })
   ctx.llm.registerAdapter(['mock'], adapter)
@@ -124,6 +124,121 @@ describe('Agent.cancel()', () => {
     await idle
     expect(userTexts(agent)).toEqual(['active', 'preserved', 'wake it'])
     expect(adapter.requests).toHaveLength(3)
+  })
+
+  it('cancel({ keepInbox: true }) latches a waking send landing in the abort-to-idle window', async () => {
+    const adapter = new MockAdapter(['hang', textResponse('B reply')])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('latch-window'), { provider: 'mock', model: 'mock' })
+
+    send(agent, 'active')
+    await new Promise(resolve => setTimeout(resolve, 30))
+
+    // The abort signal is set but the driver has not converged to idle yet:
+    // the waking send must be latched, not parked until another wake.
+    agent.cancel({ kind: 'user' }, { keepInbox: true })
+    send(agent, 'B')
+
+    await agent.whenIdle()
+
+    expect(userTexts(agent)).toEqual(['active', 'B'])
+    expect(adapter.requests).toHaveLength(2)
+    expect(agent.inbox.nextTurn).toHaveLength(0)
+    expect(agent.session.events.filter(e => e.type === 'turn/end').map(e =>
+      e.type === 'turn/end' ? e.data.reason : null)).toEqual([
+      { kind: 'aborted', reason: { kind: 'user' } },
+      { kind: 'completed' },
+    ])
+  })
+
+  it('cancel() without keepInbox clears a latched wake alongside the inbox', async () => {
+    const adapter = new MockAdapter(['hang', textResponse('C reply')])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('latch-cleared'), { provider: 'mock', model: 'mock' })
+
+    send(agent, 'active')
+    await new Promise(resolve => setTimeout(resolve, 30))
+    agent.cancel({ kind: 'user' }, { keepInbox: true })
+    send(agent, 'B') // latched behind the aborted activity
+    agent.cancel({ kind: 'user' }) // drops the inbox and the latch with it
+    await agent.whenIdle()
+
+    expect(userTexts(agent)).toEqual(['active'])
+    expect(agent.inbox.nextTurn).toHaveLength(0)
+    expect(adapter.requests).toHaveLength(1)
+
+    send(agent, 'C')
+    await agent.whenIdle()
+    expect(userTexts(agent)).toEqual(['active', 'C'])
+    expect(adapter.requests).toHaveLength(2)
+  })
+
+  it('removing the latched wake before convergence suppresses the replay', async () => {
+    const adapter = new MockAdapter(['hang'])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('removed-latched-wake'), { provider: 'mock', model: 'mock' })
+
+    send(agent, 'active')
+    await new Promise(resolve => setTimeout(resolve, 30))
+
+    agent.cancel({ kind: 'user' }, { keepInbox: true })
+    const steer = createUserMessage({ content: [{ type: 'text', text: 'steer me' }], source: { kind: 'user' } })
+    agent.steer(steer) // latched behind the aborted activity
+    agent.inbox.remove(steer.id) // the wake is retracted before convergence
+
+    await agent.whenIdle()
+
+    expect(userTexts(agent)).toEqual(['active'])
+    expect(adapter.requests).toHaveLength(1)
+    expect(agent.inbox.nextTurn).toHaveLength(0)
+    expect(agent.status).toBe('idle')
+    // No replay with nothing to run: the latched message is gone, so no
+    // empty follow-up turn is recorded.
+    expect(agent.session.events.filter(e => e.type === 'turn/start')).toHaveLength(1)
+  })
+
+  it('latches a wake arriving deep into a slow abort convergence', async () => {
+    // The stream notices the abort only after 50ms, so the driver stays in
+    // the abort-to-idle window long after `cancel()` returned: the wake must
+    // be latched across the whole window, not just the same-tick case.
+    const adapter = new MockAdapter(['hang-slow', textResponse('B reply')])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('slow-convergence'), { provider: 'mock', model: 'mock' })
+
+    send(agent, 'A')
+    await new Promise(resolve => setTimeout(resolve, 30))
+
+    agent.cancel({ kind: 'user' }, { keepInbox: true })
+    await new Promise(resolve => setTimeout(resolve, 10))
+    send(agent, 'B')
+
+    await agent.whenIdle()
+    expect(userTexts(agent)).toEqual(['A', 'B'])
+    expect(adapter.requests).toHaveLength(2)
+    expect(agent.inbox.nextTurn).toHaveLength(0)
+  })
+
+  it('does not latch a wake landing after disposal begins', async () => {
+    const adapter = new MockAdapter(['hang-slow', textResponse('late reply')])
+    const ctx = await harness(adapter)
+    const handle = await ctx.agents.create({
+      sessionId: SessionId('dispose-window-wake'),
+      agentOptions: { provider: 'mock', model: 'mock' },
+    })
+    const agent = handle.agent
+
+    send(agent, 'active')
+    await new Promise(resolve => setTimeout(resolve, 30))
+
+    // Dispose cancels with `{ kind: 'disposed' }`; a wake landing in the
+    // abort-to-idle window must not latch, so `whenIdle()` does not wait on
+    // a model turn over the session being torn down.
+    const disposal = handle.dispose()
+    setTimeout(() => { send(agent, 'late wake') }, 10)
+    await disposal
+
+    expect(adapter.requests).toHaveLength(1)
+    expect(userTexts(agent)).toEqual(['active'])
   })
 
   it('cancel after waking send closes its synchronously opened turn without a step', async () => {
@@ -228,7 +343,7 @@ describe('Agent.cancel()', () => {
     expect(userTexts(agent)).toEqual(['first', 'later'])
   })
 
-  it('replacement work queued after idle-listener cancellation waits for another wakeup', async () => {
+  it('replacement work queued after idle-listener cancellation replays at convergence', async () => {
     const adapter = new MockAdapter([
       textResponse('first reply'),
       textResponse('replacement reply'),
@@ -253,9 +368,11 @@ describe('Agent.cancel()', () => {
     if (replacementIdle === undefined) throw new Error('idle listener did not register replacement work')
     await replacementIdle
 
-    expect(adapter.requests).toHaveLength(1)
-    expect(userTexts(agent)).toEqual(['first'])
-    expect(agent.inbox.nextTurn).toHaveLength(1)
+    // The wake sent after the cancel fired is latched: the surviving
+    // replacement runs at convergence without a third message.
+    expect(adapter.requests).toHaveLength(2)
+    expect(userTexts(agent)).toEqual(['first', 'surviving replacement'])
+    expect(agent.inbox.nextTurn).toHaveLength(0)
 
     const idle = waitForIdle(ctx, agent)
     send(agent, 'wake it')
@@ -319,7 +436,7 @@ describe('Agent.cancel()', () => {
     expect(reasons).toEqual([{ kind: 'aborted', reason: { kind: 'user' } }])
     const call = agent.session.events.find(event => event.type === 'tool/call')
     const result = agent.session.events.find(event => event.type === 'tool/result')
-    expect(call?.type !== 'tool/call' ? undefined : call.data.callId).toBe('c1')
+    expect(call?.type === 'tool/call' ? call.data.callId : undefined).toBe('c1')
     expect(result?.type === 'tool/result' ? result.data : undefined).toMatchObject({
       message: {
         source: { kind: 'tool', callId: 'c1' },
@@ -368,7 +485,7 @@ describe('Agent.cancel()', () => {
     const agent = ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
 
     // A step/start session-event listener fires AFTER step/start is appended
-    // (and after the pre-step seam), so cancelling there lands in the SECOND
+    // (and after the pre-step extension point), so cancelling there lands in the SECOND
     // cancel check (the one that must closeStep() to balance the already-open
     // step) — distinct from a turn-start cancel, caught before the step opens.
     let streamed = false
@@ -395,10 +512,10 @@ describe('Agent.cancel()', () => {
   it('disposal from a synchronous step/start session-event listener stops before adapter dispatch', async () => {
     const adapter = new MockAdapter([textResponse('should not stream')])
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [] })
     ctx.llm.registerAdapter(['mock'], adapter)
@@ -479,7 +596,7 @@ describe('Agent.cancel()', () => {
     expect(agent.session.events.some(e => e.type === 'turn/start')).toBe(false)
   })
 
-  it('a running-listener cancellation parks replacement work until another wakeup', async () => {
+  it('a running-listener cancellation replays replacement work at convergence', async () => {
     const adapter = new MockAdapter([textResponse('A reply'), textResponse('B reply')])
     const ctx = await harness(adapter)
     const agent = ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
@@ -497,17 +614,20 @@ describe('Agent.cancel()', () => {
     await idle
     dispose()
 
-    expect(userTexts(agent)).toEqual([])
-    expect(agent.inbox.nextTurn).toHaveLength(1)
+    // B's wake was latched behind the cancelled driver: it runs on its own.
+    expect(userTexts(agent)).toEqual(['B'])
+    expect(agent.inbox.nextTurn).toHaveLength(0)
+    expect(adapter.requests).toHaveLength(1)
 
     const replacementIdle = waitForIdle(ctx, agent)
     send(agent, 'C')
     await replacementIdle
     expect(userTexts(agent)).toEqual(['B', 'C'])
+    expect(adapter.requests).toHaveLength(2)
     expect(agent.session.events.filter(event => event.type === 'turn/end')).toHaveLength(2)
   })
 
-  it('a prompt queued during pre-step cancellation waits for another wakeup', async () => {
+  it('a prompt queued during pre-step cancellation replays at convergence', async () => {
     const adapter = new MockAdapter([textResponse('A reply'), textResponse('B reply')])
     const ctx = await harness(adapter)
     const agent = ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
@@ -518,13 +638,15 @@ describe('Agent.cancel()', () => {
     send(agent, 'B')
 
     await idle
-    expect(userTexts(agent)).toEqual([])
-    expect(agent.inbox.nextTurn).toHaveLength(1)
+    expect(userTexts(agent)).toEqual(['B'])
+    expect(agent.inbox.nextTurn).toHaveLength(0)
+    expect(adapter.requests).toHaveLength(1)
 
     const replacementIdle = waitForIdle(ctx, agent)
     send(agent, 'C')
     await replacementIdle
     expect(userTexts(agent)).toEqual(['B', 'C'])
+    expect(adapter.requests).toHaveLength(2)
     expect(agent.session.events.filter(event => event.type === 'turn/end')).toHaveLength(3)
   })
 
@@ -556,7 +678,7 @@ describe('Agent.cancel()', () => {
     expect(flat).not.toContain('steer text')
   })
 
-  it('parks replacement work queued synchronously by an abort observer', async () => {
+  it('replays replacement work queued synchronously by an abort observer', async () => {
     const adapter = new MockAdapter([
       'hang',
       textResponse('replacement reply'),
@@ -586,13 +708,15 @@ describe('Agent.cancel()', () => {
       }),
     ])
 
-    expect(adapter.requests).toHaveLength(1)
-    expect(userTexts(agent)).toEqual(['original'])
-    expect(agent.inbox.nextTurn).toHaveLength(1)
+    // The abort-observer wake was latched: replacement runs at convergence,
+    // so the original turn is followed by a completed replacement turn.
+    expect(adapter.requests).toHaveLength(2)
+    expect(userTexts(agent)).toEqual(['original', 'replacement'])
+    expect(agent.inbox.nextTurn).toHaveLength(0)
     const reasons = agent.session.events
       .filter(event => event.type === 'turn/end')
       .map(event => event.type === 'turn/end' ? event.data.reason : undefined)
-    expect(reasons).toEqual([{ kind: 'aborted', reason: { kind: 'user' } }])
+    expect(reasons).toEqual([{ kind: 'aborted', reason: { kind: 'user' } }, { kind: 'completed' }])
 
     const replacementIdle = waitForIdle(ctx, agent)
     send(agent, 'wake it')

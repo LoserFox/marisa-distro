@@ -2,10 +2,10 @@
  * The model-facing `web_fetch` tool. This module owns its schema, validation, and presentation;
  * `ctx.web` owns retrieval. Timeout is deployment policy, not a model argument: config becomes
  * `ToolDefinition.timeoutMs`, timeout policy enforces it, and this tool forwards the resulting
- * signal. A provider timeout remains a backstop for direct seam callers.
+ * signal. A provider timeout remains a backstop for direct service callers.
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import TurndownService from 'turndown'
 import { gfm } from '@joplin/turndown-plugin-gfm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -32,7 +32,7 @@ turndown.remove(['script', 'style', 'noscript'])
 
 /** Render one GFM table cell without interpreting HTML span counts. */
 function renderTableCell(content: string, index: number): string {
-  const prefix = index !== 0 ? ' ' : '| '
+  const prefix = index === 0 ? '| ' : ' '
   const escaped = content.trim().replace(/\n\r/g, '<br>').replace(/\n/g, '<br>').replace(/\|+/g, '\\|').padEnd(3, ' ')
   return `${prefix}${escaped} |`
 }
@@ -80,7 +80,7 @@ turndown.addRule('tableRowWithoutSpanExpansion', {
  * Validate value constraints the schema DSL can't express: a non-blank `url`.
  * Throws a plain `Error` otherwise. No timeout parameter — the tool-call budget
  * is deployment policy declared via `fetchTimeoutMs` config and enforced by
- * `@deepseek-ai/dsh-timeout-policy`, not a model argument.
+ * `@deepseek-ai/dsh-tool-call-timeout-policy`, not a model argument.
  *
  * @param args - the schema-validated `web_fetch` arguments.
  * @returns the arguments as the seam's request fields.
@@ -422,7 +422,7 @@ export function presentFetchResult(args: { url: string }, result: ToolResult): W
  * @param ctx - context whose `tools` and `systemPrompt` registries receive the
  *   registrations; both are effect-scoped and unregister on plugin dispose.
  * @param timeoutMs - the cooperative tool-call budget (ms) attached as the tool's
- *   `ToolDefinition.timeoutMs` for `@deepseek-ai/dsh-timeout-policy` to enforce.
+ *   `ToolDefinition.timeoutMs` for `@deepseek-ai/dsh-tool-call-timeout-policy` to enforce.
  * @param maxOutputChars - cap on the complete rendered tool output (see
  *   {@link formatFetchOutput}) and on source characters converted synchronously.
  */

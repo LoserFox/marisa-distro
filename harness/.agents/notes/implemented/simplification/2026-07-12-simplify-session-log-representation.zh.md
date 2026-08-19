@@ -8,11 +8,11 @@ Status: implemented
 
 会话日志维护着两种表示，其机制复杂度超出了消费方的实际需求：一个伪链表 surface 和自定义的请求头增量。
 
-`SurfaceManager` 同时在数组、seq map 和可变 `prev`/`next` 链接中存储相同顺序。生产代码从不读取任一链接：compact 的工具配对 balance 根据按 surface 顺序缓存的每个切点 balance 作答。替换已经使用 `indexOf`，因此链接并未使其主导操作成为常数时间。使用线性替换查找的 seq 数组具有相同的渐近替换成本，却只有一种表示需要验证。
+`SurfaceManager` 同时在数组、seq map 和可变 `prev`/`next` 链接中存储相同顺序。生产代码从不读取任一链接：compact 的工具配对 balance 判定基于按 surface 顺序缓存的各切点 balance。替换已经使用 `indexOf`，因此链接并未使其主导操作成为常数时间。使用线性替换查找的 seq 数组具有相同的渐近替换成本，却只有一种表示需要验证。
 
-请求头子系统实现了一套自定义的系统/工具增量编解码器和传输决策层，尽管其契约声明增量只是编码优化，而非可重建性要求。在每个 agent loop（智能体循环）实例边界保留初始/恢复的完整快照，然后在该实例的组装头发生变化时写入一条规范的完整 `request/header`，即可保留回放能力，同时删除 `SystemDelta`、`ToolsDelta`、往返回退逻辑以及持久化的 `request/header-delta` 变体。编解码器专属的词汇随编解码器一起消失，并非因为其各分支本身无效。
+请求头子系统实现了一套自定义的系统/工具增量编解码器和传输决策层，尽管其约定声明增量只是编码优化，而非可重建性要求。在每个 agent loop（智能体循环）实例边界保留初始/恢复的完整快照，然后在该实例的组装头发生变化时写入一条规范的完整 `request/header`，即可保留回放能力，同时删除 `SystemDelta`、`ToolsDelta`、往返回退逻辑以及持久化的 `request/header-delta` 变体。编解码器专属的词汇随编解码器一起消失，并非因为其各分支本身无效。
 
-实现保留追加与替换操作的 `sourceEventSeqs`、崩溃修复的溯源信息，以及所有 `SessionStartSource` 变体，因为这些字段承担审计/拦截职责，当前没有读取方并不能推翻这一点。
+实现保留追加与替换操作的 `sourceEventSeqs`、崩溃修复结果引用的 `tool/call` seq，以及所有 `SessionStartSource` 变体，因为这些字段承担审计/拦截职责，当前没有读取方并不能推翻这一点。
 
 ## 决策
 
@@ -20,7 +20,7 @@ Status: implemented
 
 请求头只使用规范的完整快照。初始与恢复锚点即使没有变化也仍是完整快照；实例内变化会追加另一个完整 `request/header`，reason 为 `change`。delta 事件、codec 类型、diff/apply 辅助函数，以及仅供 codec 使用的 `fallback` reason 均已移除。请求重建选择最新快照。
 
-`SESSION_FORMAT_VERSION` 仍固定为 `0`，因此 seed、追加和持久化加载验证会显式拒绝旧 v0 `request/header-delta` 事件，以及携带已删除 `fallback` reason 的完整快照。不存在兼容性 fold 或迁移。JSONL 与 SQLite 测试固定了这一失败即报错的边界；ACP（Agent Client Protocol）快照 harness 则把合法的会话中途变更表示为完整固定请求头和完整可读提示词。
+`SESSION_FORMAT_VERSION` 仍固定为 `0`，因此 seed、追加和持久化加载验证会显式拒绝旧 v0 `request/header-delta` 事件，以及携带已删除 `fallback` reason 的完整快照。不存在兼容性 fold 或迁移。JSONL 与 SQLite 测试固定了这一失败即报错的边界；ACP（Agent Client Protocol）快照 harness 则把合法的会话中途变更表示为固定的完整请求头和完整可读提示词。
 
 ## 曾考虑的替代方案
 
@@ -28,7 +28,7 @@ Status: implemented
 
 ## 验证
 
-单元测试覆盖并锁定有序 surface 的追加/替换行为、工具配对、压缩、完整请求头 fold/记录、请求重建和开发不变量。Seed 验证以及 JSONL、SQLite 加载测试会在回放前拒绝旧事件。无密钥 ACP 套件以新形状覆盖记录、刷新、回放、变更后请求头的固定，以及沙箱模式切换 fixture（测试前置数据）。
+单元测试覆盖并锁定有序 surface 的追加/替换行为、工具配对、压缩、完整请求头 fold/记录、请求重建和开发不变量。Seed 验证以及 JSONL、SQLite 加载测试会在回放前拒绝旧事件。无密钥 ACP 套件按新的表示覆盖记录、刷新、回放、变更后请求头的固定，以及沙箱模式切换 fixture（测试前置数据）。
 
 ## 后果
 

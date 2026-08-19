@@ -31,7 +31,7 @@ Status: implemented
 
 ## 版本固定、存储与身份
 
-| 提供方 | 已测试契约 |
+| 提供方 | 已测试约定 |
 |---|---|
 | Memorix | npm `1.3.0`，tag commit `500792cad3144142293bfbb20acb4841c9f7fcfa` |
 | MCP Reference Memory | npm `2026.7.4`，package commit `6dd0a683e198783e30feabf7abaf42f925bd18b1` |
@@ -45,11 +45,11 @@ Status: implemented
 
 示例不会修改 `@deepseek-ai/dsh-system-prompt`：配置 patch 会替换某个配置项的完整配置，可能抹除已有 persona。README 改为提供一条可选的附加指令：
 
-> 用户要求记住时调用写入工具；涉及历史信息时，主动检索并使用相关记忆。
+> 当用户要求你记住某件事时，调用记忆写入工具。当历史信息可能相关时，搜索记忆并使用相关结果。
 
 提供方的工具描述仍然是权威定义。
 
-## 验证契约
+## 验证约定
 
 远程 CI 不会访问第三方服务或消耗密钥。无密钥套件解析全部三份 overlay 文件，检查其通用桥接器和密钥边界，将上游端点替换为包自带的 MCP fixture（测试前置数据）服务器，通过真实 Cordis Loader 启动，并验证工具发现。
 

@@ -1,0 +1,137 @@
+{
+  "name": "dsh-mnemon",
+  "version": "0.2.9",
+  "description": "Three-tier memory control plane for DeepSeek Harness: persistent runtime context, searchable project documents, pluggable long-term memory, smart routing, supervised agent workflows, WebUI, and headless tools.",
+  "keywords": [
+    "deepseek-harness",
+    "deepseek-harness-plugin",
+    "dsh-plugin",
+    "agent-memory",
+    "llm-memory",
+    "persistent-memory",
+    "long-term-memory",
+    "runtime-memory",
+    "working-memory",
+    "cross-session-memory",
+    "multi-agent-memory",
+    "shared-agent-memory",
+    "memory-orchestration",
+    "memory-provider",
+    "pluggable-memory",
+    "context-management",
+    "project-memory",
+    "project-documents",
+    "document-search",
+    "semantic-recall",
+    "local-first",
+    "mnemon",
+    "openviking",
+    "honcho",
+    "mem0",
+    "hindsight",
+    "holographic-memory",
+    "retaindb",
+    "byterover",
+    "supermemory"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omdsh-dev/dsh-mnemon.git"
+  },
+  "homepage": "https://github.com/omdsh-dev/dsh-mnemon#readme",
+  "bugs": {
+    "url": "https://github.com/omdsh-dev/dsh-mnemon/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh-CN.md",
+    "THIRD_PARTY_NOTICES.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsdown && tsc -p tsconfig.types.json",
+    "bundle": "tsdown",
+    "lint:package": "publint --strict && attw --pack . --profile esm-only --quiet",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "verify:build": "node scripts/verify-deterministic-build.mjs",
+    "verify:headless": "node scripts/verify-headless-profile.mjs",
+    "verify:package": "node scripts/verify-package-contents.mjs && pnpm run lint:package",
+    "verify": "pnpm run typecheck && pnpm run test && pnpm run verify:build && pnpm run verify:headless && pnpm run verify:package"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "markdown-to-jsx": "^7.7.17",
+    "schemastery": "^3.18.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.0-rc.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-connection": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-locale": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-ui-settings": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-client-ui-tool": "0.1.0-rc.6",
+    "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "jsdom": "^26.1.0",
+    "lightningcss": "^1.29.0",
+    "publint": "^0.3.23",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

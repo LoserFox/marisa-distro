@@ -1,16 +1,17 @@
 // Standalone desktop build (go build -tags embeddedbundle): the backend
 // bundle (node.exe + harness + marisa profile + launcher) is embedded as a
-// single zip in bundle/backend.zip via go:embed. On startup ensureBackend
-// materializes it under %LOCALAPPDATA%\marisa-distro\backend (versioned by
-// the VERSION file inside the zip), and DSH_WEB_CMD is pointed at the
-// extracted launcher so the shell never depends on a system dsh/Node.
+// single tar.zst in bundle/backend.tar.zst via go:embed. On startup
+// ensureBackend materializes it under %LOCALAPPDATA%\marisa-distro\backend
+// (versioned by the VERSION file inside the bundle), and DSH_WEB_CMD is
+// pointed at the extracted launcher so the shell never depends on a system
+// dsh/Node.
 //
 //go:build embeddedbundle
 
 package main
 
 import (
-	"archive/zip"
+	"archive/tar"
 	"bytes"
 	_ "embed"
 	"encoding/json"
@@ -19,15 +20,19 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/klauspost/compress/zstd"
 )
 
-//go:embed bundle/backend.zip
+//go:embed bundle/backend.tar.zst
 var backendZip []byte
 
-// backendVersionName is the version marker file at the zip root.
+// installForm 是本构建的安装形态标记，随子进程环境注入后端（MARISA_INSTALL_FORM）。
+const installForm = "standalone"
+
+// backendVersionName is the version marker file at the bundle root.
 const backendVersionName = "VERSION"
 
 // backendRootDir is where the embedded backend is materialized.
@@ -43,28 +48,32 @@ func backendRootDir() (string, error) {
 	return filepath.Join(local, "marisa-distro", "backend"), nil
 }
 
-// embeddedBackendVersion reads the VERSION file from the embedded zip.
+// embeddedBackendVersion reads the VERSION file from the embedded tar.zst.
 func embeddedBackendVersion() (string, error) {
-	r, err := zip.NewReader(bytes.NewReader(backendZip), int64(len(backendZip)))
+	zr, err := zstd.NewReader(bytes.NewReader(backendZip))
 	if err != nil {
-		return "", fmt.Errorf("open embedded zip: %w", err)
+		return "", fmt.Errorf("open embedded bundle: %w", err)
 	}
-	for _, f := range r.File {
-		if f.Name != backendVersionName {
-			continue
+	defer zr.Close()
+	tr := tar.NewReader(zr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
 		}
-		rc, err := f.Open()
 		if err != nil {
 			return "", err
 		}
-		b, err := io.ReadAll(rc)
-		rc.Close()
+		if hdr.Name != backendVersionName {
+			continue
+		}
+		b, err := io.ReadAll(tr)
 		if err != nil {
 			return "", err
 		}
 		return strings.TrimSpace(string(b)), nil
 	}
-	return "", fmt.Errorf("embedded zip has no %s file", backendVersionName)
+	return "", fmt.Errorf("embedded bundle has no %s entry", backendVersionName)
 }
 
 // ensureBackend extracts the embedded backend to disk if the extracted copy
@@ -85,6 +94,8 @@ func ensureBackend() (string, error) {
 
 	stagingDir := dir + ".extracting"
 	log.Printf("extracting embedded backend (version %s, %d bytes) to %s", want, len(backendZip), stagingDir)
+	progress := newExtractionProgress(int64(len(backendZip)))
+	progress.start()
 	if err := os.RemoveAll(stagingDir); err != nil {
 		return "", fmt.Errorf("remove incomplete backend %s: %w", stagingDir, err)
 	}
@@ -97,7 +108,7 @@ func ensureBackend() (string, error) {
 			_ = os.RemoveAll(stagingDir)
 		}
 	}()
-	n, err := extractZip(backendZip, stagingDir)
+	n, err := extractBackend(backendZip, stagingDir, progress.report)
 	if err != nil {
 		return "", fmt.Errorf("extract backend to %s: %w", stagingDir, err)
 	}
@@ -114,7 +125,7 @@ func ensureBackend() (string, error) {
 	if err := recreateLinks(filepath.Join(dir, "LINKS.json"), dir); err != nil {
 		return "", fmt.Errorf("recreate workspace links: %w", err)
 	}
-	// VERSION is deliberately skipped by extractZip and written only after
+	// VERSION is deliberately skipped by extractTarZst and written only after
 	// every file and junction exists. A crash at any earlier point leaves no
 	// matching marker, so the next launch retries instead of accepting a
 	// partial backend.
@@ -122,56 +133,19 @@ func ensureBackend() (string, error) {
 		return "", fmt.Errorf("write backend completion marker: %w", err)
 	}
 	log.Printf("backend extraction complete: %d entries", n)
+	progress.done(n)
 	return dir, nil
 }
 
-// extractZip writes every entry of the zip to dest, rejecting path
-// traversal / absolute names.
-func extractZip(data []byte, dest string) (int, error) {
-	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil {
-		return 0, err
-	}
-	n := 0
-	for _, f := range r.File {
-		if f.Name == backendVersionName {
-			continue
-		}
-		name := filepath.Clean(filepath.FromSlash(f.Name))
-		if name == "." || name == ".." || strings.HasPrefix(name, ".."+string(filepath.Separator)) || filepath.IsAbs(name) {
-			return n, fmt.Errorf("unsafe zip entry %q", f.Name)
-		}
-		target := filepath.Join(dest, name)
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return n, err
-			}
-			continue
-		}
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return n, err
-		}
-		rc, err := f.Open()
-		if err != nil {
-			return n, err
-		}
-		dst, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
-		if err != nil {
-			rc.Close()
-			return n, err
-		}
-		_, err = io.Copy(dst, rc)
-		cerr := dst.Close()
-		rc.Close()
-		if err != nil {
-			return n, err
-		}
-		if cerr != nil {
-			return n, cerr
-		}
-		n++
-	}
-	return n, nil
+// extractBackend writes the tar.zst bundle to dest (sequential stream, see
+// extractTarZst), rejecting path traversal / absolute names. The VERSION
+// marker is skipped: ensureBackend writes it only after every file and
+// junction exists, so a crash never leaves a matching marker on a partial
+// tree. progress, when non-nil, receives extraction progress.
+func extractBackend(data []byte, dest string, progress func(consumed, total int64)) (int, error) {
+	return extractTarZst(data, dest, func(name string) bool {
+		return name == backendVersionName
+	}, progress)
 }
 
 // backendWebCommand returns the DSH_WEB_CMD value pointing at the extracted
@@ -247,9 +221,8 @@ func recreateLinks(manifestPath, root string) error {
 		if _, err := os.Lstat(link); err == nil {
 			continue // already present
 		}
-		cmd := exec.Command("cmd", "/c", "mklink", "/J", link, target)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("mklink %s -> %s: %v (%s)", e.Link, e.Target, err, strings.TrimSpace(string(out)))
+		if err := createJunction(link, target); err != nil {
+			return fmt.Errorf("create junction %s -> %s: %w", e.Link, e.Target, err)
 		}
 		created++
 	}

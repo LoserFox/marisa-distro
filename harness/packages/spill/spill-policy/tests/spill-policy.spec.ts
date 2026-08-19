@@ -9,19 +9,19 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { createUserMessage, CallId } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 import type { PostToolDecision, ToolExecution, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
 import { SpillLocator, SpillStore } from '@deepseek-ai/dsh-spill'
 import type { SaveTextSpill, SpillRef } from '@deepseek-ai/dsh-spill'
 import * as SpillPolicy from '@deepseek-ai/dsh-spill-policy'
-import { WorkerCodeRuntime } from '@deepseek-ai/dsh-code-runtime-worker'
+import { WorkerThreadCodeRuntime } from '@deepseek-ai/dsh-code-runtime-worker-thread'
 
 const testToolSignal = new AbortController().signal
 
@@ -72,7 +72,7 @@ async function setup(
 ): Promise<{ ctx: Context; spill?: StubStore; fiber: Awaited<ReturnType<Context['plugin']>> }> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   let spill: StubStore | undefined
   if (withSpill) {
     await ctx.plugin(StubStore)
@@ -190,10 +190,10 @@ describe('outer Code Mode failure capture', () => {
   it('spills the bounded output-limit diagnostic through the ordinary outer-result policy', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry, { mode: 'code' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
     await ctx.plugin(StubStore)
     await ctx.plugin(SpillPolicy, { maxInlineBytes: 200 })
-    await ctx.plugin(WorkerCodeRuntime, { maxOutputBytes: 500 })
+    await ctx.plugin(WorkerThreadCodeRuntime, { maxOutputBytes: 500 })
     const events: unknown[] = []
     const agent = {
       session: {
@@ -239,10 +239,10 @@ describe('the durable dispatch-log arm', () => {
   async function runCodeWith(program: string, maxInlineBytes: number, extraTools: ToolDefinition[] = []) {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry, { mode: 'code' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
     await ctx.plugin(StubStore)
     await ctx.plugin(SpillPolicy, { maxInlineBytes })
-    await ctx.plugin(WorkerCodeRuntime, {})
+    await ctx.plugin(WorkerThreadCodeRuntime, {})
     const events: { type: string; data: unknown }[] = []
     const agent = {
       session: {
@@ -313,10 +313,10 @@ describe('the durable dispatch-log arm', () => {
   it('a slow spill backend never delays the program value or a later dispatch slot', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry, { mode: 'code' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
     await ctx.plugin(StubStore)
     await ctx.plugin(SpillPolicy, { maxInlineBytes: 100 })
-    await ctx.plugin(WorkerCodeRuntime, {})
+    await ctx.plugin(WorkerThreadCodeRuntime, {})
     // A spill backend that hangs until released.
     let releaseSave!: () => void
     const gate = new Promise<void>((resolve) => { releaseSave = resolve })
@@ -377,10 +377,10 @@ describe('the durable dispatch-log arm', () => {
     // lane holds inside the second commit, so the THIRD dispatch cannot start
     // until a pending save drains — the bound is observable as its missing
     // start event.
-    await ctx.plugin(ToolRegistry, { mode: 'code', maxParallelSubCalls: 1 })
+    await ctx.plugin(ToolRuntime, { mode: 'code', maxParallelSubCalls: 1 })
     await ctx.plugin(StubStore)
     await ctx.plugin(SpillPolicy, { maxInlineBytes: 100 })
-    await ctx.plugin(WorkerCodeRuntime, {})
+    await ctx.plugin(WorkerThreadCodeRuntime, {})
     const store = ctx.spillStore as StubStore
     const releases: (() => void)[] = []
     store.gate = () => new Promise<void>((resolve) => { releases.push(resolve) })
@@ -430,10 +430,10 @@ describe('the durable dispatch-log arm', () => {
   it('a saveText failure keeps the complete content in the durable log (best-effort)', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry, { mode: 'code' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
     await ctx.plugin(StubStore)
     await ctx.plugin(SpillPolicy, { maxInlineBytes: 100 })
-    await ctx.plugin(WorkerCodeRuntime, {})
+    await ctx.plugin(WorkerThreadCodeRuntime, {})
     ;(ctx.spillStore as StubStore).fail = true
     const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
     const events: { type: string; data: unknown }[] = []

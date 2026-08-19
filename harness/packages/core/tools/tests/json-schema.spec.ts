@@ -375,7 +375,7 @@ describe('validateJsonSchemaValue', () => {
     expect(validateJsonSchemaValue(schema, runInNewContext('[1, 2]'))).toEqual([])
     expect(validateJsonSchemaValue(schema, [1, 1.5])).toEqual(['"value[1]" must be an integer'])
     expect(validateJsonSchemaValue(schema, 'x')).toEqual(['"value" must be an array'])
-    const sparse: Array<number> = []
+    const sparse: number[] = []
     sparse.length = 2
     sparse[0] = 1
     expect(validateJsonSchemaValue(schema, sparse)).toEqual(['"value" must be a dense lossless JSON array'])

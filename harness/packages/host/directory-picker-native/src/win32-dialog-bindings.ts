@@ -148,7 +148,7 @@ export async function loadWin32DialogBindings(): Promise<Win32DialogBindings> {
         setTitle: title => method(dialog, SLOT_SET_TITLE, protoSetTitle)(title),
         show: () => method(dialog, SLOT_SHOW, protoShow)(null),
         resultPath: () => {
-          const itemOut: Array<unknown> = [null]
+          const itemOut: unknown[] = [null]
           const gotItem = method(dialog, SLOT_GET_RESULT, protoGetResult)(itemOut)
           if (gotItem < 0) return { hr: gotItem }
           const item = itemOut[0]

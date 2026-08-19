@@ -186,7 +186,7 @@ function diffPaths(root: string, args: string[], context: string): string[] {
 }
 
 function stripGitLineTerminator(output: string): string {
-  const withoutLineFeed = !output.endsWith('\n') ? output : output.slice(0, -1)
+  const withoutLineFeed = output.endsWith('\n') ? output.slice(0, -1) : output
   return process.platform === 'win32' && withoutLineFeed.endsWith('\r')
     ? withoutLineFeed.slice(0, -1)
     : withoutLineFeed

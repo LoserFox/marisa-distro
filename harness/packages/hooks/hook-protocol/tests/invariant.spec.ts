@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { Session, SessionId } from '@deepseek-ai/dsh-session'
 import * as HookInvariant from '@deepseek-ai/dsh-hook-protocol/invariant'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(HookInvariant)
   return ctx
 }
@@ -15,7 +15,7 @@ async function setup(): Promise<Context> {
 const invoked = (overrides: Record<string, unknown> = {}) => ({
   turn: 1,
   point: 'PreToolUse',
-  dialect: 'claude' as const,
+  dialect: 'claude-code' as const,
   handlerId: 'hook-1',
   ...overrides,
 })
@@ -45,13 +45,13 @@ describe('hook-protocol invariants', () => {
     session.append('hook/result', result())
   })
 
-  it('rebuilds pending hook provenance from an existing session', async () => {
+  it('rebuilds pending hook invocations from an existing session', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     const session = ctx.sessions.create()
     session.append('turn/start', { turn: 1 })
     session.append('hook/invoked', invoked())
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     await ctx.plugin(HookInvariant)
     expect(() => session.append('hook/result', result())).not.toThrow()
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
@@ -89,7 +89,7 @@ describe('hook-protocol invariants', () => {
     startTurn(session)
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
     session.append('hook/invoked', invoked())
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     await expect(ctx.plugin(HookInvariant).then(() => undefined)).rejects.toThrow(/outside any open turn/)
   })
 

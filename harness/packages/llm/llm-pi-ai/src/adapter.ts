@@ -33,6 +33,7 @@ import type {
 } from '@earendil-works/pi-ai'
 import {
   attributionHeaders,
+  contentHasImage,
   LlmAdapter,
   LlmError,
   ReasoningEffortId,
@@ -46,6 +47,7 @@ import type {
   ResolvedRetryPolicy,
   StreamChunk,
 } from '@deepseek-ai/dsh-llm'
+import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import { idleWatchdog, timeoutOf } from '@deepseek-ai/dsh-timeout'
 import type { ResolvedPiAiProviderProfile } from './config.ts'
 import { toPiContext } from './context.ts'
@@ -59,7 +61,7 @@ interface PiAiSnapshot {
   models: Models
 }
 
-/** Constructor options for {@link PiAiAdapter}: the two resolution seams the plugin owns. */
+/** Constructor options for {@link PiAiAdapter}: the two resolution hooks the plugin owns. */
 export interface PiAiAdapterOptions {
   /** Current validated profiles by provider route; called once per operation. */
   profiles: () => ReadonlyMap<string, ResolvedPiAiProviderProfile>
@@ -72,6 +74,13 @@ export interface PiAiAdapterOptions {
    * `MISSING_CREDENTIAL` rather than falling back.
    */
   resolveApiKey: (provider: string, profile: ResolvedPiAiProviderProfile) => Promise<string | undefined>
+  /** Resolve the optional durable attachment service at request time. */
+  resolveAttachments?: () => AttachmentStore | undefined
+  /**
+   * Observe one assistant history message degrading to provider-neutral
+   * conversion because its stored replay state is unusable by this build.
+   */
+  onReplayDegrade?: (detail: { provider: string; model: string; reason: string }) => void
 }
 
 /** Copy profile stream knobs into pi-ai's common option vocabulary. */
@@ -239,6 +248,7 @@ export class PiAiAdapter extends LlmAdapter {
         provider,
         id: model.id,
         name: model.name,
+        inputModalities: [...model.input],
       }))
     })
   }
@@ -260,6 +270,7 @@ export class PiAiAdapter extends LlmAdapter {
         provider,
         id: model,
         name: resolvedModel.name,
+        inputModalities: [...resolvedModel.input],
         context: { contextWindow: resolvedModel.contextWindow },
         ...configuredMaxTokens === undefined ? {} : { defaultMaxTokens: configuredMaxTokens },
         ...reasoningInfo(resolvedModel, defaultLevel),
@@ -293,7 +304,21 @@ export class PiAiAdapter extends LlmAdapter {
     using watchdog = idleWatchdog(upstream, streamIdleTimeoutMs, 'LLM_STREAM_IDLE_TIMEOUT')
 
     try {
-      const events = snapshot.models.streamSimple(model, toPiContext(options), {
+      const containsImage = options.messages.some(message => contentHasImage(message.content))
+      if (containsImage && !model.input.includes('image')) {
+        throw new LlmError(`pi-ai model "${model.id}" does not support image input`, 'UNSUPPORTED_CONTENT')
+      }
+      const attachments = containsImage ? this.config.resolveAttachments?.() : undefined
+      if (containsImage && attachments === undefined) {
+        throw new LlmError('pi-ai image input requires the durable attachment service', 'UNSUPPORTED_CONTENT')
+      }
+      const onReplayDegrade = (reason: string): void => {
+        this.config.onReplayDegrade?.({ provider: options.provider, model: options.model, reason })
+      }
+      const context = attachments === undefined
+        ? toPiContext(options, undefined, onReplayDegrade)
+        : await toPiContext(options, attachments, onReplayDegrade)
+      const events = snapshot.models.streamSimple(model, context, {
         ...profileOptions(profile, reasoning, apiKey),
         ...options.temperature === undefined ? {} : { temperature: options.temperature },
         ...options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens },

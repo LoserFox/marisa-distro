@@ -7,10 +7,14 @@
  * (callbacks from inject, live state from useProjection).
  */
 
-/** Settled outcome of one goal mutation, rendered inline by the strip. */
-export type GoalActionResult =
-  | { ok: true }
-  | { ok: false; error: { code: string; message: string } }
+import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+
+/**
+ * Settled outcome of one goal mutation, rendered inline by the strip. The
+ * strip renders the failure only — the mutated goal arrives through the
+ * projection — so the success value stays unread here.
+ */
+export type GoalActionResult = RemoteResult<unknown>
 
 /** Injected business face of the GoalBar dock entry: the mutation verbs (function properties: the strip destructures them freely). */
 export interface GoalBarActions {

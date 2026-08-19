@@ -6,7 +6,7 @@
  * the program.
  */
 import type { ReactNode } from 'react'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-web-react'
 import { DocumentTitle } from './DocumentTitle.tsx'
 // Type-only: pulls the runtime's SlotMap declaration merge (the 'root' key) into this program.

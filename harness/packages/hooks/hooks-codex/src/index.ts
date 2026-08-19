@@ -1,5 +1,5 @@
 /**
- * Bridge for unmodified Codex command hooks on harness interception seams. It
+ * Bridge for unmodified Codex command hooks on harness interception points. It
  * supports five points (SessionStart, prompt/tool pre/post, Stop), regex-only
  * matchers, snake_case payloads without a trailing newline, no hook environment
  * or command substitution, and no pre-tool approval or rewrite path; only
@@ -13,8 +13,8 @@
 // point; a cross-package facade for imports alone would add indirection.
 /* jscpd:ignore-start */
 import { readFileSync } from 'node:fs'
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, MessageSource } from '@deepseek-ai/dsh-llm'
@@ -38,7 +38,7 @@ import { parseCodexConfig, type CodexHookConfig } from './config.ts'
 /* jscpd:ignore-end */
 
 export const name = 'hooks-codex'
-export const inject = ['bash']
+export const inject = ['shell']
 
 /** Plugin config: where the Codex hooks.json lives + the model name for payloads. */
 export interface Config {
@@ -46,7 +46,7 @@ export interface Config {
    * Path to a Codex `hooks.json`. Process-level: read once at load, a relative
    * path resolves against the process launch cwd.
    * TODO(per-session-hook-config): per-session project-local discovery from each
-   * `session/new.cwd` is not yet implemented.
+   * `session/new.cwd`.
    */
   configPath: string
   /** The model name stamped on every payload (Codex includes `model` on each event). */
@@ -107,7 +107,7 @@ export function apply(ctx: Context, config: Config): void {
   /**
    * Run and fold one configured Codex hook point.
    *
-   * A supplied turn records the hook provenance pair inside that open turn.
+   * A supplied turn records the hook invocation/result pair inside that open turn.
    * Detached lifecycle points omit it.
    */
   async function runPoint(
@@ -138,7 +138,7 @@ export function apply(ctx: Context, config: Config): void {
             ...group.matcher !== undefined ? { matcher: group.matcher } : {},
           })
         }
-        const { output, durationMs } = await runHook(ctx.bash, hook, {
+        const { output, durationMs } = await runHook(ctx.shell, hook, {
           payload,
           defaultTimeoutMs,
           ...workdir !== undefined ? { cwd: workdir } : {},
@@ -156,7 +156,7 @@ export function apply(ctx: Context, config: Config): void {
         }
         outputs.push(output)
         // Execution and decision mapping remain in each bridge so dialect
-        // differences stay explicit at their owning seam.
+        // differences stay explicit at their owning extension point.
         /* jscpd:ignore-start */
         if (output.systemMessage !== undefined) {
           ctx.logger.warn(`hooks-codex: ${point} hook emitted a systemMessage, which is not yet surfaced (ignored)`)
@@ -169,15 +169,15 @@ export function apply(ctx: Context, config: Config): void {
     return mergeHookOutputs(outputs)
   }
 
-  // TODO(hook-continue-false): `merged.stop` is logged but needs a run-level halt seam.
+  // TODO(hook-continue-false): `merged.stop` is logged but needs a run-level halt mechanism.
 
   function contextFrom(merged: MergedHookOutcome): UserMessage | undefined {
-    if (merged.additionalContext.length === 0) { return undefined }
+    if (merged.additionalContext.length === 0) return undefined
     const content: ContentBlock[] = merged.additionalContext.map(text => ({ type: 'text', text }))
     return createUserMessage({ content, source: PLUGIN_SOURCE })
   }
 
-  /** Prepend one context without flattening downstream provenance or metadata. */
+  /** Prepend one context without flattening source fields or other downstream metadata. */
   function prependContext(ours: UserMessage, theirs: UserMessage[] | undefined): UserMessage[] {
     return [ours, ...theirs ?? []]
   }
@@ -279,7 +279,7 @@ export function apply(ctx: Context, config: Config): void {
 function lastTurn(agent: Agent | undefined): number {
   if (!agent) return 0
   const last = [...agent.session.events].findLast(e => e.type === 'turn/start')
-  /* v8 ignore next -- agent-present turnBase callers are tool/stop seams inside an open turn. */
+  /* v8 ignore next -- agent-present turnBase callers are tool/stop extension points inside an open turn. */
   return last?.type === 'turn/start' ? last.data.turn : 0
 }
 

@@ -1,5 +1,5 @@
-import { composeError, Context } from 'cordis'
-import { isNonNullable, type Dict } from 'cosmokit'
+import { composeError, Context } from '@deepseek-ai/cordis'
+import { isNonNullable, type Dict } from '@deepseek-ai/cosmokit'
 import { Entry, type EntryOptions } from './entry.ts'
 import { EntryGroup } from './group.ts'
 
@@ -51,7 +51,7 @@ export abstract class EntryTree {
         continue
       }
       const outcomes = await Promise.allSettled(
-        [...this.entries()].map(entry => entry.fiber?.await()),
+        [...this.entries()].map(entry => entry._await()),
       )
       const failures = outcomes
         .filter((outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected')

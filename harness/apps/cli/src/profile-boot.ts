@@ -1,17 +1,22 @@
 /**
  * Shared profile boot for every `dsh` surface: resolve the profile, stack its
- * patch layers (bundle layers in `dsh.profile.bundles` order, the profile's own
- * `cordis.patch.yml`, `--patch` overlays, flag-derived patches, the telemetry
- * switch), mount the tree over the profile's empty root config, keep the
- * profile patch layer live, and wire fail-loud plus bounded shutdown.
+ * patch layers (bundle layers in `dsh.profile.bundles` order, the profile's
+ * own `cordis.patch.yml`, `--patch` overlays, the telemetry switch), mount the
+ * tree over the profile's empty root config, keep the profile patch layer
+ * live, and wire fail-loud plus bounded shutdown.
+ *
+ * App flags are not the launcher's business: the invocation's inner arguments
+ * are provided to the tree through `ctx.cmdlineArgs`, where any injected app
+ * plugin may read the same immutable snapshot.
  * @module @deepseek-ai/dsh/profile-boot
  */
 
 import { writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Context } from 'cordis'
-import type { PatchOptions } from '@cordisjs/plugin-include'
+import { FiberState, type Context } from '@deepseek-ai/cordis'
+import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
+import type { EntryOptions } from '@deepseek-ai/cordis-plugin-loader'
 import {
   boot,
   composeEntries,
@@ -24,9 +29,13 @@ import {
   watchUserPatches,
   type Profile,
 } from '@deepseek-ai/dsh-app-boot'
-import { resolveDshHome } from '@deepseek-ai/dsh-paths'
-import { DSH_ENVIRONMENT_KEY, type EnvironmentSnapshot } from '@deepseek-ai/dsh-environment'
-import type { HeadlessIo } from '@deepseek-ai/dsh-headless'
+import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+
+/** Shipped agent-preset root: beside this app's own config, in both source and built layouts. */
+const SHIPPED_PRESET_ROOT = fileURLToPath(new URL('../config/agent-presets/', import.meta.url))
+
+import { DSH_LAUNCH_ENVIRONMENT_KEY, type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
+import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { createProcessShutdown, type ProcessShutdown } from './process-shutdown.ts'
 
 const NAME = 'dsh'
@@ -45,10 +54,7 @@ export function homePatchPath(): string {
 export const INSTALL_ANCHOR = fileURLToPath(new URL('../package.json', import.meta.url))
 
 /** The session-telemetry row id the DSH_TELEMETRY_DISABLED switch targets. */
-const TELEMETRY_ROW_ID = 'telemetry-otel'
-
-/** The one-shot runner row a `dsh run` task requires and configures. */
-const HEADLESS_ROW_ID = 'headless-runner'
+const TELEMETRY_ROW_ID = 'session-telemetry-otel'
 
 /** The empty root entry list every profile tree patches over. */
 const PROFILE_ROOT_CONFIG = `# dsh profile root — an empty entry list. The tree is composed as patches:
@@ -69,7 +75,7 @@ export const PROFILE_ROOT_FILENAME = 'cordis.yml'
  * switch set.
  * @param disabledEnv - the raw `DSH_TELEMETRY_DISABLED` value (`undefined` when unset).
  * @param hasRow - whether the composition carries the telemetry row.
- * @returns the disable patch, or `undefined` when telemetry stays enabled or is not mounted.
+ * @returns the disable patch, or `undefined` when no hard-disable patch is required.
  */
 export function resolveTelemetryPatch(disabledEnv: string | undefined, hasRow: boolean): PatchOptions | undefined {
   if ((disabledEnv ?? '') === '' || !hasRow) return undefined
@@ -96,9 +102,6 @@ export function prepareProfile(name: string, userLayer = true): Profile {
   return profile
 }
 
-/** Read-only row index of a profile composition before launcher flag patches. */
-export type ProfileRows = ReadonlyMap<string, { name?: string; config?: unknown }>
-
 /** One profile's patch layers (application order) and the row index of its pre-flag composition. */
 interface ComposedProfile {
   profile: Profile
@@ -106,108 +109,126 @@ interface ComposedProfile {
   bundlePatches: PatchOptions[]
   /** The home-level user layer (`$DSH_HOME/cordis.patch.yml`), applied after the profile's own. */
   homePatches: PatchOptions[]
-  /** Layers above the user layers on a live reload: --patch overlays, flag patches, the telemetry switch. */
-  overlayAndFlags: PatchOptions[]
+  /** Layers above the user layers on a live reload: `--patch` overlays and the telemetry switch. */
+  overlays: PatchOptions[]
   /**
-   * id → row of the pre-flag composition (bundles + user layers + overlays),
-   * for flag merges and row checks. Flag patches must not insert rows the
-   * launcher consults here (they only override values and insert dev glue).
+   * id → row of the composed tree (bundles + user layers + overlays), for the
+   * launcher's own row checks.
    */
-  rows: ProfileRows
+  rows: ReadonlyMap<string, EntryOptions>
 }
 
 /** The full patch stack of one composed profile, in application order. */
 function allPatches(composed: ComposedProfile): PatchOptions[] {
-  return [...composed.bundlePatches, ...composed.profile.patches, ...composed.homePatches, ...composed.overlayAndFlags]
+  return [
+    ...composed.bundlePatches,
+    ...composed.profile.patches,
+    ...composed.homePatches,
+    ...composed.overlays,
+  ]
 }
 
 /**
  * Load `name` and compose its effective patch stack: bundle layers in
- * `dsh.profile.bundles` order, the profile's user layer, the home-level user layer
- * (`$DSH_HOME/cordis.patch.yml` — machine-local preferences that apply to
- * every profile, so it outranks the per-profile layer), `--patch` overlays,
- * then flag patches derived from the composed rows, then the telemetry
- * switch.
+ * `dsh.profile.bundles` order (the base bundle gates the shell stacks by
+ * platform on its own rows), the profile's user layer, the home-level user
+ * layer (`$DSH_HOME/cordis.patch.yml` — machine-local preferences that apply
+ * to every profile, so it outranks the per-profile layer), `--patch` overlays,
+ * then the telemetry switch.
  * @param name - the profile name.
  * @param patchFiles - `--patch` overlay paths, in argv order.
- * @param deriveFlagPatches - launcher hook turning composed rows into flag patches.
  * @returns the profile, its patch layers, and the composed row index.
  */
 function composeProfile(
   name: string,
   patchFiles: readonly string[],
-  deriveFlagPatches: (rows: ComposedProfile['rows']) => PatchOptions[] = () => [],
 ): ComposedProfile {
   const profile = prepareProfile(name)
   const homePatches = loadOptionalPatches(NAME, homePatchPath()) ?? []
   const overlays = patchFiles.flatMap(file => loadOverlayPatches(NAME, resolve(file)))
   const bundlePatches = profile.layers.flatMap(layer => layer.patches)
-  const rows = new Map<string, { name?: string; config?: unknown }>()
+  const rows = new Map<string, EntryOptions>()
   for (const row of composeEntries([bundlePatches, profile.patches, homePatches, overlays])) {
     if (typeof row.id === 'string') rows.set(row.id, row)
   }
-  const overlayAndFlags = [...overlays, ...deriveFlagPatches(rows)]
+  const composedOverlays = [...overlays]
+  // The SHIPPED root is the part of the roster only this app can resolve: it
+  // sits beside this app's own config, in both the source and built layouts.
+  // The writable root the roster appends is `dsh-agent-presets`' own, so a
+  // launcher that never reaches this patch still finds a person's presets.
+  if (rows.has('agent-presets')) {
+    composedOverlays.push({
+      id: 'agent-presets',
+      config: {
+        ...(rows.get('agent-presets')?.config ?? {}) as Record<string, unknown>,
+        roots: [{ path: SHIPPED_PRESET_ROOT, trust: 'system' }],
+      },
+    })
+  }
   const telemetryPatch = resolveTelemetryPatch(process.env.DSH_TELEMETRY_DISABLED, rows.has(TELEMETRY_ROW_ID))
-  if (telemetryPatch !== undefined) overlayAndFlags.push(telemetryPatch)
-  return { profile, bundlePatches, homePatches, overlayAndFlags, rows }
+  if (telemetryPatch !== undefined) composedOverlays.push(telemetryPatch)
+  return { profile, bundlePatches, homePatches, overlays: composedOverlays, rows }
 }
 
 /** Options for {@link runProfile}. */
 export interface RunProfileOptions {
+  /** This run's frozen environment snapshot, provided before any entry mounts. */
+  environment: LaunchEnvironmentSnapshot
   /** The profile name to boot. */
   profile: string
   /** `--patch` overlay paths, in argv order. */
   patchFiles: readonly string[]
-  /** Launcher hook turning the pre-flag composed rows into flag patches (the web alias's flag family). */
-  deriveFlagPatches?: (rows: ProfileRows) => PatchOptions[]
-  /** `dsh run` task text; requires the composition to mount the headless runner row. */
-  task?: string
-  /** Surface setup registered after Loader installation and before any config-tree entry mounts. */
-  prepare?: (ctx: Context, rows: ProfileRows) => Promise<void> | void
-  /** This run's frozen environment snapshot, provided to the tree before any entry mounts. */
-  environment: EnvironmentSnapshot
+  /** The invocation's inner arguments, handed to the tree through `ctx.cmdlineArgs`. */
+  args: readonly string[]
+}
+
+/**
+ * Re-throw a watcher-setup failure unless a shutdown already owns the tree:
+ * a signal aborted this invocation, or an app requested exit (`ctx.appExit`
+ * from a fast one-shot) and the root's disposal rejected the in-flight setup
+ * await. Either way the failure describes a tree that is exiting as asked,
+ * not a broken watch.
+ * @param ctx - the booted root context.
+ * @param signal - this invocation's signal-shutdown fact.
+ * @param error - the setup failure.
+ */
+function suppressShutdownError(ctx: Context, signal: AbortSignal, error: unknown): void {
+  if (signal.aborted) return
+  if (ctx.fiber.state !== FiberState.ACTIVE || ctx.get('loader') === undefined) return
+  throw error
 }
 
 /**
  * Boot one profile invocation end to end and leave process lifetime to the
- * mounted plugins (or to the one-shot runner when `task` is present).
- * @param options - profile name, overlays, flag patches, and the optional task.
+ * mounted plugins (or to a one-shot runner the composition mounts).
+ * @param options - environment snapshot, profile name, overlays, and the booted app's own arguments.
  * @returns the settled root context and the shutdown controller.
  */
 export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Context; shutdown: ProcessShutdown }> {
-  const composed = composeProfile(options.profile, options.patchFiles, options.deriveFlagPatches)
-  if (options.task !== undefined) {
-    if (!composed.rows.has(HEADLESS_ROW_ID)) {
-      throw new Error(
-        `dsh: profile ${JSON.stringify(options.profile)} takes no task — its composition mounts no "${HEADLESS_ROW_ID}" row `
-        + '(the headless profile does)',
-      )
-    }
-    composed.overlayAndFlags.push({ id: HEADLESS_ROW_ID, config: { task: options.task } })
-  } else if (composed.rows.has(HEADLESS_ROW_ID)) {
-    // The inverse misuse: a one-shot composition booted without its task
-    // would otherwise die in the runner row's schema with a raw "required"
-    // error naming no fix.
-    throw new Error(
-      `dsh: profile ${JSON.stringify(options.profile)} mounts the one-shot runner and needs a task: `
-      + `dsh run --profile ${options.profile} "<task>"`,
-    )
-  }
-
+  const composed = composeProfile(options.profile, options.patchFiles)
   const app: { current?: Context } = {}
   const shutdown = createProcessShutdown(async () => { await app.current?.fiber.dispose() })
+  const signalShutdown = new AbortController()
+  const interrupt = (code: number): void => {
+    signalShutdown.abort()
+    shutdown.interrupt(code)
+  }
   // Signals own teardown throughout the startup window, not only after boot()
-  // settles: an inserted front door can publish readiness before sibling rows
-  // finish mounting.
-  process.on('SIGTERM', () => { shutdown.interrupt(options.task !== undefined ? 143 : 0) })
-  process.on('SIGINT', () => { shutdown.interrupt(130) })
+  // settles: an inserted provider can publish before sibling rows finish mounting.
+  // SIGTERM is a supervisor's ordinary stop request and exits 0 on every
+  // surface — the launcher does not know whether the app considered its work
+  // complete; SIGINT is a user interrupt and reports 130.
+  process.on('SIGTERM', () => { interrupt(0) })
+  process.on('SIGINT', () => { interrupt(130) })
   installFailLoud(NAME, process, async () => {
     await app.current?.fiber.dispose()
   })
 
   const rootConfig = join(composed.profile.dir, PROFILE_ROOT_FILENAME)
   // Recomposition for the live user layers: bundle layers below, overlays
-  // and flag patches above, so a user edit can never displace them. BOTH
+  // above, so a user edit can never displace them. Parsed app arguments are
+  // not in here at all — they live in app-provided services that survive a
+  // recomposition. BOTH
   // user files are re-read per generation (the HMR watcher hands us only the
   // changed file's patches, which one of the reads duplicates — fresh reads
   // keep the two watchers from stitching in each other's stale copy).
@@ -220,56 +241,60 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
     ...composed.bundlePatches,
     ...loadOptionalPatches(NAME, composed.profile.patchPath) ?? [],
     ...loadOptionalPatches(NAME, homePatchPath()) ?? [],
-    ...composed.overlayAndFlags,
+    ...composed.overlays,
   ])
-  // One-shot runs exit through the runner; watching would only hold the
-  // process open after its exit request.
-  const watchProfilePatch = options.task === undefined
   // Cloned for the same insert-aliasing reason as composeLive: the boot
   // application must not mutate the objects later reloads recompose from.
-  const ctx = await boot(NAME, rootConfig, structuredClone(allPatches(composed)), async (hostCtx) => {
+  const ctx = await boot(NAME, rootConfig, structuredClone(allPatches(composed)), (hostCtx) => {
     app.current = hostCtx
-    // Before any config-tree entry mounts, so a plugin that resolves a
-    // user-facing value at construction already sees this run's layers.
-    hostCtx.provide(DSH_ENVIRONMENT_KEY, options.environment)
-    if (options.task !== undefined) {
-      const io: HeadlessIo = {
-        stdout: process.stdout,
-        stderr: process.stderr,
-        exit: (code) => { void shutdown.shutdown(code) },
-      }
-      hostCtx.provide('headlessIo', io)
-    }
-    await options.prepare?.(hostCtx, composed.rows)
+    // Before any config-tree entry mounts, so plugins resolve all launch-time
+    // environment values from the same immutable provenance snapshot.
+    hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, options.environment)
+    // The command line and bounded exit request are launcher facts available
+    // to every app plugin that injects the argument snapshot.
+    provideCmdline(hostCtx, {
+      args: options.args,
+      exit: code => void shutdown.shutdown(code),
+    })
   })
   app.current = ctx
-  // A surface can dispose the whole tree while startup was still in flight
-  // (early SIGTERM); the Loader service goes with it and there is nothing to
-  // keep live.
-  if (watchProfilePatch && ctx.get('loader') !== undefined) {
-    // Config-only HMR for the live profile patch layer: the web bundle
-    // disables the shared module-reload `hmr` row (its reload lifecycle is
-    // untested), so when the composition leaves no HMR service, mount a
-    // watch-only instance with no module roots — cordis.patch.yml edits stay
-    // live on every long-lived surface. A silent skip would break the
-    // documented hot-reload contract. HMR injects the timer service, which a
-    // bare custom profile may not mount either.
-    if (ctx.get('hmr') === undefined) {
-      if (ctx.get('timer') === undefined) {
-        await ctx.loader.create({ name: '@cordisjs/plugin-timer' })
+  // A surface can dispose the whole tree while boot or this post-boot watcher
+  // setup is still in flight — a signal, or a fast one-shot's appExit. Loader
+  // presence and fiber state own liveness; the initial check skips a tree
+  // that already exited, and the catch below re-checks for an exit that
+  // landed mid-setup. Watching is unconditional: a one-shot surface exits
+  // through its bounded shutdown, which disposes the watchers before the
+  // loop drains.
+  if (!signalShutdown.signal.aborted
+    && ctx.fiber.state === FiberState.ACTIVE
+    && ctx.get('loader') !== undefined) {
+    try {
+      // Config-only HMR for the live profile patch layer: the web bundle
+      // disables the shared module-reload `hmr` row (its reload lifecycle is
+      // untested), so when the composition leaves no HMR service, mount a
+      // watch-only instance with no module roots — cordis.patch.yml edits stay
+      // live on every long-lived surface. A silent skip would break the
+      // documented hot-reload contract. HMR injects the timer service, which a
+      // bare custom profile may not mount either.
+      if (ctx.get('hmr') === undefined) {
+        if (ctx.get('timer') === undefined) {
+          await ctx.loader.create({ name: '@deepseek-ai/cordis-plugin-timer' })
+        }
+        await ctx.loader.create({ name: '@deepseek-ai/cordis-plugin-hmr', config: { root: [] } })
       }
-      await ctx.loader.create({ name: '@cordisjs/plugin-hmr', config: { root: [] } })
+      await watchUserPatches(ctx, {
+        binName: NAME,
+        filename: composed.profile.patchPath,
+        compose: composeLive,
+      })
+      await watchUserPatches(ctx, {
+        binName: NAME,
+        filename: homePatchPath(),
+        compose: composeLive,
+      })
+    } catch (error) {
+      suppressShutdownError(ctx, signalShutdown.signal, error)
     }
-    await watchUserPatches(ctx, {
-      binName: NAME,
-      filename: composed.profile.patchPath,
-      compose: composeLive,
-    })
-    await watchUserPatches(ctx, {
-      binName: NAME,
-      filename: homePatchPath(),
-      compose: composeLive,
-    })
   }
   return { ctx, shutdown }
 }

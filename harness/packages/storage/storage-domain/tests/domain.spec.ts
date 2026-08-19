@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { z } from 'zod'
 import Storage, { storageBackendServiceKey } from '@deepseek-ai/dsh-storage'
 import { apply, DomainFacility, defineDomain, domainTable } from '../src/index.ts'
@@ -35,7 +35,7 @@ async function harness(options?: { pool?: MemoryMediaPool; config?: Partial<Conf
   // Mounted, not just constructed: the package invariant resolves the form
   // through ctx.storage to cross-check every domain/changed emission.
   ctx.storage.mount('domain', facility)
-  const changes: Array<DomainChanged> = []
+  const changes: DomainChanged[] = []
   ctx.on('domain/changed', (change) => { changes.push(change) })
   return { ctx, backend, facility, changes }
 }
@@ -316,7 +316,7 @@ describe('close and lifecycle', () => {
     // Durability is the drain contract: both queued writes reached the medium.
     expect([...pool.media.get('demo')!.tables.get('items')!.keys()].sort()).toEqual(['a', 'b'])
     await expect(table.put('c', { label: 'z', count: 3 })).rejects.toMatchObject({ code: 'closed' })
-    expect(() => { return table.get('a') }).toThrow(/closed/)
+    expect(() => table.get('a')).toThrow(/closed/)
     // The name is free again: reopening sees the drained state.
     const reopened = await facility.open(spec)
     expect([...reopened.table('items').keys()].sort()).toEqual(['a', 'b'])

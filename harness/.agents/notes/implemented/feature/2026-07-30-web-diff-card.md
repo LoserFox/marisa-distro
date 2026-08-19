@@ -32,7 +32,7 @@ The chat row renders the diff resident under its path-link summary, capped at `C
 
 **A side-by-side (two-column) diff.** Rejected for now by the owner: it is denser but does not fit the narrow chat row, and the goal was parity with the TUI's single-column unified form. A two-column mode in the details panel is a later props change, not a redesign.
 
-**Git-style line-number gutters.** The `FileDiff` contract carries only `{ path, oldText, newText }` — `structuredPatch`'s hunk start lines are dropped in `diff.ts`, so no line number reaches the client. Rendering a numbered gutter needs a backend contract change (carry `oldStart`/`newStart`) and a matching TUI upgrade to stay consistent; deferred so this PR stays a pure Web consumer of the existing contract.
+**Git-style line-number gutters.** The `FileDiff` contract carries only `{ path, oldText, newText }` — `structuredPatch`'s hunk start lines are dropped in `diff.ts`, so no line number reaches the client. Rendering a numbered gutter needs a backend contract change (carry `oldStart`/`newStart`) and a matching TUI upgrade to stay consistent; deferred so this change stays a pure Web consumer of the existing contract.
 
 **Reuse `CodeBlock`.** Rejected for the same reason the terminal card was: `CodeBlock` soft-wraps and has no per-line `+`/`-` role, no path headers, and no footer. The two share geometry and font tokens, which is the only part where one implementation is correct for both.
 
@@ -44,9 +44,9 @@ The multi-file arm of `DiffBlock` (one card, several path headers) has no produc
 
 ## Testing
 
-`packages/client/ui-primitives/tests/diff-block.spec.tsx` pins the component: the create arm (added-only, no removed side), the edit arm (removed above added), the same-file `⋯` gap versus a new file's own header, the empty-diffs null render, the footer counts and their singular/plural, the head/tail cap with its `aria-expanded` toggle, and the copy control asserting the prefixed diff text on both the accepted and refused clipboard paths. Per-file 100%.
+`packages/client/ui-primitives/tests/diff-block.client.spec.tsx` pins the component: the create arm (added-only, no removed side), the edit arm (removed above added), the same-file `⋯` gap versus a new file's own header, the empty-diffs null render, the footer counts and their singular/plural, the head/tail cap with its `aria-expanded` toggle, and the copy control asserting the prefixed diff text on both the accepted and refused clipboard paths. Per-file 100%.
 
-`packages/client/ui-tool/tests/diff-card.spec.tsx` pins the wiring at every render site: `diffCardModel`'s derivation and each of its null arms, the result hunks replacing the call-time diff, a window-truncated call still rendering from the result, the chat row's diff body, `FileMutationRow`'s resident card and its path link opening cwd-resolved through the host, its registration under both `write` and `edit`, and the panel's Output section.
+`packages/client/ui-tool/tests/diff-card.client.spec.tsx` pins the wiring at every render site: `diffCardModel`'s derivation and each of its null arms, the result hunks replacing the call-time diff, a window-truncated call still rendering from the result, the chat row's diff body, `FileMutationRow`'s resident card and its path link opening cwd-resolved through the host, its registration under both `write` and `edit`, and the panel's Output section.
 
 The fixture (`packages/client/connection/src/client/fixture.ts`) carries three diff turns so a `?fixture` server and the per-package wiring suite exercise all three arms at both render sites: a single-hunk edit (turn 62, keyed `FileMutationRow`), a create/write (turn 63), and a multi-hunk edit (turn 67, the `⋯` gap between two scattered hunks in one file). The built-boot snapshot (`apps/web/tests/built-boot.snapshot.ts`) is a boot-assembly smoke that asserts only that the graph mounts and reaches chat content (`data-sample="bash-global"`); by its own contract it carries no diff-behavior assertions, which the wiring suite owns.
 

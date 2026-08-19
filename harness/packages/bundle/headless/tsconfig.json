@@ -18,19 +18,22 @@
       "path": "../../../vendor/schemastery"
     },
     {
-      "path": "../../host/apiproxy"
-    },
-    {
-      "path": "../../host/webserver"
-    },
-    {
       "path": "../../core/agent"
+    },
+    {
+      "path": "../../core/agent-default-model"
+    },
+    {
+      "path": "../../llm/llm"
     },
     {
       "path": "../../core/session"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../../boot/cmdline"
     }
   ]
 }

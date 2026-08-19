@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from deepseek_harness import DeepSeekHarness, HarnessClient, HarnessConfig, Notification
+from deepseek_harness import DeepSeekHarness, HarnessClient, HarnessConfig, Notification, SdkProtocolError
 
 
 def test_high_level_sdk_runs_turn_and_collects_final_response(tmp_path: Path) -> None:
@@ -60,6 +60,28 @@ for line in sys.stdin:
         }), flush=True)
         print(json.dumps({
             "jsonrpc": "2.0",
+            "method": "session.event",
+            "params": {
+                "sessionId": params["sessionId"],
+                "event": {
+                    "type": "turn/end",
+                    "data": {"turn": 1, "reason": {"kind": "completed"}},
+                },
+            },
+        }), flush=True)
+        print(json.dumps({
+            "jsonrpc": "2.0",
+            "method": "session.event",
+            "params": {
+                "sessionId": params["sessionId"],
+                "event": {
+                    "type": "turn/end",
+                    "data": {"turn": 2, "reason": {"kind": "max-tokens"}},
+                },
+            },
+        }), flush=True)
+        print(json.dumps({
+            "jsonrpc": "2.0",
             "method": "session.status",
             "params": {"sessionId": params["sessionId"], "status": "idle"},
         }), flush=True)
@@ -86,7 +108,8 @@ for line in sys.stdin:
         result = harness.run("say hello", session_id="main")
 
     assert result.final_response == "hello from runtime"
-    assert result.events[-1]["type"] == "assistant/message"
+    assert result.finish_reason == "max-tokens"
+    assert result.events[-1]["type"] == "turn/end"
     dumped_env = json.loads(env_dump.read_text())
     assert dumped_env["DEEPSEEK_API_KEY"] == "env-key"
     assert dumped_env["DEEPSEEK_BASE_URL"] == "http://127.0.0.1:4321"
@@ -137,6 +160,42 @@ for line in sys.stdin:
         )
 
     assert seen == ["session.event", "session.status", "subagent.started", "session.status"]
+    assert result.finish_reason is None
+
+
+def test_high_level_sdk_rejects_turn_end_without_reason_kind(tmp_path: Path) -> None:
+    script = tmp_path / "fake_runtime.py"
+    script.write_text(
+        """
+import json
+import sys
+
+for line in sys.stdin:
+    msg = json.loads(line)
+    method = msg.get("method")
+    if method == "initialize":
+        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {"serverInfo": {"name": "fake-runtime"}}}), flush=True)
+    elif method == "session/prompt":
+        params = msg.get("params") or {}
+        print(json.dumps({"jsonrpc": "2.0", "method": "session.event", "params": {"sessionId": params["sessionId"], "event": {"type": "agent/inbox/spliced", "data": {"target": "next-turn", "start": 0, "inserted": [{"id": "message-1"}]}}}}), flush=True)
+        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {"messageId": "message-1"}}), flush=True)
+        print(json.dumps({"jsonrpc": "2.0", "method": "session.event", "params": {"sessionId": params["sessionId"], "event": {"type": "turn/end", "data": {"turn": 1, "reason": {}}}}}), flush=True)
+        print(json.dumps({"jsonrpc": "2.0", "method": "session.status", "params": {"sessionId": params["sessionId"], "status": "idle"}}), flush=True)
+    elif method == "shutdown":
+        print(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {}}), flush=True)
+        break
+""".strip()
+    )
+
+    with DeepSeekHarness(
+        launch_args_override=(sys.executable, str(script)),
+        cwd=str(tmp_path),
+    ) as harness:
+        with pytest.raises(
+            SdkProtocolError,
+            match=r"turn/end event requires a string data\.reason\.kind",
+        ):
+            harness.run("reject malformed turn ending", session_id="main")
 
 
 def test_relative_cwd_is_absolute_in_process_environment_and_wire(
@@ -662,8 +721,10 @@ def test_client_request_times_out_when_bridge_does_not_respond(tmp_path: Path) -
     script = tmp_path / "fake_bridge.py"
     script.write_text(
         """
+import sys
 import time
 
+print("bridge is still starting", file=sys.stderr, flush=True)
 time.sleep(60)
 """.strip()
     )
@@ -677,8 +738,9 @@ time.sleep(60)
         start = time.monotonic()
         try:
             client.initialize(provider="deepseek-official", cwd="/workspace", model="dsagent")
-        except TimeoutError:
+        except TimeoutError as exc:
             assert time.monotonic() - start < 2
+            assert "bridge is still starting" in str(exc)
         else:
             raise AssertionError("initialize should time out")
 

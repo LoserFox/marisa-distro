@@ -12,7 +12,7 @@ Atomic attachment to an inbox message forced the loop to preserve context throug
 
 Idle `inject()` exposed a second mismatch. Injection did not request model execution, yet the implementation opened and closed a zero-step `injection` turn solely to satisfy the turn-enclosure invariant and obtain a durability checkpoint. A turn therefore sometimes meant “run the agent loop” and sometimes meant “persist context without running it.”
 
-`HookContext` also named its producer rather than its role. The value could come from a native plugin, a hook bridge, prompt admission, or tool post-processing; its stable meaning was additional model-facing context with provenance.
+`HookContext` also named its producer rather than its role. The value could come from a native plugin, a hook bridge, prompt admission, or tool post-processing; its stable meaning was additional model-facing context whose source named the producer.
 
 ## Decision
 
@@ -22,7 +22,7 @@ A caller that owns context delivers an identified, frozen `UserMessage` through 
 
 An entering pre-step returns the complete `PreStepDecision.messages` batch for the request being finalized. Tool extension points still return `additionalContexts`, which enter the next-step inbox only after the corresponding tool results. These values are extension-point outputs, not attachments captured from a caller's inbox item.
 
-Every additional context is an independent `UserMessage` whose `source` records provenance. Inbox insertion is durable immediately; admission later records the same value as `user/message`. There is no `context/message`, prompt-prefix placement, stable request delimiter, or prompt envelope. Transcript and UI consumers distinguish direct user messages from injected context by `source`.
+Every additional context is an independent `UserMessage` whose `source` names its producer and carries producer-specific fields. Inbox insertion is durable immediately; admission later records the same value as `user/message`. There is no `context/message`, prompt-prefix placement, stable request delimiter, or prompt envelope. Transcript and UI consumers distinguish direct user messages from injected context by `source`.
 
 ## Injection lifecycle
 
@@ -36,7 +36,7 @@ The loop appends injected `user/message` events only from entered batches inside
 
 ## Extension and caller semantics
 
-The enter branch's `PreStepDecision.messages` is the complete batch for the proposed step. A waterfall listener that delegates with `next()` preserves downstream messages unless it intentionally replaces them; additions follow natural waterfall return order. Tool-result `additionalContexts` retain FIFO order and individual provenance.
+The enter branch's `PreStepDecision.messages` is the complete batch for the proposed step. A waterfall listener that delegates with `next()` preserves downstream messages unless it intentionally replaces them; additions follow natural waterfall return order. Tool-result `additionalContexts` retain FIFO order and each message's source.
 
 Caller-driven injection and current-step context deliberately use different timing. `inject()` joins the next pre-step available and cannot promise that a request already being finalized will consume it. A listener that must affect that exact request returns the context in `PreStepDecision.messages`; downstream rejection or failure then prevents it from materializing.
 

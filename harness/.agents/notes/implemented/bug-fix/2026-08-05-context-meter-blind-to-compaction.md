@@ -6,7 +6,7 @@ English | [中文](2026-08-05-context-meter-blind-to-compaction.zh.md)
 
 ## Problem
 
-The composer's [context meter](../feature/2026-08-05-composer-context-meter-breakdown.md) took its ring, percentage, and `~used / capacity` header from `contextPressure.pressureTokens`, the newest provider-reported prompt size. That number moves only when a request reports usage, and compaction reports none: `compact-basic` summarizes through a direct `ctx.llm.stream()` call and appends `compact/start`, `compact/summary`, the replacement `user/message`, and `compact/end` — no `assistant/message`, no usage chunk.
+The composer's [context meter](../feature/2026-08-05-composer-context-meter-breakdown.md) took its ring, percentage, and `~used / capacity` header from `contextPressure.pressureTokens`, the newest provider-reported prompt size. That number moves only when a request reports usage, and compaction reports none: `compaction-basic` summarizes through a direct `ctx.llm.stream()` call and appends `compaction/start`, `compaction/summary`, the replacement `user/message`, and `compaction/end` — no `assistant/message`, no usage chunk.
 
 So the meter was frozen across the one action taken to change it. Driving a real `compactNow` through the agent loop:
 
@@ -27,7 +27,7 @@ This reverses the "the ring, header, and bar length stay provider-exact" half of
 
 ## Alternatives considered
 
-**Project `measure().totalTokens` instead.** The measurement service already composes exactly this (`baseline` anchor plus signed `surfaceDeltaTokens`), and it reacts correctly — measured at 4383 → 304 across the same compaction. But it is a service over private replay state, not a pure fold, and a projection cannot call it. Reproducing its anchor inside a `ProjectionDefinition` needs `_estimateProviderAssistant`'s random access to the chunk provenance (`session.events[seq]`), which `apply(state, event)` does not have. Anchoring on the sampled surface total is the same idea reachable from a pure per-event fold.
+**Project `measure().totalTokens` instead.** The measurement service already composes exactly this (`baseline` anchor plus signed `surfaceDeltaTokens`), and it reacts correctly — measured at 4383 → 304 across the same compaction. But it is a service over private replay state, not a pure fold, and a projection cannot call it. Reproducing its anchor inside a `ProjectionDefinition` needs `_estimateProviderAssistant`'s random access to the chunk events cited by seq (`session.events[seq]`), which `apply(state, event)` does not have. Anchoring on the sampled surface total is the same idea reachable from a pure per-event fold.
 
 **Emit a synthetic usage record at the end of compaction.** Would move `pressureTokens` itself, but the only usage compaction holds is the summarization request's own — a different prompt entirely. Recording it as the conversation's prompt size would be a lie in the durable log rather than in one display.
 
@@ -43,4 +43,4 @@ The panel's composition rows still do not sum to the header, and now for one cle
 
 ## Testing
 
-`packages/llm/token-meter/tests/token-usage-projection.spec.ts` covers the carry-forward across surface growth and a compaction (the sample holding still while the projection shrinks) and the zero clamp when heuristic error would drive the figure negative. `packages/client/ui-conversation/tests/context-meter.spec.tsx` pins the ring reading the projected figure, and `chat-stats.spec.tsx` pins `contextOccupancy`'s preference and its fallback. The end-to-end numbers above came from driving `BasicCompactService.compactNow` through a real `AgentLoop` with the projection registry mounted.
+`packages/llm/token-meter/tests/token-usage-projection.spec.ts` covers the carry-forward across surface growth and a compaction (the sample holding still while the projection shrinks) and the zero clamp when heuristic error would drive the figure negative. `packages/client/ui-conversation/tests/context-meter.client.spec.tsx` pins the ring reading the projected figure, and `chat-stats.spec.tsx` pins `contextOccupancy`'s preference and its fallback. The end-to-end numbers above came from driving `BasicCompactionEngine.compactNow` through a real `AgentLoop` with the projection registry mounted.

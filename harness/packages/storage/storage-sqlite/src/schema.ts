@@ -45,7 +45,7 @@ async function createDatabaseFile(path: string): Promise<void> {
     const handle = await open(path, 'wx', 0o600)
     await handle.close()
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') { throw error }
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
   }
 }
 
@@ -59,7 +59,7 @@ async function createDatabaseFile(path: string): Promise<void> {
  * @returns the open handle with pragmas applied and the unit metadata tables ensured.
  */
 export async function openDatabase(path: string, journalMode: JournalMode): Promise<DatabaseSync> {
-  const actual = path !== ':memory:' ? resolve(path) : path
+  const actual = path === ':memory:' ? path : resolve(path)
   if (actual !== ':memory:') {
     await mkdir(dirname(actual), { recursive: true, mode: 0o700 })
     await createDatabaseFile(actual)

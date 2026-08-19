@@ -1,4 +1,4 @@
-/** Node-test stand-ins for rc.5 browser bundles loaded through window.__ModuleLoader__. */
+/** Node-test stand-ins for supported DSH browser bundles loaded through window.__ModuleLoader__. */
 
 export const DisclosureRow = () => null
 export const IconBranchOutline16 = () => null

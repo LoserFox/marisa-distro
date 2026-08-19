@@ -29,7 +29,9 @@ export function bwrapProfileArgs(policy: SandboxPolicy): string[] {
  */
 export function landlockProfileArgs(policy: SandboxPolicy): string[] {
   const readWrite = ['/dev/null']
-  if (policy.mode === 'workspace-write') readWrite.push('/tmp', policy.workspaceRoot)
+  if (policy.mode === 'workspace-write') {
+    readWrite.push('/tmp', policy.workspaceRoot)
+  }
   return landlockGrantArgs({ readOnly: ['/'], readWrite })
 }
 

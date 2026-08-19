@@ -10,7 +10,7 @@
 
 /* Floating capsule input (figma Input_Bottom 75:8208): card floats above the
    viewport bottom inside the centered message column; textarea on top, action
-   row below, one primary circle button bottom-right. Input width rides the
+   row below, primary action controls bottom-right. Input width rides the
    column (--dsh-composer-card-max-width = chat content + 32px, 16px per side,
    is a cap, not a fixed size — layout rule: the box shrinks with the center
    column keeping its clearance). Hero variant = the same card centered in the
@@ -35,22 +35,6 @@
   padding: 0 var(--dsh-composer-side-clearance);
 }
 
-.error,
-.status {
-  width: 100%;
-  max-width: var(--dsh-composer-card-max-width);
-  margin-bottom: 6px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.status {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-secondary);
-}
-
 .notice {
   width: 100%;
   max-width: var(--dsh-composer-card-max-width);
@@ -64,11 +48,6 @@
 }
 
 .noticeError {
-  background: var(--dsw-alias-interactive-bg-hover-danger);
-  color: var(--dsw-alias-state-error-primary);
-}
-
-.error {
   background: var(--dsw-alias-interactive-bg-hover-danger);
   color: var(--dsw-alias-state-error-primary);
 }
@@ -102,11 +81,54 @@
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
+/* No-workspace trigger state: dashed l4 stroke marks the card as a pick-a-
+   workspace affordance rather than a live composer; hover answers in the
+   business blue to invite the click. Native `dashed` has a fixed browser
+   pattern, so the stroke is an ::after overlay: theme-token background masked
+   by an SVG dash ring (stroke-width 2 centered on the box edge = 1px visible
+   inside), which keeps the 22px radius and both themes. */
+.cardWorkspaceTrigger {
+  border-color: transparent;
+  cursor: pointer;
+}
+
+.cardWorkspaceTrigger::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 22px;
+  background: var(--dsw-alias-border-l4);
+  transition: background-color 100ms ease;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='22' ry='22' stroke='black' stroke-width='2' stroke-dasharray='4 4'/%3E%3C/svg%3E");
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='22' ry='22' stroke='black' stroke-width='2' stroke-dasharray='4 4'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Disabled toolbar controls neither receive nor swallow clicks in the trigger
+   state: pointer events fall through to the card's own click handler, making
+   the full capsule one pick target. */
+.cardWorkspaceTrigger :disabled {
+  pointer-events: none;
+}
+
+.cardWorkspaceTrigger:hover::after {
+  background: var(--dsw-alias-state-business-primary);
+}
+
 .accessory {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 12px 0;
+}
+
+/* Rail seat: the card's top padding (10px) plus this 4px matches DeepSeek
+   Chat's spacing above the thumbnails; the card's 12px flex gap owns the space
+   below. The rail itself (arrows, hidden scrollbar, card geometry) is the
+   ui-attachment atom's. */
+.attachments {
+  min-width: 0;
+  padding: 4px 12px 0;
 }
 
 /* Floating overlay anchor (menu / popupSelect shell): entries position
@@ -225,9 +247,9 @@
      so by construction now that all three sit INSIDE .scroll — a scrollbar
      that consumes layout space narrows the scrollport, which is their shared
      containing block, so it costs all three the same width on every engine.
-     Scrolling the textarea itself is what used to break this, and no property
-     fixed it: WebKit reserved gutter space for the overflow-y:auto textarea
-     and not for the overflow:hidden layers beside it, leaving them 8px apart
+     A textarea that scrolls itself would break this, and no property fixes
+     it: WebKit reserves gutter space for an overflow-y:auto textarea and not
+     for the overflow:hidden layers beside it, leaving them 8px apart
      (768 against 776) — worth 2 to 5 wrapped lines on a long draft. */
 }
 
@@ -241,6 +263,10 @@
 .input:disabled {
   color: var(--dsw-alias-label-tertiary);
   cursor: not-allowed;
+}
+
+.input[aria-haspopup='menu'] {
+  cursor: pointer;
 }
 
 .mirror {
@@ -395,7 +421,7 @@
   cursor: pointer;
 }
 
-/* Plain-text reference highlight (decision 21): a pure range mark over the
+/* Plain-text reference highlight: a pure range mark over the
    draft's own glyphs — advance untouched, so the two layers cannot drift.
    Chip family colors; clone keeps rounded ends on soft-wrap fragments. */
 .textRef {

@@ -14,7 +14,7 @@
 // collapsed summary is the failure's first line in the error color.
 
 import { useState, type KeyboardEvent } from 'react'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import clsx from 'clsx'
 import {
   IconApiOutline14, IconChevronDownOutline14, IconInspectOutline12, StateDot, TerminalBlock,

@@ -1,0 +1,29 @@
+{
+  "name": "@dsh-external/mygo-rdb",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./store": "./lib/store.js",
+    "./store-provider": "./lib/store-provider.js",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-mygo": "workspace:^",
+    "pg": "^8.22.0"
+  },
+  "dsh": {
+    "mygo": {
+      "compatibility": {
+        "depends": {
+          "service:mygo-core": ">=0.1.0"
+        }
+      },
+      "provides": [
+        "service:mygo-session-reader"
+      ]
+    }
+  }
+}

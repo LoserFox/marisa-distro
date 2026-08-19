@@ -1,5 +1,5 @@
 // Web e2e scenario: the sidebar session list's scrollbar as the browser
-// actually lays it out — the observable half of the themed-scrollbar change
+// actually lays it out — the observable half of the themed scrollbars
 // (packages/client/ui-theme/src/styles/scrollbar.css plus the
 // `scrollbar-gutter: stable` reservation on WorkspaceBrowser's `.list`). The
 // ui-theme/ui-workspace unit specs read the CSS text; only a real engine
@@ -17,8 +17,8 @@
 // Headless chromium defaults to an OVERLAY scrollbar: one drawn on top of the
 // content, consuming no layout width unless something reserves space. That is
 // the mode in which the reported symptom exists at all, so this environment
-// reproduces it rather than merely approximating it — measured against clean
-// master, where the list's band is 0 and the bar covers 7px of the relative
+// reproduces it rather than merely approximating it — without either
+// declaration the list's band is 0 and the bar covers 7px of the relative
 // time. (Under a classic space-consuming bar, `clientWidth` already excludes
 // the bar and nothing can be covered; a headed run under xvfb behaves that way
 // and cannot show the symptom.)
@@ -40,9 +40,8 @@
 // neither replaces the other. Removing only the gutter leaves `timeCoveredBy` at
 // 0, because the bar is then 8px wide and the row's right padding is also 8px,
 // so it abuts the timestamp without covering it; `band` catches that case.
-// Removing both — the actual master state — is what produces the reported
-// overlap, and `timeCoveredBy` measures it at 7. Each was mutation-checked with
-// the other assertions in its test silenced.
+// Removing both is what produces the reported overlap, and `timeCoveredBy`
+// measures it at 7.
 //
 // The thumb is a pointer affordance (ui-sidebar rebinds the indirection pair
 // to `transparent` while the pointer is outside the column), so every
@@ -135,7 +134,8 @@ interface ListMetrics {
 /**
  * Measure the sidebar list in the page.
  * @param page - the page under test.
- * @returns the list's resolved scrollbar style and the geometry the fix changes.
+ * @returns the list's resolved scrollbar style and the geometry the
+ * scrollbar-gutter/thin-scrollbar declarations shape.
  */
 function measureList(page: Page): Promise<ListMetrics> {
   return page.evaluate(() => {
@@ -201,8 +201,8 @@ function measureList(page: Page): Promise<ListMetrics> {
       // The bar is drawn in the rightmost `barWidth` of the border box, whether
       // or not that space was reserved. Its width comes from the sheet where the
       // sheet applies, and from the UA's own overlay bar otherwise — 15px is
-      // what this chromium paints, measured against master where the rule is
-      // absent. Taking the UA width as the fallback is what keeps the assertion
+      // what this chromium paints, measured with the rule absent. Taking the
+      // UA width as the fallback is what keeps the assertion
       // honest: assuming 0 there would report no occlusion precisely in the
       // state that has it.
       timeCoveredBy: Math.max(0, time.getBoundingClientRect().right - (listRect.right - barWidth)),
@@ -261,13 +261,14 @@ async function measurePalette(page: Page): Promise<PaletteMetrics> {
 
 /**
  * Render the golden body: the resolved scrollbar style of the list in each
- * palette, plus the geometric relations the fix establishes.
+ * palette, plus the geometric relations the scrollbar-gutter/thin-scrollbar
+ * declarations establish.
  *
  * Absolute coordinates are deliberately absent. `timeRight`, `clientRight`, and
  * `borderRight` depend on the sidebar's laid-out width and on font metrics, so
  * committing them would make the golden fail on a machine whose fonts measure
  * differently — a fixture that has to be re-recorded per platform documents the
- * platform, not the change. What is recorded instead is the band, the overlap,
+ * platform, not the behavior. What is recorded instead is the band, the overlap,
  * and the two orderings, each of which is a difference or a comparison and so
  * survives any layout that keeps the reservation.
  * @param light - metrics measured under the light palette.
@@ -348,9 +349,9 @@ async function pointAt(page: Page, where: 'list' | 'away'): Promise<void> {
 
 /**
  * Reveal the seeded rows: every seeded session is unattached, so they all sit
- * in the collapsed Ungrouped bucket. Converges on expanded rather than
- * clicking once — startup auto-selection can expand the bucket first, and a
- * second click would collapse it again. Hand-rolled polling because
+ * in the collapsed Ungrouped bucket. Open the bucket, then use its transient
+ * Show-more control because an open group intentionally renders only five
+ * rows by default. Hand-rolled polling because
  * `expect.poll` is test-scoped and this runs in `beforeAll`.
  * @param page - the page under test.
  */
@@ -362,6 +363,12 @@ async function expandSeededSessions(page: Page): Promise<void> {
   for (;;) {
     if (await bucket.getAttribute('aria-expanded') !== 'true') {
       await page.getByText('Ungrouped', { exact: true }).click()
+    }
+    const showMore = page.getByRole('button', { name: /Show \d+ more sessions/ })
+    if (await bucket.getAttribute('aria-expanded') === 'true'
+      && await rows.count() <= SEED_COUNT / 2
+      && await showMore.count() > 0) {
+      await showMore.click()
     }
     if (await bucket.getAttribute('aria-expanded') === 'true' && await rows.count() > SEED_COUNT / 2) return
     if (Date.now() > deadline) {
@@ -417,12 +424,13 @@ describe('web e2e: sidebar session list scrollbar (reserved gutter / themed thum
     expect(metrics.scrollbarEdgeOffset).toBe(2)
     expect(metrics.rowEdgeInset).toBe(12)
     // The reported symptom, stated directly: no part of the row's relative time
-    // lies under the bar. Measures 7 on clean master — the `h` of `1h` is the
-    // covered part. Unlike the client-edge comparison below it does not go
-    // vacuous under an overlay scrollbar, because it measures against the bar's
-    // own width rather than against a content edge the overlay bar does not
-    // move. It is not a replacement for the band assertion above; see the file
-    // header for which regression each one catches.
+    // lies under the bar. Without either declaration it measures 7 — the `h`
+    // of `1h` is the covered part. Unlike the client-edge comparison below it
+    // does not go vacuous under an overlay scrollbar, because it measures
+    // against the bar's own width rather than against a content edge the
+    // overlay bar does not move. It is not a replacement for the band
+    // assertion above; see the file header for which regression each one
+    // catches.
     expect(metrics.timeCoveredBy).toBe(0)
     // Corollaries of the reservation, kept because they pin where the band sits
     // rather than only that it exists: the time ends inside the content area,
@@ -451,7 +459,7 @@ describe('web e2e: sidebar session list scrollbar (reserved gutter / themed thum
     expect(quiet.band).toBeGreaterThan(0)
     expect(quiet.timeCoveredBy).toBe(0)
     // Scrolling without a pointer — what a keyboard or a touch drag does —
-    // leaves the column quiet. This is the change's one deliberate loss, and
+    // leaves the column quiet. This is the one deliberate loss, and
     // it is pinned here rather than only described, so making a scroll
     // re-reveal the bar has to be a decision rather than a side effect.
     await page.locator('[role="tree"][aria-label="Sessions"]').evaluate((el) => { el.scrollTop += 200 })

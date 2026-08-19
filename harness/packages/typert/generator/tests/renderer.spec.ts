@@ -42,7 +42,7 @@ describe('TypeGraphRenderer defensive and optional shapes', () => {
       [{ id: 'this', kind: 'this' }, []],
     ]
 
-    for (const [node, expected] of cases) { expect(childTypeNodeIds(node)).toEqual(expected) }
+    for (const [node, expected] of cases) expect(childTypeNodeIds(node)).toEqual(expected)
   })
 
   it('renders optional source shapes and traverses every optional closure edge', () => {

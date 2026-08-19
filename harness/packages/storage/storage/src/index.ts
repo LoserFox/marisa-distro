@@ -5,7 +5,7 @@
  * @module @deepseek-ai/dsh-storage
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { StorageError } from './error.ts'
 import { BackendRegistry } from './registry.ts'
 
@@ -27,7 +27,7 @@ export function storageBackendServiceKey(name: string): string {
   return `storage.backend.${name}`
 }
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     storage: Storage
   }
@@ -62,7 +62,9 @@ export class Storage extends Service {
    * @returns the disposer that unmounts the form.
    */
   mount<K extends keyof StorageForms>(form: K, facility: StorageForms[K]): () => void {
-    if (this.forms.has(form)) throw new StorageError('duplicate-mount', `storage form '${String(form)}' is already mounted`)
+    if (this.forms.has(form)) {
+      throw new StorageError('duplicate-mount', `storage form '${String(form)}' is already mounted`)
+    }
     this.forms.set(form, facility)
     return () => {
       // Same stale-disposer guard as BackendRegistry.register.

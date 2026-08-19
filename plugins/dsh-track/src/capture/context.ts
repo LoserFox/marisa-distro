@@ -70,6 +70,25 @@ export function latestUserRequestFromEvents(events: readonly ContextEvent[]): Us
   return undefined
 }
 
+/**
+ * Deterministic title-ification for auto-capture content — every capture path
+ * (todo / goal / delegate / requirement) stores a CLEAN one-liner so the wall
+ * reads consistently (2026-08-14: requirement captures stored the user's raw
+ * multi-line message while todo/goal stored agent-phrased one-liners — the
+ * user flagged the inconsistency). Rules: strip leading list markers ("1 ",
+ * "- ", "1."), collapse whitespace/newlines, cap the length. The FULL raw
+ * text is preserved in the capture's `context` (motivation), never lost.
+ */
+export function titleifyCapture(text: string, maxLen = 80): string {
+  const cleaned = text
+    // Leading list marker: "1. ", "1 ", "3）", "- " — 1-2 digit numbers (a
+    // 4-digit year like "2026 年" must NOT be treated as a list index).
+    .replace(/^\s*(?:\d{1,3}[.)、]\s*|\d{1,2}\s+|[-*•]\s*)/u, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return cleaned.length > maxLen ? `${cleaned.slice(0, maxLen)}…` : cleaned
+}
+
 /** Read the latest explicit user request for a session (best-effort). */
 export async function latestUserRequest(
   sessionQuery: ContextSessionQuery | undefined,

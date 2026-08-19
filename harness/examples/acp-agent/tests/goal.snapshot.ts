@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest'
 
 // This lifecycle proof has goal-specific timestamp normalization and semantic
 // assertions, so it owns a separate snapshot root from the generic suite.
-const scenarioDir = join(dirname(fileURLToPath(import.meta.url)), 'goal-snapshots/goal-session')
+const scenarioDir = join(dirname(fileURLToPath(import.meta.url)), 'goal-snapshots/goal-round-driver')
 const fixtureFile = join(scenarioDir, 'session.jsonl')
 const overrideFile = join(scenarioDir, 'replay.override.json')
 const stdoutExpected = join(scenarioDir, 'stdout.expected.jsonl')
@@ -80,7 +80,7 @@ describe('same-session goal snapshot through the ACP automation driver', () => {
     const log = result.sessionLogs[0]
     if (log === undefined) throw new Error('goal snapshot did not persist its session')
     const records = parseJsonl(log.content)
-    const events = records.slice(1) as unknown as Array<SessionEvent>
+    const events = records.slice(1) as unknown as SessionEvent[]
     const calls = events.filter(event => event.type === 'tool/call').map(event => event.data.name)
     expect(calls).toEqual(['create_goal', 'get_goal'])
     const rounds = events.flatMap(event => event.type === 'user/message' && event.data.source.kind === 'goal'
@@ -90,7 +90,7 @@ describe('same-session goal snapshot through the ACP automation driver', () => {
     expect(rounds).toEqual([1, 2])
     expect(foldGoal(events)).toMatchObject({
       goal: {
-        objective: 'Finish the ACP goal-session snapshot proof',
+        objective: 'Finish the ACP goal-round-driver snapshot proof',
         phase: 'paused',
         revision: 2,
         maxGoalRounds: 2,
@@ -99,7 +99,7 @@ describe('same-session goal snapshot through the ACP automation driver', () => {
     })
 
     const context: NormalizeContext = {
-      sessionIds: [result.sessionId, log.id].filter((id): id is string => { return id !== undefined }),
+      sessionIds: [result.sessionId, log.id].filter((id): id is string => id !== undefined),
       cwd: result.cwd,
     }
     const stdout = normalizeStdout(result.rawStdout, context)

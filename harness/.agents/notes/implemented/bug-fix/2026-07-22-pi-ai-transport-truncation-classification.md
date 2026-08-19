@@ -22,7 +22,7 @@ Classification stays on message text because that is the only signal pi-ai deliv
 
 ## Alternatives considered
 
-**Capture the `cause` via a pi-ai fetch/dispatcher/client hook.** Rejected: pi-ai 0.81.1 exposes none. `StreamOptions` offers only `onPayload`/`onResponse`; `onResponse` fires before the body stream is consumed, so it cannot observe a mid-stream drop. The Anthropic path accepts a `client` object, but constructing and injecting a provider SDK client per request to intercept transport errors reaches around the adapter seam for one diagnostic string.
+**Capture the `cause` via a pi-ai fetch/dispatcher/client hook.** Rejected: pi-ai 0.81.1 exposes none. `StreamOptions` offers only `onPayload`/`onResponse`; `onResponse` fires before the body stream is consumed, so it cannot observe a mid-stream drop. The Anthropic path accepts a `client` object, but constructing and injecting a provider SDK client per request to intercept transport errors reaches around the adapter boundary for one diagnostic string.
 
 **Leave both as `PI_AI_ERROR` and widen `llm-retry`'s retryable set.** Rejected: `PI_AI_ERROR` is the catch-all for genuinely unclassified failures, including non-retryable ones (a malformed provider response, an unexpected SDK bug). Making the catch-all retryable would retry failures that will never succeed; the fix is to classify the recoverable case, not to blur the bucket.
 

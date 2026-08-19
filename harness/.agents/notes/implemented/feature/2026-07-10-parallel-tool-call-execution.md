@@ -14,7 +14,7 @@ The session log remains authoritative: every started call has an audit event, or
 
 ## Decision
 
-Each tool may provide an optional `isConcurrencySafe(args)` classifier. It is synchronous and pure: it examines only the current call's parsed arguments and performs no I/O or mutation. Only an explicit `true` opts in; a missing classifier, invalid arguments, a thrown classifier, or any other return value makes the call exclusive. The canonical type contract lives in the [tool data structures](../../../../docs/core-data-structures/tools.md).
+Each tool may provide an optional `isConcurrencySafe(args)` classifier. It is synchronous and pure: it examines only the current call's parsed arguments and performs no I/O or mutation. Only an explicit `true` opts in; a missing classifier, invalid arguments, a thrown classifier, or any other return value makes the call exclusive. The canonical type contract lives in the [tool data structures](../../../../docs/subsystems/tools.md).
 
 The classifier is deliberately unary. Returning `true` is the tool's promise that this call may overlap with any sibling call that also returns `true`; the scheduler does not compare calls or prove that their resource accesses are compatible.
 
@@ -60,7 +60,7 @@ Any shared state touched during execution must be concurrency-safe. This include
 
 `maxParallelToolCalls` is a positive AgentLoop deployment cap shared by every agent the factory creates. It defaults to `10`; `1` preserves serial execution. Exact fields and defaults live in the generated [configuration catalog](../../../../docs/config-catalog.md).
 
-The shipped declarations are conservative. Web search, web fetch, and filesystem read opt in. Filesystem writes and edits, bash tools, subagent delegation, workflow, user interaction, todo mutation, Code Mode, and Cordis mutation tools remain exclusive. A subagent may share its parent's workspace or external resources, and the unary classifier cannot prove that sibling delegations have disjoint effects. Bash has no proven input-sensitive classifier and remains exclusive.
+The shipped declarations are conservative. Web search, web fetch, filesystem read, the session-query trace/read tools, and subagent delegation opt in — delegation because a child works in its own session and its run never mutates the parent session, with sibling workspace coordination owned by the model ([parallel subagent Agent Note](2026-08-09-parallel-subagent-delegations.md)). Filesystem writes and edits, bash tools, the session-query search tools, workflow, user interaction, todo mutation, Code Mode, and Cordis mutation tools remain exclusive. Bash has no proven input-sensitive classifier and remains exclusive.
 
 Filesystem read relies on a narrow recorder exception: its synchronous observation updates may settle out of order, but write and edit re-check the observed version before mutation, so stale state only produces `FS_STALE_VERSION`.
 
@@ -82,9 +82,9 @@ Snapshot coverage pins the visible multi-call transcript: pending calls may over
 
 **Parallelize the complete tool pipeline.** This keeps the loop on the public one-call API but runs pre- and post-execute middleware concurrently. Existing guards and hook bridges may carry ordered state, so only dispatch overlaps.
 
-**Expose staged methods or a scheduling waterfall.** Public `prepare` / `dispatch` / `finalize` methods or a `tools/execution-mode` event add extension surface before another consumer needs it. The loop uses an internal scheduler view, while `executionMode(exec)` leaves an insertion point for a policy seam.
+**Expose staged methods or a scheduling waterfall.** Public `prepare` / `dispatch` / `finalize` methods or a `tools/execution-mode` event add extension surface before another consumer needs it. The loop uses an internal scheduler view, while `executionMode(exec)` leaves an insertion point for a policy hook.
 
-**Convert scheduler failures into tool results.** AgentLoop cannot determine whether a rejected dispatch invoked the tool body; ToolRegistry owns body-invocation state and typed tool outcomes. Internal scheduler failures therefore remain terminal instead of being reclassified as `ABORTED` results.
+**Convert scheduler failures into tool results.** AgentLoop cannot determine whether a rejected dispatch invoked the tool body; ToolRuntime owns body-invocation state and typed tool outcomes. Internal scheduler failures therefore remain terminal instead of being reclassified as `ABORTED` results.
 
 **Start calls while the model streams.** This may reduce latency further but changes assistant-message authority, replay, and call/result pairing. The scheduler starts only after the assistant message is complete.
 

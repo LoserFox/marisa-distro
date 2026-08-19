@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import { COMPACT_CHECKPOINT_SOURCE } from '@deepseek-ai/dsh-compact'
+import { CompactionId, compactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 import { createUserMessage, CallId , createMessage, createToolResultMessage } from '@deepseek-ai/dsh-llm'
 import SessionStore, { Session, SessionId } from '@deepseek-ai/dsh-session'
-import SessionQueryService from '@deepseek-ai/dsh-session-query'
-import SessionReferenceService, {
+import SessionQueryEngine from '@deepseek-ai/dsh-session-query'
+import SessionReferenceResolver, {
   decodeSessionReferenceUri,
   encodeSessionReferenceUri,
   formatSessionReferenceMention,
@@ -15,16 +15,16 @@ import SessionReferenceService, {
 } from '@deepseek-ai/dsh-session-reference'
 import { stringifyTagSafeJson } from '../src/serialization.ts'
 
-class TestSessionQueryService extends SessionQueryService {
+class TestSessionQueryEngine extends SessionQueryEngine {
   override searchSessions(
-    ..._args: Parameters<SessionQueryService['searchSessions']>
-  ): ReturnType<SessionQueryService['searchSessions']> {
+    ..._args: Parameters<SessionQueryEngine['searchSessions']>
+  ): ReturnType<SessionQueryEngine['searchSessions']> {
     return Promise.resolve({ items: [] })
   }
 
   override searchEvents(
-    ...args: Parameters<SessionQueryService['searchEvents']>
-  ): ReturnType<SessionQueryService['searchEvents']> {
+    ...args: Parameters<SessionQueryEngine['searchEvents']>
+  ): ReturnType<SessionQueryEngine['searchEvents']> {
     return this.readSurface(args[0].sessionId).then(surface => ({
       session: surface.session,
       items: [],
@@ -35,8 +35,8 @@ class TestSessionQueryService extends SessionQueryService {
 async function harness(config: Config = {}): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(TestSessionQueryService)
-  await ctx.plugin(SessionReferenceService, config)
+  await ctx.plugin(TestSessionQueryEngine)
+  await ctx.plugin(SessionReferenceResolver, config)
   return ctx
 }
 
@@ -46,6 +46,10 @@ function fakeAgent(session: Session): Agent {
 
 function expectCode(code: SessionReferenceErrorCode): Error {
   return expect.objectContaining({ code }) as Error
+}
+
+function checkpointSource(id: string) {
+  return compactCheckpointSource(CompactionId(id))
 }
 
 function appendConversation(session: Session): void {
@@ -75,7 +79,8 @@ function appendConversation(session: Session): void {
   session.append(
     'user/message',
     createUserMessage({
-      content: [{ type: 'text', text: '<compacted-summary>checkpoint</compacted-summary>' }], source: COMPACT_CHECKPOINT_SOURCE,
+      content: [{ type: 'text', text: '<compacted-summary>checkpoint</compacted-summary>' }],
+      source: checkpointSource('conversation'),
     }),
     {
       surfaceOp: { op: 'replace', start: oldUser.seq, end: oldAssistant.seq },
@@ -247,19 +252,19 @@ describe('session reference discovery and preparation', () => {
       source: { kind: 'fallback' },
     })
 
-    await expect(ctx.sessionReferences.listCandidates(fakeAgent(target))).resolves.toEqual([
+    await expect(ctx.sessionReferenceResolver.listCandidates(fakeAgent(target))).resolves.toEqual([
       { sessionId: SessionId('same-later'), label: 'Latest title', cwd: '/same', createdAt: 25 },
       { sessionId: SessionId('same'), label: 'same', cwd: '/same', createdAt: 20 },
       { sessionId: SessionId('none'), label: 'none', createdAt: 30 },
       { sessionId: SessionId('other'), label: 'other', cwd: '/else', createdAt: 40 },
     ])
-    await expect(ctx.sessionReferences.listCandidates(fakeAgent(target), 'els', 1)).resolves.toEqual([
+    await expect(ctx.sessionReferenceResolver.listCandidates(fakeAgent(target), 'els', 1)).resolves.toEqual([
       { sessionId: SessionId('other'), label: 'other', cwd: '/else', createdAt: 40 },
     ])
-    await expect(ctx.sessionReferences.listCandidates(fakeAgent(target), 'LATEST', 1)).resolves.toEqual([
+    await expect(ctx.sessionReferenceResolver.listCandidates(fakeAgent(target), 'LATEST', 1)).resolves.toEqual([
       { sessionId: SessionId('same-later'), label: 'Latest title', cwd: '/same', createdAt: 25 },
     ])
-    await expect(ctx.sessionReferences.listCandidates(fakeAgent(target), '', 0))
+    await expect(ctx.sessionReferenceResolver.listCandidates(fakeAgent(target), '', 0))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_INVALID_REFERENCE'))
 
     let releaseList: (() => void) | undefined
@@ -268,7 +273,7 @@ describe('session reference discovery and preparation', () => {
       return []
     })
     const controller = new AbortController()
-    const pending = ctx.sessionReferences.listCandidates(fakeAgent(target), '', undefined, controller.signal)
+    const pending = ctx.sessionReferenceResolver.listCandidates(fakeAgent(target), '', undefined, controller.signal)
     await vi.waitFor(() => { expect(releaseList).toBeTypeOf('function') })
     const cancelledList = expect(pending).rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
     controller.abort('autocomplete superseded')
@@ -289,7 +294,7 @@ describe('session reference discovery and preparation', () => {
       reason: new Error('broken title log'),
     }])
 
-    await expect(ctx.sessionReferences.listCandidates(fakeAgent(target), 'source')).resolves.toEqual([
+    await expect(ctx.sessionReferenceResolver.listCandidates(fakeAgent(target), 'source')).resolves.toEqual([
       { sessionId: source.id, label: source.id, createdAt: source.header.createdAt },
     ])
 
@@ -301,7 +306,7 @@ describe('session reference discovery and preparation', () => {
       return []
     })
     const controller = new AbortController()
-    const pending = ctx.sessionReferences.listCandidates(fakeAgent(target), 'source', undefined, controller.signal)
+    const pending = ctx.sessionReferenceResolver.listCandidates(fakeAgent(target), 'source', undefined, controller.signal)
     await vi.waitFor(() => { expect(releaseTitles).toBeTypeOf('function') })
     expect(titleSignal).toBe(controller.signal)
     const cancelledTitles = expect(pending).rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
@@ -318,7 +323,7 @@ describe('session reference discovery and preparation', () => {
     const source = ctx.sessions.create(SessionId('source'), { meta: { cwd: '/source' } })
     appendConversation(source)
 
-    const prepared = await ctx.sessionReferences.prepare(
+    const prepared = await ctx.sessionReferenceResolver.prepare(
       fakeAgent(target),
       [{ type: 'text', text: 'use @source' }],
       [{ sessionId: source.id, label: 'source' }],
@@ -375,7 +380,7 @@ describe('session reference discovery and preparation', () => {
       source: { kind: 'user' },
     }), { surfaceOp: 'append' })
 
-    const prepared = await ctx.sessionReferences.prepare(
+    const prepared = await ctx.sessionReferenceResolver.prepare(
       fakeAgent(target),
       [{ type: 'text', text: 'inspect source' }],
       [{ sessionId: source.id }],
@@ -401,7 +406,7 @@ describe('session reference discovery and preparation', () => {
       { surfaceOp: 'append' },
     )
 
-    const prepared = await ctx.sessionReferences.prepare(
+    const prepared = await ctx.sessionReferenceResolver.prepare(
       fakeAgent(target),
       [{ type: 'text', text: 'use @source' }],
       [{ sessionId: source.id }],
@@ -430,36 +435,36 @@ describe('session reference discovery and preparation', () => {
     const agent = fakeAgent(target)
     const content = [{ type: 'text' as const, text: 'go' }]
 
-    const withoutReferences = await ctx.sessionReferences.prepare(agent, content, [])
+    const withoutReferences = await ctx.sessionReferenceResolver.prepare(agent, content, [])
     expect(withoutReferences).toEqual({ content })
     expect(withoutReferences.content).not.toBe(content)
 
-    await expect(ctx.sessionReferences.prepare(agent, content, [
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [
       { sessionId: one.id, label: 'first' },
       { sessionId: one.id, label: 'ignored duplicate' },
       { sessionId: two.id },
     ])).resolves.toMatchObject({ additionalContext: { source: { references: [{ label: 'first' }, { label: 'two' }] } } })
-    await expect(ctx.sessionReferences.prepare(agent, content, [{ sessionId: target.id }]))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: target.id }]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_SELF_REFERENCE'))
-    await expect(ctx.sessionReferences.prepare(agent, content, [null as never]))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [null as never]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_INVALID_REFERENCE'))
-    await expect(ctx.sessionReferences.prepare(agent, content, [1 as never]))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [1 as never]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_INVALID_REFERENCE'))
-    await expect(ctx.sessionReferences.prepare(agent, content, [{ sessionId: 1 } as never]))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: 1 } as never]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_INVALID_REFERENCE'))
-    await expect(ctx.sessionReferences.prepare(agent, content, [
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [
       { sessionId: one.id }, { sessionId: two.id }, { sessionId: SessionId('three') },
     ])).rejects.toThrow(expectCode('SESSION_REFERENCE_TOO_MANY'))
-    await expect(ctx.sessionReferences.prepare(agent, content, [
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [
       { sessionId: one.id }, { sessionId: SessionId('missing') },
     ])).rejects.toThrow(expectCode('SESSION_REFERENCE_READ_FAILED'))
 
     const readSurface = vi.spyOn(ctx.sessionQuery, 'readSurface')
     readSurface.mockRejectedValueOnce('non-error read failure')
-    await expect(ctx.sessionReferences.prepare(agent, content, [{ sessionId: one.id }]))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: one.id }]))
       .rejects.toThrow(/non-error read failure/)
     readSurface.mockRejectedValueOnce('non-error signalled read failure')
-    await expect(ctx.sessionReferences.prepare(agent, content, [{ sessionId: one.id }], new AbortController().signal))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: one.id }], new AbortController().signal))
       .rejects.toThrow(/non-error signalled read failure/)
 
     const duringRead = new AbortController()
@@ -467,7 +472,7 @@ describe('session reference discovery and preparation', () => {
       duringRead.abort('cancelled during read')
       throw new Error('read interrupted')
     })
-    await expect(ctx.sessionReferences.prepare(agent, content, [{ sessionId: one.id }], duringRead.signal))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: one.id }], duringRead.signal))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
 
     const snapshot = await ctx.sessionQuery.readSurface(one.id)
@@ -477,7 +482,7 @@ describe('session reference discovery and preparation', () => {
       return snapshot
     })
     const hangingRead = new AbortController()
-    const pending = ctx.sessionReferences.prepare(agent, content, [{ sessionId: one.id }], hangingRead.signal)
+    const pending = ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: one.id }], hangingRead.signal)
     await vi.waitFor(() => { expect(releaseRead).toBeTypeOf('function') })
     const cancelledRead = expect(pending).rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
     hangingRead.abort('cancelled while storage remained pending')
@@ -488,7 +493,7 @@ describe('session reference discovery and preparation', () => {
 
     const abort = new AbortController()
     abort.abort('host cancelled')
-    await expect(ctx.sessionReferences.prepare(agent, content, [{ sessionId: one.id }], abort.signal))
+    await expect(ctx.sessionReferenceResolver.prepare(agent, content, [{ sessionId: one.id }], abort.signal))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_CANCELLED'))
   })
 
@@ -514,7 +519,7 @@ describe('session reference discovery and preparation', () => {
       { surfaceOp: 'append' },
     )
 
-    const prepared = await ctx.sessionReferences.prepare(fakeAgent(target), [{ type: 'text', text: 'go' }], [{ sessionId: source.id }])
+    const prepared = await ctx.sessionReferenceResolver.prepare(fakeAgent(target), [{ type: 'text', text: 'go' }], [{ sessionId: source.id }])
     const context = prepared.additionalContext
     if (context?.content[0]?.type !== 'text') throw new Error('expected text context')
     const data = promptData(context.content[0].text) as unknown[]
@@ -534,7 +539,8 @@ describe('session reference discovery and preparation', () => {
       source.append(
         'user/message',
         createUserMessage({
-          content: [{ type: 'text', text: `${id}-${'界'.repeat(400)}` }], source: COMPACT_CHECKPOINT_SOURCE,
+          content: [{ type: 'text', text: `${id}-${'界'.repeat(400)}` }],
+          source: checkpointSource(id),
         }),
         { surfaceOp: 'append' },
       )
@@ -548,7 +554,7 @@ describe('session reference discovery and preparation', () => {
       return source
     })
 
-    const prepared = await ctx.sessionReferences.prepare(
+    const prepared = await ctx.sessionReferenceResolver.prepare(
       fakeAgent(target),
       [{ type: 'text', text: 'go' }],
       sources.map(source => ({ sessionId: source.id })),
@@ -566,7 +572,7 @@ describe('session reference discovery and preparation', () => {
     const ctx = await harness({ maxReferenceBytes: 16 })
     const target = ctx.sessions.create(SessionId('target'))
     const source = ctx.sessions.create(SessionId('source'))
-    await expect(ctx.sessionReferences.prepare(fakeAgent(target), [{ type: 'text', text: 'go' }], [{ sessionId: source.id }]))
+    await expect(ctx.sessionReferenceResolver.prepare(fakeAgent(target), [{ type: 'text', text: 'go' }], [{ sessionId: source.id }]))
       .rejects.toThrow(expectCode('SESSION_REFERENCE_BUDGET_EXCEEDED'))
   })
 
@@ -583,7 +589,7 @@ describe('session reference discovery and preparation', () => {
       }),
       { surfaceOp: 'append' },
     )
-    const prepared = await ctx.sessionReferences.prepare(
+    const prepared = await ctx.sessionReferenceResolver.prepare(
       fakeAgent(target),
       [{ type: 'text', text: 'use @source' }],
       [{ sessionId: source.id }],
@@ -616,7 +622,8 @@ describe('session reference discovery and preparation', () => {
     source.append(
       'user/message',
       createUserMessage({
-        content: [{ type: 'text', text: 'later compact checkpoint' }], source: COMPACT_CHECKPOINT_SOURCE,
+        content: [{ type: 'text', text: 'later compact checkpoint' }],
+        source: checkpointSource('later-source-mutation'),
       }),
       {
         surfaceOp: { op: 'replace', start: original.seq, end: later.seq },
@@ -636,19 +643,19 @@ describe('session reference discovery and preparation', () => {
   it('rejects direct invalid configuration before service publication', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    await ctx.plugin(TestSessionQueryService)
-    expect(() => new SessionReferenceService(ctx, { maxReferences: 0 }))
+    await ctx.plugin(TestSessionQueryEngine)
+    expect(() => new SessionReferenceResolver(ctx, { maxReferences: 0 }))
       .toThrow(expectCode('SESSION_REFERENCE_INVALID_CONFIG'))
 
     const oversizedCtx = new Context()
     await oversizedCtx.plugin(SessionStore)
-    await oversizedCtx.plugin(TestSessionQueryService)
-    expect(() => new SessionReferenceService(oversizedCtx, { maxReferences: 4 }))
+    await oversizedCtx.plugin(TestSessionQueryEngine)
+    expect(() => new SessionReferenceResolver(oversizedCtx, { maxReferences: 4 }))
       .toThrow(expectCode('SESSION_REFERENCE_INVALID_CONFIG'))
 
     const defaultCtx = new Context()
     await defaultCtx.plugin(SessionStore)
-    await defaultCtx.plugin(TestSessionQueryService)
-    expect(() => new SessionReferenceService(defaultCtx)).not.toThrow()
+    await defaultCtx.plugin(TestSessionQueryEngine)
+    expect(() => new SessionReferenceResolver(defaultCtx)).not.toThrow()
   })
 })

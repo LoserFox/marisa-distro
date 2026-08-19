@@ -61,7 +61,7 @@ describe('ACP machine permission policy', () => {
     harness = await makeBridgeHarness()
     const request = await ownedRequest()
     const foreign = {
-      session: { id: request.agent.session.id, events: [{ type: 'turn/start' }], append: () => { return ({}) } },
+      session: { id: request.agent.session.id, events: [{ type: 'turn/start' }], append: () => ({}) },
     } as unknown as Agent
     await expect(harness.ctx.approval.request({ agent: foreign, toolName: 'bash', callId: CallId('call') }))
       .resolves.toBe('unavailable')

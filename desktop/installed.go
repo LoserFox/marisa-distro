@@ -3,21 +3,21 @@
 package main
 
 import (
-	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 )
 
 const installedVersionName = "VERSION"
+
+// installForm 是本构建的安装形态标记，随子进程环境注入后端（MARISA_INSTALL_FORM）。
+const installForm = "msi"
 
 func installedBackendDir() (string, error) {
 	if override := os.Getenv("MARISA_BACKEND_DIR"); override != "" {
@@ -96,7 +96,7 @@ func prepareInstalledBackend(zipPath string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := extractInstalledZip(data, staging); err != nil {
+	if _, err := extractInstalledTar(data, staging); err != nil {
 		_ = os.RemoveAll(staging)
 		return err
 	}
@@ -131,48 +131,8 @@ func removeInstalledBackend(requested string) error {
 	return os.RemoveAll(expected)
 }
 
-func extractInstalledZip(data []byte, dest string) (int, error) {
-	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil {
-		return 0, err
-	}
-	n := 0
-	for _, f := range r.File {
-		name := filepath.Clean(filepath.FromSlash(f.Name))
-		if name == "." || filepath.IsAbs(name) || name == ".." || strings.HasPrefix(name, ".."+string(filepath.Separator)) {
-			return n, fmt.Errorf("unsafe zip entry %q", f.Name)
-		}
-		target := filepath.Join(dest, name)
-		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return n, err
-			}
-			continue
-		}
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return n, err
-		}
-		rc, err := f.Open()
-		if err != nil {
-			return n, err
-		}
-		dst, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
-		if err != nil {
-			rc.Close()
-			return n, err
-		}
-		_, copyErr := io.Copy(dst, rc)
-		closeErr := dst.Close()
-		rc.Close()
-		if copyErr != nil {
-			return n, copyErr
-		}
-		if closeErr != nil {
-			return n, closeErr
-		}
-		n++
-	}
-	return n, nil
+func extractInstalledTar(data []byte, dest string) (int, error) {
+	return extractTarZst(data, dest, nil, nil)
 }
 
 type installedLinkEntry struct {
@@ -204,9 +164,8 @@ func recreateInstalledLinks(manifestPath, root string) error {
 		if _, err := os.Lstat(link); err == nil {
 			continue
 		}
-		cmd := exec.Command("cmd", "/c", "mklink", "/J", link, target)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("mklink %s -> %s: %v (%s)", entry.Link, entry.Target, err, strings.TrimSpace(string(out)))
+		if err := createJunction(link, target); err != nil {
+			return fmt.Errorf("create junction %s -> %s: %w", entry.Link, entry.Target, err)
 		}
 		created++
 	}

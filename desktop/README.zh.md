@@ -58,6 +58,10 @@ pnpm dev:desktop
 
 Windows 打包版本会把 `DSH_WEB_CMD` 替换为随包 launcher。不要用这些变量把已发布的 Windows 包替换成任意外部后端。
 
+## 启动日志
+
+Windows 桌面壳与随包后端共享 `%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop.log`。后端 stdout、stderr 和桌面守护进程的启动、就绪、退出及重试记录都会进入该文件；日志达到 5 MiB 后在下次启动时轮转，上一份保留为 `marisa-desktop.log.1`。提交诊断日志前请检查并移除本机路径、插件配置和其他敏感信息。
+
 ## 验证
 
 完整的仓库验证和打包规则见[打包说明](../docs/packaging.md)与[贡献说明](../CONTRIBUTING.md)。发版验收不能只看 HTTP 返回值；维护者必须观察真实窗口渲染，并验证 MSI 安装、启动和卸载。

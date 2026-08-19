@@ -86,7 +86,7 @@ export class WebSocketDownlinks {
    * @returns A promise resolving after every socket and source iterator stops.
    */
   async close(): Promise<void> {
-    for (const socket of this.server.clients) { socket.terminate() }
+    for (const socket of this.server.clients) socket.terminate()
     await new Promise<void>((resolve, reject) => {
       this.server.close((error) => {
         if (error === undefined) resolve()

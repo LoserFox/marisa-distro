@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { SessionId } from '@deepseek-ai/dsh-session'
 import { WorkflowRunId } from '@deepseek-ai/dsh-workflow'
 import type {
@@ -9,11 +9,11 @@ import type {
   WorkflowRunInfo,
 } from '@deepseek-ai/dsh-workflow'
 import * as WorkflowInvariant from '@deepseek-ai/dsh-workflow/invariant'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(WorkflowInvariant)
   return ctx
 }

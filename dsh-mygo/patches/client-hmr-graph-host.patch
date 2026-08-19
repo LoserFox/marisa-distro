@@ -1,0 +1,134 @@
+Subject: [PROPOSAL] client-hmr: handle graph frames — mount/dispose client rows at runtime
+
+Motivation: mygo r7 live rail installs/uninstalls bundle plugins while an
+instance is running (host watchUserPatches replays the profile patch layer).
+The node half updates the client module graph on such churn, but the
+/plugins/events SSE channel only pushes the graph at connect time and the
+browser half explicitly no-ops graph frames — so an already-open page only
+sees newly live-installed client rows after a full reload. This proposal
+makes graph frames carry membership changes end to end:
+
+- node half (packages/client/hmr/src/index.ts): broadcast the fresh graph
+  when clientModules.onGraphChanged fires (the connect-time graph push
+  stays as the baseline).
+- browser half (packages/client/hmr/src/client/index.ts): diff each graph
+  frame against the mounted tree — mount added rows with the boot path's
+  own verbs (prefetch for factory registration, then loader.create), dispose
+  removed rows with reload()'s documented teardown (registry-first, drain
+  inertia, clear fiber, remove owned styles) and drop the entry. Shell-own
+  entries (modules wrapper, app-shell assembly) never appear in graphs; a
+  baseline set seeded from the first frame guarantees the diff only ever
+  touches rows that some graph once listed.
+
+Coexistence with rebuilt frames: rebuilt carries content changes (same id,
+new rev), graph carries membership changes (id added/removed); both ride
+the same serial queue, so a row rebuilt right after a live mount settles
+in order. A graph frame whose membership matches the baseline is a no-op
+(rev refreshes stay with the rebuilt/reconnect path, unchanged).
+
+Fixed host snapshot: deepseek-harness-public @ 47f9438 (dsh 0.1.0-rc.6,
+public npm line). Verified with git apply --check against that snapshot
+(check only; never applied — proposal artifact per dsh-dev rules).
+
+diff --git a/packages/client/hmr/src/client/index.ts b/packages/client/hmr/src/client/index.ts
+index 8e440ac..9ff5f65 100644
+--- a/packages/client/hmr/src/client/index.ts
++++ b/packages/client/hmr/src/client/index.ts
+@@ -63,6 +63,7 @@
+  */
+ import type { Context } from '@deepseek-ai/cordis'
+ import type { Entry, Loader } from '@deepseek-ai/cordis-plugin-loader'
++import type { WebBootGraph } from '@deepseek-ai/dsh-client-modules'
+ import type { PluginsEventFrame } from '../events.ts'
+ import { EVENTS_ENDPOINT } from '../events.ts'
+ 
+@@ -139,6 +140,50 @@ export function apply(ctx: Context): void {
+     await entry.fiber?.await()
+   }
+ 
++  /**
++   * Mounted-row membership the last graph frame established (`undefined`
++   * before the first frame). Seeded from the connect-time baseline so the
++   * diff only ever touches rows some graph once listed — shell-own entries
++   * (modules wrapper, app-shell assembly) live in the loader tree but never
++   * in a graph, and are never mounted or removed here.
++   */
++  let knownGraphIds: Set<string> | undefined
++
++  /**
++   * Apply one graph frame as a membership diff: mount added rows, dispose
++   * removed rows. Mount reuses the boot path's own verbs (prefetch registers
++   * the factory, `loader.create` imports and materializes through the
++   * Loader); disposal reuses reload()'s documented teardown (registry-first
++   * so the Loader does not flag the entry disabled, drain the old fiber's
++   * unload, drop owned styles) and then removes the entry from the tree.
++   * Content changes (same id, new rev) stay with rebuilt frames.
++   * @param graph - the graph payload of a `graph` frame.
++   */
++  async function applyGraph(graph: WebBootGraph): Promise<void> {
++    const wanted = new Set(graph.entries.map(row => row.id))
++    const known = knownGraphIds ?? wanted
++    knownGraphIds = wanted
++    for (const row of graph.entries) {
++      if (known.has(row.id) || findEntry(loader, row.id) !== undefined) continue
++      await modLoader.prefetch(row.id)
++      await loader.create({ name: row.id })
++    }
++    for (const id of known) {
++      if (wanted.has(id)) continue
++      const entry = findEntry(loader, id)
++      if (entry === undefined) continue
++      const oldFiber = entry.fiber
++      if (oldFiber !== undefined) {
++        const runtime = oldFiber.runtime
++        if (runtime !== null) entry.ctx.registry.delete(runtime.callback)
++        while (oldFiber.inertia !== undefined) await oldFiber.inertia
++        delete entry.fiber
++      }
++      removeOwnedStyles(id)
++      await loader.remove(entry.id)
++    }
++  }
++
+   // Serialize reloads: frames can arrive faster than a swap completes, and
+   // interleaved dispose/execute chains would corrupt the single-slot handoff.
+   let queue: Promise<void> = Promise.resolve()
+@@ -151,10 +196,13 @@ export function apply(ctx: Context): void {
+         })
+         break
+       case 'graph':
+-        // Connect-time snapshot, unused. The loader's cached graph rev
+-        // goes stale after rebuilds — harmless, since prefetch hits the
+-        // network anyway (host serves bundles no-cache); graph rev refresh
+-        // lands with the reconnect-handshake mechanism.
++        // Membership diff (runtime install/uninstall, e.g. mygo live rail);
++        // the connect-time frame only seeds the baseline. Graph rev refresh
++        // still lands with the reconnect-handshake mechanism.
++        queue = queue.then(() => applyGraph(frame.graph)).catch((error: unknown) => {
++          ctx.logger.error('client-hmr: graph frame apply failed')
++          ctx.logger.error(error)
++        })
+         break
+       default:
+         // Merge-extensible frame union: unknown frame types from newer hosts
+diff --git a/packages/client/hmr/src/index.ts b/packages/client/hmr/src/index.ts
+index 92b6dec..d199356 100644
+--- a/packages/client/hmr/src/index.ts
++++ b/packages/client/hmr/src/index.ts
+@@ -181,8 +181,16 @@ export function apply(ctx: Context, config: Config): void {
+       const line = sseData({ type: 'rebuilt', id, rev })
+       for (const res of connections) res.write(line)
+     })
++    // Runtime membership churn (live rail install/uninstall adds or drops
++    // graph rows without a rebuild): broadcast the fresh graph so the
++    // browser half can mount/dispose the delta without a page reload.
++    const unsubscribeGraph = ctx.clientModules.onGraphChanged(() => {
++      const line = sseData({ type: 'graph', graph: ctx.clientModules.graph() })
++      for (const res of connections) res.write(line)
++    })
+     return () => {
+       unsubscribe()
++      unsubscribeGraph()
+       disposeRoute()
+       for (const res of connections) res.destroy()
+       connections.clear()

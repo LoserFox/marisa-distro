@@ -128,6 +128,7 @@ describe('web e2e: message IconActions and clocks on settled history', () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-message-actions-aria'))
     await page.getByRole('button', { name: /^Select model, current/ })
       .waitFor({ timeout: 10_000 })
+    await page.getByText(/Cache hit \d+%/u).first().waitFor({ timeout: 10_000 })
     // Keep a footer focused so opacity-hidden actions stay in the a11y tree
     // as an active/focused control during the capture.
     await page.getByRole('button', { name: 'Copy' }).first().focus()
@@ -176,6 +177,12 @@ describe('web e2e: message IconActions and clocks on settled history', () => {
       () => page.locator('[role="treeitem"][aria-selected="true"]').count(),
       { timeout: 10_000 },
     ).toBe(1)
+    // The child row is published before its inherited title rename settles;
+    // wait for that second RPC projection before freezing the ARIA tree.
+    await expect.poll(
+      () => page.locator('[role="treeitem"][aria-selected="true"]').textContent(),
+      { timeout: 10_000 },
+    ).toContain('Use the read tool twice (2)')
     const tree = await captureStableAria(
       page,
       '[role="tree"][aria-label="Sessions"]',

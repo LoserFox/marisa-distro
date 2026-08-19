@@ -46,7 +46,7 @@ export function privateRoot(): string {
  * @returns An injective, filesystem-safe single path segment.
  */
 export function encodeSegment(raw: string): string {
-  if (raw.length === 0) { return '~' }
+  if (raw.length === 0) return '~'
   if (raw === '.') return '~002E'
   if (raw === '..') return '~002E~002E'
   let out = ''
@@ -55,7 +55,9 @@ export function encodeSegment(raw: string): string {
     const ch = String.fromCharCode(code)
     if (ch !== '~' && /^[A-Za-z0-9._-]$/.test(ch)) {
       out += ch
-    } else out += '~' + code.toString(16).toUpperCase().padStart(4, '0')
+    } else {
+      out += '~' + code.toString(16).toUpperCase().padStart(4, '0')
+    }
   }
   return out
 }

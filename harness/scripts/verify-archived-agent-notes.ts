@@ -99,17 +99,17 @@ if (!writeMode) {
 }
 
 if (errors.length > 0) {
-  console.error('verify-archived-agent-notes: archive contract violated:')
+  console.error('verify-archived-agent-notes: archive rules violated:')
   for (const error of errors) console.error(`  ${error}`)
   process.exit(1)
 }
 
-if (!writeMode) {
-  console.log(`verify-archived-agent-notes: ${artifacts.size} frozen artifact(s) checked across ${kinds.size} kind(s).`)
-} else {
+if (writeMode) {
   const rendered = renderArchiveManifest(extended.files)
   if (!existsSync(manifestPath) || readFileSync(manifestPath, 'utf8') !== rendered) {
     writeFileSync(manifestPath, rendered)
   }
   console.log(`verify-archived-agent-notes: sealed ${extended.added.length} new artifact(s); existing seals unchanged.`)
+} else {
+  console.log(`verify-archived-agent-notes: ${artifacts.size} frozen artifact(s) checked across ${kinds.size} kind(s).`)
 }

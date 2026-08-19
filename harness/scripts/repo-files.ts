@@ -36,7 +36,7 @@ export function isArchivedAgentNotePath(path: string): boolean {
 export function uniqueRepoFiles(
   root: string,
   patterns: readonly string[],
-  isExcluded: (relativePath: string) => boolean = () => { return false },
+  isExcluded: (relativePath: string) => boolean = () => false,
 ): RepoFile[] {
   const seen = new Set<string>()
   const files: RepoFile[] = []

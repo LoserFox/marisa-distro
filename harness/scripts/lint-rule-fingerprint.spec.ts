@@ -15,7 +15,7 @@ interface Profile {
 // A one-time audit against eslint.config.mjs blob 696b08282885296830189fdafe7051a356806fc2
 // mapped @typescript-eslint/* to typescript/* and four extension rules to their
 // Oxlint core equivalents. These fingerprints pin the resulting repository
-// contract; they do not re-evaluate that deleted baseline or track its preset.
+// snapshot; they do not re-evaluate that deleted baseline or track its preset.
 const profiles = {
   source: {
     count: 88,
@@ -55,7 +55,7 @@ function normalizedRules(rules: Rules): Rules {
     .filter(([, value]) => severity(value) > 0)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([name, value]) => {
-      const options = !isUnknownArray(value) ? [] : value.slice(1)
+      const options = isUnknownArray(value) ? value.slice(1) : []
       return [name, [severity(value), ...options]]
     }))
 }
@@ -84,8 +84,8 @@ describe('Oxlint repository rule fingerprint', () => {
   }
   const overrides: readonly unknown[] = parsed.overrides
 
-  it('pins the complete override shape', () => {
-    expect(overrides).toHaveLength(6)
+  it('pins every override field', () => {
+    expect(overrides).toHaveLength(8)
   })
 
   it.each(Object.entries(profiles))('pins the %s rule profile', (_name, profile) => {

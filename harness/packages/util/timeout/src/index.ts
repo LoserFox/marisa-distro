@@ -72,6 +72,8 @@ export interface IdleWatchdog {
    * @returns the iterator's next result.
    */
   next<T>(iterator: AsyncIterator<T>): Promise<IteratorResult<T>>
+  /** Rearm an outstanding demand after transport activity that yields no iterator value; otherwise a no-op. */
+  pulse(): void
   /** Clear an armed timer; safe to call once at the owning stream's exit. */
   [Symbol.dispose](): void
 }
@@ -135,15 +137,20 @@ export function idleWatchdog(
   let outstanding = false
   let disposed = false
 
+  const arm = (): void => {
+    if (timer !== undefined) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timeout.abort(new TimeoutReason(code, timeoutMs))
+    }, timeoutMs)
+  }
+
   return {
     signal,
     async next<T>(iterator: AsyncIterator<T>): Promise<IteratorResult<T>> {
-      if (disposed) { throw new Error('idleWatchdog is disposed') }
+      if (disposed) throw new Error('idleWatchdog is disposed')
       if (outstanding) throw new Error('idleWatchdog next is already outstanding')
       outstanding = true
-      timer = setTimeout(() => {
-        timeout.abort(new TimeoutReason(code, timeoutMs))
-      }, timeoutMs)
+      arm()
       try {
         return await iterator.next()
       } finally {
@@ -151,6 +158,10 @@ export function idleWatchdog(
         timer = undefined
         outstanding = false
       }
+    },
+    pulse(): void {
+      if (disposed || !outstanding) return
+      arm()
     },
     [Symbol.dispose](): void {
       if (disposed) return

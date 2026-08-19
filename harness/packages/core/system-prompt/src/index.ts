@@ -4,13 +4,13 @@
  * @module @deepseek-ai/dsh-system-prompt
  */
 
-import { Context, Service } from 'cordis'
-import z from 'schemastery'
+import { Context, Service } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { AnonymousEntries, NamedEntries, ScopedLayers, scopeTarget } from '@deepseek-ai/dsh-scope'
 import type { ScopeKey, ScopeLayer, Scoped } from '@deepseek-ai/dsh-scope'
 import type { ContextSnapshotSection, ToolSchema } from '@deepseek-ai/dsh-llm'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     systemPrompt: SystemPrompt
   }
@@ -21,7 +21,9 @@ declare module 'cordis' {
      * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): scoped listeners
      * receive only that scope's assemblies. The returned value is authoritative.
      * A supplied signal controls only this explicit assembly request and must not
-     * be retained to control later turns.
+     * be retained to control later turns. A registered complete section is
+     * restored after this waterfall, so listeners cannot add to or replace
+     * that scope's system prompt.
      * @param assembly - the mutable assembly built from registered providers.
      * @param context - the caller's per-assembly context.
      * @mode waterfall
@@ -63,6 +65,13 @@ export interface PromptSection {
    * interpolated later, by {@link renderPrompt}.
    */
   readonly text: string | ((context: AssembleContext) => string)
+  /**
+   * Treat this contribution as the complete system prompt. Assembly still
+   * runs the cooperative waterfall so tools, contexts, and variables can be
+   * resolved, then restores this exact section as the sole prompt section.
+   * More than one effective complete section makes assembly fail.
+   */
+  readonly complete?: boolean
 }
 
 /** Dynamic model context materialized as a durable user-role snapshot. */
@@ -109,6 +118,17 @@ export interface PromptAssembly {
   tools: ToolSchema[]
   variables: Record<string, string | undefined>
 }
+
+/**
+ * The deployment persona's section name and order. Exported because a
+ * composition can replace this slot — an agent preset shadows the
+ * deployment's persona with its own — and both sides naming the same section
+ * is what makes the replacement work rather than duplicate.
+ */
+export const PERSONA_SECTION = 'deployment:persona'
+
+/** Prompt order of the persona slot; the first section a model reads. */
+export const PERSONA_ORDER = 0
 
 /** Valid variable names: how they are written between the braces. */
 const VARIABLE_NAME = /^[a-z][a-z0-9_]*$/
@@ -166,6 +186,8 @@ function compareToolNames(a: ToolSchema, b: ToolSchema): number {
 export interface Config {
   /** Include the fixed DeepSeek Harness identity before the deployment persona (default true). */
   includeHarnessIdentity?: boolean
+  /** Include dynamic runtime-context snapshots in model history (default true). */
+  includeRuntimeContext?: boolean
   /**
    * Deployment-wide order-0 persona template. A scoped section named
    * `deployment:persona` shadows it; `{{variable}}` references are strict.
@@ -173,7 +195,7 @@ export interface Config {
   persona?: string
   /**
    * Model-facing tool names in order, with {@link TOOL_ORDER_REST} exactly once.
-   * Shape errors fail at load and unknown names fail at assembly; known names
+   * Invalid fields fail at load and unknown names fail at assembly; known names
    * hidden in one scope may be absent there. Omitted means lexicographic order.
    */
   toolOrder?: string[]
@@ -282,6 +304,7 @@ type VariableProvider = (context: AssembleContext) => string | undefined
 class PromptLayer implements ScopeLayer {
   readonly sections: NamedEntries<PromptSection>
   readonly contexts: NamedEntries<PromptContext>
+  readonly runtimeContextSuppressors = new AnonymousEntries<true>()
   readonly toolProviders = new AnonymousEntries<ToolProvider>()
   readonly variables: NamedEntries<VariableProvider>
 
@@ -305,6 +328,7 @@ class PromptLayer implements ScopeLayer {
   isEmpty(): boolean {
     return this.sections.isEmpty()
       && this.contexts.isEmpty()
+      && this.runtimeContextSuppressors.isEmpty()
       && this.toolProviders.isEmpty()
       && this.variables.isEmpty()
   }
@@ -314,6 +338,7 @@ class PromptLayer implements ScopeLayer {
 export class SystemPrompt extends Service {
   static Config: z<Config> = z.object({
     includeHarnessIdentity: z.boolean().default(true),
+    includeRuntimeContext: z.boolean().default(true),
     persona: z.string().default(''),
     // Preserve omission because an explicit empty order lacks the rest marker.
     toolOrder: z.array(z.string()).default(undefined as unknown as string[]),
@@ -333,15 +358,16 @@ export class SystemPrompt extends Service {
       this.section({
         name: 'harness:identity',
         order: -100,
-        text: 'You are an AI agent powered by the DeepSeek Harness SDK.',
+        text: 'You are an AI agent powered by DeepSeek Harness.',
       })
     }
     this.section({
-      name: 'deployment:persona',
-      order: 0,
+      name: PERSONA_SECTION,
+      order: PERSONA_ORDER,
       // The fallback narrows the optional input type; the schema already defaults it.
       text: config.persona ?? '',
     })
+    if (!(config.includeRuntimeContext ?? true)) this.suppressRuntimeContext()
   }
 
   /**
@@ -377,6 +403,20 @@ export class SystemPrompt extends Service {
       this.ctx,
       layer => layer.contexts.insert(context.name, context),
       { label: 'systemPrompt.context()' },
+    )
+  }
+
+  /**
+   * Suppress every dynamic runtime-context contribution in the calling
+   * context's scope without changing the services that own or enforce those
+   * facts. Multiple suppressors remain independently disposable.
+   * @returns the exact Cordis effect disposer.
+   */
+  suppressRuntimeContext(): () => void {
+    return this.layers.effect(
+      this.ctx,
+      layer => layer.runtimeContextSuppressors.append(true),
+      { label: 'systemPrompt.suppressRuntimeContext()' },
     )
   }
 
@@ -417,21 +457,28 @@ export class SystemPrompt extends Service {
   /**
    * Assemble global and scoped providers, detach tool parameters, apply
    * canonical ordering, then run the assembly waterfall. Scoped sections and
-   * variables shadow globals; the returned waterfall value is authoritative.
+   * variables shadow globals. The returned waterfall value is authoritative
+   * except that an effective complete section is restored afterwards as the
+   * sole prompt section.
    * @param context - the optional scope and plugin-defined assembly fields.
-   * @returns the authoritative post-waterfall assembly.
+   * @returns the post-waterfall assembly with any complete prompt enforced.
    */
   // Keep configuration failures on the declared asynchronous error path.
   async assemble(context: AssembleContext = {}): Promise<PromptAssembly> {
     const scope = context.scope
+    const scopeLayers = this.layers.chainLayers(scope)
+    const runtimeContextSuppressed = !this.layers.global.runtimeContextSuppressors.isEmpty()
+      || scopeLayers.some(layer => !layer.runtimeContextSuppressors.isEmpty())
     // Scoped variables shadow globals.
     const variables: Record<string, string | undefined> = {}
     for (const [name, provider] of this.layers.global.variables.entries()) {
       variables[name] = provider(context)
     }
-    const scopedVariables = this.layers.peek(scope)?.variables
-    for (const [name, provider] of scopedVariables?.entries() ?? []) {
-      variables[name] = provider(context)
+    // Scope-chain variables, farthest first, so the nearest scope wins a name.
+    for (const layer of scopeLayers) {
+      for (const [name, provider] of layer.variables.entries()) {
+        variables[name] = provider(context)
+      }
     }
     // Scoped sections shadow globals before the stable order sort.
     const sectionByName = this.layers.merge(scope, layer => layer.sections)
@@ -439,9 +486,9 @@ export class SystemPrompt extends Service {
     // Validate order against pre-restriction names while collecting visible schemas.
     const providers = [
       ...this.layers.global.toolProviders.values(),
-      ...(this.layers.peek(scope)?.toolProviders.values() ?? []),
+      ...scopeLayers.flatMap(layer => [...layer.toolProviders.values()]),
     ]
-    const collected: Array<ToolSchema> = []
+    const collected: ToolSchema[] = []
     const knownNames = new Set<string>()
     for (const provider of providers) {
       const result = provider(context)
@@ -454,26 +501,44 @@ export class SystemPrompt extends Service {
       collected.push(...schemas)
       for (const name of acceptedKnownNames) knownNames.add(name)
     }
-    const assembly: PromptAssembly = {
-      sections: [...sectionByName.values()]
-        .sort((a, b) => { return a.order - b.order })
-        .map(section => ({
+    const sectionDefinitions = [...sectionByName.values()].sort((a, b) => a.order - b.order)
+    const completeSections = sectionDefinitions.filter(section => section.complete === true)
+    if (completeSections.length > 1) {
+      throw new Error(`multiple complete prompt sections are active: ${completeSections.map(section => JSON.stringify(section.name)).join(', ')}`)
+    }
+    let completeSection: AssembledSection | undefined
+    const sections = sectionDefinitions
+      .map((section) => {
+        const assembled = {
           name: section.name,
           text: typeof section.text === 'function' ? section.text(context) : section.text,
-        })),
-      contexts: [...contextByName.values()]
-        .sort((a, b) => a.order - b.order)
-        .map(entry => ({
-          name: entry.name,
-          text: typeof entry.text === 'function' ? entry.text(context) : entry.text,
-        })),
+        }
+        if (section.complete === true) completeSection = { ...assembled }
+        return assembled
+      })
+    const assembly: PromptAssembly = {
+      sections,
+      contexts: runtimeContextSuppressed
+        ? []
+        : [...contextByName.values()]
+          .sort((a, b) => a.order - b.order)
+          .map(entry => ({
+            name: entry.name,
+            text: typeof entry.text === 'function' ? entry.text(context) : entry.text,
+          })),
       tools: orderTools(collected, this.toolOrder, knownNames),
       variables,
     }
-    return this.ctx.waterfall(
+    const transformed = await this.ctx.waterfall(
       scopeTarget(this, scope), 'system-prompt/assemble', assembly, context,
       () => Promise.resolve(assembly),
     )
+    if (completeSection === undefined && !runtimeContextSuppressed) return transformed
+    return {
+      ...transformed,
+      sections: completeSection === undefined ? transformed.sections : [completeSection],
+      contexts: runtimeContextSuppressed ? [] : transformed.contexts,
+    }
   }
 }
 

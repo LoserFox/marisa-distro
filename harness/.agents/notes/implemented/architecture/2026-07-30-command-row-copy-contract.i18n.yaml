@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-07-30-command-row-copy-contract.md
 2026-07-30-command-row-copy-contract.md: f6d5199389b3907780c501894e2861e6add85e77
-2026-07-30-command-row-copy-contract.zh.md: 4afaf31640c07e88765060681739f262f322769e
+2026-07-30-command-row-copy-contract.zh.md: 250c8090e357c02b68bdf9b75efac0cd163c6343

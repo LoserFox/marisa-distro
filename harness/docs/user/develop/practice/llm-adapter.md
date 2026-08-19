@@ -11,8 +11,8 @@ An LLM adapter extends `LlmAdapter` and implements `stream()`, translating Harne
 ## Minimal implementation
 
 ```ts
-import type { Context } from 'cordis'
-import Schema from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import Schema from '@deepseek-ai/schemastery'
 import { LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 
 class MyAdapter extends LlmAdapter {
@@ -32,12 +32,12 @@ class MyAdapter extends LlmAdapter {
 
 export interface Config {
   apiKey: string
-  models: string[]
+  providers: string[]
 }
 
 export const Config: Schema<Config> = Schema.object({
   apiKey: Schema.string().required(),
-  models: Schema.array(Schema.string()).required(),
+  providers: Schema.array(Schema.string()).required(),
 })
 
 export const name = 'my-llm-adapter'
@@ -45,7 +45,7 @@ export const inject = ['llm']
 
 export function apply(ctx: Context, config: Config) {
   const adapter = new MyAdapter(config.apiKey)
-  ctx.llm.registerAdapter(config.models, adapter)
+  ctx.llm.registerAdapter(config.providers, adapter)
 }
 ```
 
@@ -117,10 +117,10 @@ Override `resolveModel(provider, model, signal?)` to return exact provider/model
 ## Register an adapter
 
 ```ts ignore-check
-ctx.llm.registerAdapter(['model-name-1', 'model-name-2'], adapter)
+ctx.llm.registerAdapter(['my-provider'], adapter)
 ```
 
-The first argument lists the model names handled by the adapter. If `cordis.yml` selects `model: model-name-1`, the service routes that request to this adapter.
+The first argument lists provider routes handled by the adapter. `GenerateOptions.provider` selects the registered adapter, while `GenerateOptions.model` passes an adapter-owned model id without lifecycle registration. Override `listModels()` when the adapter can advertise model choices to selectors.
 
 ## Use it from cordis.yml
 
@@ -129,18 +129,16 @@ The first argument lists the model names handled by the adapter. If `cordis.yml`
   name: './src/my-llm-adapter.ts'
   config:
     apiKey: !!js process.env.MY_API_KEY
-    models:
-      - my-model-v1
-      - my-model-v2
+    providers:
+      - my-provider
 
 - id: agent-loop
   name: '@deepseek-ai/dsh-agent-loop'
   config:
     agents:
       - id: main
-        provider: my-llm
-    model: my-model-v1  # References the model registered above.
-    workspaceContext: false
+        provider: my-provider
+        model: my-model-v1
 ```
 
 ## Reference implementations

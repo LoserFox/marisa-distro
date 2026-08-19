@@ -11,19 +11,19 @@
  * @module @deepseek-ai/dsh-acp-demo
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { join } from 'node:path'
-import z from 'schemastery'
+import z from '@deepseek-ai/schemastery'
 import * as acp from '@deepseek-ai/dsh-acp'
 import * as agentCore from '@deepseek-ai/dsh-agent-spine-demo'
-import * as workspaceContext from '@deepseek-ai/dsh-workspace-context'
-import ToolRegistry, { type Config as ToolsConfig } from '@deepseek-ai/dsh-tools'
-import SessionPersistenceJsonl, {
+import * as workspaceContext from '@deepseek-ai/dsh-agent-instructions'
+import ToolRuntime, { type Config as ToolsConfig } from '@deepseek-ai/dsh-tools'
+import JsonlSessionPersistence, {
   JsonlCompressionSchema,
   type JsonlCompression,
 } from '@deepseek-ai/dsh-session-persistence-jsonl'
 import * as sessionCheckpointPolicy from '@deepseek-ai/dsh-session-checkpoint-policy'
-import SessionQuerySqlite from '@deepseek-ai/dsh-session-query-sqlite'
+import SqliteSessionQueryEngine from '@deepseek-ai/dsh-session-query-sqlite'
 
 export const name = 'acp-demo'
 const DEFAULT_PERSISTENCE_ROOT = './.sessions'
@@ -65,13 +65,15 @@ export interface Config {
   skills?: agentCore.SkillConfig
   /** Model-facing bash tool config forwarded through agent-core. */
   toolBash?: NonNullable<agentCore.Config['toolBash']>
-  /** Generic background-task controls forwarded through agent-core; set false to omit their tool surface. */
-  toolTasks?: NonNullable<agentCore.Config['toolTasks']>
+  /** Process-local background-job admission config forwarded through agent-core. */
+  jobs?: NonNullable<agentCore.Config['jobs']>
+  /** Generic background-job controls forwarded through agent-core; set false to omit their tools. */
+  toolJobs?: NonNullable<agentCore.Config['toolJobs']>
   /** Persisted same-session goals; owner defaults enable them, or false disables the stack and tools. */
   goals?: agentCore.GoalConfig | false
 }
 
-// Each front door owns a complete, directly readable config schema; extracting
+// Each entry point owns a complete, directly readable config schema; extracting
 // the common fields would make two small app contracts depend on a new facade.
 /* jscpd:ignore-start */
 export const Config: z<Config> = z.object({
@@ -83,7 +85,7 @@ export const Config: z<Config> = z.object({
   // order" (the owning dsh-system-prompt schema does the same), while
   // schemastery's native [] default would read as an invalid configured list.
   toolOrder: z.array(z.string()).default(undefined as unknown as string[]),
-  tools: ToolRegistry.Config,
+  tools: ToolRuntime.Config,
   dshHome: z.string(),
   sessionTitle: agentCore.SessionTitleConfigSchema,
   persistenceRoot: z.string().default(DEFAULT_PERSISTENCE_ROOT),
@@ -92,7 +94,8 @@ export const Config: z<Config> = z.object({
   workspaceContext: z.union([z.const(false), workspaceContext.Config]).required(),
   skills: agentCore.SkillConfigSchema,
   toolBash: agentCore.ToolBashConfigSchema,
-  toolTasks: z.union([z.const(false), agentCore.ToolTasksConfigSchema]),
+  jobs: agentCore.JobsConfigSchema,
+  toolJobs: z.union([z.const(false), agentCore.ToolJobsConfigSchema]),
   goals: z.union([z.const(false), agentCore.GoalConfigSchema]),
 })
 /* jscpd:ignore-end */
@@ -114,13 +117,13 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     const spine = ctx.plugin(agentCore, { ...agentCore.pickSpineConfig(config), goals })
     await spine
     yield spine.dispose
-    // Same rationale as the Config schema above: each front door forwards its own
+    // Same rationale as the Config schema above: each entry point forwards its own
     // persistence passthroughs rather than sharing a facade with stdio-demo.
     /* jscpd:ignore-start */
-    const persistence = ctx.plugin(SessionPersistenceJsonl, {
+    const persistence = ctx.plugin(JsonlSessionPersistence, {
       root: persistenceRoot,
       ...config.packChunks !== undefined ? { packChunks: config.packChunks } : {},
-      ...(config.persistenceCompression !== undefined ? { compression: config.persistenceCompression } : {}),
+      ...(config.persistenceCompression === undefined ? {} : { compression: config.persistenceCompression }),
     })
     await persistence
     yield persistence.dispose
@@ -128,7 +131,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     const checkpoint = ctx.plugin(sessionCheckpointPolicy)
     await checkpoint
     yield checkpoint.dispose
-    const query = ctx.plugin(SessionQuerySqlite, { path: join(persistenceRoot, 'session-query.db') })
+    const query = ctx.plugin(SqliteSessionQueryEngine, { path: join(persistenceRoot, 'session-query.db') })
     await query
     yield query.dispose
     const transport = ctx.plugin(acp, { provider: config.provider, model: config.model })

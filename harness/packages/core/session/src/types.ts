@@ -13,6 +13,11 @@ import type {
 } from '@deepseek-ai/dsh-llm'
 import type { JsonValue } from './json.ts'
 
+// The lossless-JSON payload type belongs to this client-safe face too: a wire
+// contract carrying JSON data must not import the root entry, which merges
+// `ctx.sessions` (a Host-only SessionStore) into every consumer's program.
+export type { JsonValue } from './json.ts'
+
 /** Identifies one session in the store (and its persistence artifacts). */
 export type SessionId = Branded<'SessionId'>
 
@@ -30,8 +35,23 @@ export function SessionId(id: string): SessionId {
  * and enforced by every persistence backend on load. The single source of truth for the
  * version — write sites and the load-time check all read it.
  * While the harness is unreleased it is pinned at `0`: no compatibility is
- * implied, incompatible logs are rejected, and no migration is provided. A
- * monotonic version policy starts with the first tagged release.
+ * implied, incompatible logs are rejected, and no migration is provided.
+ *
+ * The version is a single monotonic integer with no major/minor split. Whether
+ * a bump is needed is decided by what the WRITER emits, never by what a newer
+ * reader can accept: bump exactly when an older runtime could no longer handle
+ * a new log with full semantic correctness ("parses without error" is not
+ * correctness — silently skipping content that shapes reconstruction is a
+ * wrong read). Only structural changes reach that bar: the header shape, the
+ * {@link SessionEvent} envelope, core event semantics, or the surface
+ * mechanism (the {@link SurfaceEventType} set and {@link SurfaceOp} variants).
+ * Adding an ordinary event type does not bump — the per-event
+ * {@link SessionEvent.ignorable} guard covers vocabulary growth instead. When
+ * in doubt, bump: a near-identity upgrade step is almost free, a missed bump
+ * makes older runtimes read new logs wrong silently. The full mechanism
+ * (upgrade-step chain, in-memory view conversion, migrate-on-continue) is
+ * recorded in the session-log-version-mechanism Agent Note
+ * (`.agents/notes/implemented/architecture/2026-08-10-session-log-version-mechanism.md`).
  */
 export const SESSION_FORMAT_VERSION = 0
 
@@ -69,6 +89,13 @@ export interface SessionHeader {
    * resume — a runtime-only depth would reset a resumed child to top-level.
    */
   readonly delegationDepth?: number
+  /**
+   * Id of the agent preset this session's agent was composed from, when the
+   * deployment composes per session. Durable because the preset decides the
+   * session's tools and prompt: a resume that restored a different composition
+   * would replay history the model can no longer act on.
+   */
+  readonly agentPreset?: string
 }
 
 /**
@@ -90,6 +117,7 @@ export interface CreateSessionOptions {
     readonly seedLength?: number
     readonly origin?: 'subagent'
     readonly delegationDepth?: number
+    readonly agentPreset?: string
   }
 }
 
@@ -294,8 +322,8 @@ export interface SessionEventMap {
    * companion deliberately constrains nothing here, so a plugin appending one
    * would silently classify every live bracket before it as seed history.
    *
-   * An owner of a standalone open/close bracket (`compact/start` …
-   * `compact/end`) reads it because seed history and live work are otherwise
+   * An owner of a standalone open/close bracket (`compaction/start` …
+   * `compaction/end`) reads it because seed history and live work are otherwise
    * byte-identical: an unmatched opening marker before this event belongs to
    * an ended lifecycle, whatever ended it. NOT a liveness signal about other
    * writers — a concurrently live session holds its own boundary elsewhere,
@@ -338,23 +366,24 @@ export type SurfaceEvent = SessionEvent<SurfaceEventType> & { surfaceOp: Surface
  *   (inclusive) through `end` (inclusive) with this node. Both must exist as
  *   surface nodes in the current surface. `start === end` replaces a single
  *   node. The node's {@link SessionEvent.sourceEventSeqs} must include every
- *   shadowed surface node. Used by compaction and possible other manipulations.
+ *   shadowed surface node. Used by compaction; any surface-replacing producer
+ *   may use it.
  */
 export type SurfaceOp =
   | 'append'
   | { op: 'replace'; start: number; end: number }
 
 /**
- * Surface placement and provenance for {@link Session.append}. Required on
+ * Surface placement and cited source-event seqs for {@link Session.append}. Required on
  * message-producing events and forbidden on log-only events.
  */
 export interface SurfaceIntent {
   surfaceOp: SurfaceOp
   /**
-   * Complete known provenance source set. `assistant/message` may use a
-   * present empty array for a known empty provider stream; omission means its
-   * provenance was not recorded. Other surface events require a non-empty set
-   * when this field is present.
+   * Complete set of known source-event seqs. `assistant/message` may use a
+   * present empty array for a known empty provider stream; when the field is
+   * absent, the event does not record which earlier events produced the message.
+   * Other surface events require a non-empty set when this field is present.
    */
   sourceEventSeqs?: number[]
 }
@@ -380,13 +409,25 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
     /** Unix epoch milliseconds. */
     time: number
     data: SessionEventMap[K]
+    /**
+     * Marks an event a reader may safely skip when it does not recognize
+     * `type`. Absent means required: a reader meeting an unrecognized type
+     * without this marker MUST refuse to reconstruct the session instead of
+     * silently dropping the event, because an unrecognized required event may
+     * change how the rest of the log is interpreted. A writer sets `true` only
+     * on purely informational records whose loss cannot affect reconstruction;
+     * defaulting to required means a forgotten marker over-refuses (an
+     * inconvenience) rather than silently resuming a gutted session.
+     */
+    ignorable?: true
   } & (K extends SurfaceEventType ? {
     /**
-     * Seq numbers of events that are provenance sources of this event
+     * Seq numbers of earlier events that this event cites as sources
      * (e.g. the `assistant/chunk` seqs that built an `assistant/message`,
      * or the surface nodes shadowed by a compaction replace node). An
      * `assistant/message` may carry a present empty array for a known empty
-     * provider stream; omission means unrecorded provenance.
+     * provider stream; when the field is absent, the event does not record which
+     * earlier events produced the message.
      */
     sourceEventSeqs?: number[]
     /** How this event entered the surface; absent for non-surface events. */

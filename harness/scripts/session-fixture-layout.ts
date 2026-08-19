@@ -23,7 +23,7 @@ interface RecordLine {
 
 function recordLines(content: string): RecordLine[] {
   return content.split(/\r?\n/).flatMap((text, index) => (
-    text.trim().length !== 0 ? [{ line: index + 1, text }] : []
+    text.trim().length === 0 ? [] : [{ line: index + 1, text }]
   ))
 }
 

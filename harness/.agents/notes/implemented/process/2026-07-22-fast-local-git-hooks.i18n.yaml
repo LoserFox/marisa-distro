@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-07-22-fast-local-git-hooks.md
-2026-07-22-fast-local-git-hooks.md: af8a9380fc3cbf4f672ca0b32faa7b187522cf11
-2026-07-22-fast-local-git-hooks.zh.md: 04f3a407e421c4d585b8b78b16b9055fd19ac756
+2026-07-22-fast-local-git-hooks.md: ad187c5cfd021ca76ad5f569a17fb12c82dcf4e7
+2026-07-22-fast-local-git-hooks.zh.md: 87f9a86ea94e56335026f4069a74de6dec1e5a8b

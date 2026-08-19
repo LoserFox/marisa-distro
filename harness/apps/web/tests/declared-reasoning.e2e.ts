@@ -1,6 +1,6 @@
 // Web e2e scenario: a hand-declared model's `reasoningEfforts` reaches the
 // composer's effort pane — the levels a settings profile declares are exactly
-// what the picker offers, and picking one records it with the default route.
+// what the picker offers, and picking one records it with the Agent default.
 // Zero model calls: declaring, describing, and switching are settings/llm
 // traffic only, so there is no fixture and a stray stream would fail loud.
 import { readFile } from 'node:fs/promises'
@@ -77,8 +77,8 @@ describe.skipIf(MODE === 'record')('web e2e: declared reasoning efforts reach th
     const snapshot = await captureStableAria(page, '[role="menu"]', scaffold.workspaceCwd)
     await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
 
-    // Picking a level is the same gesture that saves the default target, so
-    // the effort lands in the gateway's settings section beside the route.
+    // Picking a level is the same gesture that saves the default selection, so
+    // the effort lands in the Agent default Settings section beside provider/model.
     await page.getByRole('menuitemradio', { name: 'High' }).click()
     await expect.poll(
       async () => readFile(join(scaffold.harnessHome, 'settings.yaml'), 'utf8'),

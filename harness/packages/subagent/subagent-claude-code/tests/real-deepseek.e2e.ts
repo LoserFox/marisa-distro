@@ -7,15 +7,15 @@ import {
   rmSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import SubagentService from '@deepseek-ai/dsh-subagent'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { SubprocessHandle } from '@deepseek-ai/dsh-subprocess'
-import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
+import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import * as claudeCode from '../src/index.ts'
 
 const execFileAsync = promisify(execFile)
@@ -39,7 +39,7 @@ const claudeBin = join(
 )
 
 const roots: string[] = []
-const contexts: Array<Context> = []
+const contexts: Context[] = []
 
 afterEach(async () => {
   await Promise.all(contexts.splice(0).map(ctx => ctx.fiber.dispose()))
@@ -87,6 +87,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)(
       ]) mkdirSync(directory)
 
       const env = {
+        PATH: `${dirname(claudeBin)}${delimiter}${process.env.PATH ?? ''}`,
         ANTHROPIC_AUTH_TOKEN: apiKey,
         ANTHROPIC_BASE_URL: `${deepSeekBaseUrl()}/anthropic`,
         ANTHROPIC_MODEL: 'deepseek-v4-pro[1m]',
@@ -112,8 +113,8 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)(
       }
       const ctx = new Context()
       contexts.push(ctx)
-      await ctx.plugin(SubagentService)
-      await ctx.plugin(LocalSubprocessService)
+      await ctx.plugin(SubagentRuntime)
+      await ctx.plugin(LocalSubprocessRuntime)
       const handles: SubprocessHandle[] = []
       const spawn = ctx.subprocess.spawn.bind(ctx.subprocess)
       vi.spyOn(ctx.subprocess, 'spawn').mockImplementation((spec) => {

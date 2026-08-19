@@ -1,0 +1,11 @@
+{
+  "name": "@dsh-external/dsh-voice-chat",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "E2E fixture: voice-chat service provider（真实仓库不在本地 90 快照，按 F4 契约构造）",
+  "main": "src/index.ts",
+  "peerDependencies": {
+    "cordis": "^4.0.0-rc.7"
+  }
+}

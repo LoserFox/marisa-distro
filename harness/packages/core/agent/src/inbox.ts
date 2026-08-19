@@ -6,9 +6,7 @@
 
 import type { MessageId } from '@deepseek-ai/dsh-llm'
 import type { Session, SessionEventMap, UserMessage } from '@deepseek-ai/dsh-session'
-
-/** One of the two ordered pending-message lists owned by an agent. */
-export type InboxTarget = 'next-turn' | 'next-step'
+import type { InboxTarget } from './types.ts'
 
 /** Mutable state privately owned by an {@link Inbox}. */
 type InboxState = Record<InboxTarget, UserMessage[]>
@@ -68,14 +66,14 @@ export class Inbox {
    * @param target - whether this boundary also consumes one queued turn.
    * @param turn - turn that will own the claimed batch.
    * @returns next-step input followed by the queued turn, when requested.
-   * @internal - the agent loop's step-boundary operation, not a plugin seam.
+   * @internal - The agent loop's step-boundary operation, not a plugin extension point.
    */
   claim(target: InboxTarget, turn: number): UserMessage[] {
     const claimed = this.mutate('next-step', 0, this.nextStep.length, [], false)
     if (target === 'next-turn') {
       claimed.push(...this.mutate('next-turn', 0, 1, [], false))
     }
-    for (const message of claimed) { this.notifications.claimed(message, turn) }
+    for (const message of claimed) this.notifications.claimed(message, turn)
     return claimed
   }
 

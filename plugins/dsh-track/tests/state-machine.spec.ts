@@ -81,13 +81,30 @@ describe('nextInferred', () => {
     expect(isAutoCommit(next, issue)).toBe(false)
   })
 
-  it('in_progress → done proposal requires todo-all-done + turn-completed and gates confirmation', () => {
+  it('in_progress → done proposal requires todo-all-done + turn-completed + commit-observed and gates confirmation', () => {
     const issue = makeIssue({ state: 'in_progress' })
-    const signals = [ev('todo-all-done', now - 2000), ev('turn-completed', now - 1000), ev('turn-completed', now)]
+    const signals = [ev('todo-all-done', now - 2000), ev('turn-completed', now - 1000), ev('turn-completed', now), ev('commit-observed', now)]
     const next = nextInferred(issue, signals, now)
     expect(next.inferred.state).toBe('done')
     expect(next.confirm?.to).toBe('done')
     expect(isAutoCommit(next, issue)).toBe(false) // never auto-commits done
+  })
+
+  it('P0: process completion WITHOUT commit evidence does not propose done', () => {
+    const issue = makeIssue({ state: 'in_progress' })
+    // conf 0.804 ≥ 0.7 and both process signals present, but no commit-observed.
+    const signals = [ev('todo-all-done', now - 2000), ev('turn-completed', now - 1000), ev('turn-completed', now)]
+    const next = nextInferred(issue, signals, now)
+    expect(next.inferred.state).toBe('in_progress')
+    expect(next.confirm).toBeUndefined()
+  })
+
+  it('P0: user-confirm without commit evidence still proposes done but flags no-output', () => {
+    const issue = makeIssue({ state: 'in_progress' })
+    const next = nextInferred(issue, [ev('user-confirm', now)], now)
+    expect(next.inferred.state).toBe('done')
+    expect(next.confirm?.to).toBe('done')
+    expect(next.confirm?.reason).toContain('无 commit 证据')
   })
 
   it('user-confirm alone on in_progress produces a done proposal (still gated)', () => {
@@ -166,11 +183,24 @@ describe('sweepProposal', () => {
       inferred: {
         state: 'in_progress', confidence: 0.8,
         at: now - 2 * 86400_000, by: 'auto',
-        evidence: [ev('todo-all-done', now - 2 * 86400_000), ev('turn-completed', now - 2 * 86400_000)],
+        evidence: [ev('todo-all-done', now - 2 * 86400_000), ev('turn-completed', now - 2 * 86400_000), ev('commit-observed', now - 2 * 86400_000)],
       },
     })
     const p = sweepProposal(issue, now)
     expect(p?.to).toBe('done')
+  })
+
+  it('P0: sweep does not propose done without commit evidence', () => {
+    const issue = makeIssue({
+      state: 'in_progress',
+      lastProgressAt: now - 1000, // fresh progress — no review/cancel interference
+      inferred: {
+        state: 'in_progress', confidence: 0.8,
+        at: now - 2 * 86400_000, by: 'auto',
+        evidence: [ev('todo-all-done', now - 2 * 86400_000), ev('turn-completed', now - 2 * 86400_000)],
+      },
+    })
+    expect(sweepProposal(issue, now)?.to).not.toBe('done')
   })
 
   it('proposes done from user-confirm evidence (stale allowed)', () => {
@@ -225,7 +255,7 @@ describe('sweepProposal', () => {
       inferred: {
         state: 'in_progress', confidence: 0.8,
         at: now - 5 * 86400_000, by: 'auto',
-        evidence: [ev('todo-all-done', now - 5 * 86400_000), ev('turn-completed', now - 5 * 86400_000)],
+        evidence: [ev('todo-all-done', now - 5 * 86400_000), ev('turn-completed', now - 5 * 86400_000), ev('commit-observed', now - 5 * 86400_000)],
       },
     })
     expect(sweepProposal(issue, now)?.to).toBe('done')

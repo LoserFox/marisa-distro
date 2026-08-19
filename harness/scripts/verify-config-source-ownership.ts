@@ -19,7 +19,7 @@ const SHIPPED_CONFIG_GLOBS = [
   'python/*/src/**/cordis.yml',
 ]
 
-/** Ordinary single-line forms this narrow source-shape check rejects; not full YAML analysis. */
+/** Ordinary single-line configuration forms this source check rejects; not full YAML analysis. */
 const INLINE_DENY = /^\s*(apiKey|baseURL|apiKeyEnv|authToken|headers)\s*:\s*!!js\b/
 
 /** Return every forbidden inline environment form in shipped configuration. */

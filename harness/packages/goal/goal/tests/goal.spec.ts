@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry, { agentEvents, Inbox } from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage, HarnessError } from '@deepseek-ai/dsh-llm'
@@ -502,8 +502,8 @@ describe('GoalService mutations', () => {
     session.append('goal/change', change)
     session.append('goal/change', { ...change, operation: 'edit', extra: true } as never)
 
-    expect(() => ctx.goals.get(agent)).toThrow('invalid shape')
-    expect(() => ctx.goals.get(agent)).toThrow('invalid shape')
+    expect(() => ctx.goals.get(agent)).toThrow('snapshot change must have exactly')
+    expect(() => ctx.goals.get(agent)).toThrow('snapshot change must have exactly')
   })
 })
 
@@ -609,13 +609,13 @@ describe('goal replay validation', () => {
     expect(() => foldGoal(session.events)).toThrow('not the next admitted round')
   })
 
-  it('rejects unsupported versions, operations, and top-level shapes', () => {
+  it('rejects unsupported versions, operations, and extra top-level fields', () => {
     expect(() => decodeGoalChange({ ...snapshotChange(), version: 2 })).toThrow('unsupported goal change version')
     expect(() => decodeGoalChange({ ...snapshotChange(), operation: 'explode' })).toThrow('operation is invalid')
-    expect(() => decodeGoalChange({ ...snapshotChange(), extra: true })).toThrow('snapshot change has an invalid shape')
+    expect(() => decodeGoalChange({ ...snapshotChange(), extra: true })).toThrow('snapshot change must have exactly')
     expect(() => decodeGoalChange({
       kind: 'goal/change', version: 1, operation: 'clear', cleared: { id: 'x', revision: 2 }, clearedAt: 1, extra: true,
-    })).toThrow('clear change has an invalid shape')
+    })).toThrow('clear change must have exactly')
   })
 
   it('rejects invalid create and missing-current mutation sequences', () => {

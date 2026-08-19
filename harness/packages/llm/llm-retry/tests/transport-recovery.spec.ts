@@ -2,7 +2,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
@@ -67,7 +67,7 @@ function sendAndWait(ctx: Context, agent: Agent): Promise<void> {
 
 function finalAssistantText(agent: Agent): string | undefined {
   const message = agent.session.deriveMessages().at(-1)
-  if (message?.role !== 'assistant') { return undefined }
+  if (message?.role !== 'assistant') return undefined
   return message.content
     .filter(block => block.type === 'text')
     .map(block => block.text)

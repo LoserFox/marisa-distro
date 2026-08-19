@@ -27,16 +27,16 @@
       "path": "../../core/system-prompt"
     },
     {
-      "path": "../../ui/user-interaction"
+      "path": "../../interaction/user-questions"
     },
     {
-      "path": "../../ui/commands"
+      "path": "../../interaction/commands"
     },
     {
-      "path": "../../session-projection/session-projection"
+      "path": "../../session/session-projection"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

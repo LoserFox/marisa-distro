@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { scopeTarget } from '@deepseek-ai/dsh-scope'
 import { CallId } from '@deepseek-ai/dsh-llm'
-import SessionStore from '@deepseek-ai/dsh-session'
+import SessionStore, { Session, SessionId } from '@deepseek-ai/dsh-session'
 import type { ToolExecution, ToolExecutionResult, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
 import * as ToolsInvariant from '@deepseek-ai/dsh-tools/invariant'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 const testToolSignal = new AbortController().signal
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(InvariantService)
+  await ctx.plugin(InvariantRegistry)
   await ctx.plugin(ToolsInvariant)
   return ctx
 }
@@ -24,6 +24,7 @@ const execution = (overrides: Partial<ToolExecution> = {}): ToolExecution => ({
   arguments: Object.freeze({ text: 'hi' }),
   ...overrides,
   signal: overrides.signal ?? testToolSignal,
+  rootCallId: overrides.rootCallId ?? overrides.callId ?? CallId('call-1'),
 })
 
 const outcome = (): ToolExecutionResult => Object.freeze({
@@ -39,7 +40,9 @@ function emitResult(ctx: Context, exec: ToolExecution, result: ToolExecutionResu
 async function stage(ctx: Context, name: 'tools/pre-execute' | 'tools/execute', exec: ToolExecution): Promise<void> {
   if (name === 'tools/pre-execute') {
     await ctx.waterfall(ctx as never, name, exec, () => Promise.resolve({ kind: 'allow' as const }))
-  } else await ctx.waterfall(ctx as never, name, exec, () => Promise.resolve(outcome()))
+  } else {
+    await ctx.waterfall(ctx as never, name, exec, () => Promise.resolve(outcome()))
+  }
 }
 
 describe('tool-pipeline invariants', () => {
@@ -90,6 +93,7 @@ describe('tool-pipeline invariants', () => {
     const ctx = await setup()
     const session = ctx.sessions.create()
     const data = {
+      rootCallId: CallId('parent'),
       parentCallId: CallId('parent'),
       subCallId: CallId('child'),
       name: 'echo',
@@ -101,12 +105,112 @@ describe('tool-pipeline invariants', () => {
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
   })
 
+  it('does not commit a rejected dispatch edge into the root index', async () => {
+    const ctx = await setup()
+    const session = ctx.sessions.create()
+    expect(() => session.append('tool/code-dispatch-start', {
+      rootCallId: CallId('rejected-root'),
+      parentCallId: CallId('rejected-root'),
+      subCallId: CallId('reused-child'),
+      name: 'echo',
+      arguments: {},
+    })).toThrow(/outside any open turn/)
+
+    session.append('turn/start', { turn: 1 })
+    expect(() => session.append('tool/code-dispatch-start', {
+      rootCallId: CallId('accepted-root'),
+      parentCallId: CallId('accepted-root'),
+      subCallId: CallId('reused-child'),
+      name: 'echo',
+      arguments: {},
+    })).not.toThrow()
+  })
+
+  it('rejects a nested code dispatch that changes its parent chain root before append', async () => {
+    const ctx = await setup()
+    const session = ctx.sessions.create()
+    session.append('turn/start', { turn: 1 })
+    session.append('tool/code-dispatch-start', {
+      rootCallId: CallId('root'),
+      parentCallId: CallId('root'),
+      subCallId: CallId('child'),
+      name: 'run_code',
+      arguments: {},
+    })
+    session.append('tool/code-dispatch-start', {
+      rootCallId: CallId('root'),
+      parentCallId: CallId('child'),
+      subCallId: CallId('grandchild'),
+      name: 'echo',
+      arguments: {},
+    })
+
+    expect(() => session.append('tool/code-dispatch-start', {
+      rootCallId: CallId('another-root'),
+      parentCallId: CallId('child'),
+      subCallId: CallId('invalid-grandchild'),
+      name: 'echo',
+      arguments: {},
+    })).toThrow(/parentCallId child does not belong to rootCallId another-root/)
+    expect(session.events.some(event => event.type === 'tool/code-dispatch-start'
+      && String(event.data.subCallId) === 'invalid-grandchild')).toBe(false)
+  })
+
+  it('requires non-empty dispatch identities and keeps one subcall on one root', async () => {
+    const ctx = await setup()
+    const session = ctx.sessions.create()
+    session.append('turn/start', { turn: 1 })
+    expect(() => session.append('tool/code-dispatch-start', {
+      rootCallId: CallId(''),
+      parentCallId: CallId('root'),
+      subCallId: CallId('child'),
+      name: 'echo',
+      arguments: {},
+    })).toThrow(/must carry non-empty rootCallId/)
+
+    session.append('tool/code-dispatch-start', {
+      rootCallId: CallId('root'),
+      parentCallId: CallId('root'),
+      subCallId: CallId('child'),
+      name: 'echo',
+      arguments: {},
+    })
+    expect(() => session.append('tool/code-dispatch-start', {
+      rootCallId: CallId('other-root'),
+      parentCallId: CallId('other-root'),
+      subCallId: CallId('child'),
+      name: 'echo',
+      arguments: {},
+    })).toThrow(/changed rootCallId for subCallId child/)
+  })
+
+  it('indexes dispatch records emitted for a bare session', async () => {
+    const ctx = await setup()
+    const session = Session.create(SessionId('bare-dispatch-session'))
+    session.append('turn/start', { turn: 1 })
+    expect(() => {
+      ctx.emit('session/event', session as never, {
+        type: 'tool/code-dispatch-start',
+        seq: 1,
+        time: 1,
+        data: {
+          rootCallId: CallId('root'),
+          parentCallId: CallId('root'),
+          subCallId: CallId('child'),
+          name: 'echo',
+          arguments: {},
+        },
+      } as never)
+    }).not.toThrow()
+  })
+
   it('replays enclosed code-dispatch records on late registration', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     const session = ctx.sessions.create()
     session.append('turn/start', { turn: 1 })
     session.append('tool/code-dispatch', {
+      rootCallId: CallId('parent'),
       parentCallId: CallId('parent'),
       subCallId: CallId('child'),
       name: 'echo',
@@ -115,7 +219,7 @@ describe('tool-pipeline invariants', () => {
       content: [{ type: 'text', text: 'ok' }],
     })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     await expect(ctx.plugin(ToolsInvariant).then(() => undefined)).resolves.toBeUndefined()
   })
 
@@ -123,12 +227,13 @@ describe('tool-pipeline invariants', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     ctx.sessions.create().append('tool/code-dispatch-start', {
+      rootCallId: CallId('parent'),
       parentCallId: CallId('parent'),
       subCallId: CallId('child'),
       name: 'echo',
       arguments: {},
     })
-    await ctx.plugin(InvariantService)
+    await ctx.plugin(InvariantRegistry)
     await expect(ctx.plugin(ToolsInvariant).then(() => undefined)).rejects.toThrow(/outside any open turn/)
   })
 })

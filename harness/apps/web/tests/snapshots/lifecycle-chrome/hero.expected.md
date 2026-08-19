@@ -5,17 +5,17 @@
   - img
   - text: New Session
 - text: Workspaces
-- button "Group by":
+- button "Search sessions":
+  - img
+- textbox "Search sessions..."
+- button "View options":
   - img
 - button "Add workspace":
   - img
-- button "Search sessions":
-  - img
-- textbox "Search name, keywords..."
 - tree "Sessions":
-  - treeitem "workspace 1 session" [expanded]:
+  - treeitem "workspace" [expanded]:
     - img
-    - text: workspace 1 session
+    - text: workspace
   - treeitem "New Session" [selected]
 - button "Settings":
   - img
@@ -24,6 +24,10 @@
 - button "Choose workspace":
   - img
   - text: workspace
+  - img
+- button "Standard mode":
+  - img
+  - text: Standard mode
   - img
 - textbox "Describe what you want to build"
 - button "Commands":

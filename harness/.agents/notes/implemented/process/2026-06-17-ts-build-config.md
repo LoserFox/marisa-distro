@@ -13,13 +13,13 @@ The current TypeScript build and typecheck setup had these issues:
 - `build` used `tsc` to transform `.ts` to `.d.ts` files for packages under `packages/<group>/<pkg>` and `vendor/*`, and then used `tsdown` to transform `.ts` to bundled `.js` files. This made two tools do TypeScript transform.
 - `typecheck` tended to validate packages, vendor source, examples, tests, and scripts through one root typecheck config.
 
-The goal is to make build and typecheck use matching tsconfig boundaries and TypeScript resolution/transform behavior. Build should generate `.js`, `.d.ts`, `.js.map`, and `.d.ts.map` through one compiler and config, so publish output and type validation stay consistent.
+Build and typecheck use matching tsconfig boundaries and TypeScript resolution/transform behavior. Build generates `.js`, `.d.ts`, `.js.map`, and `.d.ts.map` through one compiler and config, so publish output and type validation stay consistent.
 
-Validation found several concrete technical issues and possible routes:
+Concrete constraints:
 
 - `tsdown` uses `oxc` to transform TypeScript, which is not the same behavior as `tsc`.
     - Bundled `.d.ts` emitted by `tsdown` conflicts with Cordis' internal relative module augmentation shape.
-    - The tsc output is affected by `allowImportingTsExtensions`, so we need to ensure that generated `.js` files do not import `.ts` files and generated `.d.ts` files keep explicit relative specifiers that NodeNext/Node16 accepts. Therefore, in-package relative imports use explicit `.ts` specifiers in TypeScript source and `rewriteRelativeImportExtensions` rewrites those specifiers to `.js` in emitted JS.
+    - The tsc output is affected by `allowImportingTsExtensions`: generated `.js` files must not import `.ts` files, and generated `.d.ts` files must keep explicit relative specifiers that NodeNext/Node16 accepts. Therefore, in-package relative imports use explicit `.ts` specifiers in TypeScript source and `rewriteRelativeImportExtensions` rewrites those specifiers to `.js` in emitted JS.
     - Bundled `.js` emitted by `tsdown` is not the same behavior as per-file `.js` emitted by `tsc -b`, such as decorator transform behavior.
 - `vendor/*/src`, examples, tests, and scripts cannot all be plain-included in one root strict program.
     - Directly typechecking `vendor/*/src` under the root strict config triggers many type errors outside this project's ownership.
@@ -32,8 +32,8 @@ In-package relative imports use explicit `.ts` specifiers.
 
 `pnpm run build` orders Host lib, Client lib, and Web; each lib phase keeps tsc emission before tsdown bundling:
 
-- Host tsc runs `tsc -b` against `tsconfig.host.json`, emitting per-module `.js`, `.d.ts`, `.js.map`, and `.d.ts.map` into `lib/types` for each package in the Host graph; Host tsdown then reads that JavaScript, produces published entries, and runs Host TypeRT.
-- Client tsc runs `tsc -b` against `tsconfig.client.json` after Host TypeRT has generated the Remote Client declarations; Client tsdown then reads the JavaScript emitted by the Client graph and produces the Client packages' Node loader entries and browser bundles.
+- Host tsc runs `tsc -b` against `tsconfig.host.json`, emitting per-module `.js`, `.d.ts`, `.js.map`, and `.d.ts.map` into `lib/types` for each package in the Host graph; Host tsdown then reads that JavaScript, produces published entries, and runs Host Typert.
+- Client tsc runs `tsc -b` against `tsconfig.client.json` after Host Typert has generated the Remote Client declarations; Client tsdown then reads the JavaScript emitted by the Client graph and produces the Client packages' Node loader entries and browser bundles.
 - The Web build starts only after both lib phases complete.
 
 `tsdown` is no longer the owner of TypeScript compilation or declaration output.

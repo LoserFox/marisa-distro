@@ -1,4 +1,4 @@
-import { valueMap } from 'cosmokit'
+import { valueMap } from '@deepseek-ai/cosmokit'
 
 // eslint-disable-next-line no-new-func
 /** Evaluate a JavaScript expression against a loader context scope. */

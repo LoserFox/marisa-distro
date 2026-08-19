@@ -21,7 +21,13 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
+    },
+    {
+      "path": "../ui-settings"
     }
   ]
 }

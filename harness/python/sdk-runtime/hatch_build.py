@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import platform
 import stat
@@ -8,11 +9,30 @@ from pathlib import Path
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 
-_PLATFORMS = {
-    "linux-x64": ("manylinux_2_28_x86_64", "dsh-jsonrpc-agent-pkg-linux-x64"),
-    "linux-arm64": ("manylinux_2_28_aarch64", "dsh-jsonrpc-agent-pkg-linux-arm64"),
-    "macos-arm64": ("macosx_11_0_arm64", "dsh-jsonrpc-agent-pkg-macos-arm64"),
-}
+def _load_platforms() -> dict[str, tuple[str, str]]:
+    """Load and validate the platform manifest inside an isolated wheel build."""
+    path = Path(__file__).with_name("platforms.json")
+    try:
+        payload = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"could not read runtime platform manifest from {path}") from error
+    if not isinstance(payload, dict) or not payload:
+        raise RuntimeError(f"{path} must contain a non-empty platform object")
+    platforms: dict[str, tuple[str, str]] = {}
+    for name, raw in payload.items():
+        if (
+            not isinstance(name, str)
+            or not isinstance(raw, dict)
+            or set(raw) != {"tag", "executable"}
+            or not isinstance(raw["tag"], str)
+            or not isinstance(raw["executable"], str)
+        ):
+            raise RuntimeError(f"{path} platform entries must contain string tag and executable fields")
+        platforms[name] = (raw["tag"], raw["executable"])
+    return platforms
+
+
+_PLATFORMS = _load_platforms()
 
 
 def _host_platform_tag() -> str:

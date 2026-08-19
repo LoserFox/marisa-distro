@@ -57,7 +57,7 @@ function decisionForRank(maxRank: number): MergedDecision {
  * yields a neutral outcome (`decision: 'none'`, no stop, empty context) — the
  * caller treats that as "no hook had anything to say".
  * @param outputs - every matched hook's decoded output, in hook order.
- * @returns the single folded outcome the bridge maps onto its seam.
+ * @returns the single folded outcome the bridge maps onto its extension point.
  */
 export function mergeHookOutputs(outputs: HookOutput[]): MergedHookOutcome {
   let maxRank = 0

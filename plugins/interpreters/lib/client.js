@@ -446,10 +446,9 @@ function apply(ctx) {
   ctx.slots.inject("settings.plugin.item", function* () {
     yield ctx.slots.register({
       name: "settings.plugin.item",
-      id: "dsh-interpreters",
-      order: 50,
-      // bash 0 / agent-loop 10 / web-search 20 / advisor 30 / interpreters 50
-      locale: NS,
+      key: "interpreters",
+      // rc7 sync (2026-08-18): plugin-item slot is keyed by settings namespace
+            locale: NS,
       inject: () => ({ controller, useSnapshot })
     }, InterpretersCard);
   });

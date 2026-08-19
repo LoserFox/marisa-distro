@@ -1,12 +1,28 @@
 /**
  * Canonical provider-neutral message and streaming vocabulary for the loop,
- * session log, and plugins. Adapters alone translate provider wire shapes;
+ * session log, and plugins. Adapters alone translate provider wire messages;
  * mapped interfaces make the content, source, and finish unions extensible.
  */
 
 import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { CallId, ProviderRequestId, ReasoningEffortId } from './brand.ts'
 import type { Message } from './message.ts'
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * The provider topology changed: an adapter registered or unregistered
+     * routes, or the configurable-provider directory gained or lost entries.
+     * This payload-free registry notification fires at each commit point
+     * (including registration disposal); consumers re-read `listProviders()`,
+     * `listModels()`, or `listConfigurableProviders()` for the new state.
+     * Observer failures are contained and cannot veto the registry mutation.
+     * @mode emit
+     */
+    'llm/adapters-updated'(): void
+  }
+}
 
 export type {
   AssistantMessage,
@@ -20,13 +36,13 @@ export type {
   UserMessage,
 } from './message.ts'
 
-/** Serializable provider-boundary facts; policy decides whether they are retryable. */
+/** Serializable provider or transport failure facts; policy decides whether they are retryable. */
 export interface LlmFailure {
   /** Human-readable provider or transport failure. */
   readonly message: string
   /** Stable provider-neutral machine-routing code. */
   readonly code: string
-  /** HTTP status observed at the provider boundary, when available. */
+  /** HTTP status returned by the provider, when available. */
   readonly status?: number
   /** Provider-requested delay in milliseconds, when valid and available. */
   readonly providerRetryAfterMs?: number
@@ -44,6 +60,18 @@ export interface TextBlock {
 export interface ReasoningBlock {
   type: 'reasoning'
   text: string
+}
+
+/**
+ * A durable raster image reference, valid in user or assistant content. The
+ * block is deliberately role-neutral; assistant-side rendering is forward
+ * compatibility — the current production adapters declare text-only output,
+ * so only user content carries images today.
+ */
+export interface ImageBlock {
+  type: 'image'
+  /** Immutable bytes and intrinsic display metadata owned by the attachment service. */
+  attachment: ImageAttachmentRef
 }
 
 /** A tool invocation requested by the model. */
@@ -71,11 +99,12 @@ export interface ToolResultBlock {
 export interface ContentBlockMap {
   'text': TextBlock
   'reasoning': ReasoningBlock
+  'image': ImageBlock
   'tool-call': ToolCallBlock
   'tool-result': ToolResultBlock
 }
 
-/** The block `type` tag vocabulary; widens as plugins merge new shapes into {@link ContentBlockMap}. */
+/** The block `type` tag vocabulary; widens as plugins add entries to {@link ContentBlockMap}. */
 export type ContentBlockType = keyof ContentBlockMap
 /** Any known content block, derived from {@link ContentBlockMap}; switch on `type` and fall through unknowns (merge-extensible). */
 export type ContentBlock = ContentBlockMap[ContentBlockType]
@@ -118,6 +147,15 @@ export interface LlmProviderInfo {
   /** Human-readable provider name for selectors and diagnostics. */
   name: string
 }
+
+/** Merge-extensible provider model modality vocabulary. */
+export interface ModelModalityMap {
+  text: 'text'
+  image: 'image'
+}
+
+/** Any declared provider model modality. */
+export type ModelModality = ModelModalityMap[keyof ModelModalityMap]
 
 /**
  * One provider route an adapter plugin can activate through configuration,
@@ -201,6 +239,8 @@ export interface LlmModelInfo {
   name: string
   /** Optional user-facing distinction from otherwise similar models. */
   description?: string
+  /** Accepted request modalities; absent means unknown, while an explicit omission is negative capability. */
+  inputModalities?: readonly ModelModality[]
 }
 
 /** Provider-owned context capacity for one exact provider/model route. */
@@ -241,11 +281,32 @@ export interface LlmResolvedModelInfo extends LlmModelInfo {
 }
 
 /**
+ * Adapter-private lossless-JSON state for replaying a successful response,
+ * carried by a terminal `finish` chunk and stored on the assembled assistant
+ * message's model source. Both halves stay opaque to the harness; only the
+ * split is shared vocabulary, so assembly can keep stored metadata aligned
+ * with stored content without reading either half.
+ */
+export interface ReplayEnvelope {
+  /** Response-level adapter-private metadata (ids, native stop reason). */
+  response: unknown
+  /**
+   * Per-block adapter-private metadata, one entry per emitted block in
+   * first-seen stream order. When assembly drops a block it drops the entry at
+   * the same position; entries whose length does not match the emitted block
+   * count discard the whole envelope. An adapter whose metadata is independent
+   * of block structure omits this field and the envelope passes through
+   * assembly unchanged.
+   */
+  blocks?: readonly unknown[]
+}
+
+/**
  * Raw streaming protocol emitted by adapters.
  * Block indexes correlate interleaved deltas, and `block-end` carries the
  * assembled block. Adapters emit usage before the terminal finish and nothing
  * afterward; tool arguments remain raw JSON strings. An adapter implementation
- * may throw, but `LlmService.stream()` normalizes that failure to a terminal
+ * may throw, but `LlmRuntime.stream()` normalizes that failure to a terminal
  * `error` or `aborted` finish before exposing it to consumers.
  */
 export type StreamChunk =
@@ -258,8 +319,8 @@ export type StreamChunk =
   | {
     type: 'finish'
     reason: FinishReason
-    /** Adapter-private lossless-JSON state for replaying a successful response. */
-    replayState?: unknown
+    /** Replay metadata for a successful response; see {@link ReplayEnvelope}. */
+    replayState?: ReplayEnvelope
   }
 
 /**
@@ -303,8 +364,8 @@ export interface GenerateOptions {
   stop?: string[]
   signal?: AbortSignal
   /**
-   * Session identity stamped by the loop for listener routing. Adapters ignore
-   * it; replay uses it to keep concurrent parent and child cursors independent.
+   * Session identity stamped by the loop for request routing. Replay uses it
+   * to separate cursors; adapters may map it to model-hidden transport metadata.
    */
   sessionId?: Branded<'SessionId'>
   /**

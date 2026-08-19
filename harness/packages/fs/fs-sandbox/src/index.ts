@@ -1,6 +1,6 @@
 /**
  * `SandboxedFileSystem`: the sandbox-enforcing implementation of the
- * `@deepseek-ai/dsh-fs` provider seam. It extends `LocalFileSystem` so all
+ * `@deepseek-ai/dsh-fs` Service Definition. It extends `LocalFileSystem` so all
  * text-storage mechanics — resolve, stat, read/stream, list, the atomic
  * write and the read-match-write edit critical section — are the local
  * implementation's, verbatim; this package adds only the per-call POLICY fence
@@ -11,7 +11,7 @@
  * NOT a kernel boundary — the operations are the seam's own (open, rename),
  * and only the target path is untrusted, so canonicalize-then-contain is the
  * complete answer to this surface. Kernel-grade isolation of untrusted CODE
- * stays `ctx.bash`'s job (`@deepseek-ai/dsh-bash-sandbox`). This mirrors the
+ * stays `ctx.shell`'s job (`@deepseek-ai/dsh-bash-sandbox`). This mirrors the
  * `code-runtime` stance: containment, not a security boundary. The residual
  * TOCTOU (an ancestor symlink swapped between the containment re-check and the
  * syscall) is narrowed by re-canonicalizing immediately before delegating and
@@ -30,7 +30,7 @@
  * @module @deepseek-ai/dsh-fs-sandbox
  */
 
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
 import type { Config as LocalConfig } from '@deepseek-ai/dsh-fs-local'
 import { FsError } from '@deepseek-ai/dsh-fs'
@@ -41,10 +41,10 @@ import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import { isPathUnder } from './containment.ts'
 
 /**
- * Plugin config: the local backend's knobs, verbatim (only `cwd`, the resolve
- * base for relative paths). The sandbox default (mode + `workspace-write`
- * fallback root) is NOT here — `ctx.sandboxPolicy` resolves each calling
- * session for every enforcing capability.
+ * Plugin config: the local backend's knobs verbatim (`cwd` resolution default
+ * and `diffBasisMaxBytes` overwrite-presentation bound). The sandbox default
+ * (mode + `workspace-write` fallback root) is NOT here — `ctx.sandboxPolicy`
+ * resolves each calling session for every enforcing capability.
  */
 export type Config = LocalConfig
 
@@ -76,7 +76,7 @@ export class SandboxedFileSystem extends LocalFileSystem {
    * @param target - the resolved target to write.
    * @param content - the full new file content.
    * @param expected - the write intent guarding the write; omit for unconditional.
-   * @param signal - aborts before the atomic rename takes effect.
+   * @param signal - aborts before atomic publication takes effect.
    * @param sandboxPolicy - the per-call mode and workspace root; omit to use
    *   the deployment fallback.
    * @returns the write outcome from the inherited backend.
@@ -97,7 +97,7 @@ export class SandboxedFileSystem extends LocalFileSystem {
    * @param target - the resolved target to edit.
    * @param edit - the literal search/replace request.
    * @param expected - the version guard; omit for an unconditional edit.
-   * @param signal - aborts before the atomic rename takes effect.
+   * @param signal - aborts before atomic publication takes effect.
    * @param sandboxPolicy - the per-call mode and workspace root; omit to use
    *   the deployment fallback.
    * @returns the edit outcome from the inherited backend.

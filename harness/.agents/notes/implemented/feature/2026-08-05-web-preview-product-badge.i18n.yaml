@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-05-web-preview-product-badge.md
 2026-08-05-web-preview-product-badge.md: c20dedf8caa497d17a577cf46261c6a24c09a1ce
-2026-08-05-web-preview-product-badge.zh.md: c428dabf2a9a2ece2f90b0c3a527835a494c7cb7
+2026-08-05-web-preview-product-badge.zh.md: 415a7cb3eb02030ef5481f4eba9110b56547ce64

@@ -21,11 +21,11 @@ describe('translation prompt runnable snapshot', () => {
     expect(() => {
       JSON.parse(stdout)
     }).not.toThrow()
-    if (!refreshing) {
-      await access(expected)
-    } else {
+    if (refreshing) {
       await mkdir(dirname(expected), { recursive: true })
       await writeFile(expected, stdout)
+    } else {
+      await access(expected)
     }
     await expect(stdout).toMatchFileSnapshot(expected)
   })

@@ -1,8 +1,8 @@
 import { createServer } from 'node:http'
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { userAgent } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { userAgent } from '@deepseek-ai/dsh-llm'
 import * as LlmPiAi from '@deepseek-ai/dsh-llm-pi-ai'
 import { getBuiltinModels } from '@earendil-works/pi-ai/providers/all'
 import { discoverModels } from '../src/discovery.ts'
@@ -67,7 +67,7 @@ async function listingServer(behavior: {
 /** A bare dormant mount: discovery is offered whether or not a route exists. */
 async function harness(): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(LlmPiAi, {})
   return ctx
 }
@@ -153,7 +153,7 @@ describe('draft-provider model discovery', () => {
     // and read as a wrong key.
     const server = await listingServer({ body: JSON.stringify({ data: [{ id: 'm' }] }) })
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     process.env['ACME_GATEWAY_KEY'] = 'stored-key'
     touchedEnv.push('ACME_GATEWAY_KEY')
     await ctx.plugin(LlmPiAi, {
@@ -183,7 +183,7 @@ describe('draft-provider model discovery', () => {
     // profile names a credential that is not set must still answer rather than
     // failing over a key the interrogation never needed.
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     Reflect.deleteProperty(process.env, 'ABSENT_FOR_DISCOVERY')
     await ctx.plugin(LlmPiAi, { providers: { deepseek: { apiKeyEnv: 'ABSENT_FOR_DISCOVERY' } } })
 
@@ -275,10 +275,28 @@ describe('draft-provider model discovery', () => {
   it('reports cancellation during the body read as an abort, not a raw reason', async () => {
     const ctx = await harness()
     const controller = new AbortController()
-    // Chunked, so the headers arrive and the cancellation lands mid-body.
-    const slow = await listingServer({ chunks: ['{"data":[', '{"id":"a"}'], holdOpenMs: 400 })
-    const probe = ctx.llm.discoverModels('llm-pi-ai', { baseURL: slow.url, signal: controller.signal })
-    setTimeout(() => { controller.abort('test cancellation') }, 40)
+    const bodyRead = Promise.withResolvers<undefined>()
+    vi.stubGlobal('fetch', async (_url: string | URL, init?: RequestInit) => {
+      const signal = init?.signal
+      if (signal === undefined || signal === null) throw new Error('expected a discovery signal')
+      return new Response(new ReadableStream<Uint8Array>({
+        pull(stream) {
+          bodyRead.resolve(undefined)
+          return new Promise<void>((resolve) => {
+            signal.addEventListener('abort', () => {
+              stream.error(signal.reason)
+              resolve()
+            }, { once: true })
+          })
+        },
+      }))
+    })
+    const probe = ctx.llm.discoverModels('llm-pi-ai', {
+      baseURL: 'https://slow.example/v1',
+      signal: controller.signal,
+    })
+    await bodyRead.promise
+    controller.abort('test cancellation')
 
     await expect(probe).rejects.toMatchObject({ code: 'ABORTED' })
   })
@@ -304,7 +322,7 @@ describe('draft-provider model discovery', () => {
 
   it('withdraws the offer when the plugin unloads', async () => {
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     const fiber = await ctx.plugin(LlmPiAi, {})
     await expect(ctx.llm.discoverModels('llm-pi-ai', { provider: 'openai' })).resolves.not.toHaveLength(0)
 

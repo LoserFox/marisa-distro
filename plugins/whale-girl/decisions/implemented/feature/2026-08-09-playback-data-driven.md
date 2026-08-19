@@ -16,7 +16,7 @@ Status: implemented
 - **播放器数据驱动**：tick 删 `animState === 'idle'` 与 `animState === 'walk'` 特判，改为读 `cfg.playback` 分支——播放器不再知道任何状态名，只剩「帧播放模式」一种概念。
 - **verify-assets 门禁**：playback ∈ 枚举 + 帧数 ≥ 该模式下限（loop≥1/pingpong≥2/once≥1/blink≥2）交叉校验；`loop` 字段从校验中移除。
 - **spec 契约**：状态总表 `loop` 列改「播放行为」列（标注每状态 playback）；新增「播放行为」表（模式/帧序/下限/示例）与「帧0=常态起点」帧序语义契约；新增「角色契约」章节（第二角色 = 15 张 sheet + manifest，零代码）。
-- 帧数下限/枚举常量在 [client/logic.mjs](../../../.dsh-plugin/client/logic.mjs)：`PLAYBACK_MODES` / `PLAYBACK_MIN_FRAMES`（门禁与测试共用，单一来源）。
+- 帧数下限/枚举常量在 [client/logic.mjs](../../../lib/client/logic.mjs)：`PLAYBACK_MODES` / `PLAYBACK_MIN_FRAMES`（门禁与测试共用，单一来源）。
 
 ## Alternatives considered
 

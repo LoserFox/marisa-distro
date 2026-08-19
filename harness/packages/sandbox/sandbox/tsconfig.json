@@ -18,7 +18,10 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../core/session"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

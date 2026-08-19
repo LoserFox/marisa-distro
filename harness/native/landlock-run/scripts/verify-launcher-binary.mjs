@@ -8,9 +8,8 @@
  * binary's absence surfacing only at runtime as a failed probe on every
  * consumer — and a binary copied across packages would advertise an
  * architecture it cannot execute. The check is presence + ELF `e_machine`
- * against the package's declared `cpu`; byte provenance is
- * `verify-packed-install.mjs`'s concern (it pins the installed tarball
- * against the workspace build).
+ * against the package's declared `cpu`. `verify-packed-install.mjs`
+ * separately pins the installed tarball bytes to the workspace build.
  *
  * Runs from each platform package's `prepack` hook (pnpm sets the script
  * cwd to the package directory). Also callable directly with an explicit

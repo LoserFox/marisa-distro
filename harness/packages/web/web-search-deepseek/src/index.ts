@@ -5,11 +5,12 @@
  * @module @deepseek-ai/dsh-web-search-deepseek
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-agent'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { environmentOf } from '@deepseek-ai/dsh-environment'
+import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import type {} from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-web'
 import {
@@ -20,6 +21,7 @@ import {
   DEEPSEEK_DEFAULT_MAX_USES,
   DEEPSEEK_DEFAULT_MODEL,
 } from './provider.ts'
+import type { DeepSeekSearchProviderOptions } from './provider.ts'
 
 export {
   DeepSeekSearchProvider,
@@ -61,11 +63,14 @@ export interface Config {
 export const Config: z<Config> = z.object({
   apiKey: z.string().role('secret'),
   apiKeyEnv: z.string().role('credential-ref').default(DEFAULT_API_KEY_ENV),
+  // Declared here rather than only at the use site: a configuration surface
+  // renders the resolved section, so a default the schema does not carry reads
+  // there as no value at all.
   baseURL: z.string(),
-  model: z.string(),
-  apiVersion: z.string(),
-  maxTokens: z.number().step(1).min(1),
-  maxUses: z.number().step(1).min(1),
+  model: z.string().default(DEEPSEEK_DEFAULT_MODEL),
+  apiVersion: z.string().default(DEEPSEEK_DEFAULT_API_VERSION),
+  maxTokens: z.number().step(1).min(1).default(DEEPSEEK_DEFAULT_MAX_TOKENS),
+  maxUses: z.number().step(1).min(1).default(DEEPSEEK_DEFAULT_MAX_USES),
 })
 
 /**
@@ -76,36 +81,58 @@ export const Config: z<Config> = z.object({
  */
 const SEARCH_BASE_URL_ENV = 'DEEPSEEK_SEARCH_BASE_URL'
 
-/** Register the DeepSeek search provider with `ctx.web`. */
-export function apply(ctx: Context, config: Config): void {
-  const maxTokens = config.maxTokens ?? DEEPSEEK_DEFAULT_MAX_TOKENS
-  const maxUses = config.maxUses ?? DEEPSEEK_DEFAULT_MAX_USES
+/** Settings namespace carrying this provider's endpoint, model, and key reference. */
+export const WEB_SEARCH_DEEPSEEK_SETTINGS_NAMESPACE = settingsNamespace('web-search-deepseek')
+
+/**
+ * Project one resolved section into the options the provider serves its next
+ * search with. Environment fallbacks stay here rather than in the provider:
+ * every value it reads is already fully defaulted.
+ * @param ctx - plugin context supplying the credential and environment planes.
+ * @param config - the currently authoritative section.
+ * @returns options for one search.
+ */
+function resolveOptions(ctx: Context, config: Config): DeepSeekSearchProviderOptions {
   const apiKeyEnv = credentialRef(config.apiKeyEnv ?? DEFAULT_API_KEY_ENV)
   const literalApiKey = config.apiKey !== undefined && config.apiKey.length > 0
     ? config.apiKey
     : undefined
-  ctx.web.registerSearchProvider(new DeepSeekSearchProvider({
-    ...literalApiKey !== undefined ? { apiKey: literalApiKey } : {},
+  return {
+    ...literalApiKey === undefined ? {} : { apiKey: literalApiKey },
     resolveApiKey: async () => {
       const credentials = ctx.get('credentials')
       if (credentials !== undefined) return (await credentials.resolve(apiKeyEnv))?.value
       // Without the seam the environment is the whole credential plane.
-      const ambient = environmentOf(ctx).get(apiKeyEnv)
+      const ambient = launchEnvironmentOf(ctx).get(apiKeyEnv)
       return ambient !== undefined && ambient.value.length > 0 ? ambient.value : undefined
     },
     apiKeyEnv,
     baseURL: config.baseURL
-      ?? environmentOf(ctx).get(SEARCH_BASE_URL_ENV)?.value
+      ?? launchEnvironmentOf(ctx).get(SEARCH_BASE_URL_ENV)?.value
       ?? DEEPSEEK_DEFAULT_BASE_URL,
     model: config.model ?? DEEPSEEK_DEFAULT_MODEL,
     apiVersion: config.apiVersion ?? DEEPSEEK_DEFAULT_API_VERSION,
-    maxTokens,
-    maxUses,
+    maxTokens: config.maxTokens ?? DEEPSEEK_DEFAULT_MAX_TOKENS,
+    maxUses: config.maxUses ?? DEEPSEEK_DEFAULT_MAX_USES,
     recordRequest: (request) => {
       ctx.get('agents')?.currentInitiator()?.session.append(
         'web/deepseek-search-llm-request',
         request,
       )
     },
-  }))
+  }
+}
+
+/** Register the DeepSeek search provider with `ctx.web`. */
+export function apply(ctx: Context, config: Config): void {
+  let current: () => Config = () => config
+  installSettingsSection(ctx, WEB_SEARCH_DEEPSEEK_SETTINGS_NAMESPACE, Config, config, {
+    setSource: (source) => {
+      current = source
+    },
+    // The registration carries no resolved value: the provider projects the
+    // section per search, so a committed change needs no re-registration.
+    onChange: () => {},
+  })
+  ctx.web.registerSearchProvider(new DeepSeekSearchProvider(() => resolveOptions(ctx, current())))
 }

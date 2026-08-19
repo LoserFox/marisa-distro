@@ -10,14 +10,14 @@ The product principle is "everything is a plugin": hooks, /goal, /loop, dynamic 
 
 ## Decision
 
-Pure Cordis event taxonomy. The loop's extension seams are typed events with deliberate dispatch modes:
+Pure Cordis event taxonomy. The loop's extension points are typed events with deliberate dispatch modes:
 
-- **waterfall** (around-middleware) where plugins transform, veto, recover, or wrap: `agent/pre-step`, `agent/request`, `agent/request-error`, `tools/pre-execute`, `tools/execute`, `tools/post-execute`, `llm/stream`, `system-prompt/assemble`.
+- **waterfall** (around-middleware) where plugins transform, short-circuit, recover, or wrap: `agent/pre-step`, `agent/request`, `agent/request-error`, `tools/pre-execute`, `tools/execute`, `tools/post-execute`, `llm/stream`, `system-prompt/assemble`.
 - **serial** (awaited in listener order) for ordered checkpoints such as `agent/turn-stopping`.
 - **parallel** (awaited fan-out) where every listener must get an independent chance: the `session/flush` durability checkpoint.
 - **emit** (synchronous fire-and-forget) for notifications: inbox transitions, lifecycle, errors, and the contained immutable `tools/result` observation. Durable session events own turn and step boundaries.
 
-The event vocabulary lives in interface packages (dsh-agent declares the agent/* events); `@deepseek-ai/dsh-agent-loop` is the only concrete loop plugin and is itself swappable — nothing outside it may depend on it.
+The event vocabulary lives in contract packages (`dsh-agent` declares the `agent/*` events); `@deepseek-ai/dsh-agent-loop` is the only concrete loop plugin and is itself swappable — nothing outside it may depend on it.
 
 ## Alternatives considered
 
@@ -28,4 +28,4 @@ The event vocabulary lives in interface packages (dsh-agent declares the agent/*
 - Every MVP feature maps to a listener (the [feature → mechanism map](../../../../docs/cookbook/extension-cookbook.md#the-feature--mechanism-map) is the proof obligation, kept current).
 - HMR and disposal come free: listeners and registrations are Cordis effects.
 - Waterfall semantics (call `next()` or short-circuit) are non-obvious and must be taught — documented in AGENTS.md and covered by composition tests.
-- The loop must be defensive: plugin exceptions are contained at turn level, steering from any seam is never stranded (regression-tested).
+- The loop must be defensive: plugin exceptions are contained at turn level, steering from any extension point is never stranded (regression-tested).

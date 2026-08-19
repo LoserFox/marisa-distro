@@ -10,7 +10,7 @@
  * distros alike, no loader or libc expectations on the consumer host), and
  * CI's per-arch runners are the builders of record. No cross toolchain
  * exists here on purpose: native runners replace it, and the audit surface
- * is the reviewed C source plus CI provenance.
+ * is the reviewed C source plus the CI job that built the binary.
  *
  * Binaries land in `packages/<name>/bin/` — git-ignored (root
  * `.gitignore`), packed into the platform package's npm tarball behind its

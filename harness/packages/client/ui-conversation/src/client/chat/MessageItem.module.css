@@ -8,18 +8,17 @@
   gap: 6px;
 }
 
-/* Steering caption above the bubble: mid-turn interjections carry the same
-   bubble as a turn-opening prompt, so the transcript names which one this is. */
-.steeringMark {
-  padding-right: 4px;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 12px;
-  line-height: 16px;
+.userStack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: min(525px, 82%);
 }
-
 .bubble {
   /* 525px cap inside the 736 column; percentage keeps narrow windows sane. */
-  max-width: min(525px, 82%);
+  max-width: 100%;
   background: var(--dsw-specific-bubble);
   border-radius: 22px;
   /* 44px single-line bubble: 24 line + 10 vertical padding each side. */
@@ -243,6 +242,12 @@
 .turnErrorCode {
   color: var(--dsw-alias-label-tertiary);
   font: var(--dsw-font-markdown-code-block-small);
+}
+
+.maxTokensTitle {
+  margin-right: 6px;
+  color: var(--dsw-alias-state-warn-primary);
+  font-weight: 600;
 }
 
 @keyframes retry-shimmer {

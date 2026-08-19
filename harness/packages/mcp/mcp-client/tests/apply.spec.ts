@@ -3,9 +3,9 @@
  * Isolated file so vi.mock of the MCP SDK doesn't pollute other test suites.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import type { Config } from '@deepseek-ai/dsh-mcp-client'
 
 // ---- Mock MCP SDK ----
@@ -61,7 +61,7 @@ import { apply, name, inject, Config as ConfigSchema } from '@deepseek-ai/dsh-mc
 async function mountRegistry(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   return ctx
 }
 
@@ -82,6 +82,7 @@ const stdioConfig: Config = {
   env: {},
   cwd: '',
   toolCallTimeoutMs: 60_000,
+  failOnStartupError: false,
 }
 
 // ---- Tests ----
@@ -123,6 +124,33 @@ describe('mcp-client plugin module exports', () => {
     } as never)
     expect(resolved.serverName).toBe('github-prod_1')
   })
+
+  it('Config schema materializes reconnect defaults and merges partial overrides', () => {
+    const omitted = ConfigSchema({
+      transport: 'stdio',
+      serverName: 'srv',
+      command: 'echo',
+    } as never)
+    expect(omitted.reconnect).toEqual({ enabled: true, initialDelayMs: 500, maxDelayMs: 30_000, maxAttempts: 10 })
+
+    const partial = ConfigSchema({
+      transport: 'stdio',
+      serverName: 'srv',
+      command: 'echo',
+      reconnect: { initialDelayMs: 100 },
+    } as never)
+    expect(partial.reconnect).toEqual({ enabled: true, initialDelayMs: 100, maxDelayMs: 30_000, maxAttempts: 10 })
+  })
+
+  it('Config schema rejects an invalid reconnect block', () => {
+    // schemastery unions wrap branch errors, so assert the throw only.
+    expect(() => ConfigSchema({
+      transport: 'stdio',
+      serverName: 'srv',
+      command: 'echo',
+      reconnect: { maxAttempts: 0 },
+    } as never)).toThrow()
+  })
 })
 
 describe('apply (plugin lifecycle)', () => {
@@ -131,7 +159,10 @@ describe('apply (plugin lifecycle)', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     mockConnect.mockResolvedValue(undefined)
-    mockClose.mockResolvedValue(undefined)
+    mockClose.mockImplementation(function (this: { onclose?: () => void }) {
+      this.onclose?.()
+      return Promise.resolve()
+    })
     mockListTools.mockResolvedValue({
       tools: [{ name: 'remote', description: 'A remote tool', inputSchema: { type: 'object' } }],
       nextCursor: undefined,
@@ -141,8 +172,7 @@ describe('apply (plugin lifecycle)', () => {
   })
 
   it('connects, syncs tools under the namespace, and registers a notification handler', async () => {
-    apply(ctx, stdioConfig)
-    await sleep(50)
+    await apply(ctx, stdioConfig)
 
     expect(mockConnect).toHaveBeenCalled()
     expect(mockListTools).toHaveBeenCalled()
@@ -151,22 +181,38 @@ describe('apply (plugin lifecycle)', () => {
     expect(ctx.tools.get('remote')).toBeUndefined()
   })
 
+  it('keeps the Cordis plugin loading until initial discovery publishes its tools', async () => {
+    const connection: PromiseWithResolvers<void> = Promise.withResolvers()
+    mockConnect.mockImplementation(async () => {
+      await connection.promise
+    })
+    const fiber = ctx.plugin({ name: 'mcp-client-lifecycle', inject, apply }, stdioConfig)
+    let activated = false
+    const activation = Promise.resolve(fiber).then(() => { activated = true })
+
+    await vi.waitFor(() => { expect(mockConnect).toHaveBeenCalled() })
+    expect(activated).toBe(false)
+    expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
+
+    connection.resolve()
+    await activation
+    expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
+    await fiber.dispose()
+  })
+
   it('rejects a duplicate serverName at load and leaves the first instance intact', async () => {
-    apply(ctx, stdioConfig)
-    await sleep(50)
+    await apply(ctx, stdioConfig)
     expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
 
-    expect(() => { apply(ctx, stdioConfig) }).toThrow(/serverName "srv" is already in use/)
-    // First instance unaffected.
+    await expect(apply(ctx, stdioConfig)).rejects.toThrow(/serverName "srv" is already in use/)
     expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
   })
 
   it('releases the serverName reservation on dispose', async () => {
     const first = new Context()
     await first.plugin(SystemPrompt)
-    await first.plugin(ToolRegistry)
-    apply(first, stdioConfig)
-    await sleep(50)
+    await first.plugin(ToolRuntime)
+    await apply(first, stdioConfig)
 
     await first.fiber.dispose()
     await sleep(50)
@@ -175,41 +221,105 @@ describe('apply (plugin lifecycle)', () => {
     // and the disposed instance no longer holds the reservation on its root.
     const second = new Context()
     await second.plugin(SystemPrompt)
-    await second.plugin(ToolRegistry)
-    expect(() => { apply(second, stdioConfig) }).not.toThrow()
+    await second.plugin(ToolRuntime)
+    await expect(apply(second, stdioConfig)).resolves.toBeUndefined()
+    await second.fiber.dispose()
   })
 
   it('scopes serverName reservations per app root', async () => {
     const other = await mountRegistry()
 
-    apply(ctx, stdioConfig)
+    const first = apply(ctx, stdioConfig)
     // Same serverName on a DIFFERENT root is fine.
-    expect(() => { apply(other, stdioConfig) }).not.toThrow()
-    await sleep(50)
+    const second = apply(other, stdioConfig)
+    await Promise.all([first, second])
 
     expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
     expect(other.tools.get('mcp__srv__remote')).toBeDefined()
   })
 
-  it('logs error and registers no tools when connect fails; dispose is a no-op', async () => {
+  it('logs error and registers no tools when connect fails; dispose closes the client', async () => {
     mockConnect.mockRejectedValue(new Error('connection refused'))
 
-    apply(ctx, stdioConfig)
-    await sleep(50)
+    await apply(ctx, stdioConfig)
 
     expect(mockListTools).not.toHaveBeenCalled()
     expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
 
-    // Disposal exercises the empty fallback accessor: nothing to unregister,
-    // close still attempted, no throw.
+    // Disposal cancels the scheduled reconnect attempt: nothing to
+    // unregister, close already attempted by the failed attempt, no throw.
     await ctx.fiber.dispose()
     await sleep(50)
     expect(mockClose).toHaveBeenCalled()
   })
 
+  it('rejects activation and still closes the client when startup failure is configured as fatal', async () => {
+    const cause = new Error('connection refused')
+    mockConnect.mockRejectedValue(cause)
+    await expect(apply(ctx, {
+      ...stdioConfig,
+      failOnStartupError: true,
+    })).rejects.toMatchObject({
+      message: 'mcp-client(srv): initial connection or tool synchronization failed',
+      cause,
+    })
+
+    expect(mockListTools).not.toHaveBeenCalled()
+    expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
+    await ctx.fiber.dispose()
+    expect(mockClose).toHaveBeenCalled()
+  })
+
+  it('rejects strict startup when the initial tool generation cannot be registered', async () => {
+    ctx.tools.register({
+      name: 'mcp__srv__remote',
+      description: 'Foreign squatter',
+      parameters: { type: 'object' },
+      output: {
+        schema: { type: 'string' },
+        render: (_args, value) => [{ type: 'text', text: value as string }],
+      },
+      execute: async () => 'foreign',
+    })
+
+    await expect(apply(ctx, {
+      ...stdioConfig,
+      failOnStartupError: true,
+    })).rejects.toThrow('initial connection or tool synchronization failed')
+
+    expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
+    await ctx.fiber.dispose()
+    expect(mockClose).toHaveBeenCalled()
+  })
+
+  it('preserves strict startup registration when list_changed arrives before connect resolves', async () => {
+    ctx.tools.register({
+      name: 'mcp__srv__remote',
+      description: 'Foreign squatter',
+      parameters: { type: 'object' },
+      output: {
+        schema: { type: 'string' },
+        render: (_args, value) => [{ type: 'text', text: value as string }],
+      },
+      execute: async () => 'foreign',
+    })
+    mockConnect.mockImplementation(async () => {
+      const handler = mockSetNotificationHandler.mock.calls[0]![1] as () => Promise<void>
+      await handler()
+    })
+
+    await expect(apply(ctx, {
+      ...stdioConfig,
+      failOnStartupError: true,
+    })).rejects.toThrow('initial connection or tool synchronization failed')
+
+    expect(mockListTools).toHaveBeenCalledTimes(2)
+    expect(ctx.tools.get('mcp__srv__remote')?.description).toBe('Foreign squatter')
+    await ctx.fiber.dispose()
+  })
+
   it('re-syncs tools on ToolListChanged notification', async () => {
-    apply(ctx, stdioConfig)
-    await sleep(50)
+    await apply(ctx, stdioConfig)
 
     expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
 
@@ -218,7 +328,7 @@ describe('apply (plugin lifecycle)', () => {
       nextCursor: undefined,
     })
 
-    const handler: () => Promise<void> = mockSetNotificationHandler.mock.calls[0]![1] as () => Promise<void>
+    const handler = mockSetNotificationHandler.mock.calls[0]![1] as () => Promise<void>
     await handler()
 
     expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
@@ -226,8 +336,7 @@ describe('apply (plugin lifecycle)', () => {
   })
 
   it('keeps the previous generation when a re-sync fails', async () => {
-    apply(ctx, stdioConfig)
-    await sleep(50)
+    await apply(ctx, stdioConfig)
     expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
 
     mockListTools.mockRejectedValue(new Error('flaky server'))
@@ -242,7 +351,7 @@ describe('apply (plugin lifecycle)', () => {
     // Load through ctx.plugin so ONLY the plugin's fiber is disposed — the
     // registry must survive to observe the unregistration.
     const fiber = ctx.plugin({ name: 'mcp-client', inject: ['tools'], apply }, stdioConfig)
-    await sleep(50)
+    await fiber
 
     // Advance to a second generation first.
     mockListTools.mockResolvedValue({
@@ -262,10 +371,12 @@ describe('apply (plugin lifecycle)', () => {
   })
 
   it('effect disposer handles client.close failure gracefully', async () => {
-    mockClose.mockRejectedValue(new Error('already closed'))
+    mockClose.mockImplementation(function (this: { onclose?: () => void }) {
+      this.onclose?.()
+      return Promise.reject(new Error('already closed'))
+    })
 
-    apply(ctx, stdioConfig)
-    await sleep(50)
+    await apply(ctx, stdioConfig)
 
     // Should not throw when dispose is triggered.
     await ctx.fiber.dispose()
@@ -281,10 +392,10 @@ describe('apply (plugin lifecycle)', () => {
       url: 'http://localhost:3000/mcp',
       headers: { Authorization: 'Bearer x' },
       toolCallTimeoutMs: 30_000,
+      failOnStartupError: false,
     }
 
-    apply(ctx, httpConfig)
-    await sleep(50)
+    await apply(ctx, httpConfig)
 
     expect(mockConnect).toHaveBeenCalled()
     expect(ctx.tools.get('mcp__web__remote')).toBeDefined()

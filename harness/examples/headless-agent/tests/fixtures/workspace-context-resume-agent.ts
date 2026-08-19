@@ -1,9 +1,9 @@
 /**
- * Loader fixture that resumes the seeded workspace-context session.
+ * Loader fixture that resumes the seeded agent-instructions session.
  * @module workspace-context-resume-agent
  */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 
 /** Fixture plugin name. */

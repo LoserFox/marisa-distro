@@ -1,6 +1,6 @@
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent'
-import { COMPACT_CHECKPOINT_SOURCE } from '@deepseek-ai/dsh-compact'
+import { CompactionId, compactCheckpointSource } from '@deepseek-ai/dsh-compaction'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-tools'
 
@@ -21,12 +21,12 @@ export function apply(ctx: Context): void {
     const baseline = agent.session.surface.nodes
       .map(seq => agent.session.events[seq])
       .find(event => event?.type === 'user/message'
-        && event.data.source.kind === 'workspace-instructions'
+        && event.data.source.kind === 'agent-instructions'
         && event.data.source.baseline === true)
     if (baseline === undefined) throw new Error('workspace baseline missing before snapshot compaction')
     agent.session.append('user/message', createUserMessage({
       content: [{ type: 'text', text: 'Earlier context was compacted for this snapshot.' }],
-      source: COMPACT_CHECKPOINT_SOURCE,
+      source: compactCheckpointSource(CompactionId('workspace-context-fixture')),
     }), {
       surfaceOp: { op: 'replace', start: baseline.seq, end: baseline.seq },
       sourceEventSeqs: [baseline.seq],

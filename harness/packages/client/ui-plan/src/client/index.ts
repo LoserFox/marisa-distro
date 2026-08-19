@@ -7,7 +7,7 @@
  * projection pair through the standard-kit `useProjection`; zero client-side
  * plan state.
  */
-import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
 // Type-only: pulls the ui-conversation SlotMap merge (the input.plan seat).
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -39,8 +39,8 @@ export interface PlanChipInjected {
   exitPlanMode: () => Promise<string | null>
 }
 
-/** Required services: the seat's slot registry, transport, and locale registry. */
-export const inject = ['slots', 'connection', 'locale']
+/** Required services: the seat's slot registry, commands Remote, and locale registry. */
+export const inject = ['slots', 'remote', 'remote.commands', 'locale']
 
 /**
  * Client plugin body: register the plan chip over the command channel.
@@ -55,10 +55,9 @@ export function apply(ctx: ClientContext): void {
     inject: (sessionId: SessionId): PlanChipInjected => ({
       // Failure strings stay English (error-surface policy: not localized).
       exitPlanMode: async () => {
-        const connection = ctx.get('connection') as ConnectionHandle
-        const { result } = await connection.api.commands.execute({ sessionId, line: '/plan off' })
+        const result = await ctx.remote.commands.execute(sessionId, '/plan off')
         if (!result.ok) return `${result.error.message} (${result.error.code})`
-        if (!result.value.matched) return 'unknown command: /plan off'
+        if (result.value === undefined) return 'unknown command: /plan off'
         return null
       },
     }),

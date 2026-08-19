@@ -1,11 +1,11 @@
 /**
  * questions domain contract. The question requested frame is a
  * server-request whose rpcId is the question's stable logical id (minted when the host accepts
- * ask(); core user-interaction has no request-level id); the answer is a client-response
+ * ask(); core user-questions has no request-level id); the answer is a client-response
  * echoing that rpcId, with no resource id in the payload (rpcId suffices).
  */
 
-import type { AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-interaction/types'
+import type { AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 /**

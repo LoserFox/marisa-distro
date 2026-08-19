@@ -48,6 +48,6 @@ export class DomainError extends Error {
     options?: DomainErrorOptions,
   ) {
     super(message, options)
-    if (options?.detail) { this.detail = options.detail }
+    if (options?.detail) this.detail = options.detail
   }
 }

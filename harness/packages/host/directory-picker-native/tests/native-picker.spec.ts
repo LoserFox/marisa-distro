@@ -119,7 +119,7 @@ describe('native directory picker', () => {
   it('uses the current process platform when no platform override is supplied', async () => {
     // Deterministic on every host: the win32 tier answers from the dialog,
     // the POSIX tiers from the command runner.
-    const run = vi.fn<DirectoryPickerRunner>(async () => { return ({ stdout: '/default/platform\n', stderr: '' }) })
+    const run = vi.fn<DirectoryPickerRunner>(async () => ({ stdout: '/default/platform\n', stderr: '' }))
     const pickWin32Dialog = async (): Promise<string | null> => 'C:\\default\\platform'
     const expected = process.platform === 'win32' ? 'C:\\default\\platform' : '/default/platform'
     await expect(pickNativeDirectory(signal(), { run, pickWin32Dialog })).resolves.toBe(expected)

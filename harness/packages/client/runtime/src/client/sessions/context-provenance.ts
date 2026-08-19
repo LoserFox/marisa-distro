@@ -1,4 +1,4 @@
-// Context provenance projection: the role and the human-facing producer name
+// Context source projection: the role and the human-facing producer name
 // of one logged non-user `user/message`, read from its durable `source` alone.
 // The client keeps no table of known plugin ids — a renamed or newly mounted
 // producer must never need a client release to stay identifiable, and a resumed
@@ -79,7 +79,7 @@ export function contextProvenance(source: unknown): ContextProvenanceView {
       return { role: 'recall', label: joined(collect(record, 'references', 'label')) ?? kind }
     // Workspace instructions name the files they were reconciled from, which
     // identifies the producer far better than the plugin id would.
-    case 'workspace-instructions':
+    case 'agent-instructions':
       return { role: 'inject', label: joined(collect(record, 'changes', 'path')) ?? kind }
     case 'plugin':
       return { role: 'inject', label: readString(record, 'plugin') ?? kind }

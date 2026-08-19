@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import AgentRegistry, { agentEvents, Inbox, type Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { BashExecutor } from '@deepseek-ai/dsh-bash'
-import type { BashExecRequest, BashExecSpec, BashProcess, BashRunResult } from '@deepseek-ai/dsh-bash'
+import { ShellExecutor } from '@deepseek-ai/dsh-shell'
+import type { ShellExecRequest, ShellExecSpec, ShellProcess, ShellRunResult } from '@deepseek-ai/dsh-shell'
 import * as tmuxContext from '@deepseek-ai/dsh-tmux-context'
 import type { Config } from '@deepseek-ai/dsh-tmux-context'
 
@@ -33,7 +33,7 @@ function tmuxLine(fields: {
   ].join('\\t')
 }
 
-function runResult(stdout: string, overrides: Partial<BashRunResult> = {}): BashRunResult {
+function runResult(stdout: string, overrides: Partial<ShellRunResult> = {}): ShellRunResult {
   return {
     exitCode: 0,
     signal: null,
@@ -46,14 +46,14 @@ function runResult(stdout: string, overrides: Partial<BashRunResult> = {}): Bash
   }
 }
 
-/** A scriptable fake `ctx.bash` recording the command it was asked to run. */
-class FakeBash extends BashExecutor {
+/** A scriptable fake `ctx.shell` recording the command it was asked to run. */
+class FakeBash extends ShellExecutor {
   commands: string[] = []
-  result: BashRunResult = runResult(`${tmuxLine()}\n`)
+  result: ShellRunResult = runResult(`${tmuxLine()}\n`)
   runError?: Error
   resolveError?: Error
 
-  override resolve(request: BashExecRequest): BashExecSpec {
+  override resolve(request: ShellExecRequest): ShellExecSpec {
     if (this.resolveError) throw this.resolveError
     return {
       command: request.command,
@@ -64,13 +64,13 @@ class FakeBash extends BashExecutor {
       sandboxPolicy: request.sandboxPolicy,
     }
   }
-  override async run(spec: BashExecSpec): Promise<BashRunResult> {
+  override async run(spec: ShellExecSpec): Promise<ShellRunResult> {
     this.commands.push(spec.command)
     if (this.runError) throw this.runError
     return this.result
   }
-  override start(): BashProcess {
-    throw new Error('tmux-context must never start a background task')
+  override start(): ShellProcess {
+    throw new Error('tmux-context must never start a background job')
   }
 }
 
@@ -85,7 +85,7 @@ async function mount(
   let bash: FakeBash | undefined
   if (withBash) {
     await ctx.plugin(FakeBash)
-    bash = ctx.bash as FakeBash
+    bash = ctx.shell as FakeBash
   }
   await ctx.plugin(tmuxContext, config)
   return { ctx, bash }
@@ -105,7 +105,7 @@ function sessionAgent(session: Session, id = 'agent'): Agent {
     inject: () => { throw new Error('tmux-context must append directly to the open step') },
     cancel() {},
     runMaintenance: task => task(new AbortController().signal),
-    whenIdle: () => { return Promise.resolve() },
+    whenIdle: () => Promise.resolve(),
   }
 }
 
@@ -118,7 +118,7 @@ function openMessageTurn(session: Session, turn: number): void {
 }
 
 function contextTexts(session: Session): string[] {
-  const texts: Array<string> = []
+  const texts: string[] = []
   for (const event of session.events) {
     if (event.type === 'user/message'
       && event.data.source.kind === 'plugin'

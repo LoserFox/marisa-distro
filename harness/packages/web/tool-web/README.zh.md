@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-面向模型的 web 工具套件 `web_search` 与 `web_fetch`，构建于 [web 能力 seam](../web/README.md)（`ctx.web`）之上。它只负责面向模型的事项：工具名称、JSON Schema、snake_case 参数名称、提示词区段、结果数量上限、结果格式、HTML→markdown 呈现，以及 UI 呈现投影——`presentCall`、`presentResult`（以 `kind: 'search' | 'fetch'` 区分的 `card: 'web'` 结果卡片），以及承载有损渲染文本无法携带的结构化搜索来源或抓取摘要的 `output.presentationMeta`（见 [web-result-card Agent Note](../../../.agents/notes/implemented/feature/2026-07-30-web-result-card.md)）。所有 web 访问都通过 `ctx.web`；该包绝不导入具体提供方。两个工具都不公开面向模型的超时：每个工具的协作式工具调用超时预算通过配置在此声明（`fetchTimeoutMs`／`searchTimeoutMs`，附加为 `ToolDefinition.timeoutMs`），由 [`@deepseek-ai/dsh-timeout-policy`](../../timeout/timeout-policy/README.md)（`tools/execute` 包装层）强制执行；每个工具只把 `exec.signal` 转发给 seam。
+面向模型的 web 工具套件 `web_search` 与 `web_fetch`，构建于 [web 能力 seam](../web/README.md)（`ctx.web`）之上。它只负责面向模型的事项：工具名称、JSON Schema、snake_case 参数名称、提示词区段、结果数量上限、结果格式、HTML→markdown 呈现，以及 UI 呈现投影——`presentCall`、`presentResult`（以 `kind: 'search' | 'fetch'` 区分的 `card: 'web'` 结果卡片），以及承载有损渲染文本无法携带的结构化搜索来源或抓取摘要的 `output.presentationMeta`（见 [web-result-card Agent Note](../../../.agents/notes/implemented/feature/2026-07-30-web-result-card.md)）。所有 web 访问都通过 `ctx.web`；该包绝不导入具体提供方。两个工具都不公开面向模型的超时：每个工具的协作式工具调用超时预算通过配置在此声明（`fetchTimeoutMs`／`searchTimeoutMs`，附加为 `ToolDefinition.timeoutMs`），由 [`@deepseek-ai/dsh-tool-call-timeout-policy`](../../guard/timeout-policy/README.md)（`tools/execute` 包装层）强制执行；每个工具只把 `exec.signal` 转发给 seam。
 
 每个工具独立注册；只需要其中一个工具的产品可以通过配置禁用另一个（`{ search: false }`／`{ fetch: false }`）。仅当抓取也通过配置启用时，搜索指引才会提及 `web_fetch`；仅启用搜索的组合则会要求模型使用返回的 snippet 并引用其 URL。
 
@@ -11,11 +11,11 @@
 | 工具 | 参数 | 行为 |
 |---|---|---|
 | `web_search` | `query`（string） | 用于发现信息。返回可选答案与来源 URL。`max_results` **不**面向模型：工具设置上限（`searchMaxResults` 配置，默认 8）并传给 seam。 |
-| `web_fetch` | `url`（string） | 获取特定 URL。HTML 主体渲染为 markdown（turndown，带 GFM 表格／删除线）；文本主体原样通过。非 2xx 状态会报告，而非报错。工具调用超时是部署策略（`dsh-timeout-policy`），不是模型参数。 |
+| `web_fetch` | `url`（string） | 获取特定 URL。HTML 主体渲染为 markdown（turndown，带 GFM 表格／删除线）；文本主体原样通过。非 2xx 状态会报告，而非报错。工具调用超时是部署策略（`dsh-tool-call-timeout-policy`），不是模型参数。 |
 
 两个工具都选择并发调度，因为提供方读取会返回内容，不会修改父 agent（智能体）的状态。
 
-规范化后的 seam 结果也是标准工具值：`WebSearchResult` 与 `WebFetchResult`。原生渲染器会保留下文所述的答案、来源和抓取正文文本；提供方对搜索结果数量和正文大小的上限仍属于获取限制，而非仅用于呈现的截断。
+规范化后的服务结果也是标准工具值：`WebSearchResult` 与 `WebFetchResult`。原生渲染器会保留下文所述的答案、来源和抓取正文文本；提供方对搜索结果数量和正文大小的上限仍属于获取限制，而非仅用于呈现的截断。
 
 ## 配置
 
@@ -28,7 +28,7 @@
 | `searchTimeoutMs` | `30000` | `web_search` 的协作式工具调用超时预算（ms）。 |
 | `fetchMaxOutputChars` | `200000` | 同步转换的源字符数与单次完整 `web_fetch` 输出的上限（状态头、渲染后的主体与页脚合并计算）；主体被截断时，在能容纳的情况下附带截断提示。 |
 
-`fetchTimeoutMs`／`searchTimeoutMs` 声明每个工具的协作式超时预算（附加为 `ToolDefinition.timeoutMs`），由 [`@deepseek-ai/dsh-timeout-policy`](../../timeout/timeout-policy/README.md) 强制执行；面向模型的 schema 不公开超时参数。`fetchMaxOutputChars` 同时限制同步转换工作量和完整渲染结果：只转换至多该数量的源字符，随后对状态头、转换后的前缀和截断提示合并设限。默认值为本地提供方的 100,000 字符主体上限留出余量，但渲染膨胀仍可能使最终上限截断结果。
+`fetchTimeoutMs`／`searchTimeoutMs` 声明每个工具的协作式超时预算（附加为 `ToolDefinition.timeoutMs`），由 [`@deepseek-ai/dsh-tool-call-timeout-policy`](../../guard/timeout-policy/README.md) 强制执行；面向模型的 schema 不公开超时参数。`fetchMaxOutputChars` 同时限制同步转换工作量和完整渲染结果：只转换至多该数量的源字符，随后对状态头、转换后的前缀和截断提示合并设限。默认值为本地提供方的 100,000 字符主体上限留出余量，但渲染膨胀仍可能使最终上限截断结果。
 
 ```yaml
 - id: tool-web
@@ -37,7 +37,7 @@
 
 ## 稳定注册
 
-工具注册遵循产品**启用状态**，而非后端可用性。即使选中的提供方缺失、错误配置、存在歧义或暂时不可用，工具仍保持可见；seam 在执行时解析提供方，执行以结构化 `WebError`（例如 `WEB_PROVIDER_UNAVAILABLE`、`WEB_PROVIDER_AMBIGUOUS`）失败，`ToolRegistry.execute()` 会把它转为模型可读、钩子／UI 可路由的错误工具结果。这样无需把插件加载顺序、凭据状态或 HMR（热模块替换）时机纳入面向模型契约，也能保持模型 schema 稳定。要彻底移除 web 工具，请在此处通过配置将其禁用。
+工具注册遵循产品**启用状态**，而非后端可用性。即使选中的提供方缺失、错误配置、存在歧义或暂时不可用，工具仍保持可见；seam 在执行时解析提供方，执行以结构化 `WebError`（例如 `WEB_PROVIDER_UNAVAILABLE`、`WEB_PROVIDER_AMBIGUOUS`）失败，`ToolRuntime.execute()` 会把它转为模型可读、钩子／UI 可路由的错误工具结果。这样无需把插件加载顺序、凭据状态或 HMR（热模块替换）时机纳入面向模型约定，也能保持模型 schema 稳定。要彻底移除 web 工具，请在此处通过配置将其禁用。
 
 工具绝不会调用提供方的 `available()`，也不会枚举提供方；唯一执行路径是 `ctx.web.search()`／`ctx.web.fetch()`，提供方不可用时，选择机制会在执行阶段抛出结构化 `WebError`，其错误码由工具接收。提供方选择完全留在 seam 内，由单一主体负责。
 
@@ -93,7 +93,7 @@ Use the web_fetch tool to retrieve the content of a specific HTTP(S) URL (for ex
 
 #### 模型看到的内容
 
-可选的提供方答案之后是 `Sources:`，再跟随内容取决于数据且格式严格为 `- [<title-or-url>](<url>)` 的行，并可添加后缀 ` — <snippet> (<publishedAt>)`。既无答案也无来源时，结果显示 `No results found.`。列表达到上限时会添加 `(Showing the first <count> sources. Refine the query for more.)`；每个结果都以 `Cite the relevant URLs above as markdown links in your answer.` 结尾。
+可选的提供方答案之后是 `Sources:`，再跟随内容取决于数据且格式严格为 `- [<title-or-url>](<url>)` 的行，并可添加后缀 ` — <snippet> (<publishedAt>)`。既无答案也无来源时，结果显示 `No results found.`。列表被截断至上限时会添加 `(Showing the first <count> sources. Refine the query for more.)`；每个结果都以 `Cite the relevant URLs above as markdown links in your answer.` 结尾。
 
 #### Token 影响
 

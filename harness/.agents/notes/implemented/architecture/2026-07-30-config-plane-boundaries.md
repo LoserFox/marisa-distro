@@ -4,7 +4,9 @@ Status: implemented
 
 English | [中文](2026-07-30-config-plane-boundaries.zh.md)
 
-> Scope: the review round over the [web configuration plane](2026-07-30-web-config-plane.md) — which namespaces reach the wire, which callers reach them, and how an editor holding a partial, possibly stale view writes without destroying what it cannot see.
+> Scope: boundary hardening of the [web configuration plane](2026-07-30-web-config-plane.md) — which namespaces reach the wire, which callers reach them, and how an editor holding a partial, possibly stale view writes without destroying what it cannot see.
+
+> The caller boundary, the redaction, and the revision fencing remain current. Restricting which namespaces reach the wire to the configurable-provider directory is superseded by the [plugin-owned settings surface](2026-08-12-plugin-owned-settings-surface.md), which serves every registered namespace.
 
 ## Problem
 
@@ -22,11 +24,11 @@ Three smaller defects sat beside them. `llm/adapters-updated` documented contain
 
 **The plane serves exactly the namespaces a registered model provider addresses.** `ctx.llm.listConfigurableProviders()` is the allow-list, so the product boundary is enforced rather than inferred from today's plugin set, and a future namespace becomes web-configurable only by joining that directory. An unregistered namespace and an unexposed one answer identically (`settings-not-exposed`), so probing cannot enumerate the registry.
 
-**A caller with a partial view names the field it means.** `Settings.mutate(ns, ops)` applies `set`/`unset` path ops to the section as it stands at the front of the write queue. The client builds ops by diffing its opening snapshot against its draft, so it mentions only fields it can see: a secret absent from both sides produces no op and survives by construction, not by care. `replace` remains the deliberate wholesale reset.
+**A caller with a partial view names the field it means.** `SettingsProvider.mutate(ns, ops)` applies `set`/`unset` path ops to the section as it stands at the front of the write queue. The client builds ops by diffing its opening snapshot against its draft, so it mentions only fields it can see: a secret absent from both sides produces no op and survives by construction, not by care. `replace` remains the deliberate wholesale reset.
 
 **Staleness is detected, not ordered away.** Each namespace carries a monotonic `revision` over its RAW section; writes may carry `expectedRevision`, and a mismatch rejects with `SettingsConflictError` → `settings-conflict` on the wire, both revisions attached. The editor captures the revision it opened at and, on conflict, tells the user to reopen rather than replaying its snapshot.
 
-**The raw layer gets its own event.** `settings/updated` stays gated on the resolved value — that is what a consumer means by change. `settings/document-updated (ns, revision)` fires on any raw-section change, because a configuration surface must learn that a field went from inherited to overridden (same resolved value, different meaning) and that its held revision is stale. The host frame `host/settings-changed` now rides this event, and a change to an exposed provider namespace also emits `host/models-changed`: that namespace holds the provider's catalog, which no route change announces.
+**The raw layer gets its own event.** `settings/updated` stays gated on the resolved value — that is what a consumer means by change. `settings/document-updated (ns, revision)` fires on any raw-section change, because a configuration surface must learn that a field went from inherited to overridden (same resolved value, different meaning) and that its held revision is stale. The event is forwarded verbatim, and model consumers subscribe to it alongside `llm/adapters-updated`, because provider settings hold catalog data that no route change announces.
 
 ## Alternatives considered
 
@@ -34,7 +36,7 @@ Three smaller defects sat beside them. `llm/adapters-updated` documented contain
 - **Opt-in metadata at `settings.register()`** — the most honest semantics (the namespace's owner declares its own exposure), and the largest change: the seam's public interface, both LLM plugins, and their docs. Recorded as the shape to adopt if a non-LLM namespace ever needs the plane.
 - **Distinguishing "unregistered" from "registered but unexposed"** — better diagnostics, and a namespace-enumeration oracle. The uniform answer is deliberate.
 - **Detecting conflicts by diffing instead of a revision** — comparing the submitted base against storage would work for whole-section writes, but the editor holds a REDACTED section: it cannot produce a comparable base, which is the same reason it cannot safely `replace`. A counter needs neither.
-- **Fixing the redaction gaps in this round** — `redactSecrets` walks only `object`/`dict`/`array`, so a secret behind a union, intersection, or transform is returned verbatim with an empty `secrets` list; `schema.toJSON()` carries a secret field's `.default(...)`; write-rejection messages return schema text that may quote the input; the client rehydrates the envelope through schemastery's `new Function`; and pi-ai's plain-string `headers` dict can legitimately hold `Authorization`. All confirmed, all deliberately left for a fail-closed `describeForWire()` that refuses a schema it cannot prove safe. They are recorded as `TODO(settings-wire-redaction)` and in the owning READMEs' Known Limitations rather than half-fixed here.
+- **Fixing the redaction gaps here** — `redactSecrets` walks only `object`/`dict`/`array`, so a secret behind a union, intersection, or transform is returned verbatim with an empty `secrets` list; `schema.toJSON()` carries a secret field's `.default(...)`; write-rejection messages return schema text that may quote the input; the client rehydrates the envelope through schemastery's `new Function`; and pi-ai's plain-string `headers` dict can legitimately hold `Authorization`. All real, all deliberately left for a fail-closed `describeForWire()` that refuses a schema it cannot prove safe. They are recorded as `TODO(settings-wire-redaction)` and in the owning READMEs' Known Limitations rather than half-fixed here.
 
 ## Consequences
 

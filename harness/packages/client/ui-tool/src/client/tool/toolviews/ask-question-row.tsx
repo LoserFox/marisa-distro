@@ -7,7 +7,7 @@
 // render in the composer takeover.
 
 import { IconQuestionOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ToolCallViewProps } from '../../contract/slots.ts'
 import { toolRowModel } from '../models/tool-call-model.ts'
@@ -21,8 +21,8 @@ function isAnswer(value: unknown): value is AnswerEntry {
   return typeof value === 'object' && value !== null
 }
 
-/** Answered-count summary off the result JSON (a skipped question has
- *  empty `selected` and no `custom`); null on unexpected shape (generic fallback). */
+/** Answered-count summary from the result JSON (a skipped question has
+ *  empty `selected` and no `custom`); null when answer fields are invalid. */
 function answeredSummary(text: string, t: AskQuestionRowProps['t']): string | null {
   let parsed: unknown
   try {
@@ -46,7 +46,7 @@ type AskQuestionRowProps = ToolCallViewProps & PropsLocale<'conversation'>
  *  Input/Output sections, ToolRow's unified expand). */
 export function AskQuestionRow({ toolName, block, inspect, t }: AskQuestionRowProps) {
   const model = toolRowModel(toolName, block)
-  // Composer verdicts settle the call as specific UserInteractionErrors
+  // Composer verdicts settle the call as specific UserQuestionErrors
   // (apiproxy ask_user_question handler): 'ASK_CANCELLED' is the user's own
   // dismissal of the set, 'ASK_ABORTED' is a turn interrupt landing while the
   // question was pending. Both name their verdict instead of the generic

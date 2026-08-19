@@ -1,19 +1,19 @@
 /**
  * Settlement of one ONE-SHOT subagent run into a background-Task outcome. Only
- * the one-shot background path uses Tasks; continuable children have no Task,
+ * the one-shot background path uses Jobs; continuable children have no Task,
  * no per-message result, and no Task cancellation.
  *
  * @module @deepseek-ai/dsh-subagent/run-settlement
  */
 
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { TaskOutcome } from '@deepseek-ai/dsh-tasks'
+import type { JobOutcome } from '@deepseek-ai/dsh-jobs'
 import type { SubagentResult, SubagentRun } from './types.ts'
 
 /** Flatten a child's final output blocks to the task's final text. */
 function finalText(blocks: ContentBlock[]): string {
   return blocks
-    .filter((block): block is Extract<ContentBlock, { type: 'text' }> => { return block.type === 'text' })
+    .filter((block): block is Extract<ContentBlock, { type: 'text' }> => block.type === 'text')
     .map(block => block.text)
     .join('')
 }
@@ -22,9 +22,9 @@ function finalText(blocks: ContentBlock[]): string {
  * Map a child result to the task outcome: completed carries final text,
  * aborted is killed, and every other reason is failed without partial output.
  * @param result - child terminal result.
- * @returns outcome for the `ctx.tasks` registration.
+ * @returns outcome for the `ctx.jobs` registration.
  */
-function runOutcome(result: SubagentResult): TaskOutcome {
+function runOutcome(result: SubagentResult): JobOutcome {
   switch (result.stopReason) {
     case 'completed':
       return { status: 'completed', output: finalText(result.output) }
@@ -46,8 +46,8 @@ function runOutcome(result: SubagentResult): TaskOutcome {
  * @param run - live run to settle and release.
  * @returns outcome after child resources are released.
  */
-export async function settleRun(run: SubagentRun): Promise<TaskOutcome> {
-  let outcome: TaskOutcome
+export async function settleRun(run: SubagentRun): Promise<JobOutcome> {
+  let outcome: JobOutcome
   try {
     outcome = runOutcome(await run.result)
   } catch (error: unknown) {

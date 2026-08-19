@@ -1,15 +1,15 @@
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
-import SkillService from '@deepseek-ai/dsh-skill'
+import SkillRegistry from '@deepseek-ai/dsh-skill'
 import * as SkillBadge from '@deepseek-ai/dsh-skill-badge'
 
 describe('dsh-skill-badge', () => {
   it('registers and disposes the bundled badge skill', async () => {
     const ctx = new Context()
-    await ctx.plugin(SkillService)
+    await ctx.plugin(SkillRegistry)
     const fiber = await ctx.plugin(SkillBadge)
     const resourcePath = fileURLToPath(new URL('../assets/', import.meta.url))
 

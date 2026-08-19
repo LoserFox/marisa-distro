@@ -15,11 +15,13 @@ from deepseek_harness.errors import TransportClosedError
 from deepseek_harness_runtime import resolve_bundled_launch_args
 
 _MODES = ("exe", "node")
+_REPO_ROOT = Path(__file__).parents[3]
+_MINIMAL_CONFIG = _REPO_ROOT / "examples" / "jsonrpc-agent" / "minimal.cordis.yml"
 
 # The config must include the JSON-RPC serving plugin.
 _CORDIS_YML = """\
-- id: jsonrpc
-  name: '@deepseek-ai/dsh-jsonrpc'
+- id: sdk-jsonrpc-server
+  name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
 - id: agent-core
   name: '@deepseek-ai/dsh-agent-spine-demo'
   config:
@@ -78,6 +80,30 @@ def test_bundled_runtime_boots_a_cordis_config(tmp_path: Path, mode: str) -> Non
 
     assert init.serverInfo is not None
     assert init.serverInfo.name == "deepseek-harness-sdk-runtime"
+
+
+@pytest.mark.parametrize("mode", _MODES)
+def test_python_sdk_boots_minimal_jsonrpc_config(tmp_path: Path, mode: str) -> None:
+    launch_args = _launch_args(mode)
+    model = "minimal-environment-model"
+    harness = DeepSeekHarness(
+        model=model,
+        cwd=str(tmp_path),
+        session_root=str(tmp_path / "sessions"),
+        cordis=str(_MINIMAL_CONFIG),
+        env={
+            "DSH_MODEL": model,
+            "DSH_CONTEXT_WINDOW": "1000000",
+            "DSH_SYSTEM_PROMPT": "You are the Python SDK minimal boot test agent.",
+        },
+        api_key="sk-dummy-for-boot",
+        base_url="http://127.0.0.1:9",
+        launch_args_override=launch_args,
+        request_timeout_seconds=120,
+    )
+
+    with harness:
+        pass
 
 
 @pytest.mark.parametrize("mode", _MODES)

@@ -60,7 +60,7 @@ export function currentSurfaceEvents(
  * @param sessionId - owner of the event log.
  * @param events - detached raw event log.
  * @param seq - target event seq.
- * @returns direct surface and provenance relationships.
+ * @returns direct surface replacements and relationships to cited source events.
  */
 export function traceEvent(
   sessionId: SessionId,
@@ -96,7 +96,7 @@ export function traceEvent(
   const replacedBy = analysis.replacedBy.get(seq)
   return {
     target: targetRecord,
-    ...replacedBy !== undefined ? { replacedBy } : {},
+    ...replacedBy === undefined ? {} : { replacedBy },
     replacementChain,
     replacedEventSeqs: analysis.replacedEventSeqs.get(seq) ?? [],
     sourceEventSeqs: [...eventSources(target)],

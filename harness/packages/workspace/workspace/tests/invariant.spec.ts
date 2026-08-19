@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import { Context } from '@deepseek-ai/cordis'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 import type { DomainChanged } from '@deepseek-ai/dsh-storage-domain'
 import * as WorkspaceInvariant from '../src/invariant.ts'
 import { WorkspaceId } from '../src/index.ts'
@@ -8,8 +8,8 @@ import { WorkspaceId } from '../src/index.ts'
 /** Boot the invariant service plus the companion over a stubbed registry knowing exactly `ids`. */
 async function setup(ids: string[]): Promise<Context> {
   const ctx = new Context()
-  await ctx.plugin(InvariantService)
-  ctx.provide('workspace', {
+  await ctx.plugin(InvariantRegistry)
+  ctx.provide('workspaceRegistry', {
     get: (id: WorkspaceId) => (ids.includes(id) ? { id } : undefined),
   })
   await ctx.plugin(WorkspaceInvariant)

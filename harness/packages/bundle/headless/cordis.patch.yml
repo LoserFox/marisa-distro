@@ -1,21 +1,35 @@
-# The dsh-headless bundle patch: one-shot task mode over dsh-base +
-# dsh-web-app. The web composition stays mounted (the session is observable
-# in a browser while it runs); this layer silences the URL line and the
-# GUI-orientation surface context (this user is not in the GUI), moves the
-# webserver to an OS-assigned port so parallel headless runs never collide,
-# and mounts the one-shot runner. The launcher patches the runner's `task`.
+# The dsh-headless bundle patch: one-shot task mode directly over dsh-base.
+# It mounts no Host, HTTP server, Web runtime, or browser plugin. An ordinary
+# provider plugin injects `cmdlineArgs`, parses the task positional
+# (`dsh --profile headless "<task>"`) and this app's --help, then the direct
+# driver creates an Agent through the core registry and prints its durable result.
 
-- id: webserver
+- id: system-prompt
   config:
-    host: 127.0.0.1
-    port: 0
+    persona: >-
+      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
 
-- id: web-runtime
+# The shared module-reload HMR row stays off; the launcher's watch-only
+# fallback still keeps the user patch layers live until the run exits.
+- id: hmr
+  disabled: true
+
+- id: tools
   config:
-    mode: production
-    printUrl: false
-    surfaceContext: false
+    # Keep the same temporary process-wide Code Mode opt-in as the Web surface.
+    mode: !!js process.env.DSH_TOOLS_MODE
 
 - insert:
+    # Code Mode is a core execution capability, not a Web component.
+    - id: code-runtime
+      name: '@deepseek-ai/dsh-code-runtime-worker-thread'
+
+    - id: headless-startup
+      name: '@deepseek-ai/dsh-headless/startup'
+
+    # Reads its task from the ordinary headlessStartup provider.
     - id: headless-runner
       name: '@deepseek-ai/dsh-headless'
+      inject: [headlessStartup]
+      config:
+        task: !!js ctx.headlessStartup.task

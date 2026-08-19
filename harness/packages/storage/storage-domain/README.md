@@ -19,7 +19,7 @@ Design rationale, open semantics, and the storage/domain layer split live in the
 
 #### What the model sees
 
-Nothing. The package registers no tools, injects no prompts, and appends no session events; it stores non-session data (workspace records, future session sidecars) behind `ctx.storageDomain` and emits only the in-process `domain/changed` event, which reaches a model only if a consumer package renders it through its own documented surface.
+Nothing. The package registers no tools, injects no prompts, and appends no session events; it stores non-session data (workspace records, future session sidecars) behind `ctx.storageDomain` and emits only the in-process `domain/changed` event, which reaches a model only if a Consumer package renders it through its own documented surface.
 
 #### Token effect
 

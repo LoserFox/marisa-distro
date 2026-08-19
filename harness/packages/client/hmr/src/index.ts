@@ -4,13 +4,15 @@
  * mounts deliver no inotify events), reports content changes through
  * `clientModuleHost.rebuilt(id)`, and serves the `/plugins/events` SSE channel
  * broadcasting graph/rebuilt frames to the browser half (src/client/).
- * Dev-only row: prod compositions never mount this plugin.
+ * The web bundle mounts this row unconditionally: without a rebuild
+ * watcher rewriting client bundles, the poll observes no changes and the
+ * chain stays idle.
  */
 import { statSync } from 'node:fs'
 import type { ServerResponse } from 'node:http'
-import type { Context } from 'cordis'
-import z from 'schemastery'
-// Empty type imports carry the clientModuleHost/httpServer Context merges.
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
+// Empty type imports carry the clientModuleHost/webServer Context merges.
 import type {} from '@deepseek-ai/dsh-client-modules'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type { PluginsEventFrame } from './events.ts'
@@ -23,7 +25,7 @@ export { EVENTS_ENDPOINT } from './events.ts'
 export const name = 'client-hmr'
 
 /** Required services: the web plugin table and the route registry. */
-export const inject = ['clientModuleHost', 'httpServer']
+export const inject = ['clientModules', 'webServer']
 
 /** Plugin config, validated by the same-named schemastery schema. */
 export interface Config {
@@ -49,7 +51,7 @@ interface WatchedBundle {
 
 /**
  * Mount the dev chain: bundle watches, rebuilt reporting, and the SSE channel.
- * @param ctx - host plugin context carrying clientModuleHost and httpServer.
+ * @param ctx - host plugin context carrying clientModuleHost and webServer.
  * @param config - validated {@link Config}.
  */
 export function apply(ctx: Context, config: Config): void {
@@ -63,7 +65,7 @@ export function apply(ctx: Context, config: Config): void {
     try {
       // rebuilt() re-hashes; an unchanged hash stays silent (clientModuleHost
       // fires onRebuilt only on a real rev change).
-      ctx.clientModuleHost.rebuilt(id)
+      ctx.clientModules.rebuilt(id)
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code === 'ENOENT') {
@@ -83,7 +85,7 @@ export function apply(ctx: Context, config: Config): void {
       baseline = statSync(path)
     } catch (error) {
       watched.set(id, { path, mtimeMs: 0, size: 0, dirty: true })
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') { ctx.logger.warn(error) }
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') ctx.logger.warn(error)
       return
     }
     const watch = { path, mtimeMs: baseline.mtimeMs, size: baseline.size, dirty: false }
@@ -115,8 +117,8 @@ export function apply(ctx: Context, config: Config): void {
   // rows (or rows whose bundle path moved), add watches for new rows.
   const syncWatches = (): void => {
     const rows = new Map<string, string>()
-    for (const row of ctx.clientModuleHost.graph().entries) {
-      const path = ctx.clientModuleHost.clientPath(row.id)
+    for (const row of ctx.clientModules.graph().entries) {
+      const path = ctx.clientModules.clientPath(row.id)
       if (path !== undefined) rows.set(row.id, path)
     }
     for (const [id, watch] of watched) {
@@ -133,7 +135,7 @@ export function apply(ctx: Context, config: Config): void {
     // rows arriving later (boot-window activations, including this plugin's
     // own row — no self-exemption, a modules/hmr rebuild rides the same chain).
     syncWatches()
-    const unsubscribe = ctx.clientModuleHost.onGraphChanged(syncWatches)
+    const unsubscribe = ctx.clientModules.onGraphChanged(syncWatches)
     const timer = setInterval(pollWatches, pollIntervalMs)
     timer.unref()
     return () => {
@@ -155,13 +157,13 @@ export function apply(ctx: Context, config: Config): void {
     // Comment line on open so clients/proxies see a live channel even when
     // no rebuild ever happens; EventSource frame parsing skips it naturally.
     res.write(': connected\n\n')
-    res.write(sseData({ type: 'graph', graph: ctx.clientModuleHost.graph() }))
+    res.write(sseData({ type: 'graph', graph: ctx.clientModules.graph() }))
     connections.add(res)
     res.on('close', () => { connections.delete(res) })
   }
 
   ctx.effect(() => {
-    const disposeRoute = ctx.httpServer.register({
+    const disposeRoute = ctx.webServer.register({
       kind: 'exact',
       path: EVENTS_ENDPOINT,
       handler: (req, res) => {
@@ -175,14 +177,14 @@ export function apply(ctx: Context, config: Config): void {
         connect(res)
       },
     })
-    const unsubscribe = ctx.clientModuleHost.onRebuilt((id, rev) => {
+    const unsubscribe = ctx.clientModules.onRebuilt((id, rev) => {
       const line = sseData({ type: 'rebuilt', id, rev })
       for (const res of connections) res.write(line)
     })
     return () => {
       unsubscribe()
       disposeRoute()
-      for (const res of connections) { res.destroy() }
+      for (const res of connections) res.destroy()
       connections.clear()
     }
   }, 'client-hmr: /plugins/events channel')

@@ -1,9 +1,9 @@
 /**
  * Host-side vocabulary of the goal domain: live views, durable change
  * payloads, message attribution, replay folds, and the scoped `goal/changed`
- * event. Split from ./types.ts (the pure client-safe outlet) because these
- * declarations pull dsh-agent, dsh-llm, and cordis into the program — the
- * one-program-per-side layout forbids that on client aggregates.
+ * event. Kept separate from ./types.ts (the pure client-safe outlet) because
+ * these declarations pull dsh-agent, dsh-llm, and cordis into the program —
+ * the one-program-per-side layout forbids that on client aggregates.
  * @module @deepseek-ai/dsh-goal
  */
 
@@ -58,7 +58,7 @@ declare module '@deepseek-ai/dsh-llm' {
   }
 }
 
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /**
      * Complete post-mutation goal state or clear tombstone.
@@ -101,7 +101,7 @@ export type GoalErrorCode =
   | 'GOAL_INVALID_EDIT'
   | 'GOAL_INVALID_TRANSITION'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Events {
     /**
      * Goal mutation accepted by one live agent. The matching `goal/change`

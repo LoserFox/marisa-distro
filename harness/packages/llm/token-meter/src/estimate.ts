@@ -73,7 +73,7 @@ export function estimateSystemTokens(header: EpochHeader | undefined): number {
  * @returns heuristic tool-schema tokens; 0 when absent or empty.
  */
 export function estimateToolsTokens(header: EpochHeader | undefined): number {
-  if (header?.tools === undefined || header.tools.length === 0) { return 0 }
+  if (header?.tools === undefined || header.tools.length === 0) return 0
   return Math.ceil(JSON.stringify(header.tools).length / CHARS_PER_TOKEN) + BLOCK_OVERHEAD
 }
 

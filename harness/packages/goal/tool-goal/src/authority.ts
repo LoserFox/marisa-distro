@@ -1,6 +1,6 @@
 /** Execution-time authority checks for the model-facing goal tools. */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { GoalView } from '@deepseek-ai/dsh-goal'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
@@ -99,7 +99,7 @@ export function requireDirectHuman(ctx: Context, execution: GoalToolExecution): 
  * @returns The direct-human or exact-goal-round authority grant.
  */
 export function completionAuthority(ctx: Context, execution: GoalToolExecution): GoalToolAuthority {
-  if (hasDirectHumanInput(ctx, execution)) { return { kind: 'direct-human' } }
+  if (hasDirectHumanInput(ctx, execution)) return { kind: 'direct-human' }
   const goal = ctx.goals.get(execution.agent)
   if (goal !== undefined && isMatchingGoalRound(execution, goal)) {
     return { kind: 'goal-round', goal }

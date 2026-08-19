@@ -8,15 +8,15 @@ The public operation set is refined by [Intent-named subagent continuation opera
 
 ## Problem
 
-Continuable-child orchestration originally lived in a separate `ctx.subagentControl` service above the raw `ctx.subagents` provider seam. That split kept provider dispatch independent of Tasks and persistence, and gave model and human adapters one orchestration contract. In practice the two services described one capability family, every continuable caller needed both, and the provider-bound delegation tool had to infer policy from `provider.resume` and inspect whether the control service and `send_message` tool happened to be loaded. This made sibling plugin presence decide execution semantics and coupled starting continuable work to an optional follow-up surface.
+Continuable-child orchestration originally lived in a separate `ctx.subagentControl` service above the raw `ctx.subagents` provider contract. That split kept provider dispatch independent of Jobs and persistence, and gave model and human adapters one orchestration contract. In practice the two services described one capability family, every continuable caller needed both, and the provider-bound delegation tool had to infer policy from `provider.resume` and inspect whether the control service and `send_message` tool happened to be loaded. This made sibling plugin presence decide execution semantics and coupled starting continuable work to an optional follow-up surface.
 
 ## Decision
 
-`SubagentService` is the only public service. It exposes ordinary `start(name, request)`, Task-backed `startContinuable(spec)`, and intent-named `followup(...)`; provider resume dispatch remains private to its continuation manager. The standalone `@deepseek-ai/dsh-subagent-control` package and `ctx.subagentControl` key are absent; the optional `@deepseek-ai/dsh-tool-subagent-control` package injects `ctx.subagents` directly.
+`SubagentRuntime` is the only public service. It exposes ordinary `start(name, request)`, Task-backed `startContinuable(spec)`, and intent-named `followup(...)`; provider resume dispatch remains private to its continuation manager. The standalone `@deepseek-ai/dsh-subagent-control` package and `ctx.subagentControl` key are absent; the optional `@deepseek-ai/dsh-tool-subagent-control` package injects `ctx.subagents` directly.
 
 The merged service and its providers expose one `SubagentError` taxonomy. Stable codes distinguish provider lookup and capability failures from continuation routing, authorization, cancellation, persistence, and delivery failures; the removed service does not retain a separate error class.
 
-The continuation implementation remains an internal manager rather than expanding the provider registry's core state. `SubagentService` creates it through `ctx.inject(['tasks', 'agents'], ...)`, so the injected Cordis child fiber owns its Task completion listener and teardown effects. Loading the provider registry does not require Tasks or persistence. The manager exists only while Tasks and Agents are available, and each continuation operation resolves session persistence at the point it needs durability. Disposing that fiber cancels and settles active continuations before releasing their associations.
+The continuation implementation remains an internal manager rather than expanding the provider registry's core state. `SubagentRuntime` creates it through `ctx.inject(['tasks', 'agents'], ...)`, so the injected Cordis child fiber owns its Task completion listener and teardown effects. Loading the provider registry does not require Jobs or persistence. The manager exists only while Jobs and Agents are available, and each continuation operation resolves session persistence at the point it needs durability. Disposing that fiber cancels and settles active continuations before releasing their associations.
 
 `startContinuable` remains distinct from raw `start` because it has a different ownership and timing contract: it allocates the durable child id, creates the Task, and returns both ids synchronously while startup continues inside the Task. Raw `start` instead awaits provider publication and transfers a holder-owned run. Folding the method onto `start` through flags or return unions would broaden the low-level contract and create more change than keeping the existing explicit entry.
 
@@ -34,8 +34,8 @@ Each `@deepseek-ai/dsh-tool-subagent` instance selects `backgroundMode: 'one-sho
 
 ## Consequences
 
-- The service topology has one public key and one package fewer while raw provider dispatch remains usable without Tasks or persistence.
-- Continuable mode fails at provider mount when the configured provider lacks `resume`; missing Tasks, Agents, or persistence still fail at the earliest operation that requires them.
+- The service topology has one public key and one package fewer while raw provider dispatch remains usable without Jobs or persistence.
+- Continuable mode fails at provider mount when the configured provider lacks `resume`; missing Jobs, Agents, or persistence still fail at the earliest operation that requires them.
 - Follow-up delivery remains optional. Deployments may start and collect continuable work through Task tools without exposing `send_message`.
 - The continuation manager is still Task- and persistence-aware inside the `dsh-subagent` package, so the package declares optional peer dependencies on those services even though ordinary `start` callers do not need them.
 - Existing continuation races, authorization, durability, cancellation, and settle-then-dispose semantics are unchanged and remain pinned by the migrated `subagent` tests.

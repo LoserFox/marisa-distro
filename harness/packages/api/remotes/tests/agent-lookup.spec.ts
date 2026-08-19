@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import { createApiRemoteAgentResolver } from '@deepseek-ai/dsh-api-remotes'
-import { TypeRTLookupFailure } from '@deepseek-ai/dsh-type-meta'
+import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 
 const sid = (value: string): SessionId => value as SessionId
@@ -147,7 +147,7 @@ describe('API Remote Agent resolver races', () => {
     if (provider === undefined) throw new Error('Agent Host Context provider was not mounted')
 
     const resolution = provider.resolve(sessionId)
-    await expect(resolution).rejects.toBeInstanceOf(TypeRTLookupFailure)
+    await expect(resolution).rejects.toBeInstanceOf(TypertLookupFailure)
     await expect(resolution).rejects.toMatchObject({ failure: { code: 'agent-busy' } })
     await ctx.fiber.dispose()
   })

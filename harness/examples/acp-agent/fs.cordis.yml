@@ -2,7 +2,7 @@
 # the base cordis.yml, so this overlay adds only the local tool-result spill
 # storage those scenarios exercise.
 - id: base
-  name: '@cordisjs/plugin-include'
+  name: '@deepseek-ai/cordis-plugin-include'
   config:
     path: ./cordis.yml
     patches:

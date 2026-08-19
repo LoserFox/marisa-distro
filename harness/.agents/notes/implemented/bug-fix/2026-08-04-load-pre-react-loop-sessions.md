@@ -24,7 +24,7 @@ The importer does not synthesize inbox splices. A resumed pre-react-loop agent b
 
 **Replay old inbox notifications into durable splices.** Those notifications were not session events and do not provide a trustworthy pending-state snapshot. Inferring insertions without every claim and discard would re-run consumed work.
 
-**Assign coarse aborted records to an existing caller.** Mapping them to `user`, `parent`, or `hook` would manufacture provenance. A dedicated `legacy` cause keeps the stop classification without making a false audit claim.
+**Assign coarse aborted records to an existing caller.** Mapping them to `user`, `parent`, or `hook` would invent a caller that the old record did not name. A dedicated `legacy` cause keeps the stop classification without making a false audit claim.
 
 **Rewrite stored JSONL and SQLite records.** A rewrite would violate the append-only contract and require backend-specific atomic migration machinery for a read compatibility boundary.
 

@@ -16,7 +16,7 @@ One sentence: **the shell renders only `'root'`; a plugin composes UI through a 
 
 ### 'root' is the only a-priori slot
 
-`SlotsService` (client runtime) declares `'root'` at construction — single/root, `owner: {}` — and its `SlotMap` merge lives in the runtime package. The shell's entire assembly is `ctx.slots.renderSlot('root', {})`: the only ctx-level render entry; any other key, a missing renderer, or an unregistered root fails loud (no fallback).
+`SlotRegistry` (client runtime) declares `'root'` at construction — single/root, `owner: {}` — and its `SlotMap` merge lives in the runtime package. The shell's entire assembly is `ctx.slots.renderSlot('root', {})`: the only ctx-level render entry; any other key, a missing renderer, or an unregistered root fails loud (no fallback).
 
 ### register is the single API; children = declaration + authorization + runtime spec
 
@@ -78,7 +78,7 @@ export function createChatStore() {
 
 One factory, three consumption points: (a) `register` — pass the factory for an exclusive store, or call it once in `apply` and pass the same handle to several registers to share the instance (cross-plugin sharing is constructively impossible: the handle never leaves the package); (b) `PropsStore<ReturnType<typeof createChatStore>>` derives the component's store share with zero hand-written members; (c) tests call the factory and `.create()` a real engine instance, feeding `useSelector`/`actions` straight in as props — production outlets run the very same `create` path, so there is no second machinery.
 
-Store scope is **derived from the mounting entry's scope** (session slot → one instance per session, living and dying with the session; root slot → one per entry). Read = `props.useStore`; write = `props.actions.*` only — the raw instance (with `update`/`set`) never reaches a component, so the declared actions are the complete, auditable mutation surface. Production code never calls the factory or `create` outside `apply`.
+Store scope is **derived from the mounting entry's scope** (session slot → one instance per session, living and dying with the session; root slot → one per entry). Read = `props.useStore`; write = `props.actions.*` only — the raw instance (with `update`/`set`) never reaches a component, so the declared actions are the complete, auditable mutation API. Production code never calls the factory or `create` outside `apply`.
 
 ### inject: the registrant's business face, on its own ctx
 
@@ -88,11 +88,11 @@ An inject factory takes what its declarations earn it — `sessionId` for sessio
 
 Hooks are framework-made only: `useSession`, `useSessions`, `useWorkspaces`, `useStore`, `renderSlot` plus the hooks bound from provide contributions and inject `hooks` compartments — every one synthesized by the renderer's single binding machinery; business code passes plain data and callbacks between parent and child (a component's own behavioral hooks that subscribe to nothing external remain fine). Live data has exactly three channels: what the parent knows travels as owner props at the renderSlot site; what only the component knows is local state; what must be shared across entries or survive remounts is a declared store. Derivation is a pure function over framework-hook data (`useMemo`), never a subscription of its own.
 
-### Tree context and the renderer seam
+### Tree context and the renderer contract
 
 `SessionProvider` is a framework component **delivered as a standard-kit seat**: an entry whose `children` declare a session-scope slot receives it as a prop (type in ui-slots, value injected by the renderer) — components never value-import it. It is self-wired (it reads the runtime's current-session state internally; the assembler passes nothing), render-prop shaped — `children(sessionId)` with an `empty` branch, remounting under `key={sessionId}`. `BindingContext` is machinery-internal; business components see zero React contexts. Inject factories execute inside the outlet on purpose (per-entry error boundaries catch them; a crashing registrant blacks out only its own entry while assembly errors rethrow); the outlet reads tree context as a machinery-only implicit parameter — the "identity from the register closure, situation from the tree position" split.
 
-Rendering lives behind an install seam so the runtime stays React-free: `SlotRenderer` (interface in ui-slots, implementation `createSlotRenderer()` in web-react) is installed once at shell boot via `ctx.slots.install(...)`; double install and render-before-install throw. Ownership bookkeeping is a single `Map<key, entry>` in the service — ledger, slots, contributions, render bindings, and store instances all live and die on the one entry axis, which closes the stale-authority window across plugin reloads by construction (a disposed entry's captured `renderSlot` throws a stale-authorization error on entry).
+Rendering lives behind an installation contract so the runtime stays React-free: `SlotRenderer` (interface in ui-slots, implementation `createSlotRenderer()` in web-react) is installed once at shell boot via `ctx.slots.install(...)`; double install and render-before-install throw. Ownership bookkeeping is a single `Map<key, entry>` in the service — ledger, slots, contributions, render bindings, and store instances all live and die on the one entry axis, which closes the stale-authority window across plugin reloads by construction (a disposed entry's captured `renderSlot` throws a stale-authorization error on entry).
 
 ### Type-chain implementation rulings
 
@@ -103,19 +103,19 @@ Two hardening decisions in the register signature exist because the obvious alte
 
 ## Consequences
 
-Render authority is enforceable rather than conventional: who renders what is a load-time fact, and auditing the UI structure = reading the register calls; for chain slots, WHO renders is additionally a render-time fact, but the deciding selectors are register-site declarations, so the audit surface stays the register calls. Every props surface is statically derived from one source (SlotMap entry, children keys, store factory, inject return), so a schema change propagates by compiler rather than by grep. Plugins carry no subscription machinery of their own — store lifecycle (per-session instances, disposal, persistence) is framework semantics keyed to the entry axis. Costs: registration options are dense (children spec objects); the framework carries real inference machinery (`defineStore`'s init/actions same-round inference may need a curried fallback); and the compile-time double locks mean prototype-stage drift is a hard error, not a warning.
+Render authority is enforceable rather than conventional: who renders what is a load-time fact, and auditing the UI structure = reading the register calls; for chain slots, WHO renders is additionally a render-time fact, but the deciding selectors are register-site declarations, so the audit scope stays the register calls. Every props API is statically derived from one source (SlotMap entry, children keys, store factory, inject return), so a schema change propagates by compiler rather than by grep. Plugins carry no subscription machinery of their own — store lifecycle (per-session instances, disposal, persistence) is framework semantics keyed to the entry axis. Costs: registration options are dense (children spec objects); the framework carries real inference machinery (`defineStore`'s init/actions same-round inference may need a curried fallback); and the compile-time double locks mean prototype-stage drift is a hard error, not a warning.
 
 ## Alternatives considered
 
 | Rejected | One-line reason |
 |---|---|
 | Separate define/register two-step API | The split leaves render authority unenforced and invites ordering bugs; children-in-register settles declaration, authorization, and spec in one visible place |
-| Whitelist face objects (`ScopedSlots` + narrowing helpers) | With the whitelist already in the component's props type, the face is derivable by machinery; a mintable face object is a third authority surface with runtime-only checks |
+| Whitelist face objects (`ScopedSlots` + narrowing helpers) | With the whitelist already in the component's props type, the face is derivable by machinery; a mintable face object is a third authority API with runtime-only checks |
 | Assembly handles carrying root ctx into inject | Bypasses declared inject topology — every factory could reach every service, so package.json dependency declarations stop meaning anything |
 | `children` as a key array | kind/scope are runtime dispatch data; SlotMap is erased, so an array forces a second spec-registration API — a definition API reborn |
 | Business hand-made hooks / raw observables in component props | Every plugin becomes its own subscription machine; the inject `hooks` compartment carries the same facts through the one audited binding machinery |
 | Module-level store handles | A module-scope handle is a singleton across plugin reloads and test cases; the factory form scopes identity to apply/test invocation |
-| Components receiving the store instance | `update`/`set` in render code makes the mutation surface unauditable; declared actions keep "what can change" a register-site fact |
+| Components receiving the store instance | `update`/`set` in render code makes the mutation API unauditable; declared actions keep "what can change" a register-site fact |
 | `FC` at the register position / inferring `I` from the component | FC statics generate covariant noise that rejects valid components; component-side inference absorbs props drift silently (see rulings above) |
 | Keyed dispatch with owner-side routing for takeover slots | The owner accumulates per-entry contracts and a hardcoded routing table (`find` + `entryKey` per takeover); the chain currency keeps new takeover registrations at zero owner edits |
 | Components declining by rendering null | Declining requires mounting first — hooks and effects run for nothing, and mount/unmount churn breaks memoization and key semantics; a pure selector decides without a component instance |

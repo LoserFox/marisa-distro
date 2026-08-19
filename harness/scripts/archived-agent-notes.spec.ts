@@ -78,7 +78,7 @@ describe('archived Agent Notes', () => {
     ])
     const removed: ArchiveManifest = {
       version: 1,
-      files: Object.fromEntries(Object.entries(current.files).filter(([candidate]) => { return candidate !== path })),
+      files: Object.fromEntries(Object.entries(current.files).filter(([candidate]) => candidate !== path)),
     }
     expect(validateArchiveManifestExtension(baseline, removed)).toContain(
       `${path}: sealed manifest entry is missing`,

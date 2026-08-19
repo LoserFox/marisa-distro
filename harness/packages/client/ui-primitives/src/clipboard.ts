@@ -1,5 +1,5 @@
 // Host clipboard write shared by Web UI copy controls. Success feedback stays
-// with each control; this seam only reports whether the host accepted a write.
+// with each control; this helper only reports whether the host accepted a write.
 
 /**
  * Write text to the host clipboard, preferring the async Clipboard API and

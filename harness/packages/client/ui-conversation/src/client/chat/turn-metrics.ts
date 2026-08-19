@@ -1,6 +1,6 @@
 // Latency/throughput folds shared by the settled turn footer and StatsLine.
 
-import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { AssistantMessageNode, ConversationNode } from '@deepseek-ai/dsh-client-runtime/client'
 
 /** Latency and decode-throughput readings for one turn's footer. */
 export interface TurnMetrics {
@@ -24,7 +24,7 @@ interface UsageLike {
   outputTokens?: number
 }
 
-type AssistantNode = Extract<ConversationSnapshot['nodes'][number], { kind: 'assistant' }>
+type AssistantNode = AssistantMessageNode
 
 function usageOutputTokens(usage: unknown): number | null {
   if (typeof usage !== 'object' || usage === null) return null
@@ -67,7 +67,7 @@ interface TurnFold {
  * @param nodes - Snapshot nodes of the loaded window.
  * @returns Turn number → available metrics; turns with none are absent.
  */
-export function deriveTurnMetrics(nodes: ConversationSnapshot['nodes']): Map<number, TurnMetrics> {
+export function deriveTurnMetrics(nodes: readonly ConversationNode[]): Map<number, TurnMetrics> {
   const folds = new Map<number, TurnFold>()
   for (const node of nodes) {
     if (node.kind !== 'assistant') continue

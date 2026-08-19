@@ -1,9 +1,5 @@
-- region "内测声明":
+- dialog "内测声明":
   - heading "内测声明" [level=2]
-  - paragraph: 感谢您愿意拨冗试用 DeepSeek Harness。当前版本仍处于内部测试阶段，功能仍待完善，体验难免有些粗糙。
-  - blockquote: “如切如磋，如琢如磨。” 产品的成长，离不开一次次真实的碰撞与坦诚的反馈。您在真实使用中发现的问题，也可能促使我们重新审视，甚至推翻已有的设计。
-  - paragraph:
-    - text: 为了帮助我们更准确地还原您真实使用中的问题，内测版本默认会上传所有 Session Log；如需关闭，可以设置环境变量 DSH_TELEMETRY_DISABLED=1。另外，
-    - strong: 如果您有任何反馈与建议，请在企业微信群中留言告诉我们
-    - text: 。每一条反馈，都会帮助我们把它打磨得更好。
+  - paragraph: DeepSeek Harness 目前的 0.1 版本仍处在面向 Harness 开发者进行测试的阶段，还有许多地方需要持续改进和打磨，希望听取广大开发者的反馈建议。预计 DeepSeek Harness 的核心插件以及基础 API 都会在接下来的一段时间内快速迭代、持续演化。
+  - paragraph: 我们期待与全球开发者一起，在开源、开放、可复用、可组合的基础设施之上，共同探索智能上限。欢迎全球 Harness 开发者加入 DSH 插件生态。
   - button "继续"

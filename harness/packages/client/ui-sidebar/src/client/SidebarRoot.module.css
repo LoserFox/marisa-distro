@@ -58,24 +58,35 @@
   from { opacity: 0; }
 }
 
-/* Rail controls hold hidden while the column slides shut, then fade in over
-   the slide's tail: .railIn applies at settle (150ms into the 0.3s AppFrame
-   track transition), so a 100ms delay + 150ms fade starts just before the
-   slide ends (250ms) and finishes at 400ms; `backwards` keeps them at
-   opacity 0 through the delay. Only a live collapse gets .railIn — a
-   refresh straight into the collapsed state renders statically. */
+/* At the 150ms rail settle, the four upper controls enter from the former
+   rail right edge over the remaining 150ms of the AppFrame track transition.
+   The bottom-pinned settings seat shares their opacity timeline but stays
+   horizontally fixed. Only a live collapse gets .railIn; a cold collapsed
+   render stays static. */
 .railIn .iconButton,
 .railIn .newSession,
+.railIn .regionArea {
+  animation: rail-in 150ms var(--ds-ease-in-out) backwards;
+}
+
 .railIn .footArea {
-  animation: rail-in 150ms var(--ds-ease-in-out) 100ms backwards;
+  animation: rail-fade-in 150ms var(--ds-ease-in-out) backwards;
 }
 
 @keyframes rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(49px);
+  }
+}
+
+@keyframes rail-fade-in {
   from { opacity: 0; }
 }
 
-/* Logo row (figma pad (4,8,4,8)): brand left, panel toggle right-anchored —
-   the toggle is the rail's expand control and slides in with the right edge. */
+/* Logo row (figma pad (4,8,4,8)): expanded keeps the panel toggle at the
+   right edge; the rail gives every control the same base left anchor before
+   the shared entry translation is applied. */
 .logoRow {
   flex: none;
   display: flex;
@@ -84,7 +95,7 @@
   gap: 8px;
   height: 60px;
   padding: 8px 0 8px 4px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -93,10 +104,11 @@
   height: 36px;
   padding: 0;
   margin-bottom: 12px;
+  justify-content: flex-start;
 }
 
 /* Brand group (figma I133:7632): the full wordmark rides the text ink
-   (figma-flows ruling: main-screen instance is black; blue is brand
+   (figma flows: the main-screen instance is black; blue is brand
    emphasis only). A button only in behavior (New Session shortcut): the
    pointer cursor is the sole affordance — no hover chrome on the mark. */
 .brand {
@@ -157,8 +169,8 @@
   color: var(--dsw-alias-label-primary);
 }
 
-/* New Session: 38px capsule (figma 133:7634); collapsed it renders as the
-   rail's plain icon control. */
+/* New Session: 38px bar, 12px radius (figma 133:7634 geometry, squared-off
+   corners); collapsed it renders as the rail's plain icon control. */
 .newSession {
   flex: none;
   display: flex;
@@ -167,10 +179,10 @@
   gap: 6px;
   height: 38px;
   padding: 8px 16px;
-  margin: 0 2px 20px; /* bottom: former headerBlock padBottom 12 + root gap 8 */
+  margin: 0 2px 8px;
   box-sizing: border-box;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 24px;
+  border-radius: 12px;
   background: var(--dsw-alias-button-elevated-fill);
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
@@ -185,6 +197,8 @@
 }
 
 .collapsed .newSession {
+  align-self: flex-start;
+  width: 36px;
   height: 36px;
   padding: 0;
   margin: 0 0 12px;
@@ -215,19 +229,46 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  margin-left: -4px;
   margin-right: calc(-1 * var(--dsh-sidebar-inline-padding));
+  padding-left: 4px;
   overflow: hidden;
 }
 
 .collapsed .regionArea {
+  margin-left: 0;
   margin-right: 0;
+  padding-left: 0;
 }
 
-/* Foot seat: a pure layout socket pinned under the region; the ui-settings
-   trigger row inside owns its own geometry (49px wide row / 36px rail
-   circle) and hover chrome. */
+/* Footer seats: additive actions stack above Settings. Each occupant owns its
+   button geometry and hover chrome. */
 .footArea {
   flex: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.settingsArea,
+.footerActions {
+  flex: none;
+  min-width: 0;
+  width: 100%;
+}
+
+.footerActions {
+  display: flex;
+}
+
+.collapsed .footArea {
+  align-items: center;
+}
+
+.collapsed .settingsArea,
+.collapsed .footerActions {
+  display: flex;
+  justify-content: center;
+  width: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -235,7 +276,8 @@
   .fading > *,
   .railIn .iconButton,
   .railIn .newSession,
-  .railIn .footArea {
+  .railIn .footArea,
+  .railIn .regionArea {
     transition: none;
     animation: none;
   }

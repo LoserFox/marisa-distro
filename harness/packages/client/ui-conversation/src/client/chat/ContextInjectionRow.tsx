@@ -25,7 +25,7 @@ export interface ContextInjectionRowProps {
  * from a workspace instruction file or a recalled session without expanding.
  * The expanded body follows the producer-declared form; an absent or unknown
  * form renders the opaque body.
- * @param props - Durable content, its projected provenance and form, and the locale seat.
+ * @param props - Durable content, its projected producer role/name and form, and the locale seat.
  * @returns A collapsed context row with a bounded, form-specific body.
  */
 export function ContextInjectionRow({ content, source, provenance, form, t }: ContextInjectionRowProps) {

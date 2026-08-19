@@ -98,7 +98,7 @@ function applyStructured(output: HookOutput, parsed: Record<string, unknown>, ex
   const cont = bool(parsed, 'continue')
   if (cont !== undefined) output.continue = cont
   const stopReason = str(parsed, 'stopReason')
-  if (stopReason !== undefined) { output.stopReason = stopReason }
+  if (stopReason !== undefined) output.stopReason = stopReason
   const sysMsg = str(parsed, 'systemMessage')
   if (sysMsg !== undefined) output.systemMessage = sysMsg
 

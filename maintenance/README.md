@@ -8,12 +8,13 @@
 {
   "schemaVersion": 1,
   "harness": {
-    "mode": "fork",                  // 当前固定为 fork
+    "mode": "mirror",                // harness 只跟踪上游；发行版差异放在根 workspace/profile
     "path": "harness",
     "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
-    "baseline": "4e7fb95f",           // 导入的上游 commit
-    "dshVersion": "0.1.0-rc.6",       // Marisa 当前锁定的 DSH rc
-    "channel": "testing",             // main = testing；lts/rcN = stable/lts
+    "baseline": "99f6f02fecdb7dff40c3fbc9470f5907c29f74ca", // 导入的上游 commit
+    "baselineReviewed": "2026-08-18", // 最近一次基线复核日期
+    "dshVersion": "0.1.0-rc.7",       // Marisa 当前锁定的 DSH rc
+    "channel": "next",                // next = rc 预发布；main/testing = 开发；lts/rcN = stable/lts
     "diffDocument": "docs/upstream-diff.md"
   },
   "plugins": [
@@ -39,9 +40,10 @@
 
 - `plugins/` 下每个目录必须且只能出现一次。
 - `git` 组件要求完整 40 位 commit；`npm` 组件要求 `version`，仓库未知时 `repository` 可以为 `null`。
-- `fork` 必须提供 `diffDocument` 且文件存在；`mirror` 不得带 `diffDocument`。
+- `fork` 必须提供 `diffDocument` 且文件存在；`mirror` 不得带 `diffDocument`。harness 的上游 pin 使用 `mirror`，其 rc7 说明文档仅记录基线和同步验证，不代表 harness 内有本地源码 patch。
 - vendored npm 快照的 `package.json` 中禁止 `prepare`、`prepublishOnly`、`preinstall`、`install`、`postinstall` 生命周期脚本：发布 tarball 自带构建产物，安装期构建没有完整源码。
 - `profiles/marisa/plugins.json` 是 profile 生成器使用的目录/包名映射，与 `upstreams.json` 必须同集合、同 source。
+- 插件是否进入默认组合由 profile/bundle patch 决定，不由 `upstreams.json` 的上游基线 metadata 决定。
 
 ## 常用命令
 

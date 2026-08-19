@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { DirectoryPickerError } from '@deepseek-ai/dsh-host-directory-picker'
 import type { DirectoryPickerBrowseCapability } from '@deepseek-ai/dsh-host-directory-picker'
 import BrowseDirectoryPicker, { boundedInsert, fullyQualified, raceAbort } from '../src/index.ts'
@@ -138,7 +138,7 @@ describe('BrowseDirectoryPicker', () => {
 
   it('boundedInsert keeps the window name-sorted and bounded, reporting evictions', () => {
     const candidate = (name: string): ListingCandidate => ({ name, isDirectory: true, isSymbolicLink: false })
-    const window: Array<ListingCandidate> = []
+    const window: ListingCandidate[] = []
     expect(boundedInsert(window, candidate('m'), 2)).toBe(false)
     expect(boundedInsert(window, candidate('z'), 2)).toBe(false)
     // A smaller name lands in place and pushes the current largest out.
@@ -198,7 +198,7 @@ describe('BrowseDirectoryPicker', () => {
       expect(listFailure).toBeInstanceOf(DirectoryPickerError)
       expect((listFailure as DirectoryPickerError).code).toBe('directory-unreadable')
       expect((listFailure as DirectoryPickerError).path).toBe(relative)
-      const createFailure = await capability.createDirectory(relative, 'child').catch((error: unknown) => { return error })
+      const createFailure = await capability.createDirectory(relative, 'child').catch((error: unknown) => error)
       expect(createFailure).toBeInstanceOf(DirectoryPickerError)
       expect((createFailure as DirectoryPickerError).code).toBe('directory-create-failed')
       expect((createFailure as DirectoryPickerError).path).toBe(relative)

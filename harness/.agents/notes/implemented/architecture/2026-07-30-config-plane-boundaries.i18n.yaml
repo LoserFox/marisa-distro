@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-07-30-config-plane-boundaries.md
-2026-07-30-config-plane-boundaries.md: 8a29dcc934126d6e3dfa9c0a6a308ef006017a5a
-2026-07-30-config-plane-boundaries.zh.md: 61edb9b7d8396e0453dcca0042cd0ee27551b216
+2026-07-30-config-plane-boundaries.md: aab0d7a80c2732b33637ec721a9ab7c1b50fce3f
+2026-07-30-config-plane-boundaries.zh.md: fb069e6dd9f276c7cc0069695b388ef37a081ab4

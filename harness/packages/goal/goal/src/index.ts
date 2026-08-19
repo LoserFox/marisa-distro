@@ -5,14 +5,14 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import { Context } from 'cordis'
-import z from 'schemastery'
+import { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
 import { agentEvents } from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import { GatewayService, Remote } from '@deepseek-ai/dsh-type-meta'
+import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
 // Type-only: resolves ctx.sessionProjections for the optional unit child.
 import type {} from '@deepseek-ai/dsh-session-projection'
 import {
@@ -56,7 +56,7 @@ export type * from './domain.ts'
 export { GOAL_CHANGE_VERSION, GoalError, GoalId } from './runtime.ts'
 export { decodeGoalChange, foldGoal, goalChangeRef } from './fold.ts'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     goals: GoalService
   }
@@ -180,7 +180,7 @@ function resolveBlockReason(reason: unknown): GoalBlockReason {
 }
 
 /** Goal service (`ctx.goals`) backed exclusively by the owning session log. */
-export class GoalService extends GatewayService {
+export class GoalService extends TypertRemoteService {
   static inject = ['agents']
 
   static Config: z<Config> = z.object({
@@ -311,7 +311,7 @@ export class GoalService extends GatewayService {
   resume(agent: Agent, ref: GoalRef): GoalView {
     const cache = this.prepareMutation(agent)
     const current = this.expectCurrent(cache, ref)
-    const resumable: ReadonlyArray<GoalPhase> = ['active', 'paused', 'blocked']
+    const resumable: readonly GoalPhase[] = ['active', 'paused', 'blocked']
     if (!resumable.includes(current.phase)) {
       throw this.transitionError(current, 'resume', resumable)
     }

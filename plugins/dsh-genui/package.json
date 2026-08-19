@@ -56,15 +56,14 @@
     "react": "^18.3.1"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-client-runtime": "^0.0.1",
-    "@deepseek-ai/dsh-client-ui-primitives": "^0.0.1",
-    "@deepseek-ai/dsh-client-ui-slash": "^0.0.1",
-    "@deepseek-ai/dsh-client-ui-slots": "^0.0.1",
-    "@deepseek-ai/dsh-client-ui-tool": "^0.0.1",
-    "@deepseek-ai/dsh-invariants": "^0.0.1",
-    "@deepseek-ai/dsh-llm": "^0.0.1",
-    "@deepseek-ai/dsh-system-prompt": "^0.0.1",
-    "@deepseek-ai/dsh-tools": "^0.0.1",
+    "@deepseek-ai/dsh-client-runtime": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-tool": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-system-prompt": "workspace:^",
+    "@deepseek-ai/dsh-tools": "workspace:^",
     "@deepseek-ai/cordis": "^4.0.1-rc.1",
     "react": "^18.0.0 || ^19.0.0"
   },

@@ -10,9 +10,9 @@ The [shipped-roster decision](2026-07-31-even-out-shipped-tool-rosters.md) made 
 
 ## Decision
 
-The shipped TUI, Web, and headless surfaces no longer mount `@deepseek-ai/dsh-tool-session-query`: the row is removed from the shared `cordis.patch.yml`, the now-dangling `disabled` patch in the opt-in [`core-web.cordis.yml`](../../../../apps/cli/config/core-web.cordis.yml) profile goes with it, and the workspace dependency drops from `apps/cli/package.json`. The consumer stays opt-in exactly as the model-facing-session-query-tools note describes: the ACP example's [`session-query.cordis.yml`](../../../../examples/acp-agent/session-query.cordis.yml) and its snapshot counterpart remain the mounted reference, and a custom composition can mount the package with the timeout and spill policies.
+The shipped TUI, Web, and headless surfaces do not mount `@deepseek-ai/dsh-tool-session-query`, and no shipped agent preset carries it. The consumer stays opt-in exactly as the model-facing-session-query-tools note describes: the ACP example's [`session-query.cordis.yml`](../../../../examples/acp-agent/session-query.cordis.yml) and its snapshot counterpart remain the mounted reference, and a custom composition can mount the package with the timeout and spill policies.
 
-The `ctx.sessionQuery` service itself stays mounted. `session-query-sqlite` remains a base row — the TUI's `session-reference` consumes it for `/resume` — and the Web overlay keeps patching it to an in-memory index for the browser content search. Only the model-facing consumer is removed.
+The `ctx.sessionQuery` service itself stays mounted. `session-query-sqlite` remains a base row — the TUI's `session-reference` consumes it for `/resume` — with its full-text index off by default (`openAt: never`; the [content-search opt-in decision](../architecture/2026-08-13-session-content-search-opt-in.md)), and the Web overlay keeps its in-memory values for deployments that enable content search. Only the model-facing consumer is removed.
 
 ## Alternatives considered
 

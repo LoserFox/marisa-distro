@@ -1,16 +1,11 @@
-# SDK packages
+# sdk/ — drive Harness runtimes from another process
 
 English | [中文](README.zh.md)
 
-This group contains developer tooling for Harness projects and the client stack for driving a Harness runtime from another process.
+This group contains the protocol stack for driving a Harness runtime from another process. Callers supply the runtime executable and its `cordis.yml`; this group does not create, configure, build, or launch developer projects. The [TypeScript SDK decision](../../.agents/notes/implemented/feature/2026-07-27-typescript-sdk-and-sdk-subagent-backend.md) owns the client contract, and the [toolchain removal](../../.agents/notes/implemented/simplification/2026-08-11-remove-sdk-project-toolchain.md) owns the product boundary.
 
 | Package | Role |
 |---|---|
-| [`helper/`](helper/README.md) | Provides the shared project-editing domain |
-| [`scripts/`](scripts/README.md) | Provides the `dsh-sdk` project commands |
-| [`create-sdk/`](create-sdk/README.md) | Creates new SDK projects |
-| [`sdk-protocol/`](sdk-protocol/README.md) | Defines the SDK runtime wire protocol |
-| [`sdk-client/`](sdk-client/README.md) | Drives a Harness runtime through the TypeScript client API |
-| [`telemetry/`](telemetry/README.md) | Provides launcher telemetry, consent, and redaction primitives |
-
-`@deepseek-ai/create-sdk` follows npm's scoped initializer naming convention; the other packages follow the repository's `@deepseek-ai/dsh-*` convention. See the [developer-project workflow](../../.agents/notes/proposed/feature/2026-07-14-sdk-developer-projects.md), [project-editing architecture](../../.agents/notes/proposed/architecture/2026-07-15-sdk-project-editing-architecture.md), and [TypeScript SDK design](../../.agents/notes/implemented/feature/2026-07-27-typescript-sdk-and-sdk-subagent-backend.md).
+| [`protocol/`](protocol/README.md) | Defines the SDK runtime wire protocol |
+| [`client/`](client/README.md) | Drives a Harness runtime through the TypeScript client API |
+| [`server/`](server/README.md) | Serves out-of-process SDK clients over stdio JSON-RPC |

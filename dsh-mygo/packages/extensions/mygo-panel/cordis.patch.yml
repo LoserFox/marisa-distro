@@ -1,0 +1,7 @@
+# dsh-mygo-ext-panel bundle patch：面板行（dsh.bundle 原生形态）。
+# node half 提供 /api/mygo/* 路由；client half 经 dsh.client manifest 由
+# dsh-client-modules 从名册扫描进 boot 图。
+
+- insert:
+    - id: dsh-mygo-panel
+      name: '@r05en1cu/dsh-mygo-ext-panel'

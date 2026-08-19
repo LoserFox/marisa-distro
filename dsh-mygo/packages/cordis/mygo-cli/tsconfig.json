@@ -1,0 +1,32 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "paths": {
+      "@r05en1cu/dsh-mygo": [
+        "../mygo/src/index.ts"
+      ],
+      "@r05en1cu/dsh-mygo-loader-profile": [
+        "../../loaders/mygo-loader-profile/src/index.ts"
+      ],
+      "@r05en1cu/dsh-mygo-loader-hub": [
+        "../../loaders/mygo-loader-hub/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../mygo"
+    },
+    {
+      "path": "../../loaders/mygo-loader-profile"
+    },
+    {
+      "path": "../../loaders/mygo-loader-hub"
+    }
+  ]
+}

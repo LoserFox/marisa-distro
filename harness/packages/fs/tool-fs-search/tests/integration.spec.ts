@@ -14,11 +14,11 @@ import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
-import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
+import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
+import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import * as ToolFsSearch from '@deepseek-ai/dsh-tool-fs-search'
 
 const testToolSignal = new AbortController().signal
@@ -33,7 +33,7 @@ function call(name: string, args: unknown, agentObj?: object) {
     callId: CallId(`it-${++callCounter}`),
     name,
     arguments: args,
-    ...!agentObj ? {} : { agent: agentObj as never },
+    ...agentObj ? { agent: agentObj as never } : {},
   })
 }
 
@@ -62,8 +62,8 @@ describe('search tools over the real subprocess service + the packaged rg', () =
 
     ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
-    await ctx.plugin(LocalSubprocessService)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(LocalSubprocessRuntime)
     await ctx.plugin(ToolFsSearch, { sampleOverCapGlobResults: true })
   })
 

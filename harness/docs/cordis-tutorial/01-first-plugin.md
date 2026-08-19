@@ -9,7 +9,7 @@ In the loader configuration used here, a Cordis plugin module named-exports an `
 In your `tmp/cordis-tutorial` directory (see [setup](index.md#setup)), create `hello.ts`:
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 export const name = 'hello'
 
@@ -52,10 +52,10 @@ There is no framework bootstrap code in your file: a plugin describes what it co
 
 ## The two other plugin shapes
 
-A function is the most common shape, but Cordis accepts three:
+A function is the most common form, but Cordis accepts three:
 
 ```ts
-import { Service, type Context } from 'cordis'
+import { Service, type Context } from '@deepseek-ai/cordis'
 
 // 1. Function plugin (what you just wrote).
 export function apply(ctx: Context) {}
@@ -92,4 +92,4 @@ One caveat worth knowing early: a config entry whose module cannot be **resolved
 
 Next: [Lifecycle and effects](02-lifecycle-and-effects.md) — what happens when a plugin unloads.
 
-[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness-sdk)
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

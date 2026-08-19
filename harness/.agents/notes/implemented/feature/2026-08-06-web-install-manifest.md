@@ -16,11 +16,11 @@ This follows code-server's fullscreen choice without copying its `window-control
 
 The manifest deliberately has no `lang`, `theme_color`, or `background_color`. The product surface is bilingual rather than owned by one manifest language, and either static color can disagree with one of the resolved app palettes. Theme metadata therefore remains outside the install manifest.
 
-This feature adds no service worker, cache policy, or offline fallback. The manifest supplies install metadata only; browser eligibility and install affordances remain browser policy. The shipped [`dsh-frontend-static`](../../../../packages/host/frontend-static/README.md) fallback recognizes `.webmanifest` as `application/manifest+json` so the same asset is valid through the shipped HTTP composition rather than only in Vite's output directory.
+This feature adds no service worker, cache policy, or offline fallback. The manifest supplies install metadata only; browser eligibility and install affordances remain browser policy. The shipped [`dsh-host-frontend-static`](../../../../packages/host/frontend-static/README.md) fallback recognizes `.webmanifest` as `application/manifest+json` so the same asset is valid through the shipped HTTP composition rather than only in Vite's output directory.
 
 ## Verification
 
-The built-Web test parses the emitted manifest and pins the complete metadata object, including the human-visible name, compact name, icon, root identity, launch boundary, and display mode, while also verifying that the production `index.html` retains the link. The `dsh-frontend-static` real Loader composition test serves a `.webmanifest` fixture and pins its `application/manifest+json` media type.
+The built-Web test parses the emitted manifest and pins the complete metadata object, including the human-visible name, compact name, icon, root identity, launch boundary, and display mode, while also verifying that the production `index.html` retains the link. The `dsh-host-frontend-static` real Loader composition test serves a `.webmanifest` fixture and pins its `application/manifest+json` media type.
 
 ## Alternatives considered
 

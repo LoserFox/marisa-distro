@@ -5,7 +5,7 @@
  */
 
 import type { z } from 'zod'
-import type { InvocationDescriptor } from '@deepseek-ai/dsh-type-meta'
+import type { InvocationDescriptor } from '@deepseek-ai/dsh-typert-protocol'
 
 /** Independently compiled side that produced a contribution. */
 export type TypertFace = 'host' | 'client'

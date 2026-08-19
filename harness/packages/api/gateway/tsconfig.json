@@ -1,27 +1,11 @@
 {
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "lib/types"
-  },
-  "include": [
-    "src"
-  ],
+  "files": [],
   "references": [
     {
-      "path": "../../../vendor/cosmokit"
+      "path": "./tsconfig.host.json"
     },
     {
-      "path": "../../../vendor/cordis"
-    },
-    {
-      "path": "../../support/invariants"
-    },
-    {
-      "path": "../../client/connection"
-    },
-    {
-      "path": "../../typert/type-meta"
+      "path": "./tsconfig.client.json"
     }
   ]
 }

@@ -17,7 +17,7 @@ function isMissing(error: unknown): boolean {
 }
 
 function comparablePath(path: string, caseSensitive: boolean): string {
-  return !caseSensitive ? path.toLowerCase() : path
+  return caseSensitive ? path : path.toLowerCase()
 }
 
 function isLexicallyUnder(path: string, root: string, caseSensitive: boolean): boolean {
@@ -60,7 +60,7 @@ export async function isPathUnder(
   root: string,
   caseSensitive = process.platform !== 'win32',
 ): Promise<boolean> {
-  if (isLexicallyUnder(path, root, caseSensitive)) { return true }
+  if (isLexicallyUnder(path, root, caseSensitive)) return true
 
   const rootInfo = await statIfPresent(root)
   if (!rootInfo) return false

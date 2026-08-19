@@ -71,7 +71,7 @@ describe('gate graph validation', () => {
     'check-all',
     'doc-sync',
   ] as const)('constructs and executes preflight for a valid non-empty %s graph', async (mode) => {
-    const subject = withPnpmEntrypoint(() => { return gatesForMode(mode) })
+    const subject = withPnpmEntrypoint(() => gatesForMode(mode))
     const execute = vi.fn(async (item: Gate) => resultFor(item))
 
     await expect(runGates(subject, subject.length, execute)).resolves.toHaveLength(subject.length)
@@ -83,13 +83,60 @@ describe('gate graph validation', () => {
     expect(ids).toContain('public-repository-links')
   })
 
+  it.each(['ci-primary', 'ci-static', 'check-all'] as const)(
+    'keeps the DSH package license policy in %s',
+    (mode) => {
+      const ids = withPnpmEntrypoint(() => gatesForMode(mode).map(subject => subject.id))
+
+      expect(ids).toContain('dsh-package-licenses')
+    },
+  )
+
+  it('keeps native Windows coverage blocking while portability inventory remains observational', () => {
+    const gates = withPnpmEntrypoint(() => gatesForMode('ci-windows-complete'))
+    const byId = new Map(gates.map(subject => [subject.id, subject]))
+
+    expect(byId.get('coverage')?.allowFailure).not.toBe(true)
+    expect(byId.get('coverage-exempt-heavy')?.allowFailure).not.toBe(true)
+    expect(byId.get('duplication')?.allowFailure).toBe(true)
+  })
+
+  it('applies one configured test and polling timeout to both coverage gates', () => {
+    const gates = withEnv('DSH_COVERAGE_TEST_TIMEOUT_MS', '15000', () =>
+      withPnpmEntrypoint(() => gatesForMode('ci-windows-complete')))
+
+    for (const id of ['coverage', 'coverage-exempt-heavy']) {
+      expect(gates.find(subject => subject.id === id)?.args).toEqual(expect.arrayContaining([
+        '--testTimeout=15000',
+        '--expect.poll.timeout=15000',
+      ]))
+    }
+  })
+
+  it('keeps Vitest timeout defaults when the coverage override is absent', () => {
+    const gates = withEnv('DSH_COVERAGE_TEST_TIMEOUT_MS', undefined, () =>
+      withPnpmEntrypoint(() => gatesForMode('ci-windows-complete')))
+
+    for (const id of ['coverage', 'coverage-exempt-heavy']) {
+      expect(gates.find(subject => subject.id === id)?.args).not.toEqual(expect.arrayContaining([
+        expect.stringMatching(/^--(?:testTimeout|expect\.poll\.timeout)=/),
+      ]))
+    }
+  })
+
+  it('rejects an invalid coverage timeout before starting a gate', () => {
+    expect(() => withEnv('DSH_COVERAGE_TEST_TIMEOUT_MS', '0', () =>
+      withPnpmEntrypoint(() => gatesForMode('ci-windows-complete'))))
+      .toThrow('DSH_COVERAGE_TEST_TIMEOUT_MS must be a positive integer')
+  })
+
   it.each([
     ['empty', [], /gate graph has no gates/],
     ['duplicate ids', [gate('same'), gate('same')], /duplicate gate id "same"/],
     ['unknown dependencies', [gate('subject', { needs: ['missing'] })], /depends on unknown gate "missing"/],
     ['cycles', [gate('first', { needs: ['second'] }), gate('second', { needs: ['first'] })], /dependency cycle: first -> second -> first/],
   ] as const)('rejects %s before starting a child', async (_label, invalid, message) => {
-    const execute = vi.fn(async (subject: Gate) => { return resultFor(subject) })
+    const execute = vi.fn(async (subject: Gate) => resultFor(subject))
 
     await expect(runGates([...invalid], 1, execute)).rejects.toThrow(message)
     expect(execute).not.toHaveBeenCalled()
@@ -141,7 +188,7 @@ describe('Oxlint gate', () => {
   })
 })
 
-describe('TypeRT contract preparation', () => {
+describe('Typert contract preparation', () => {
   it('prepares primary source consumers once before they run', () => {
     const subject = withEnv('DSH_OXLINT_THREADS', undefined, () =>
       withPnpmEntrypoint(() => gatesForMode('ci-primary')))
@@ -236,7 +283,13 @@ describe('Node 24 lane ownership', () => {
     expect(subject.find(item => item.id === 'publint')?.needs).toEqual(['build'])
     expect(subject.find(item => item.id === 'built-package-invariants')?.needs).toEqual(['publint'])
     expect(subject.find(item => item.id === 'lint-and-duplication')?.needs).toEqual(['built-package-invariants'])
-    for (const id of ['snapshot', 'web-snapshot', 'doc-typecheck', 'node-next-types', 'built-bin-smoke']) {
+    for (const id of [
+      'snapshot',
+      'web-snapshot',
+      'doc-typecheck',
+      'node-next-types',
+      'built-bin-smoke',
+    ]) {
       expect(subject.find(item => item.id === id)?.needs).toEqual(['built-package-invariants'])
     }
     expect(subject.find(item => item.id === 'snapshot')?.env).toEqual({ DSH_EXAMPLE_MODE: 'lib' })

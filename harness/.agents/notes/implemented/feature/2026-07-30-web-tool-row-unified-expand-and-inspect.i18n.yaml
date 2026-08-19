@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-07-30-web-tool-row-unified-expand-and-inspect.md
 2026-07-30-web-tool-row-unified-expand-and-inspect.md: 4fcf1e9a567b73cd04f1bbed170c391aaedd9e73
-2026-07-30-web-tool-row-unified-expand-and-inspect.zh.md: 92d70f5aa6bd09e6f9e54015dafc38d8d3690a9e
+2026-07-30-web-tool-row-unified-expand-and-inspect.zh.md: 765cd058c99e53e5dea81f83c203a6d75d56f104

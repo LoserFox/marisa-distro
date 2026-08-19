@@ -1,4 +1,4 @@
-# Agent Note: 推理分片的逐帧累计发布与浏览器压力验证
+# Agent Note: 推理（reasoning）分片的逐帧累计发布与浏览器压力验证
 
 Status: implemented
 
@@ -12,15 +12,15 @@ Status: implemented
 
 ## 决策
 
-`Session.acceptLiveEvent()` 立即追加每个原始事件，并同步更新 transcript、`PartialAccumulator` 及其他会话派生状态。可见的 `block-start`、`text-delta`、`reasoning-delta`、`tool-call-delta` 和 `block-end` 分片通过 `Notifier.markFrameDirty()` 发布：第一项变化调度一次 `requestAnimationFrame`，后续分片只继续更新累积器；帧回调从最新状态重建一个累计快照并通知订阅者一次。`usage`、`finish` 及未知的不可见分片保留在事件窗口中，但不触发无效的 React 通知。会话与历史检查共用同一可见分片分类。
+`Session.acceptLiveEvent()` 立即追加每个原始事件，并同步更新 transcript（文本记录）、`PartialAccumulator` 及其他会话派生状态。可见的 `block-start`、`text-delta`、`reasoning-delta`、`tool-call-delta` 和 `block-end` 分片通过 `Notifier.markFrameDirty()` 发布：第一项变化调度一次 `requestAnimationFrame`，后续分片只继续更新累积器；帧回调从最新状态重建一个累计快照并通知订阅者一次。`usage`、`finish` 及未知的不可见分片保留在事件窗口中，但不触发无效的 React 通知。会话与历史检查共用同一可见分片分类。
 
-`Notifier` 用调度种类和代际标记管理待发布工作。普通结构事件继续通过 `markDirty()` 在微任务发布；如果定稿消息、工具事件或错误到达时仍有待执行的帧发布，微任务会取代它，旧帧回调因代际不匹配而失效。`notifyNow()` 同样使旧调度失效，以保留受控输入的同步回响。没有 `requestAnimationFrame` 的环境退回微任务合批。定稿事件可以跳过一次尚未显示的中间 partial，但发布的定稿内容和原始事件序列保持完整。
+`Notifier` 用调度种类和代际标记管理待发布工作。普通结构事件继续通过 `markDirty()` 在微任务中发布；如果定稿消息、工具事件或错误到达时仍有待执行的帧发布，微任务会取代它，旧帧回调因代际不匹配而失效。`notifyNow()` 同样使旧调度失效，以保留受控输入的同步回响。没有 `requestAnimationFrame` 的环境退回微任务合批。定稿事件可以跳过一次尚未显示的中间 partial，但发布的定稿内容和原始事件序列保持完整。
 
 实时 Think 行对累计文本的横向跟尾属于纯视觉对齐，不需要在每次 React 提交中同步读取布局。组件内调度器将连续请求合并为每三帧一次，从最新 DOM 读取 `scrollWidth` 和 `clientWidth` 并将 `scrollLeft` 直接更新到最新位置；固定的视觉节奏让摘要变化可读，又不会积压浏览器平滑滚动动画。该节流只作用于 Think 的横向摘要，不延迟 Chat 正文滚动、历史 prepend 锚定或用户触发的 `scrollIntoView`。
 
-`pnpm run test:web:stress` 保留为无密钥、需显式启用的浏览器性能证据。确定性的 `?fixture` 会话以独立于绘制的节奏发出 100,000 个 `reasoning-delta`，结尾标记证明事件经过生产会话归并并到达实时 Think 行；50 毫秒心跳和预先调度的 DOM 事件分别测量主线程停顿与交互延迟，250 毫秒预算用于识别明显回归。`DSH_WEB_STRESS_HEADFUL=1` 允许开发者在可见浏览器中使用 Performance 面板分析同一场景。该压力车道是手动性能诊断与修复验收证据，不是默认 CI 门禁，也不替代确定性的调度单元测试。
+`pnpm run test:web:stress` 保留为无密钥、需显式启用的浏览器性能证据。确定性的 `?fixture` 会话以独立于绘制的节奏发出 100,000 个 `reasoning-delta`，结尾标记证明事件经过生产会话归并并到达实时 Think 行；50 毫秒心跳和预先调度的 DOM 事件分别测量主线程停顿与交互延迟，250 毫秒预算用于识别明显回归。`DSH_WEB_STRESS_HEADFUL=1` 允许开发者在可见浏览器中使用 Performance 面板分析同一场景。该压力车道是手动性能诊断与修复验收的证据，不是默认 CI 门禁，也不替代确定性的调度单元测试。
 
-聚焦测试固定 `Notifier` 的逐帧合并、结构事件抢占、失效回调和无 rAF 回退，并在 `Session` 层证明一帧只发布一次最新累计文本且定稿不会被旧帧回调重复通知。fixture 的小型单元测试继续固定输入校验、外部到达节奏、并发拒绝、精确事件数和结尾标记交付，无需把 100,000 分片工作负载带入默认测试套件。
+聚焦测试固定 `Notifier` 的逐帧合并、结构事件抢占、失效回调和无 rAF 回退，并在 `Session` 层证明一帧只发布一次最新累计文本且定稿不会被旧帧回调重复通知。fixture（测试前置数据）的小型单元测试继续固定输入校验、外部到达节奏、并发拒绝、精确事件数和结尾标记交付，无需把 100,000 分片工作负载带入默认测试套件。
 
 ## 曾考虑的替代方案
 
@@ -28,7 +28,7 @@ Status: implemented
 
 **在接收或日志层丢弃、抽样或拼接原始分片。** 不予采纳：原始 `assistant/chunk` 是可重放的会话事实，改变它会损失诊断与 UI 保真度，并把展示频率策略混入数据权威层。
 
-**只使用微任务合批。** 不予采纳：连续异步 `yield` 会在相邻分片间排空微任务队列，使一个微任务调度近似退化为一次分片一次通知。
+**只使用微任务合批。** 不予采纳：连续异步 `yield` 会在相邻分片间排空微任务队列，使微任务合批近似退化为每个分片通知一次。
 
 **按动画帧控制测试生产方节奏。** 不予采纳：生产方会在渲染变慢时同步减速，使页面获得真实网络流不存在的隐式背压，并掩盖主线程饥饿。
 

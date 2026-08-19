@@ -53,11 +53,11 @@ class SnapshotSession {
 /** Cordis plugin name. */
 export const name = 'pty-snapshot-backend'
 /** Required PTY service. */
-export const inject = ['pty']
+export const inject = ['terminals']
 
 /** Register the deterministic snapshot backend. */
 export function apply(ctx) {
-  ctx.pty.registerBackend({
+  ctx.terminals.registerBackend({
     type: 'shell',
     spawn: () => Promise.resolve(new SnapshotSession()),
   })

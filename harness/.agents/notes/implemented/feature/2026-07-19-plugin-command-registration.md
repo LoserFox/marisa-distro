@@ -12,7 +12,7 @@ A shared mechanism must remain a UI concern rather than a model tool or agent-lo
 
 ## Decision
 
-`@deepseek-ai/dsh-commands` in `packages/ui/commands/` is the product command registry. The TUI app bundle mounts it beside its consuming front door; the [automation-only ACP app](../simplification/2026-07-23-acp-automation-only-protocol.md) and the executor-less, UI-less agent spine omit it. TUI injects the service, while command producers depend only on the registry and any domain they operate.
+`@deepseek-ai/dsh-commands` in `packages/interaction/commands/` is the product command registry. The TUI app bundle mounts it beside its consuming front end; the [automation-only ACP app](../simplification/2026-07-23-acp-automation-only-protocol.md) and the executor-less, UI-less agent spine omit it. TUI injects the service, while command producers depend only on the registry and any domain they operate.
 
 ### Registry contract
 
@@ -24,7 +24,7 @@ A `CommandDefinition` contains a lowercase name without `/`, a non-empty descrip
 
 ### Scope and lifecycle
 
-An unscoped registration is global. A command-injected plugin mounted beneath an agent context inherits that agent's scope key and lifetime, so its definition shadows a same-named global only for that exact agent. The child declares its own `commands` injection because `agent.ctx` intentionally inherits the core agent-loop dependency surface; adding a UI service to the loop merely to enable scoped registration would invert the dependency graph.
+An unscoped registration is global. A command-injected plugin mounted beneath an agent context inherits that agent's scope key and lifetime, so its definition shadows a same-named global only for that exact agent. The child declares its own `commands` injection because `agent.ctx` intentionally inherits the core agent-loop dependency API; adding a UI service to the loop merely to enable scoped registration would invert the dependency graph.
 
 Registration and removal emit the unfiltered, non-vetoing `commands/change` registry notification. Adapters recompute each live agent's effective view rather than trying to infer which sessions a change affects. The registry contains and logs each observer failure independently, so a broken UI refresh cannot roll back another plugin's mutation or starve a later observer. Cordis ownership removes definitions when their producer, UI instance, or agent scope unloads, so HMR cannot leave stale discovery entries or handlers.
 
@@ -50,7 +50,7 @@ TUI tests exercise all migrated built-ins, live plugin discovery, help/autocompl
 
 - **Keep adapter-local switches** — rejected because optional plugins cannot contribute discovery and behavior without editing the TUI.
 - **Represent human commands as model tools** — rejected because discovery and direct invocation are human UI behavior; routing through the model adds latency, token cost, and reinterpretation.
-- **Put the registry in the core agent spine** — rejected because UI-less front doors do not consume it, while TUI can compose it explicitly.
+- **Put the registry in the core agent spine** — rejected because UI-less entry points do not consume it, while TUI can compose it explicitly.
 - **Make `dsh-agent-loop` inject commands** — rejected because the loop does not execute or discover human commands. Agent-scoped producers declare the UI dependency in a child plugin instead.
 - **Attach adapter masks to each definition** — rejected because support is a composition fact, not command-domain state. Every composed adapter exposes a registered command; an incompatible plugin omits registration in that deployment.
 - **Send unknown slash input to the model** — rejected because typoed or unavailable direct actions must fail predictably rather than change execution planes.
@@ -68,4 +68,4 @@ TUI tests exercise all migrated built-ins, live plugin discovery, help/autocompl
 - Input metadata is limited to an unstructured text hint. Typed forms, argument schemas, and completion providers remain command-owned or require a later registry or consumer extension.
 - Generic command output is live-only and is not reconstructed after TUI restart.
 - Registry cancellation stops awaiting immediately, but external work stops only when a handler cooperates with its signal.
-- The ACP automation server, headless CLI, and JSON-RPC SDK front doors do not expose the command plane; only TUI consumes it.
+- The ACP automation server, headless CLI, and JSON-RPC SDK entry points do not expose the command plane; only TUI consumes it.

@@ -7,7 +7,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContextSnapshotSection } from '@deepseek-ai/dsh-llm'
 import type { Session, UserMessage } from '@deepseek-ai/dsh-session'
 import { isReplacementSurfaceEvent } from '@deepseek-ai/dsh-session'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 const SOURCE = '@deepseek-ai/dsh-system-prompt'
 const CLEARED = 'Current runtime context: none. Earlier runtime-context snapshots no longer apply.'
@@ -35,7 +35,7 @@ export class RuntimeContextProjection {
     const surface = new Set(session.surface.nodes)
     for (let index = session.events.length - 1; index >= 0; index -= 1) {
       const event = session.events[index]
-      if (event?.type !== 'user/message' || !isOwned(event.data)) { continue }
+      if (event?.type !== 'user/message' || !isOwned(event.data)) continue
       this.retained ??= null
       if (surface.has(event.seq)) {
         this.retained = { seq: event.seq, text: textOf(event.data) }

@@ -1,10 +1,10 @@
 /**
  * REAL-composition coverage: a test-only cordis.yml booted through the
  * vendored Loader mounts the webserver row plus the adaptive chooser, and the
- * assertions observe the durable outcome — which backend entry the chooser
- * mounted into the Loader store, the capability the seam then serves, and
- * that disposing the chooser removes the mounted entry again (HMR safety),
- * joining the backend's own teardown before the disposer settles.
+ * assertions observe the durable outcome — which backend and surface entries
+ * the chooser mounted into the Loader store, the capability the seam then
+ * serves, and that disposing the chooser removes both mounted entries again
+ * (HMR safety), joining the backend's own teardown before the disposer settles.
  */
 
 import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs'
@@ -13,18 +13,58 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
-import Include from '@cordisjs/plugin-include'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
+import Include from '@deepseek-ai/cordis-plugin-include'
 import HttpServer from '@deepseek-ai/dsh-host-webserver'
 import type { DirectoryPicker } from '@deepseek-ai/dsh-host-directory-picker'
 import BrowseDirectoryPicker from '@deepseek-ai/dsh-host-directory-picker-browse'
 import NativeDirectoryPicker from '@deepseek-ai/dsh-host-directory-picker-native'
 import * as DirectoryPickerAuto from '../src/index.ts'
 
+const renameControl = vi.hoisted(() => ({
+  attempts: 0,
+  failureCode: 'EPERM',
+  injectedFailures: 0,
+  remainingFailures: 0,
+}))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...actual,
+    async rename(oldPath: string, newPath: string): Promise<void> {
+      renameControl.attempts++
+      if (renameControl.remainingFailures > 0) {
+        renameControl.remainingFailures--
+        renameControl.injectedFailures++
+        throw Object.assign(new Error(`injected rename failure for ${newPath}`), { code: renameControl.failureCode })
+      }
+      await actual.rename(oldPath, newPath)
+    },
+  }
+})
+
 const AUTO = '@deepseek-ai/dsh-host-directory-picker-auto'
 const NATIVE = '@deepseek-ai/dsh-host-directory-picker-native'
 const BROWSE = '@deepseek-ai/dsh-host-directory-picker-browse'
+const NATIVE_SURFACE = '@deepseek-ai/dsh-client-ui-directory-picker-native'
+const BROWSE_SURFACE = '@deepseek-ai/dsh-client-ui-directory-picker-browse'
+
+/**
+ * Loader-visible stand-in for a client surface package: the surfaces belong to
+ * the Client program and publish browser entry points only, so a Host-face spec
+ * can neither name them in a static import nor resolve them from source. What
+ * the chooser owns is the mounting decision, which every case observes through
+ * the Loader store; the surface's own browser contributions belong to the
+ * assembled web coverage.
+ *
+ * @param name Surface package specifier the chooser mounts.
+ * @returns A function-plugin module the Loader can mount under that specifier.
+ */
+function surfaceModule(name: string): unknown {
+  return { name, apply: () => undefined }
+}
 
 let root: string | undefined
 let fakeBin: string | undefined
@@ -41,10 +81,17 @@ afterEach(async () => {
   }
   root = undefined
   fakeBin = undefined
+  renameControl.attempts = 0
+  renameControl.failureCode = 'EPERM'
+  renameControl.injectedFailures = 0
+  renameControl.remainingFailures = 0
 })
 
 /** Write a two-row cordis.yml (webserver + chooser), then boot it through the real Loader. */
-async function loadComposition(bindHost: '127.0.0.1' | '0.0.0.0'): Promise<{ ctx: Context; configPath: string }> {
+async function loadComposition(
+  bindHost: '127.0.0.1' | '0.0.0.0',
+  options: { failSurface?: boolean } = {},
+): Promise<{ ctx: Context; configPath: string }> {
   root = await mkdtemp(join(tmpdir(), 'dsh-directory-picker-auto-'))
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, [
@@ -65,11 +112,16 @@ async function loadComposition(bindHost: '127.0.0.1' | '0.0.0.0'): Promise<{ ctx
     [AUTO, DirectoryPickerAuto],
     [NATIVE, NativeDirectoryPicker],
     [BROWSE, BrowseDirectoryPicker],
+    [NATIVE_SURFACE, surfaceModule(NATIVE_SURFACE)],
+    [BROWSE_SURFACE, surfaceModule(BROWSE_SURFACE)],
   ])
   context.loader.internal = {
     version: 'v2',
     async import(specifier: string) {
-      if (!modules.has(specifier)) { throw new Error(`unexpected Loader import: ${specifier}`) }
+      if (options.failSurface === true && (specifier === NATIVE_SURFACE || specifier === BROWSE_SURFACE)) {
+        throw new Error(`surface import failed: ${specifier}`)
+      }
+      if (!modules.has(specifier)) throw new Error(`unexpected Loader import: ${specifier}`)
       return modules.get(specifier)
     },
   } as unknown as NonNullable<typeof context.loader.internal>
@@ -115,7 +167,9 @@ describe('real Loader composition', () => {
       .map(entry => entry.options.name)
     expect(unloaded).toEqual([])
     expect(entryNames(ctx)).toContain(NATIVE)
+    expect(entryNames(ctx)).toContain(NATIVE_SURFACE)
     expect(entryNames(ctx)).not.toContain(BROWSE)
+    expect(entryNames(ctx)).not.toContain(BROWSE_SURFACE)
     const picker = ctx.get('directoryPicker') as DirectoryPicker
     expect(picker.capability().kind).toBe('native')
     // The mounted row lives in the Loader's in-memory root tree only — the
@@ -128,6 +182,7 @@ describe('real Loader composition', () => {
     const autoEntry = [...ctx.loader.entries()].find(entry => entry.options.name === AUTO)!
     await autoEntry.fiber!.dispose()
     expect(entryNames(ctx)).not.toContain(NATIVE)
+    expect(entryNames(ctx)).not.toContain(NATIVE_SURFACE)
     expect(ctx.get('directoryPicker')).toBeUndefined()
     // Self-disposing an include-tree entry persists `disabled: true` (loader
     // behavior, not the chooser's); await that debounced write so it cannot
@@ -143,7 +198,9 @@ describe('real Loader composition', () => {
     const { ctx } = await loadComposition('127.0.0.1')
 
     expect(entryNames(ctx)).toContain(BROWSE)
+    expect(entryNames(ctx)).toContain(BROWSE_SURFACE)
     expect(entryNames(ctx)).not.toContain(NATIVE)
+    expect(entryNames(ctx)).not.toContain(NATIVE_SURFACE)
     const picker = ctx.get('directoryPicker') as DirectoryPicker
     expect(picker.capability().kind).toBe('browse')
   })
@@ -153,7 +210,20 @@ describe('real Loader composition', () => {
     const { ctx } = await loadComposition('0.0.0.0')
 
     expect(entryNames(ctx)).toContain(BROWSE)
+    expect(entryNames(ctx)).toContain(BROWSE_SURFACE)
     expect(entryNames(ctx)).not.toContain(NATIVE)
+    expect(entryNames(ctx)).not.toContain(NATIVE_SURFACE)
+  })
+
+  it('unmounts the backend when the surface entry fails to load', { timeout: 60_000 }, async () => {
+    stubAttendedHost()
+    await expect(loadComposition('127.0.0.1', { failSurface: true })).rejects.toThrow(/surface import failed/)
+
+    // Setup owns both entries until it returns its disposer, so a failed surface
+    // must take the mounted backend with it: otherwise a retry collides with the
+    // directoryPicker registration this backend already made.
+    expect(entryNames(context!)).not.toContain(NATIVE)
+    expect(context!.get('directoryPicker')).toBeUndefined()
   })
 
   it('tolerates the mounted entry being removed by the tree before the chooser unloads', { timeout: 60_000 }, async () => {
@@ -163,9 +233,31 @@ describe('real Loader composition', () => {
     const backendEntry = [...ctx.loader.entries()].find(entry => entry.options.name === NATIVE)!
     await ctx.loader.remove(backendEntry.id)
     const autoEntry = [...ctx.loader.entries()].find(entry => entry.options.name === AUTO)!
+    renameControl.remainingFailures = 1
     await expect(autoEntry.fiber!.dispose()).resolves.not.toThrow()
     expect(entryNames(ctx)).not.toContain(NATIVE)
+    expect(entryNames(ctx)).not.toContain(NATIVE_SURFACE)
     // Same self-dispose persistence as above: let the write land before teardown.
-    await expect.poll(async () => { return await readFile(configPath, 'utf8') }).toContain('disabled: true')
+    await expect.poll(async () => await readFile(configPath, 'utf8')).toContain('disabled: true')
+    expect(renameControl.injectedFailures).toBe(1)
+    expect(renameControl.remainingFailures).toBe(0)
+    expect(renameControl.attempts).toBeGreaterThanOrEqual(2)
+  })
+
+  it('reports a terminal debounced-write failure again to the teardown owner', { timeout: 60_000 }, async () => {
+    stubAttendedHost()
+    const { ctx } = await loadComposition('127.0.0.1')
+    const autoEntry = [...ctx.loader.entries()].find(entry => entry.options.name === AUTO)!
+    const include = [...ctx.loader.entries()]
+      .find(entry => entry.options.name === 'cordis:include')?.subtree as Include | undefined
+    if (include === undefined) throw new Error('expected the root Include tree')
+    renameControl.failureCode = 'EIO'
+    renameControl.remainingFailures = 1
+
+    await autoEntry.fiber!.dispose()
+    await expect.poll(() => renameControl.injectedFailures).toBe(1)
+    await expect(include.stop()).rejects.toMatchObject({ code: 'EIO' })
+    await expect(ctx.fiber.dispose()).resolves.not.toThrow()
+    context = undefined
   })
 })

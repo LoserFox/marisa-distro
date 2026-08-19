@@ -31,7 +31,7 @@ import type {
   SearchLineMatch,
   SearchResultView,
 } from '@deepseek-ai/dsh-tools'
-import type { RetainedItems } from '@deepseek-ai/dsh-retention'
+import type { RetainedItems } from '@deepseek-ai/dsh-output-retention'
 import type { GrepMatch } from './search-core.ts'
 
 /**

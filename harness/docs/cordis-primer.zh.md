@@ -2,7 +2,7 @@
 
 [English](cordis-primer.md) | 中文
 
-Cordis 是 DeepSeek Harness SDK 底层以 vendor 方式引入的插件框架。本文介绍 harness 插件作者在阅读生成的[事件](cordis-catalog/events.md)与[服务](cordis-catalog/services.md)目录之前需要了解的 Cordis 核心概念；[Cordis 教程](cordis-tutorial/index.md)则通过实践逐一讲解这些概念。vendor 源码与同步流程见 [vendor/README.md](../vendor/README.md)。
+Cordis 是 DeepSeek Harness 底层以 vendor 方式引入的插件框架。本文介绍 harness 插件作者在阅读[子系统页面](subsystems/core.md)上生成的服务/事件参考之前需要了解的 Cordis 核心概念；[Cordis 教程](cordis-tutorial/index.md)则通过实践逐一讲解这些概念。vendor 源码与同步流程见 [vendor/README.md](../vendor/README.md)。
 
 ## 五个核心概念
 
@@ -11,6 +11,8 @@ Cordis 是 DeepSeek Harness SDK 底层以 vendor 方式引入的插件框架。�
 - **通过 `inject` 声明服务依赖。** 插件声明所需的服务后，会等待这些服务就绪才启动；加载顺序通过服务依赖表达，而非手动编排启动序列。
 - **类型化事件用于通信。** 服务通过 TypeScript 声明合并注册事件名，然后以 `emit`、`waterfall`（瀑布式事件）、`parallel` 或 `serial` 方式分发，分别对应监听者观察、包装、并行扇出或按序执行。
 - **注册是可逆的副作用。** 提示词片段、工具 schema、适配器、提供方和监听器通过 `ctx.effect()` 或 `ctx.on()` 安装，reload 和 teardown 时会按预期撤销。
+
+<a id="dispatch-modes"></a>
 
 ## 分发模式
 
@@ -23,7 +25,7 @@ Cordis 是 DeepSeek Harness SDK 底层以 vendor 方式引入的插件框架。�
 | `parallel` | 是 | 所有监听器并行观察事件 | 否 |
 | `serial` | 是 | 监听器按注册顺序观察 | 是 |
 
-分发模式是事件公开契约的一部分。新的 harness 事件通过 `@mode` 标签记录模式，以便生成的目录可以将声明与分发调用点做交叉校验。
+分发模式是事件公开约定的一部分。新的 harness 事件通过 `@mode` 标签记录模式，以便生成的目录可以将声明与分发调用点做交叉校验。
 
 <a id="cordis-waterfall-semantics"></a>
 
@@ -39,7 +41,7 @@ Cordis 是 DeepSeek Harness SDK 底层以 vendor 方式引入的插件框架。�
 
 ## Loader 配置
 
-`@cordisjs/plugin-include` 将 `!!js` 解析为表达式节点，但 Loader 仅在挂载插件前对条目的 `config` 做插值。条目元数据（`id`、`name`、`group`、`disabled`、`inject`、`intercept` 和 `isolate`）保持字面值；因此 `disabled: !!js ...` 是一个 truthy 对象，会始终禁用该条目。需要根据环境选择挂载哪些插件时，请使用显式的配置覆盖层。
+`@deepseek-ai/cordis-plugin-include` 将 `!!js` 解析为表达式节点。Loader 在声明的注入激活后，基于该插件上下文（`ctx.serviceName`）插值条目的 `config`，并在每次挂载决策时基于 loader 上下文插值其 `disabled` 字段；Include 会保留嵌套行表达式，直到目标行激活。其余条目元数据保持字面值。由环境选择插件时，请使用 overlay。
 
 ## 实践规则
 

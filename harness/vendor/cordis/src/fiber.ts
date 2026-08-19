@@ -1,5 +1,5 @@
-import { defineProperty, isNullable } from 'cosmokit'
-import type { Awaitable, Dict } from 'cosmokit'
+import { defineProperty, isNullable } from '@deepseek-ai/cosmokit'
+import type { Awaitable, Dict } from '@deepseek-ai/cosmokit'
 import { Context } from './context.ts'
 import type { Plugin } from './registry.ts'
 import { buildOuterStack, composeError, DisposableList, getTraceable, isConstructor, isObject, symbols } from './utils.ts'
@@ -188,6 +188,8 @@ export class Fiber {
   public readonly ctx: Context
   /** The validated plugin config (updated by `update()`). */
   public config: any
+  /** The raw plugin config, re-resolved before each activation. */
+  public _config: any
   /** Current lifecycle state; transitions emit `internal/status`. */
   public state = FiberState.PENDING
   /** Dispose this fiber: unload the plugin, then settle once cleanup finished. */
@@ -224,6 +226,7 @@ export class Fiber {
     public runtime: Plugin.Runtime | null,
     getOuterStack: () => string[],
   ) {
+    this._config = config
     const collect = (dispose: Disposable) => {
       this._disposables.push(dispose)
     }
@@ -259,16 +262,8 @@ export class Fiber {
         collect,
       }
 
-      let shouldRefresh = false
       this.dispose = parent.fiber.effect(() => {
         const remove = runtime.fibers.push(this)
-        try {
-          this.config = resolveConfig(runtime, config)
-          shouldRefresh = true
-        } catch (error) {
-          this.ctx.logger.error(error)
-          this._error = error
-        }
         return async () => {
           this.uid = null
           emitPluginDisposed(this.context, this)
@@ -320,7 +315,7 @@ export class Fiber {
         for (const name of Object.keys(this.inject)) {
           this._checkImpl(name)
         }
-        if (shouldRefresh) this._refresh()
+        this._refresh()
       }
     } else {
       this.uid = 0
@@ -643,6 +638,11 @@ export class Fiber {
     })
   }
 
+  private _resolveConfig(config: any) {
+    config = this.context.waterfall(this, 'internal/config', config, () => config)
+    return this.runtime ? resolveConfig(this.runtime, config) : config
+  }
+
   private async _reload() {
     this.store = { ...this._store }
     const oldEpoch = this._runner.epoch
@@ -652,7 +652,9 @@ export class Fiber {
       // the load. Do not run plugin code for a stale epoch; the state update
       // below will drain any effects collected while the fiber was PENDING.
       if (this._runner.epoch === oldEpoch) {
+        this.config = this._resolveConfig(this._config)
         await this._execute(this._runner)
+        this._error = undefined
       }
     } catch (reason) {
       // impl guarantees that the error is non-null (?)
@@ -733,7 +735,16 @@ export class Fiber {
    */
   update(config: any, noSave = false) {
     this.assertActive()
-    config = resolveConfig(this.runtime!, config)
+    this._config = config
+    if (this.state !== FiberState.ACTIVE) {
+      // Config resolution may access injected services, so defer it until the
+      // fiber can activate.
+      this._error = undefined
+      this._setEpoch(INACTIVE)
+      this._refresh()
+      return
+    }
+    config = this._resolveConfig(config)
     return this.context.waterfall(this, 'internal/update', config, noSave, () => {
       this.config = config
       this._error = undefined

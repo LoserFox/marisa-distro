@@ -87,7 +87,7 @@ describe('SQLite search request normalization', () => {
       eventFilters: [{} as never],
     }, limits)).toThrow(expectCode('SESSION_QUERY_INVALID_FILTER'))
     for (const limit of [1.5, 0, 4]) {
-      expect(() => { return normalizeEventRequest({ sessionId: SessionId('s'), query: 'x', limit }, limits) })
+      expect(() => normalizeEventRequest({ sessionId: SessionId('s'), query: 'x', limit }, limits))
         .toThrow(expectCode('SESSION_QUERY_INVALID_LIMIT'))
     }
     expect(() => normalizeEventRequest({

@@ -1,17 +1,17 @@
 import { PassThrough } from 'node:stream'
-import { Context } from 'cordis'
-import Loader from '@cordisjs/plugin-loader'
+import { Context } from '@deepseek-ai/cordis'
+import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { describe, expect, it, vi } from 'vitest'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import SubagentService from '@deepseek-ai/dsh-subagent'
+import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import type {
   SubprocessHandle,
   SubprocessOutcome,
 } from '@deepseek-ai/dsh-subprocess'
-import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
+import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import * as codex from '../src/index.ts'
 import * as invariant from '../src/invariant.ts'
 import {
@@ -199,7 +199,7 @@ async function initializeWire(): Promise<{
   wire.start()
   const initializing = wire.initialize(new AbortController().signal)
   const initialize = await child.peer.nextMethod('initialize')
-  child.peer.respond(initialize, { userAgent: 'codex-cli 0.146.0' })
+  child.peer.respond(initialize, { userAgent: 'codex-cli 0.147.0' })
   await initializing
   expect(await child.peer.nextMethod('initialized')).toEqual({
     jsonrpc: '2.0',
@@ -219,7 +219,7 @@ async function publishRun(
 ) {
   const starting = startCodexRun(request(undefined, signal), runSpec(child, specOverrides))
   const initialize = await child.peer.nextMethod('initialize')
-  child.peer.respond(initialize, { userAgent: 'codex-cli 0.146.0' })
+  child.peer.respond(initialize, { userAgent: 'codex-cli 0.147.0' })
   await child.peer.nextMethod('initialized')
   const threadStart = await child.peer.nextMethod('thread/start')
   child.peer.respond(threadStart, { thread: { id: 'thread-1', ephemeral: true } })
@@ -287,8 +287,8 @@ describe('task admission and package contracts', () => {
 
   it('registers one fixed descriptor, validates config, and unregisters on HMR', async () => {
     const ctx = new Context()
-    await ctx.plugin(SubagentService)
-    await ctx.plugin(LocalSubprocessService)
+    await ctx.plugin(SubagentRuntime)
+    await ctx.plugin(LocalSubprocessRuntime)
     const fiber = await ctx.plugin(codex, {})
     const provider = ctx.subagents.getProvider('codex')!
     expect(provider).toMatchObject({
@@ -316,8 +316,8 @@ describe('task admission and package contracts', () => {
 
   it('requires a parent session cwd without suggesting unsupported config', async () => {
     const ctx = new Context()
-    await ctx.plugin(SubagentService)
-    await ctx.plugin(LocalSubprocessService)
+    await ctx.plugin(SubagentRuntime)
+    await ctx.plugin(LocalSubprocessRuntime)
     const spawn = vi.spyOn(ctx.subprocess, 'spawn')
     await ctx.plugin(codex, {})
 
@@ -380,7 +380,7 @@ describe('CodexAppServerWire', () => {
         requestAttestation: false,
       },
     })
-    child.peer.respond(initialize, { userAgent: 'codex-cli 0.146.0' })
+    child.peer.respond(initialize, { userAgent: 'codex-cli 0.147.0' })
     await initializing
     await child.peer.nextMethod('initialized')
 
@@ -855,7 +855,7 @@ describe('run lifecycle and quiescence', () => {
     void starting.then(() => { published = true })
     const initialize = await child.peer.nextMethod('initialize')
     expect(published).toBe(false)
-    child.peer.respond(initialize, { userAgent: 'codex-cli 0.146.0' })
+    child.peer.respond(initialize, { userAgent: 'codex-cli 0.147.0' })
     await child.peer.nextMethod('initialized')
     const threadStart = await child.peer.nextMethod('thread/start')
     expect(published).toBe(false)
@@ -962,7 +962,7 @@ describe('run lifecycle and quiescence', () => {
       runSpec(child),
     )
     const initialize = await child.peer.nextMethod('initialize')
-    child.peer.respond(initialize, { userAgent: 'codex-cli 0.146.0' })
+    child.peer.respond(initialize, { userAgent: 'codex-cli 0.147.0' })
     await child.peer.nextMethod('initialized')
     const threadStart = await child.peer.nextMethod('thread/start')
     child.peer.respond(threadStart, { thread: { id: 'thread-1', ephemeral: true } })
@@ -1014,8 +1014,8 @@ describe('run lifecycle and quiescence', () => {
 
   it('uses the registered provider config and logs flattened errors', async () => {
     const ctx = new Context()
-    await ctx.plugin(SubagentService)
-    await ctx.plugin(LocalSubprocessService)
+    await ctx.plugin(SubagentRuntime)
+    await ctx.plugin(LocalSubprocessRuntime)
     const child = fakeChild()
     const spawn = vi.spyOn(ctx.subprocess, 'spawn').mockReturnValue(child.handle)
     const warnings: string[] = []
@@ -1032,7 +1032,7 @@ describe('run lifecycle and quiescence', () => {
       signal: new AbortController().signal,
     })
     const initialize = await child.peer.nextMethod('initialize')
-    child.peer.respond(initialize, { userAgent: 'codex-cli 0.146.0' })
+    child.peer.respond(initialize, { userAgent: 'codex-cli 0.147.0' })
     await child.peer.nextMethod('initialized')
     const threadStart = await child.peer.nextMethod('thread/start')
     child.peer.respond(threadStart, { thread: { id: 'thread-1', ephemeral: true } })

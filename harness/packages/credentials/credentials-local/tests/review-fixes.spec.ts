@@ -3,12 +3,12 @@
 // broken observer never fails a committed write), and the YAML document
 // editor's isolation between entries.
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { CredentialsLocal } from '../src/index.ts'
+import { LocalCredentialProvider } from '../src/index.ts'
 
 /** Credential documents are seeded owner-only, exactly as the provider creates them. */
 function writeCredentials(file: string, text: string): Promise<void> {
@@ -22,7 +22,7 @@ const INNER = credentialRef('DSH_REVIEW_INNER')
 const cleanups: Array<() => Promise<void>> = []
 
 afterEach(async () => {
-  while (cleanups.length > 0) { await cleanups.pop()!() }
+  while (cleanups.length > 0) await cleanups.pop()!()
 })
 
 async function tempDir(): Promise<string> {
@@ -31,9 +31,9 @@ async function tempDir(): Promise<string> {
   return dir
 }
 
-async function boot(config: ConstructorParameters<typeof CredentialsLocal>[1]): Promise<Context> {
+async function boot(config: ConstructorParameters<typeof LocalCredentialProvider>[1]): Promise<Context> {
   const ctx = new Context()
-  const fiber = ctx.plugin(CredentialsLocal, config)
+  const fiber = ctx.plugin(LocalCredentialProvider, config)
   cleanups.push(async () => { await fiber.dispose() })
   await fiber
   return ctx
@@ -78,7 +78,7 @@ describe('read-modify-write', () => {
     const home = join(dir, 'home')
     const ctx = await boot({ path: join(home, '.credentials.yaml'), watch: false })
     await ctx.credentials.set(ALPHA, 'one')
-    expect((await stat(home)).mode & 0o777).toBe(0o700)
+    if (process.platform !== 'win32') expect((await stat(home)).mode & 0o777).toBe(0o700)
   })
 })
 

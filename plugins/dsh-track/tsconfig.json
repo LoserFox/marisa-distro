@@ -16,8 +16,8 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "typeRoots": [
-      "C:/Users/lf/Documents/Workspace/marisa-distro/harness/node_modules/@types",
-      "C:/Users/lf/Documents/Workspace/marisa-distro/harness/apps/web/node_modules/@types"
+      "../../harness/node_modules/@types",
+      "../../harness/apps/web/node_modules/@types"
     ],
     "types": [
       "node"
@@ -27,64 +27,64 @@
     "noEmitOnError": true,
     "paths": {
       "cordis": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/vendor/cordis/lib/types/index.d.ts"
+        "../../harness/vendor/cordis/lib/types/index.d.ts"
       ],
       "react": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/apps/web/node_modules/@types/react"
+        "../../harness/apps/web/node_modules/@types/react"
       ],
       "@deepseek-ai/dsh-tools": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/core/tools/lib/types/index.d.ts"
+        "../../harness/packages/core/tools/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-session": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/core/session/lib/types/index.d.ts"
+        "../../harness/packages/core/session/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-storage": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/storage/storage/lib/types/index.d.ts"
+        "../../harness/packages/storage/storage/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-storage-json": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/storage/storage-json/lib/types/index.d.ts"
+        "../../harness/packages/storage/storage-json/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-session-query": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/session-query/session-query/lib/types/index.d.ts"
+        "../../harness/packages/session-query/session-query/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-llm": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/llm/llm/lib/types/index.d.ts"
+        "../../harness/packages/llm/llm/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-system-prompt": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/core/system-prompt/lib/types/index.d.ts"
+        "../../harness/packages/core/system-prompt/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-client-runtime": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/client/runtime/lib/types/index.d.ts"
+        "../../harness/packages/client/runtime/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-client-runtime/client": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/client/runtime/lib/types/client/index.d.ts"
+        "../../harness/packages/client/runtime/lib/types/client/index.d.ts"
       ],
       "@deepseek-ai/dsh-client-ui-slots": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/client/ui-slots/lib/types/index.d.ts"
+        "../../harness/packages/client/ui-slots/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-client-ui-conversation": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/client/ui-conversation/lib/types/index.d.ts"
+        "../../harness/packages/client/ui-conversation/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-client-ui-conversation/client": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/client/ui-conversation/lib/types/client/index.d.ts"
+        "../../harness/packages/client/ui-conversation/lib/types/client/index.d.ts"
       ],
       "@deepseek-ai/dsh-client-locale": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/client/locale/lib/types/index.d.ts"
+        "../../harness/packages/client/locale/lib/types/index.d.ts"
       ],
       "@deepseek-ai/dsh-client-locale/client": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/client/locale/lib/types/client/index.d.ts"
+        "../../harness/packages/client/locale/lib/types/client/index.d.ts"
       ],
       "@deepseek-ai/dsh-host-webserver": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/packages/host/webserver/lib/types/index.d.ts"
+        "../../harness/packages/host/webserver/lib/types/index.d.ts"
       ],
       "react-dom/client": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/apps/web/node_modules/@types/react-dom/client.d.ts"
+        "../../harness/apps/web/node_modules/@types/react-dom/client.d.ts"
       ],
       "react-dom": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/apps/web/node_modules/@types/react-dom"
+        "../../harness/apps/web/node_modules/@types/react-dom"
       ],
       "react/jsx-runtime": [
-        "C:/Users/lf/Documents/Workspace/marisa-distro/harness/apps/web/node_modules/@types/react"
+        "../../harness/apps/web/node_modules/@types/react"
       ]
     }
   },

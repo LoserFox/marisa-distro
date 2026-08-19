@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { Session, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
 import * as PlanModeInvariant from '@deepseek-ai/dsh-plan-mode/invariant'
-import InvariantService from '@deepseek-ai/dsh-invariants'
+import InvariantRegistry from '@deepseek-ai/dsh-invariants'
 
 async function setup(): Promise<Context> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
-  await ctx.plugin(InvariantService, { enabled: true })
+  await ctx.plugin(InvariantRegistry, { enabled: true })
   await ctx.plugin(PlanModeInvariant)
   return ctx
 }
@@ -45,7 +45,7 @@ describe('plan-mode stream invariants', () => {
 
   it('accepts standalone plan state between turns (the idle immediate commit)', async () => {
     const ctx = await setup()
-    expect(() => { return ctx.sessions.create().append('plan/mode', { active: true }) })
+    expect(() => ctx.sessions.create().append('plan/mode', { active: true }))
       .not.toThrow()
   })
 
@@ -67,7 +67,7 @@ describe('plan-mode stream invariants', () => {
     session.append('turn/start', { turn: 1 })
     session.append('plan/mode', { active: 'plan' as unknown as boolean })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
-    await ctx.plugin(InvariantService, { enabled: true })
+    await ctx.plugin(InvariantRegistry, { enabled: true })
 
     await expect(ctx.plugin(PlanModeInvariant).then(() => undefined)).rejects.toThrow(/expected a boolean/)
   })
@@ -79,7 +79,7 @@ describe('plan-mode stream invariants', () => {
     session.append('turn/start', { turn: 1 })
     session.append('plan/mode', { active: true })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
-    await ctx.plugin(InvariantService, { enabled: true })
+    await ctx.plugin(InvariantRegistry, { enabled: true })
 
     await expect(ctx.plugin(PlanModeInvariant).then(() => undefined)).resolves.toBeUndefined()
   })
@@ -88,7 +88,7 @@ describe('plan-mode stream invariants', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     ctx.sessions.create().append('plan/mode', { active: true })
-    await ctx.plugin(InvariantService, { enabled: true })
+    await ctx.plugin(InvariantRegistry, { enabled: true })
 
     await expect(ctx.plugin(PlanModeInvariant).then(() => undefined)).resolves.toBeUndefined()
   })

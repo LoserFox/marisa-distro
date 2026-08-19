@@ -9,8 +9,8 @@
 // model content as the question composer: the turn cannot complete without it).
 //
 // Geometry is the point of the scenario. The command is unbounded model text,
-// and before the cap a long one grew the card until the refuse/allow buttons
-// left the viewport — an approval the user could see and not answer.
+// and an uncapped card grows with it until the refuse/allow buttons leave the
+// viewport — an approval the user could see and not answer.
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
@@ -35,7 +35,7 @@ const UI_EXPECTED = join(SNAPSHOT_DIR, 'ui.expected.md')
 const MODE = webSnapshotMode()
 
 // Irreducible payload: the command has to be long enough to pass the card's
-// height cap, which is the only shape that reproduces an action row pushed off
+// height cap, which is the only command length that reproduces an action row pushed off
 // screen. Unrelated tokens, not a repeated word — a repeated word is what the
 // model compressed into `printf 'alpha %.0s' {1..400}` while recording, and a
 // short command proves nothing here. The formula keeps the source small; the
@@ -89,7 +89,7 @@ describe('web e2e: approval takeover keeps its actions reachable', () => {
     await input.fill('')
 
     // Read-only: the mode whose denial the model escalates from. Switched
-    // through the shipped access-mode chip, not a test-only seam.
+    // through the shipped access-mode chip, not a test-only override.
     await page.locator('[aria-label^="Access mode"]').click()
     await page.getByRole('menuitem', { name: 'Read Only' }).click()
     await expect.poll(
@@ -115,9 +115,8 @@ describe('web e2e: approval takeover keeps its actions reachable', () => {
       const snapshot = await captureStableAria(page, '[data-approval-key]', scaffold.workspaceCwd)
       await compareOrRefreshGolden(UI_EXPECTED, snapshot, MODE)
 
-      // The regression this scenario exists for: an uncapped card grew with
-      // the command until the action row left the viewport. Measured at the
-      // lane baseline and at a short viewport, on the live panel.
+      // The uncapped-card hazard the header names, measured at the lane
+      // baseline and at a short viewport, on the live panel.
       const original = page.viewportSize() ?? { width: 1680, height: 1000 }
       for (const height of [1000, 700]) {
         await page.setViewportSize({ width: 900, height })

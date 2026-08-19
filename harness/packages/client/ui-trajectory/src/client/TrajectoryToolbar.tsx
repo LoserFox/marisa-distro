@@ -1,6 +1,8 @@
 /** Trajectory toolbar: timeline and ledger fold controls. */
 
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconSearchOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { NS } from './locales.ts'
 import css from './TrajectoryToolbar.module.css'
 
 export interface TrajectoryToolbarProps {
@@ -24,6 +26,8 @@ export interface TrajectoryToolbarProps {
   searchQuery: string
   /** Update the live ledger search query. */
   onSearchQueryChange: (query: string) => void
+  /** Translate a toolbar dictionary key. */
+  t: TranslateNS<typeof NS>
 }
 
 /**
@@ -42,17 +46,18 @@ export function TrajectoryToolbar({
   onToggleAllAssistants,
   searchQuery,
   onSearchQueryChange,
+  t,
 }: TrajectoryToolbarProps) {
   return (
-    <div className={css.root} role="toolbar" aria-label="Trajectory toolbar">
+    <div className={css.root} role="toolbar" aria-label={t('toolbar.aria')}>
       <div className={css.inner}>
         <div className={css.actions}>
           <button
             type="button"
             className={css.toggle}
-            aria-label="Use actual duration"
+            aria-label={t('toolbar.useActualDuration')}
             aria-pressed={actualDuration}
-            title={actualDuration ? 'Use equal-width operations' : 'Use actual duration'}
+            title={actualDuration ? t('toolbar.useEqualWidth') : t('toolbar.useActualDuration')}
             onClick={() => { onActualDurationChange(!actualDuration) }}
           >
             <svg
@@ -64,7 +69,7 @@ export function TrajectoryToolbar({
               <circle cx="8" cy="8" r="5.25" />
               <path d="M8 4.75V8l2.25 1.5" />
             </svg>
-            Duration
+            {t('toolbar.duration')}
           </button>
           <button
             type="button"
@@ -74,7 +79,7 @@ export function TrajectoryToolbar({
             hidden
             onClick={() => { onActualTimeChange(!actualTime) }}
           >
-            <span>Actual time</span>
+            <span>{t('toolbar.actualTime')}</span>
             <span className={css.controlTrack} data-on={actualTime || undefined} aria-hidden="true">
               <span className={css.controlThumb} />
             </span>
@@ -82,28 +87,28 @@ export function TrajectoryToolbar({
           <button
             type="button"
             className={css.action}
-            aria-label={allTurnsCollapsed ? 'Expand turns' : 'Collapse turns'}
+            aria-label={allTurnsCollapsed ? t('toolbar.expandTurns') : t('toolbar.collapseTurns')}
             aria-pressed={allTurnsCollapsed}
-            title={allTurnsCollapsed ? 'Expand turns' : 'Collapse turns'}
+            title={allTurnsCollapsed ? t('toolbar.expandTurns') : t('toolbar.collapseTurns')}
             onClick={onToggleAllTurns}
           >
             <span className={css.actionIcon} aria-hidden="true">
               {allTurnsCollapsed ? '⊞' : '⊟'}
             </span>
-            Turns
+            {t('toolbar.turns')}
           </button>
           <button
             type="button"
             className={css.action}
-            aria-label={allAssistantsCollapsed ? 'Expand calls' : 'Collapse calls'}
+            aria-label={allAssistantsCollapsed ? t('toolbar.expandCalls') : t('toolbar.collapseCalls')}
             aria-pressed={allAssistantsCollapsed}
-            title={allAssistantsCollapsed ? 'Expand calls' : 'Collapse calls'}
+            title={allAssistantsCollapsed ? t('toolbar.expandCalls') : t('toolbar.collapseCalls')}
             onClick={onToggleAllAssistants}
           >
             <span className={css.actionIcon} aria-hidden="true">
               {allAssistantsCollapsed ? '⊞' : '⊟'}
             </span>
-            Calls
+            {t('toolbar.calls')}
           </button>
         </div>
         <div className={css.search}>
@@ -111,8 +116,8 @@ export function TrajectoryToolbar({
           <input
             type="search"
             className={css.searchInput}
-            aria-label="Search trajectory"
-            placeholder="Search"
+            aria-label={t('toolbar.search')}
+            placeholder={t('toolbar.searchPlaceholder')}
             value={searchQuery}
             onChange={(event) => { onSearchQueryChange(event.currentTarget.value) }}
           />

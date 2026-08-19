@@ -30,10 +30,13 @@
       "path": "../ui-slots"
     },
     {
+      "path": "../../interaction/commands"
+    },
+    {
       "path": "../../goal/goal"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

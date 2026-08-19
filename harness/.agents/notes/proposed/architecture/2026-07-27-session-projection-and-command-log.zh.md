@@ -24,9 +24,9 @@ Status: proposed
 
 ### host 侧投影注册表（`dsh-session-projection`，新包）
 
-一个轻量的接口包：merge-extensible 类型表、注册表服务、边界上的 zod 校验。能力 seam 三方拆分：领域 host 插件负责贡献，载体负责消费，两侧互不相识。
+一个轻量的 Service Definition 包：merge-extensible 类型表、注册表服务、边界上的 zod 校验。能力 seam 的角色如下：领域 host 插件提供投影单元，载体消费这些单元，两侧互不相识。
 
-领域注册的是一个**状态驱动计算单元（state-driven computation unit）**——三个纯函数外加若干声明——绝不是一个不透明的 getter。驱动它是框架的职责（订阅、水位线（watermark）、缓存，以及后续的检查点机制），领域只负责数学本身。投影服务于所有业务领域（会话标题、plan、goal、权限、todos）；命令只是其中一条触发路径，在本契约中没有任何特殊地位。
+领域注册的是一个**状态驱动计算单元（state-driven computation unit）**——三个纯函数外加若干声明——绝不是一个不透明的 getter。驱动它是框架的职责（订阅、水位线（watermark）、缓存，以及后续的检查点机制），领域只负责数学本身。投影服务于所有业务领域（会话标题、plan、goal、权限、todos）；命令只是其中一条触发路径，在本约定中没有任何特殊地位。
 
 ```ts ignore-check
 export interface SessionProjectionMap {}   // the single type table for the whole chain
@@ -58,7 +58,7 @@ declare module 'cordis' {
 
 ### 已交付的消费方：subagent 身份单元
 
-注册表的两处既有读法已经服务于本 RFC 协议计划之外的一个已交付消费方：[subagent 列表经投影单元读取身份](../../implemented/architecture/2026-08-06-subagent-list-identity-projection.md)注册了 `subagent` 单元——从 `subagent/descriptor` 按 last-wins 折叠出的持久化 mode/label 身份——`SubagentService.listChildren` 对 live child 经 `snapshot()` 读取（水位缓存，零日志读），对 cold child 则用一次持久化整读的结果调用 `restore({}, events, 0)` 读取。注册表契约不变：没有失败通道、没有新读法——单元永不抛错，值缺席本身就是信号，缺席如何呈现是该消费方自己的决定。
+注册表的两处既有读法已经服务于本 RFC 协议计划之外的一个已交付消费方：[subagent 列表经投影单元读取身份](../../implemented/architecture/2026-08-06-subagent-list-identity-projection.md)注册了 `subagent` 单元——从 `subagent/descriptor` 按 last-wins 折叠出的持久化 mode/label 身份——`SubagentRuntime.listChildren` 对 live child 经 `snapshot()` 读取（水位缓存，零日志读），对 cold child 则用一次持久化整读的结果调用 `restore({}, events, 0)` 读取。注册表约定不变：没有失败通道、没有新读法——单元永不抛错，值缺席本身就是信号，缺席如何呈现是该消费方自己的决定。
 
 ### 协议层：历史尾页上的 projections 块
 
@@ -112,7 +112,7 @@ type UseProjection = {
 
 `undefined` 统一表示能力缺失（host 插件未挂载，或尚无任何基线/帧携带过该 key）。值仓只暴露按 key 的裸 `{subscribe, getSnapshot}` 面；其余交给带逐 key 缓存的 `bindSnapshotSelector`——引用稳定性成立，因为一个 key 的值引用只在帧或基线落地时才变化。写路径不变：变更回调留在 inject 共享面（回调出自 inject，活状态出自 `useProjection`）。
 
-「钩子不得穿过 inject」的唯一既有违例——`DetailsInjected.useSelection`——随本变更一并收编：选中态是住在聊天 store 里的查看状态，因此 details 注册声明共享 store 句柄，组件改读 `props.useStore(s => s.selection)`；`useSelection` 退出 inject 契约。
+「钩子不得穿过 inject」的唯一既有违例——`DetailsInjected.useSelection`——随本变更一并收编：选中态是住在聊天 store 里的查看状态，因此 details 注册声明共享 store 句柄，组件改读 `props.useStore(s => s.selection)`；`useSelection` 退出 inject 约定。
 
 ### 日志中的命令生命周期
 
@@ -123,7 +123,7 @@ type UseProjection = {
 'command/done': { commandId: string; kind: 'success' | 'error'; text?: string }
 ```
 
-host 侧命令执行器（`packages/ui/commands`）在调用处理器前追加 `command/run`，在结算时追加 `command/done`——在接收 agent 的会话上直接独立追加，与[合成轮次移除](../../implemented/simplification/2026-07-28-remove-synthetic-log-only-turns.md)之后所有插件自有 log-only 事件同一形状：没有轮次包裹它们（轮次只描述模型循环执行），持久化在常规检查点排空它们，run/done 配对由 commands 包自己的 invariant 伴生插件把守。载荷是结构化的——`name` 以及默认携带的 `args` 来自解析器自己的切分（`parseCommand` 的 name 与 rawInput），因此消费方（折叠自己命令记录的投影单元、富命令卡片）永远无需重新解析行文本。当载荷由权威领域事件持有时，命令定义会设置 `recordInput: false`；此时 `command/run` 省略 `args`，而不是重复该载荷。`text` 是处理器的原样结果——与 `tool/result.content` 同一性质的事实数据，不是呈现（版式如何编排仍由客户端在渲染时计算，满足「呈现永不入日志」这条红线）。想让模型知道结果的领域继续做它们今天在做的事（plan 的旁白、goal 的注入）——那是领域自己的决定，保持不变。
+host 侧命令执行器（`packages/interaction/commands`）在调用处理器前追加 `command/run`，在结算时追加 `command/done`——在接收 agent（智能体）的会话上直接独立追加，与[合成轮次移除](../../implemented/simplification/2026-07-28-remove-synthetic-log-only-turns.md)之后所有插件自有 log-only 事件同一形状：没有轮次包裹它们（轮次只描述模型循环执行），持久化在常规检查点排空它们，run/done 配对由 commands 包自己的 invariant 伴生插件把守。载荷是结构化的——`name` 以及默认携带的 `args` 来自解析器自己的切分（`parseCommand` 的 name 与 rawInput），因此消费方（折叠自己命令记录的投影单元、富命令卡片）永远无需重新解析行文本。当载荷由权威领域事件持有时，命令定义会设置 `recordInput: false`；此时 `command/run` 省略 `args`，而不是重复该载荷。`text` 是处理器的原样结果——与 `tool/result.content` 同一性质的事实数据，不是呈现（版式如何编排仍由客户端在渲染时计算，满足「呈现永不入日志」这条红线）。想让模型知道结果的领域继续做它们今天在做的事（plan 的旁白、goal 的注入）——那是领域自己的决定，保持不变。
 
 由于已提交事件会在 mux 流上广播，刷新后仍在、多标签页同步、fork/恢复后可还原这三件事随之全部自动获得。`command.execute` RPC 退化为准入判定——`{ matched, commandId? }`：该行是否匹配命中，以及命中时新铸的配对 id，发起命令的客户端据此把自己的请求与生命周期事件产出的 flow 节点关联起来。一次性通知通道（`runDetached` → `noticeFor`）就此下线。
 
@@ -133,7 +133,7 @@ host 侧命令执行器（`packages/ui/commands`）在调用处理器前追加 `
 
 基础设施先行；三个在途 PR（Pull Request）原样不动，待基座落地后重新对接（它们的迁移映射即指南）：
 
-1. **host 基座**：`dsh-session-projection`（单元契约、主动驱动、水位线缓存）+ api-proxy 的 projections 块 + `session/projection` 推送帧。零领域注册也可合入（此时块与帧直接缺席）。
+1. **host 基座**：`dsh-session-projection`（单元约定、主动驱动、水位线缓存）+ api-proxy 的 projections 块 + `session/projection` 推送帧。零领域注册也可合入（此时块与帧直接缺席）。
 2. **客户端基座**：通用值仓 + `useProjection` 席位；下线按领域的 cell 机制，并在标题单元注册后一并下线 `session/title` 帧与标题快照表。帧的形状依赖 1（在此之前 fixture（测试前置数据）喂合成帧）。
 3. **命令通道**：两个事件、执行器落日志、通用节点 + keyed slot、通知通道下线、`{matched, commandId?}` 准入。与 1 并行。
 4. **领域重新对接**（在 1+2 之后）：先 todo（单元进 `tool-todo`，删掉搭载字段），再 plan（双事件单元、RPC 下线、开关改发 `/plan`），最后 goal（`goal/change` 单元，删掉 `goals.get`，把六个 `Session` 方法移入领域插件的 inject）。
@@ -143,13 +143,13 @@ host 侧命令执行器（`packages/ui/commands`）在调用处理器前追加 `
 
 **专设一个 `session.projections` RPC**——不予采纳：基线刷新时刻与尾页拉取精确重合，单独的一元 RPC 只会换来第二次往返、第二个待调和的 seq，以及一个客户端「何时重取」决策——而搭载设计把这个决策整个删掉了。
 
-**不透明的 `get(agent)` 提供方契约**——曾是第一稿，后被否决：计算模型藏在领域内部时，框架永远无法为状态做检查点、无法服务冷会话（没有 agent、没有已加载的日志——`get` 无处可跑）、也无法从日志中段续算。注册 `(init, apply, view)` 单元把驱动权交给框架，领域只留纯数学；有 host 侧行为需求的领域，其服务订阅照旧自持，与投影单元互不牵连。
+**不透明的 `get(agent)` 提供方约定**——否决：计算模型藏在领域内部时，框架永远无法为状态做检查点、无法服务冷会话（没有 agent、没有已加载的日志——`get` 无处可跑）、也无法从日志中段续算。注册 `(init, apply, view)` 单元把驱动权交给框架，领域只留纯数学；有 host 侧行为需求的领域，其服务订阅照旧自持，与投影单元互不牵连。
 
-**为 plan 待定意图专设的仅实时叠加钩子（`live?(agent, base)`）**——不予采纳：它存在的唯一理由是用户的 plan *选择*不在日志里。让选择走标准命令通道后，`command/run` 上了账，待定态成为纯回放量，投影契约保持恰好三个纯函数。
+**为 plan 待定意图专设的仅实时叠加钩子（`live?(agent, base)`）**——不予采纳：它存在的唯一理由是用户的 plan *选择*不在日志里。让选择走标准命令通道后，`command/run` 上了账，待定态成为纯回放量，投影约定保持恰好三个纯函数。
 
-**把 seam 命名为 `registerFold`**——已被单元契约取代：注册对象如今确实是一个折叠，但本仓库里 `fold*` 专指纯 `(events) => state` 辅助函数，而该 seam 注册的是带 key、带 schema、带版本的单元。投影仍是事件溯源中指称读模型角色的术语，#587 的 Note 标题与 #497 的评论也都已在使用它。
+**把注册 API 命名为 `registerFold`**——已被单元约定取代：注册对象如今确实是一个折叠，但本仓库里 `fold*` 专指纯 `(events) => state` 辅助函数，而该注册表接收的是带 key、带 schema、带版本的单元。投影仍是事件溯源中指称读模型角色的术语，#587 的 Note 标题与 #497 的评论也都已在使用它。
 
-**客户端侧折叠（带 `fromEvent` 的按领域投影 cell）**——曾是第二稿，后被否决：一旦 plan 的单元要折叠两种事件，客户端 cell 就必须在浏览器里复刻 host 的状态转移逻辑——同一个折叠写两遍、各自演化。推送成品值（标题帧先例的泛化）保住唯一计算地点，并把客户端简化为一个由 seq 把守的通用值仓；领域零客户端代码。
+**客户端侧折叠（带 `fromEvent` 的按领域投影 cell）**——否决：一旦 plan 的单元要折叠两种事件，客户端 cell 就必须在浏览器里复刻 host 的状态转移逻辑——同一个折叠写两遍、各自演化。推送成品值（标题帧先例的泛化）保住唯一计算地点，并把客户端简化为一个由 seq 把守的通用值仓；领域零客户端代码。
 
 **对日志尾部的有界反向扫描（absorber 声明）**——暂不采纳：今天没有任何东西支持它，它只服务于「每个事件都携带完整折叠状态」的领域，而持久投影缓存以统一方式覆盖同一冷读需求（缓存行 + 正向尾部回放——与客户端的基线 + 追赶、与分页加载是同一套配方）。只有当出现检查点机制服务不了的真实冷读路径时才重议。
 
@@ -173,15 +173,15 @@ host 侧命令执行器（`packages/ui/commands`）在调用处理器前追加 `
 - 历史尾页携带 `projections`，其 `asOfSeq` 等于窗口尾部 seq；loadOlder 页永不携带；未装注册表的部署照常返回不带该块的历史，客户端把所有 key 视为缺席。
 - 陈旧的基线不能覆盖更新的 `session/projection` 帧，重放的帧也不能让值仓倒退（两条路径都做 seq 高者胜测试）。
 - 在一个标签页执行的斜杠命令，刷新后、在第二个标签页上、恢复之后都在 flow 中渲染出持久节点；未注册的命令渲染通用卡片；命令结果的 composer 通知路径彻底移除。
-- `useProjection` 经标准 props 套件抵达组件；没有任何钩子穿过 inject 契约（包括 `useSelection`）。
+- `useProjection` 经标准 props 套件抵达组件；没有任何钩子穿过 inject 约定（包括 `useSelection`）。
 - 会话标题搭乘这对通用机制（基线块 + 投影帧）；专设的 `session/title` 帧与客户端标题快照表彻底移除。
 
 ## 风险
 
-- **全量值规则是承重结构**：未来某个领域若只记裸增量，就无法凭其最新事件服务消费方，还会让自己的单元复杂化。缓解：该规则写明在本 Note 与投影包的 README 里；单元契约让完整状态在每次转移处都是显式的。
+- **全量值规则是承重结构**：未来某个领域若只记裸增量，就无法凭其最新事件服务消费方，还会让自己的单元复杂化。缓解：该规则写明在本 Note 与投影包的 README 里；单元约定让完整状态在每次转移处都是显式的。
 - **单元的同步纪律**：`init`/`apply`/`view` 一旦 await 就会撕裂一致性切面。注册表在文档中申明这条纪律，invariant 配套在可行范围内断言同步性；其余由评审把关。
-- **注册表的实时增删不做推送**：会话中途加载或卸载领域插件会改变键集，但不会触发任何会话事件、也不会推任何帧；开着的客户端持有陈旧的 key 直到下次尾页拉取（重连、缺口修补、打开）。接受为仅开发期（HMR）的陈旧时窗——日后可以在变更流上加一个注册表变更推送，契约不受影响。
-- **忙碌会话上的主动驱动开销**：每个已提交事件都要过每个已注册单元的 `apply`。按构造，单元的逐事件开销很低（全量值规则），不匹配的事件返回同一引用，且已注册领域的数量很小；若真出现热点路径，可以加按单元的事件类型预过滤，契约不变。
+- **注册表的实时增删不做推送**：会话中途加载或卸载领域插件会改变键集，但不会触发任何会话事件、也不会推任何帧；开着的客户端持有陈旧的 key 直到下次尾页拉取（重连、缺口修补、打开）。接受为仅开发期（HMR）的陈旧时窗——日后可以在变更流上加一个注册表变更推送，约定不受影响。
+- **忙碌会话上的主动驱动开销**：每个已提交事件都要过每个已注册单元的 `apply`。按构造，单元的逐事件开销很低（全量值规则），不匹配的事件返回同一引用，且已注册领域的数量很小；若真出现热点路径，可以加按单元的事件类型预过滤，约定不变。
 - **投影载荷膨胀**：每个尾页携带每个已注册的 key。载荷是 UI 量级状态的全量值（一张 todo 清单、一份 goal 快照）；将来若某领域的值很大，可以在请求上加逐 key 的 opt-out 或惰性 key，模型本身不用改。
 - **命令日志体量**：每条斜杠命令两个仅日志事件；上限由人敲命令的频率决定，相对分片体量可忽略不计。
-- **重新对接的返工**：三个未合入的 PR 要变基到挪动后的地基上。这是基础设施先行的既定代价；设计台账中的迁移映射一节逐一列出每个 PR 的保留/删除清单。
+- **重新对接的返工**：三个未合入的 PR 要变基到挪动后的地基上。这是基础设施先行的既定代价。

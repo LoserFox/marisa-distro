@@ -6,7 +6,7 @@
  */
 
 import { BlockAssembler } from '@deepseek-ai/dsh-llm'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { FinishReason, GenerateOptions, Message, TokenUsage } from '@deepseek-ai/dsh-llm'
 
 export interface AssembledResult {

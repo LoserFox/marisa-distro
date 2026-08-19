@@ -93,7 +93,7 @@ export type SessionLineageTrace = {
   }
 )
 
-/** Request for direct surface and provenance relationships around one event. */
+/** Request for direct surface replacements and relationships to cited source events around one event. */
 export interface SessionEventTraceRequest {
   /** Session that owns the target event. */
   sessionId: SessionId
@@ -101,7 +101,7 @@ export interface SessionEventTraceRequest {
   seq: number
 }
 
-/** Direct surface and provenance relationships for one event. */
+/** Direct surface replacements and relationships to cited source events for one event. */
 export interface SessionEventTrace {
   /** Lightweight target record. */
   target: SessionEventRecord
@@ -111,9 +111,9 @@ export interface SessionEventTrace {
   replacementChain: number[]
   /** Surface nodes directly removed when the target itself performed a replacement. */
   replacedEventSeqs: number[]
-  /** Direct logged provenance sources in their recorded order. */
+  /** Earlier events cited directly as sources, in their recorded order. */
   sourceEventSeqs: number[]
-  /** Later events that directly name the target as a provenance source, in log order. */
+  /** Later events that directly cite the target as a source, in log order. */
   derivedEventSeqs: number[]
 }
 

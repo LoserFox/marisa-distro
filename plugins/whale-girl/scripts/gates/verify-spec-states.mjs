@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { STATE_NAMES, STATE_TABLE } from '../../.dsh-plugin/client/logic.mjs'
+import { STATE_NAMES, STATE_TABLE } from '../../lib/client/logic.mjs'
 
 const ROOT = resolve(import.meta.dirname, '../..')
 // 权威总表标题：`## 状态总表（权威，N 状态）`（N 由表格行数验证，防止手改标题数漂移）。
@@ -72,7 +72,7 @@ export function check(root = ROOT) {
     if (!nameSet.has(dynamic)) errors.push(`burst 动态解析值 ${dynamic} 不在 STATE_NAMES`)
   }
   // spec 播放行为列 ↔ manifest playback 对照（语义级配错盲区拦截）。
-  const manifestPath = join(root, '.dsh-plugin', 'assets', 'manifest.json')
+  const manifestPath = join(root, 'lib', 'assets', 'manifest.json')
   try {
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
     const specPlayback = new Map(rows.map((r) => [r.name, r.playback]))

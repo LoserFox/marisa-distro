@@ -31,6 +31,6 @@ Status: implemented
 ## 后果
 
 - 从命名提供方派生状态的消费方响应 `subagent/provider-added`/`-removed` 事件，而非在 `apply` 时读取注册表；`dsh-tool-subagent` 是参考实现。
-- **添加时大声失败；移除时按监听器隔离。** 添加监听器可以回滚注册。移除在 disposal 期间运行，因此单个监听器抛异常只会被记录到日志中，不会阻止后续镜像运行或干扰拆解流程。`start()` 仍在每次运行时按名称解析提供方，防止陈旧工具调用已移除的后端。见[事件目录](../../../../docs/cordis-catalog/events.md)与[生产者/消费方映射](../../../../docs/event-producer-consumer.md)。
+- **添加时大声失败；移除时按监听器隔离。** 添加监听器可以回滚注册。移除在 disposal 期间运行，因此单个监听器抛异常只会被记录日志，不会饿死后续镜像或干扰拆解流程。`start()` 仍在每次运行时按名称解析提供方，防止陈旧工具调用已移除的后端。见[事件目录](../../../../docs/subsystems/subagent.md#cordis-surface)与[生产者/消费方映射](../../../../docs/event-producer-consumer.md)。
 - **工具不存在的窗口期。** 在后端 disposal 与重新注册之间（HMR 重载期间），模型看不到 subagent 工具。这是诚实的状态——替代方案是一个向空处分发的工具——工具注册表发出的 `tools/change` 事件会使提示词组装保持最新状态。
 - **两个等待中的 fiber 共享同一 `toolName` 是无效配置，被延迟捕获。** 如果两个 `dsh-tool-subagent` 加载实例分别指定了不同的提供方但相同的 `toolName`，两者都会等待，先到达的提供方先注册；第二次注册仅在其提供方到达时才抛异常。插件中的 `TODO(subagent-dup-toolname)` 记录了这一影响范围；工具注册表的重名拒绝机制仍是最终防线。

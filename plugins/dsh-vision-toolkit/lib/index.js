@@ -2,8 +2,9 @@
  * @dsh-external/dsh-vision-toolkit — DSH Vision Toolkit profile bundle.
  *
  * Plugin lifecycle follows the documented readiness chain: verify the pinned
- * upstream checkout, publish the vision-tools Skill and its one-shot bootstrap,
- * then mount the execution tools only in Agents that load that Skill. Any
+ * upstream checkout, publish the vision-skills Skill and its one-shot bootstrap,
+ * then mount the execution tools only in Agents that load that Skill or invoke
+ * the bootstrap. Any
  * failure leaves no model capability behind, and disposal unregisters every
  * global and Agent-scoped contribution the plugin mounted.
  * @module @dsh-external/dsh-vision-toolkit
@@ -11,14 +12,16 @@
 import { ArtifactAccessController, prepareArtifactAccessKey } from "./artifact-access.js";
 import { Config, VISION_TOOLKIT_SETTINGS_NAMESPACE, resolveConfig, } from "./config.js";
 import { VisionToolExposure } from "./exposure.js";
+import { createPasteTakeoverResolver, installImageInputVariants } from "./image-input-variants.js";
 import { VisionToolkitRuntimeManager } from "./runtime-manager.js";
-import { VISION_TOOLS_SKILL } from "./skill.js";
+import { VISION_SKILLS_SKILL } from "./skill.js";
 import { createVisionTools } from "./tools.js";
 import { PLUGIN_VERSION } from "./version.js";
 import { installVisionToolkitWeb, VisionToolkitWebBackend } from "./web.js";
+import { MAX_PASTE_IMAGE_BYTES, PastedImageBackend } from "./paste-images.js";
 export const name = '@dsh-external/dsh-vision-toolkit';
 export { Config };
-export const inject = ['tools', 'credentials', 'skills', 'subprocess', 'settings', 'agents'];
+export const inject = ['tools', 'credentials', 'skills', 'subprocess', 'settings', 'agents', 'sessions'];
 /** Plugin entry: validate configuration synchronously, then mount asynchronously. */
 export async function apply(ctx, config = {}) {
     // Registration itself rejects an invalid stored section before any runtime
@@ -44,7 +47,7 @@ export async function apply(ctx, config = {}) {
         let skill;
         try {
             activationTool = ctx.tools.register(exposure.activationTool);
-            skill = ctx.skills.register(VISION_TOOLS_SKILL);
+            skill = ctx.skills.register(VISION_SKILLS_SKILL);
             exposureDisposer = exposure.install();
             operationalDisposers = { activationTool, exposure: exposureDisposer, skill };
             const info = manager.current().upstreamVersion;
@@ -64,14 +67,23 @@ export async function apply(ctx, config = {}) {
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        ctx.logger.error('dsh-vision-toolkit %s: runtime not ready; the vision-tools skill, activation bootstrap, and Agent-scoped visual tools are NOT registered. Settings remain available for repair. %s', PLUGIN_VERSION, message);
+        ctx.logger.error('dsh-vision-toolkit %s: runtime not ready; the vision-skills skill, activation bootstrap, and Agent-scoped visual tools are NOT registered. Settings remain available for repair. %s', PLUGIN_VERSION, message);
     }
     const backend = new VisionToolkitWebBackend(ctx, manager, artifacts, ensureOperational);
-    installVisionToolkitWeb(ctx, backend, artifacts);
+    const pastedImages = new PastedImageBackend(ctx, {
+        maxUploadBytes: () => MAX_PASTE_IMAGE_BYTES,
+    });
+    // Image-input variants register asynchronously once eligible routes exist;
+    // the runtime getter stays lazy so variants appear even when the runtime
+    // becomes ready after the first sweep.
+    const variants = installImageInputVariants(ctx, () => resolveConfig(settings.get()), () => manager.ready ? manager.current() : undefined);
+    installVisionToolkitWeb(ctx, backend, artifacts, pastedImages, createPasteTakeoverResolver(ctx, () => resolveConfig(settings.get())));
+    disposers.push(variants.dispose);
     disposers.push(settings.watch(async (next) => {
         try {
             await manager.reconfigure(next);
             ensureOperational();
+            variants.reconcile();
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);

@@ -5,27 +5,38 @@
  * operation through `ctx.credentials`.
  * @module dsh-vision-toolkit/config
  */
-import type Schema from 'schemastery';
+import type Schema from '@deepseek-ai/schemastery';
 import { type CredentialRef } from '@deepseek-ai/dsh-credentials';
+export { BUILT_IN_FREE_VISION_BASE_URL, BUILT_IN_FREE_VISION_CREDENTIAL, BUILT_IN_FREE_VISION_KEY, BUILT_IN_FREE_VISION_MODEL, } from './defaults.ts';
 /** Settings document namespace owned by this plugin. */
 export declare const VISION_TOOLKIT_SETTINGS_NAMESPACE: import("@deepseek-ai/dsh-settings").SettingsNamespace;
+/** Browser-compatible default shared with the vendored Python client. */
+export declare const DEFAULT_VISION_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 /** Full user-facing configuration; every field defaults at the schema boundary. */
 export interface VisionToolkitConfig {
     provider?: {
-        /** OpenAI-compatible chat/completions base URL. */
+        /** Provider API base URL. */
         baseUrl?: string;
+        /** Whether the endpoint is anonymous or uses a DSH Credential. */
+        authMode?: 'none' | 'credential';
         /** DSH Credential reference holding the API key (an environment-style name). */
         credential?: string;
         /** Multimodal model name. */
         model?: string;
+        /** Vision request protocol: OpenAI Chat Completions or Anthropic Messages. */
+        protocol?: 'openai' | 'anthropic';
+        /** Anthropic thinking field behavior; `omit` leaves model defaults untouched. */
+        anthropicThinking?: 'omit' | 'disabled' | 'adaptive';
+        /** Outbound User-Agent for provider requests and connection tests. */
+        userAgent?: string;
     };
     /** Vision output language (`zh` or `en`). */
     language?: 'zh' | 'en';
     /** Single remote/upstream call budget in milliseconds. */
     timeoutMs?: number;
-    /** Maximum accepted input image size in bytes. */
+    /** Maximum input image size in bytes; larger images are auto-compressed (lossless first). */
     maxImageBytes?: number;
-    /** Maximum decoded pixel count per input image. */
+    /** Maximum decoded pixel count per input image; larger images are auto-downscaled to fit. */
     maxImagePixels?: number;
     /** In-flight tool execution cap per session. */
     concurrency?: number;
@@ -39,6 +50,27 @@ export interface VisionToolkitConfig {
     };
     /** Extra directories (besides the workspace) inputs may come from. */
     allowedDirs?: string[];
+    /**
+     * Image-input variants: sibling model-selector entries for every model the
+     * host positively declares text-only. A variant declares image input, so
+     * pasted images keep the native attachment flow (composer thumbnail and
+     * durable session image), and the plugin rewrites image blocks into Vision
+     * Toolkit descriptions only on the wire to the model.
+     */
+    imageInputVariants?: {
+        /** Whether variant routes are registered at all (default true). */
+        enabled?: boolean;
+        /** Restrict wrapped upstream routes by provider id; empty wraps every eligible route. */
+        providers?: string[];
+        /**
+         * Whether the browser paste integration automatically switches the Session
+         * to the image-input variant of a text-only model before the paste, so
+         * pasted images keep the native attachment flow with no manual model
+         * change. The variant still exposes a workspace path to the model; off
+         * keeps the path-only takeover instead (default true).
+         */
+        autoSwitch?: boolean;
+    };
 }
 /** Configuration schema with the documented P0 defaults. */
 export declare const Config: Schema<VisionToolkitConfig>;
@@ -46,8 +78,12 @@ export declare const Config: Schema<VisionToolkitConfig>;
 export interface ResolvedVisionToolkitConfig {
     provider: {
         baseUrl: string;
+        authMode: 'none' | 'credential';
         credential: CredentialRef;
         model: string;
+        protocol: 'openai' | 'anthropic';
+        anthropicThinking: 'omit' | 'disabled' | 'adaptive';
+        userAgent: string;
     };
     language: 'zh' | 'en';
     timeoutMs: number;
@@ -60,6 +96,11 @@ export interface ResolvedVisionToolkitConfig {
         python?: string;
     };
     allowedDirs: string[];
+    imageInputVariants: {
+        enabled: boolean;
+        providers: string[];
+        autoSwitch: boolean;
+    };
 }
 /**
  * Validate and normalize a config object (partial inputs receive the same
@@ -70,4 +111,8 @@ export interface ResolvedVisionToolkitConfig {
  * @returns the fully defaulted, validated configuration.
  */
 export declare function resolveConfig(config?: VisionToolkitConfig): ResolvedVisionToolkitConfig;
+/** Whether a resolved provider should use the bundled public key instead of DSH credentials. */
+export declare function isBuiltInFreeVisionProvider(provider: ResolvedVisionToolkitConfig['provider']): boolean;
+/** Whether a resolved provider runs anonymously: no DSH credential is read, saved, or sent. */
+export declare function isAnonymousProvider(provider: ResolvedVisionToolkitConfig['provider']): boolean;
 //# sourceMappingURL=config.d.ts.map

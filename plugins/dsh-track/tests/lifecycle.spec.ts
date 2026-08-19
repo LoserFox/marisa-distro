@@ -162,6 +162,9 @@ describe('lifecycle store integration (real json backend)', () => {
     expect(r2?.issue.state).toBe('in_progress') // auto-committed
 
     const r3 = await trackStore.recordIssueEvidence('track_issue_flow', { signal: 'todo-all-done', at: now - 500, weight: 0.6, sessionId: 'session-y' }, 'session-y', now)
+    // P0 (Output-first): done proposal now also requires commit-observed —
+    // process completion alone no longer proposes done.
+    await trackStore.recordIssueEvidence('track_issue_flow', { signal: 'commit-observed', at: now - 250, weight: 0.55, sessionId: 'session-y', pointer: 'abc12345' }, 'session-y', now)
     const r4 = await trackStore.recordIssueEvidence('track_issue_flow', { signal: 'turn-completed', at: now, weight: 0.3, sessionId: 'session-y' }, 'session-y', now)
     expect(r4?.issue.inferred?.state).toBe('done')
     expect(r4?.confirm?.to).toBe('done')
@@ -188,11 +191,29 @@ describe('lifecycle store integration (real json backend)', () => {
     const now = Date.now()
     await trackStore.upsertIssue(makeIssue({ id, identifier: 'INV-82', state: 'in_progress' }))
     await trackStore.recordIssueEvidence(id, { signal: 'todo-all-done', at: now - 1000, weight: 0.6 }, 's', now)
+    await trackStore.recordIssueEvidence(id, { signal: 'commit-observed', at: now - 500, weight: 0.55, pointer: 'deadbeef' }, 's', now)
     const r = await trackStore.recordIssueEvidence(id, { signal: 'turn-completed', at: now, weight: 0.3 }, 's', now)
     expect(r?.confirm?.to).toBe('done')
     const issue = await trackStore.getIssue(id)
     expect(issue?.pendingConfirm?.to).toBe('done')
     expect(issue?.state).toBe('in_progress') // still gated
+  })
+
+  it('recordIssueEvidenceMany applies signals to many issues with one store load', async () => {
+    const now = Date.now()
+    for (const [id, inv] of [['track_issue_bm1', 'INV-71'], ['track_issue_bm2', 'INV-72']] as const) {
+      await trackStore.upsertIssue(makeIssue({ id, identifier: inv, state: 'in_progress' }))
+    }
+    const written = await trackStore.recordIssueEvidenceMany([
+      { issueId: 'track_issue_bm1', signal: { signal: 'commit-observed', at: now - 1000, weight: 0.55, pointer: 'abc123de' } },
+      { issueId: 'track_issue_bm2', signal: { signal: 'commit-observed', at: now - 1000, weight: 0.55, pointer: 'deadbeef' } },
+    ], now)
+    expect(written).toBe(2)
+    const [a, b] = [await trackStore.getIssue('track_issue_bm1'), await trackStore.getIssue('track_issue_bm2')]
+    expect((a?.inferred?.evidence ?? []).some((e) => e.signal === 'commit-observed' && e.pointer === 'abc123de')).toBe(true)
+    expect((b?.inferred?.evidence ?? []).some((e) => e.signal === 'commit-observed' && e.pointer === 'deadbeef')).toBe(true)
+    // Missing issue ids are skipped, not fatal.
+    expect(await trackStore.recordIssueEvidenceMany([{ issueId: 'track_issue_nope', signal: { signal: 'commit-observed', at: now, weight: 0.55 } }], now)).toBe(0)
   })
 
   it('sweepLifecycle surfaces done/canceled proposals for unattached sync-created issues', async () => {
@@ -204,6 +225,7 @@ describe('lifecycle store integration (real json backend)', () => {
         state: 'in_progress', confidence: 0.8, at: now - 3 * 86400_000, by: 'auto',
         evidence: [
           { signal: 'todo-all-done', at: now - 3 * 86400_000, weight: 0.6 },
+          { signal: 'commit-observed', at: now - 3 * 86400_000, weight: 0.55, pointer: 'aabbccdd' },
           { signal: 'turn-completed', at: now - 3 * 86400_000, weight: 0.3 },
         ],
       },
@@ -299,5 +321,89 @@ describe('lifecycle store integration (real json backend)', () => {
     expect(issue.title).toBe('新调研任务')
     expect(issue.description).toContain('动机')
     expect(issue.description).toContain('因为要出一份调研报告')
+  })
+
+  it('mergeIntoCanonical unions sessions and cancels the source (user-confirmed)', async () => {
+    await trackStore.upsertIssue(makeIssue({
+      id: 'track_issue_m1', identifier: 'INV-200', state: 'todo',
+      title: '统一调研任务', linkedSessionIds: ['s-a'],
+    }))
+    await trackStore.upsertIssue(makeIssue({
+      id: 'track_issue_m2', identifier: 'INV-201', state: 'in_progress',
+      title: '统一调研任务的复本', linkedSessionIds: ['s-b'],
+    }))
+    const merged = await trackStore.mergeIntoCanonical('track_issue_m2', 'track_issue_m1', 'user')
+    expect(merged?.linkedSessionIds).toEqual(expect.arrayContaining(['s-a', 's-b']))
+    const src = await trackStore.getIssue('track_issue_m2')
+    expect(src?.state).toBe('canceled')
+    expect(src?.pendingConfirm).toBeUndefined()
+    expect(src?.inferred?.evidence?.some((e) => e.pointer?.includes('INV-200'))).toBe(true)
+  })
+
+  it('triageCaptures auto-promotes title-matched open captures and counts stale', async () => {
+    await trackStore.upsertIssue(makeIssue({
+      id: 'track_issue_tg', identifier: 'INV-202', state: 'todo',
+      title: '查看流量使用情况',
+    }))
+    await trackStore.createCapture({
+      id: 'track_capture_tg1', content: '查看流量使用情况',
+      source: 'session', status: 'open', tags: [],
+      createdAt: new Date().toISOString(),
+    })
+    await trackStore.createCapture({
+      id: 'track_capture_tg2', content: '过期的老想法',
+      source: 'session', status: 'open', tags: [],
+      createdAt: new Date(Date.now() - 20 * 86400_000).toISOString(),
+    })
+    const r = await trackStore.triageCaptures()
+    expect(r.promoted).toBe(1)
+    expect(r.stale).toBeGreaterThanOrEqual(1)
+    const cap = await trackStore.getCapture('track_capture_tg1')
+    expect(cap?.status).toBe('promoted')
+    expect(cap?.promotedToIssueId).toBe('track_issue_tg')
+  })
+
+  it('autoMergeDuplicates merges same-title AND near-title issues into the lowest identifier', async () => {
+    await trackStore.upsertIssue(makeIssue({ id: 'track_issue_d1', identifier: 'INV-210', state: 'todo', title: '重复任务甲' }))
+    await trackStore.upsertIssue(makeIssue({ id: 'track_issue_d2', identifier: 'INV-211', state: 'in_progress', title: '重复任务甲', linkedSessionIds: ['s-x'] }))
+    await trackStore.upsertIssue(makeIssue({ id: 'track_issue_d3', identifier: 'INV-212', state: 'todo', title: '重复任务甲（复本）' }))
+    // Give OUR group a unique title: the harness's shared store accumulates
+    // same-default-title issues ('lifecycle'), so exact counts are not stable
+    // — assert on our three issues only.
+    const r = await trackStore.autoMergeDuplicates()
+    expect(r.merged).toBeGreaterThanOrEqual(2)
+    const canon = await trackStore.getIssue('track_issue_d1')
+    expect(canon?.linkedSessionIds).toContain('s-x')
+    expect((await trackStore.getIssue('track_issue_d2'))?.state).toBe('canceled')
+    expect((await trackStore.getIssue('track_issue_d3'))?.state).toBe('canceled')
+  })
+
+  it('autoConfirmPendingCanceled confirms canceled proposals past the grace (default 14d)', async () => {
+    const now = Date.now()
+    await trackStore.upsertIssue(makeIssue({
+      id: 'track_issue_ac1', identifier: 'INV-220', state: 'in_progress',
+      pendingConfirm: { to: 'canceled', reason: 'no progress for 15d', at: now - 15 * 86400_000 },
+    }))
+    await trackStore.upsertIssue(makeIssue({
+      id: 'track_issue_ac2', identifier: 'INV-221', state: 'in_progress',
+      pendingConfirm: { to: 'canceled', reason: 'no progress for 15d', at: now - 3 * 86400_000 },
+    }))
+    const r = await trackStore.autoConfirmPendingCanceled(now)
+    expect(r.confirmed).toBe(1)
+    expect((await trackStore.getIssue('track_issue_ac1'))?.state).toBe('canceled')
+    expect((await trackStore.getIssue('track_issue_ac1'))?.pendingConfirm).toBeUndefined()
+    expect((await trackStore.getIssue('track_issue_ac2'))?.state).toBe('in_progress') // still in grace
+  })
+
+  it('readConfig/writeConfig merge over defaults and persist', async () => {
+    const def = await trackStore.readConfig()
+    expect(def.autoCancelPendingDays).toBe(14)
+    const cfg = await trackStore.writeConfig({ autoCancelPendingDays: 21, nearDupThreshold: 0.7 })
+    expect(cfg.autoCancelPendingDays).toBe(21)
+    expect(cfg.nearDupThreshold).toBe(0.7)
+    expect(cfg.syncIntervalDays).toBe(7) // untouched field keeps default
+    const reread = await trackStore.readConfig()
+    expect(reread.autoCancelPendingDays).toBe(21)
+    await trackStore.writeConfig({ autoCancelPendingDays: 14 }) // restore
   })
 })

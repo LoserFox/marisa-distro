@@ -6,17 +6,17 @@ Status: implemented
 
 ## 问题
 
-事件日志是权威数据源，但历史操纵此前没有持久化的共享机制。如果没有这样的机制，上下文压缩（context compaction）等插件只能通过顺序敏感的监听器改写派生请求，不留溯源信息，且每次新增操纵都要反复修改 `deriveMessages()`。
+事件日志是权威数据源，但历史操纵此前没有持久化的共享机制。如果没有这样的机制，上下文压缩（context compaction）等插件会通过顺序敏感的监听器改写派生请求，却不记录每次替换使用了哪些事件。每次新增历史操纵时，还必须修改 `deriveMessages()`。
 
 ## 决策
 
-新增一个 **surface**：事件 seq 的派生、缓存有序投影（即产出 LLM（大语言模型）消息的事件子集），通过事件日志中的 `surfaceOp` 标记维护。
+新增一个 **surface**：事件 seq 的派生并缓存的有序投影（即产出 LLM（大语言模型）消息的事件子集），通过事件日志中的 `surfaceOp` 标记维护。
 
 ### `SessionEvent` 新增两个顶层字段
 
 每个 `SessionEvent` 获得两个可选字段（结构性元数据，与 `seq`/`time` 同级）：
 
-- **`sourceEventSeqs?: number[]`**：作为溯源来源的事件 seq 编号（例如构成 `assistant/message` 的各 `assistant/chunk` 的 seq，或被压缩标记遮蔽的 surface 节点）。出现的 `[]` 只在 `assistant/message` 上有效，表示已知为空的提供方流；在该事件上省略字段表示旧数据或未记录的溯源。其他 surface 事件一旦出现此字段，就必须是非空列表。溯源是核心设计原则；没有它，replace-range 操作在回放时无法被验证。
+- **`sourceEventSeqs?: number[]`**：被引用为数据来源的早期事件 seq 编号（例如构成 `assistant/message` 的各 `assistant/chunk` 的 seq，或被压缩标记遮蔽的 surface 节点）。出现的 `[]` 只在 `assistant/message` 上有效，表示已知为空的提供方流；旧格式或外部事件缺少该字段时，没有记录这条消息由哪些早期事件产生。其他 surface 事件一旦出现此字段，就必须是非空列表。如果没有这些引用的 seq，回放就无法验证 replace-range 操作是否列出了它移除的每个事件。
 - **`surfaceOp?: SurfaceOp`**：该事件如何进入 surface。非 surface 事件不携带此字段。
 
 ### SurfaceOp：两种操作
@@ -33,7 +33,7 @@ export type SurfaceOp =
 
 ### SurfaceManager：基于增量，而非全量重建
 
-一个 `Session` 拥有一个 `SurfaceManager`，后者维护事件 seq 的有序 `number[]`。管理器会在提交前校验每个种子或追加候选项而不应用它，然后只处理上次同步之后已经提交的事件，而不重新扫描整个日志。`Session.surface` 通过只读的 `SessionSurface` 契约暴露同一个管理器，因此接纳、派生历史、压缩与工作区上下文共享同一份增量状态。Replace 按数组位置定位两个端点（均包含在范围内），并把替换 seq splice 到该范围；不会用第二个管理器、链接对象或 seq 到节点的 map 来重复表达顺序。
+一个 `Session` 拥有一个 `SurfaceManager`，后者维护事件 seq 的有序 `number[]`。管理器会在提交前校验每个种子或追加候选项而不应用它，然后只处理上次同步之后已经提交的事件，而不重新扫描整个日志。`Session.surface` 通过只读的 `SessionSurface` 约定暴露同一个管理器，因此接纳、派生历史、压缩与工作区上下文共享同一份增量状态。Replace 按数组位置定位两个端点（均包含在范围内），并把替换 seq splice 到该范围；不会用第二个管理器、链接对象或 seq 到节点的 map 来重复表达顺序。
 
 无新事件时增量处理为 O(1)，有新事件到达时为 O(新事件数)。
 
@@ -49,7 +49,7 @@ export type SurfaceOp =
 
 ### 不变式
 
-`Session` 在始终启用的 seed/append 边界校验 `sourceEventSeqs` 与 `surfaceOp`：只有 `assistant/message` 可以使用空的溯源列表；引用必须唯一、更早且已知；替换端点必须存在于 surface 顺序中；溯源必须覆盖每个被遮蔽的节点。这些是单记录接纳与存储投影规则，不是由可选的不变式服务提供的规则。
+`Session` 在始终启用的 seed/append 边界校验 `sourceEventSeqs` 与 `surfaceOp`：只有 `assistant/message` 可以使用空的源事件列表；引用必须唯一、更早且已知；替换端点必须存在于 surface 顺序中；`sourceEventSeqs` 必须覆盖每个被遮蔽的节点。这些是单记录接纳与存储投影规则，不是由可选的不变式服务提供的规则。
 
 每个可进入 surface 的事件都必须携带 `surfaceOp`，否则它将从派生历史中消失。类型化的 `append` 重载对字面事件类型强制执行此规则；`append` 和种子构造函数中的运行时检查覆盖宽化联合类型和加载的日志。按照预发布格式策略，无效的种子被拒绝而非升级。
 
@@ -63,11 +63,11 @@ export type SurfaceOp =
 ## 后果
 
 - **`packages/core/session`**：`surface.ts`（`SurfaceManager`）维护一个用于候选接纳和实时投影的有序 seq 数组；`SessionSurface` 是其只读公共视图。`SurfaceOp`/`SurfaceIntent` 与顶层会话事件字段记录条目如何加入它。`append()` 要求 surface 事件携带 `SurfaceIntent`，`deriveMessages()` 以遍历 surface 作为唯一派生路径，`repair.ts` 则发出 surface 感知的闭合事件。种子构造函数拒绝缺少 `surfaceOp` 标记的可进入 surface 的种子事件（见「不变式」一节）。
-- **`packages/core/agent-loop`**：所有涉及 surface 事件的追加操作都传入 surface 选项。收集分片 seq 用于 `assistant/message` 溯源；捕获 `tool/call` seq 用于 `tool/result` 溯源。
-- **`packages/session-persistence/session-persistence-sqlite`**：`events` 表新增两个可空 TEXT 列（`source_event_seqs`、`surface_op`）；`SCHEMA_VERSION` 递增（bump-and-reject，无迁移）。
-- **`packages/session-persistence/session-persistence-jsonl`**：无需改动。
-- **`packages/session-persistence/session-persistence`**：抽象接口不变。
+- **`packages/core/agent-loop`**：所有涉及 surface 事件的追加操作都传入 surface 选项。每个 `assistant/message` 都引用产生它的分片 seq；每个 `tool/result` 都引用它的 `tool/call` seq。
+- **`packages/session/session-persistence-sqlite`**：`events` 表新增两个可空 TEXT 列（`source_event_seqs`、`surface_op`）；`SCHEMA_VERSION` 递增（bump-and-reject，无迁移）。
+- **`packages/session/session-persistence-jsonl`**：无需改动。
+- **`packages/session/session-persistence`**：抽象接口不变。
 
-Surface 是未来历史操纵的基础。压缩或 tool-result-prune 插件追加一个既有的消息产出事件类型（例如一条携带摘要的 `user/message`），附带 `surfaceOp: { op: 'replace', start, end }` 和覆盖被遮蔽条目的 `sourceEventSeqs`——新事件在 surface 上取代该范围的位置，而插件自身的 trace 事件（如 `compaction/start`、`compaction/end`）不进入 surface。回放以确定性方式保留该决策。
+surface 是历史操纵赖以落地的基础——dsh-compaction 的压缩就搭载于其上。压缩或 tool-result-pruner 插件追加一个既有的消息产出事件类型（例如一条携带摘要的 `user/message`），附带 `surfaceOp: { op: 'replace', start, end }` 和覆盖被遮蔽条目的 `sourceEventSeqs`——新事件在 surface 上取代该范围的位置，而插件自身的 trace 事件（如 `compaction/start`、`compaction/end`）不进入 surface。回放以确定性方式保留该决策。
 
-一次 `tool/result` 替换只能改写当前的一个 `tool/result`，并且必须保留除 `content` 以外的每个数据字段。Session 接纳会与位置范围和溯源校验一起强制这条规则，不依赖可选的诊断插件。
+一次 `tool/result` 替换只能改写当前的一个 `tool/result`，并且必须保留除 `content` 以外的每个数据字段。Session 接纳会与位置范围和引用的源事件校验一起强制这条规则，不依赖可选的诊断插件。

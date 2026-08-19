@@ -32,7 +32,7 @@ function createCell(fn: () => Promise<unknown>): InvokeCell {
       cell.listeners.add(listener)
       return () => { cell.listeners.delete(listener) }
     },
-    getPending: () => { return cell.inflight > 0 },
+    getPending: () => cell.inflight > 0,
   }
   return cell
 }

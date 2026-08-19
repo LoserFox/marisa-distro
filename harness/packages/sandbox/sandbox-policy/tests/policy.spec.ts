@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { Session, SessionId } from '@deepseek-ai/dsh-session'
 import SandboxPolicyService, { SANDBOX_MODES, effectiveSandboxMode, setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
@@ -26,7 +26,7 @@ function session(id: string, cwd?: string): Session {
     version: 0,
     id: sessionId,
     createdAt: 0,
-    ...cwd !== undefined ? { cwd } : {},
+    ...cwd === undefined ? {} : { cwd },
   })
 }
 
@@ -69,10 +69,12 @@ describe('SandboxPolicyService', () => {
     expect(ctx.sandboxPolicy.resolve({ session: first })).toEqual({
       mode: 'workspace-write',
       workspaceRoot: resolve('/projects/first'),
+      sessionId: 'sess-first',
     })
     expect(ctx.sandboxPolicy.resolve({ session: second })).toEqual({
       mode: 'read-only',
       workspaceRoot: resolve('/projects/second'),
+      sessionId: 'sess-second',
     })
     expect(ctx.sandboxPolicy.overrideOf(first)).toBeUndefined()
     expect(ctx.sandboxPolicy.overrideOf(second)).toBe('read-only')
@@ -98,6 +100,7 @@ describe('SandboxPolicyService', () => {
       expect(ctx.sandboxPolicy.resolve({ session: session('sess-symlink-parent', cwd) })).toEqual({
         mode: 'workspace-write',
         workspaceRoot: realpathSync.native(physical),
+        sessionId: 'sess-symlink-parent',
       })
     } finally {
       rmSync(root, { recursive: true, force: true })
@@ -111,6 +114,7 @@ describe('SandboxPolicyService', () => {
     expect(ctx.sandboxPolicy.resolve({ session: active, mode: 'danger-full-access' })).toEqual({
       mode: 'danger-full-access',
       workspaceRoot: resolve('/projects/approved'),
+      sessionId: 'sess-approved',
     })
   })
 

@@ -68,7 +68,7 @@ describe('web e2e: current sandbox policy reaches the model before tools', () =>
   const sessionEvents: SessionEvent[] = []
 
   beforeAll(async () => {
-    scaffold = await launchWebScaffold(MODE !== 'record' ? { replayFixture: FIXTURE } : {})
+    scaffold = await launchWebScaffold(MODE === 'record' ? {} : { replayFixture: FIXTURE })
     disposeApproval = scaffold.ctx.on('approval/request', () => Promise.resolve('allowed-once'), { prepend: true })
     scaffold.ctx.on('session/event', (session, event: SessionEvent) => {
       sessionWorkspace = session.header.cwd

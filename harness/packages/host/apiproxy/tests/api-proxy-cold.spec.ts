@@ -4,18 +4,18 @@
  * isolation, and prompt failure mapping.
  */
 
-import { mkdtempSync, writeFileSync, utimesSync } from 'node:fs'
+import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore from '@deepseek-ai/dsh-session'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
-import { TypeRTLookupFailure } from '@deepseek-ai/dsh-type-meta'
+import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
-import { MessageId } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, MessageId } from '@deepseek-ai/dsh-llm'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import UserInteractionService from '@deepseek-ai/dsh-user-interaction'
+import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import type { SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import {
   PersistenceCoordinator,
@@ -39,67 +39,200 @@ function header(id: string, createdAt: number, extra: Partial<SessionHeader> = {
 }
 
 describe('sessions.list cold merge', () => {
-  it('summarizes unattached sessions: log mtime, locate-less and vanished-log createdAt fallbacks, lineage', async () => {
+  it('verifies only small possibly-blank artifacts and treats every unavailable probe as visible', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const root = mkdtempSync(join(tmpdir(), 'dsh-cold-'))
-    const logPath = join(root, 'a.log')
-    writeFileSync(logPath, 'log-bytes')
-    utimesSync(logPath, 5000, 5000) // mtime 5_000_000 ms — newer than every createdAt below
+    const smallPath = join(root, 'small.log')
+    const largePath = join(root, 'large.log')
+    writeFileSync(smallPath, 'x'.repeat(1024))
+    writeFileSync(largePath, 'x'.repeat(1025))
     const metas = [
-      header('session-a', 1000),
-      header('session-b', 2000, { parentSession: sid('session-parent'), origin: 'subagent' }),
-      header('session-c', 1500),
+      header('small-blank', 100),
+      header('small-conversation', 200),
+      header('large-unknown', 300),
+      header('cached-nonblank', 400),
+      header('locationless', 500, { parentSession: sid('session-parent'), origin: 'subagent' }),
+      header('vanished', 600),
+      header('read-failure', 700),
     ]
-    // Structural fake of the persistence face list() consumes: list + locate.
-    // locate: a real per-session file (mtime wins), a backend without one
-    // (SQLite shape → createdAt), and a path whose file vanished (stat ENOENT
-    // → createdAt).
+    const readFrom = vi.fn(async (id: SessionId) => {
+      if (id === sid('small-blank')) {
+        return {
+          meta: metas[0]!,
+          events: [{ type: 'session/end-seed', seq: 0, time: 700, data: {} }] as SessionEvent[],
+        }
+      }
+      if (id === sid('small-conversation')) {
+        return {
+          meta: metas[1]!,
+          events: [
+            { type: 'turn/start', seq: 0, time: 800, data: { turn: 1 } },
+            {
+              type: 'user/message', seq: 1, time: 1200,
+              data: createUserMessage({ content: [{ type: 'text', text: 'worked' }], source: { kind: 'user' } }),
+              surfaceOp: 'append',
+            },
+          ] as SessionEvent[],
+        }
+      }
+      if (id === sid('read-failure')) throw new Error('simulated read failure')
+      throw new Error(`unexpected cold read: ${id}`)
+    })
     ctx.provide('sessionPersistence', {
       list: () => Promise.resolve(metas),
       locate: (meta: SessionHeader) => {
-        if (meta.id === sid('session-a')) return { kind: 'jsonl', path: logPath }
-        if (meta.id === sid('session-c')) return { kind: 'jsonl', path: join(root, 'vanished.log') }
+        if (meta.id === sid('large-unknown')) return { kind: 'jsonl', path: largePath }
+        if (meta.id === sid('locationless')) return undefined
+        if (meta.id === sid('vanished')) return { kind: 'jsonl', path: join(root, 'vanished.log') }
+        return { kind: 'jsonl', path: smallPath }
+      },
+      readFrom,
+    } as never)
+    ctx.provide('sessionProjectionCache', {
+      cachedSnapshot: (meta: SessionHeader) => {
+        if (meta.id === sid('small-blank')) {
+          return { asOfSeq: 0, values: { sessionListMetadata: { blank: true, lastPromptAt: null } } }
+        }
+        if (meta.id === sid('small-conversation')) {
+          return { asOfSeq: 0, values: { sessionListMetadata: { blank: true, lastPromptAt: 900 } } }
+        }
+        if (meta.id === sid('cached-nonblank')) {
+          return { asOfSeq: 1, values: { sessionListMetadata: { blank: false, lastPromptAt: 1000 } } }
+        }
         return undefined
       },
-    })
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    } as never)
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const response = await api.sessions.list(request({}))
     expect(response.result.ok).toBe(true)
     if (!response.result.ok) throw new Error('unreachable')
-    const items = response.result.value.items
-    expect(items.map(item => item.sessionId)).toEqual(['session-a', 'session-b', 'session-c'])
-    const [a, b, c] = items
-    expect(a?.updatedAt).toBeCloseTo(5_000_000, -3)
-    expect(a?.running).toBe(false)
-    // Cold summaries are never blank: lazy persistence keeps never-appended
-    // sessions out of list(), so a listed session necessarily has events.
-    expect(items.every(item => !item.blank)).toBe(true)
-    expect(a?.cwd).toBe('/proj')
-    expect(a?.parentSessionId).toBeUndefined()
-    expect(b?.updatedAt).toBe(2000)
-    expect(b?.parentSessionId).toBe('session-parent')
-    expect(b?.origin).toBe('subagent')
-    expect(c?.updatedAt).toBe(1500)
+    const byId = Object.fromEntries(response.result.value.items.map(item => [item.sessionId, item]))
+    expect(byId['small-blank']).toMatchObject({ blank: true, updatedAt: 100, running: false })
+    // A stale true hint cannot hide the turn found in the bounded read.
+    expect(byId['small-conversation']).toMatchObject({ blank: false, updatedAt: 1200 })
+    expect(byId['large-unknown']).toMatchObject({ blank: false, updatedAt: 300 })
+    // false is monotonic, so this row skips stat/read and keeps cached recency.
+    expect(byId['cached-nonblank']).toMatchObject({ blank: false, updatedAt: 1000 })
+    expect(byId['locationless']).toMatchObject({
+      blank: false,
+      updatedAt: 500,
+      parentSessionId: 'session-parent',
+      origin: 'subagent',
+    })
+    expect(byId['vanished']).toMatchObject({ blank: false, updatedAt: 600 })
+    expect(byId['read-failure']).toMatchObject({ blank: false, updatedAt: 700 })
+    expect(readFrom).toHaveBeenCalledTimes(3)
+    expect(readFrom.mock.calls.map(([id]) => id)).toEqual(expect.arrayContaining([
+      sid('small-blank'),
+      sid('small-conversation'),
+      sid('read-failure'),
+    ]))
+  })
+
+  it('can disable bounded blank probes without hiding cold Sessions', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(UserQuestionService)
+    const meta = header('probe-disabled', 100)
+    const readFrom = vi.fn()
+    ctx.provide('sessionPersistence', {
+      list: () => Promise.resolve([meta]),
+      locate: () => ({ kind: 'jsonl', path: '/not-read' }),
+      readFrom,
+    } as never)
+    const api = createApiProxy(ctx, {
+      defaultModelSelection: () => ({ provider: 'p', model: 'm' }),
+      cwd: '/tmp',
+      coldBlankProbeMaxBytes: 0,
+    })
+
+    const response = await api.sessions.list(request({}))
+    if (!response.result.ok) throw new Error('unreachable')
+    expect(response.result.value.items).toEqual([
+      expect.objectContaining({ sessionId: meta.id, blank: false, updatedAt: meta.createdAt }),
+    ])
+    expect(readFrom).not.toHaveBeenCalled()
+  })
+
+  it('replaces a probed cold row with the live Session that attached during the read', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(UserQuestionService)
+    await ctx.plugin(AgentRegistry)
+    const meta = header('attached-during-probe', 100)
+    const root = mkdtempSync(join(tmpdir(), 'dsh-cold-race-'))
+    const path = join(root, 'small.log')
+    writeFileSync(path, 'x')
+    const started = Promise.withResolvers<undefined>()
+    const release = Promise.withResolvers<undefined>()
+    ctx.provide('sessionPersistence', {
+      list: () => Promise.resolve([meta]),
+      locate: () => ({ kind: 'jsonl', path }),
+      readFrom: async () => {
+        started.resolve(undefined)
+        await release.promise
+        return {
+          meta,
+          events: [{ type: 'session/end-seed', seq: 0, time: 110, data: {} }] as SessionEvent[],
+        }
+      },
+    } as never)
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
+
+    const listing = api.sessions.list(request({}))
+    await started.promise
+    const session = ctx.sessions.create(meta.id, {
+      seed: [
+        { type: 'turn/start', seq: 0, time: 200, data: { turn: 1 } },
+        {
+          type: 'user/message', seq: 1, time: 300,
+          data: createUserMessage({ content: [{ type: 'text', text: 'live' }], source: { kind: 'user' } }),
+          surfaceOp: 'append',
+        },
+      ],
+      meta: {
+        ...meta.cwd === undefined ? {} : { cwd: meta.cwd },
+        createdAt: meta.createdAt,
+      },
+    })
+    ctx.agents.register({ id: session.id, session, status: 'running', ctx } as Agent)
+    release.resolve(undefined)
+
+    const response = await listing
+    if (!response.result.ok) throw new Error('list failed')
+    expect(response.result.value.items).toEqual([
+      expect.objectContaining({
+        sessionId: meta.id,
+        blank: false,
+        running: true,
+        updatedAt: 300,
+      }),
+    ])
   })
 })
 
-describe('attached updatedAt excludes end-seed', () => {
-  it('reports the last real work, not the pickup, so a resumed-untouched session does not float', async () => {
+describe('attached updatedAt tracks human prompts', () => {
+  it('ignores pickup and non-prompt work after the latest human message', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     await ctx.plugin(AgentRegistry)
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     // Old work, resumed just now: the log tail would report the pickup.
     const worked = 1_000_000
     const resumed = ctx.sessions.create(sid('resumed-untouched'), {
       seed: [
         { type: 'turn/start', seq: 0, time: worked, data: { turn: 1 } },
-        { type: 'turn/end', seq: 1, time: worked, data: { turn: 1, reason: { kind: 'completed' } } },
+        {
+          type: 'user/message', seq: 1, time: worked,
+          data: createUserMessage({ content: [{ type: 'text', text: 'worked' }], source: { kind: 'user' } }),
+          surfaceOp: 'append',
+        },
+        { type: 'turn/end', seq: 2, time: worked + 1, data: { turn: 1, reason: { kind: 'completed' } } },
       ],
       meta: { cwd: '/proj', createdAt: 500 },
     })
@@ -113,12 +246,21 @@ describe('attached updatedAt excludes end-seed', () => {
     const summary = listed.result.value.items.find(item => item.sessionId === 'resumed-untouched')
     expect(summary?.updatedAt).toBe(worked)
 
-    // Real work appended after end-seed does move it.
+    // A lifecycle boundary is not a human update.
     resumed.append('turn/start', { turn: 2 })
+    const afterBoundary = await api.sessions.list(request({}))
+    if (!afterBoundary.result.ok) throw new Error('list failed')
+    expect(afterBoundary.result.value.items.find(item => item.sessionId === 'resumed-untouched')?.updatedAt)
+      .toBe(worked)
+
+    const prompt = resumed.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'new prompt' }],
+      source: { kind: 'user' },
+    }), { surfaceOp: 'append' })
     const after = await api.sessions.list(request({}))
     if (!after.result.ok) throw new Error('list failed')
     const moved = after.result.value.items.find(item => item.sessionId === 'resumed-untouched')
-    expect(moved?.updatedAt).toBeGreaterThan(worked)
+    expect(moved?.updatedAt).toBe(prompt.time)
   })
 })
 
@@ -126,7 +268,7 @@ describe('cold history recovery view', () => {
   it('shows in-memory interruption repair without activating the session', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const sessionId = sid('session-interrupted')
     const meta = header(sessionId, 1000)
     const stored: StoredPrefix<never> = {
@@ -150,7 +292,7 @@ describe('cold history recovery view', () => {
       inspect: (id: SessionId, signal?: AbortSignal) => coordinator.inspect(id, signal),
       locate: () => undefined,
     } as never)
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const history = await api.sessions.history(request({ sessionId, beforeSeq: 2, maxMessages: 10 }))
     if (!history.result.ok) throw new Error('history failed')
@@ -188,7 +330,7 @@ describe('Remote Agent and Session lookup policy', () => {
     await ctx.plugin(TypertRegistry)
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const sessionId = sid('session-remote-cold')
     const meta = header(sessionId, 1000)
     const inspect = vi.fn(() => Promise.resolve({ meta, events: [] as SessionEvent[] }))
@@ -206,7 +348,7 @@ describe('Remote Agent and Session lookup policy', () => {
     })
     const defaultAgentLookup = ctx.typert.lookups.get('agent')
     const defaultSessionLookup = ctx.typert.lookups.get('session')
-    createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
     await vi.waitFor(() => {
       expect(ctx.typert.lookups.get('agent')).not.toBe(defaultAgentLookup)
       expect(ctx.typert.lookups.get('session')).not.toBe(defaultSessionLookup)
@@ -230,7 +372,7 @@ describe('Remote Agent and Session lookup policy', () => {
     await ctx.plugin(TypertRegistry)
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const coldId = sid('session-remote-cold-child')
     const coldMeta = header(coldId, 1000, {
       parentSession: sid('session-parent'),
@@ -250,7 +392,7 @@ describe('Remote Agent and Session lookup policy', () => {
     const resume = vi.spyOn(ctx.agents, 'resume')
     const defaultAgentLookup = ctx.typert.lookups.get('agent')
     const defaultSessionLookup = ctx.typert.lookups.get('session')
-    createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
     await vi.waitFor(() => {
       expect(ctx.typert.lookups.get('agent')).not.toBe(defaultAgentLookup)
       expect(ctx.typert.lookups.get('session')).not.toBe(defaultSessionLookup)
@@ -267,9 +409,9 @@ describe('Remote Agent and Session lookup policy', () => {
 
     const coldFailure = Promise.resolve(agentLookup.resolve(coldId))
     const liveFailure = Promise.resolve(sessionLookup.resolve(liveSession.id))
-    await expect(coldFailure).rejects.toBeInstanceOf(TypeRTLookupFailure)
+    await expect(coldFailure).rejects.toBeInstanceOf(TypertLookupFailure)
     await expect(coldFailure).rejects.toMatchObject(ownershipFailure)
-    await expect(liveFailure).rejects.toBeInstanceOf(TypeRTLookupFailure)
+    await expect(liveFailure).rejects.toBeInstanceOf(TypertLookupFailure)
     await expect(liveFailure).rejects.toMatchObject(ownershipFailure)
     expect(resume).not.toHaveBeenCalled()
     expect(inspect).toHaveBeenCalledOnce()
@@ -281,7 +423,7 @@ describe('subagent ownership fence', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const sessionId = sid('session-child')
     const meta = header('session-child', 1000, {
       parentSession: sid('session-parent'),
@@ -312,7 +454,7 @@ describe('subagent ownership fence', () => {
       locate: () => undefined,
     } as never)
     const resume = vi.spyOn(ctx.agents, 'resume')
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const history = await api.sessions.history(request({ sessionId }))
     expect(history.result.ok).toBe(true)
@@ -346,7 +488,7 @@ describe('subagent ownership fence', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const sessionId = sid('session-legacy-child')
     const meta = header('session-legacy-child', 1000, {
       parentSession: sid('session-parent'),
@@ -365,13 +507,13 @@ describe('subagent ownership fence', () => {
       inspect: () => Promise.resolve({ meta, events }),
       locate: () => undefined,
     } as never)
-    // Pre-#1569 stores classify a child only through the descriptor event and
-    // carry no header `origin`; the pre-release decision stops recognizing
-    // them, so the ownership fence lets generic resume reach the registry
-    // instead of answering `agent-busy`.
+    // Stores whose headers predate `origin` classify a child only through the
+    // descriptor event; the pre-release decision stops recognizing them, so
+    // the ownership fence lets generic resume reach the registry instead of
+    // answering `agent-busy`.
     const resume = vi.spyOn(ctx.agents, 'resume')
       .mockRejectedValue(new Error('registry unavailable in this bench'))
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const prompt = await api.sessions.prompt(request({
       sessionId,
@@ -387,7 +529,7 @@ describe('subagent ownership fence', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const parentSession = ctx.sessions.create(sid('session-parent'), { meta: { cwd: '/proj' } })
     const parent = { id: parentSession.id, session: parentSession, status: 'idle', ctx } as Agent
     ctx.agents.register(parent)
@@ -412,7 +554,7 @@ describe('subagent ownership fence', () => {
     })
     const startingChild = { id: startingSession.id, session: startingSession, status: 'idle', ctx } as Agent
     ctx.agents.enter(startingChild, parent)
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const stopped = await api.sessions.cancel(request({ sessionId: originChild.id }))
     expect(stopped.result.ok).toBe(false)
@@ -445,7 +587,7 @@ describe('subagent ownership fence', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const session = ctx.sessions.create(sid('session-ordinary-fork'), {
       seed: [{
         type: 'subagent/descriptor',
@@ -458,7 +600,7 @@ describe('subagent ownership fence', () => {
     const followup = vi.fn()
     const agent = { id: session.id, session, status: 'idle', ctx, followup } as unknown as Agent
     ctx.agents.register(agent)
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const response = await api.sessions.prompt(request({
       sessionId: agent.id,
@@ -468,6 +610,80 @@ describe('subagent ownership fence', () => {
     expect(response.result.ok).toBe(true)
     expect(followup).toHaveBeenCalledOnce()
   })
+
+  it('canonicalizes a supplied browser zone on the exact prompt and rejects invalid names', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    await ctx.plugin(UserQuestionService)
+    const session = ctx.sessions.create(sid('session-browser-zone'), { meta: { cwd: '/proj' } })
+    const followup = vi.fn()
+    const agent = { id: session.id, session, status: 'idle', ctx, followup } as unknown as Agent
+    ctx.agents.register(agent)
+    const api = createApiProxy(ctx, {
+      defaultModelSelection: () => ({ provider: 'p', model: 'm' }),
+      cwd: '/tmp',
+    })
+
+    const alias = 'US/Pacific'
+    const canonical = new Intl.DateTimeFormat('en-US', { timeZone: alias })
+      .resolvedOptions().timeZone
+    const zonedRequest = request({
+      sessionId: agent.id,
+      mode: 'queue' as const,
+      content: [{ type: 'text' as const, text: 'zoned work' }],
+      clientTimeZone: alias,
+    })
+    await expect(api.sessions.prompt(zonedRequest)).resolves.toMatchObject({
+      result: { ok: true },
+    })
+    expect(followup).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      source: { kind: 'user', rpcId: zonedRequest.rpcId, clientTimeZone: canonical },
+    }))
+
+    const utcRequest = request({
+      sessionId: agent.id,
+      mode: 'queue' as const,
+      content: [{ type: 'text' as const, text: 'UTC work' }],
+      clientTimeZone: 'UTC',
+    })
+    await expect(api.sessions.prompt(utcRequest)).resolves.toMatchObject({
+      result: { ok: true },
+    })
+    expect(followup).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      source: { kind: 'user', rpcId: utcRequest.rpcId, clientTimeZone: 'UTC' },
+    }))
+
+    const unzonedRequest = request({
+      sessionId: agent.id,
+      mode: 'queue' as const,
+      content: [{ type: 'text' as const, text: 'headless work' }],
+    })
+    await expect(api.sessions.prompt(unzonedRequest)).resolves.toMatchObject({
+      result: { ok: true },
+    })
+    expect(followup).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      source: { kind: 'user', rpcId: unzonedRequest.rpcId },
+    }))
+
+    for (const clientTimeZone of ['', ' UTC', 'CST', 'Not/A_Real_Zone']) {
+      const invalid = await api.sessions.prompt(request({
+        sessionId: agent.id,
+        mode: 'queue' as const,
+        content: [{ type: 'text' as const, text: 'invalid zone' }],
+        clientTimeZone,
+      }))
+      expect(invalid.result).toEqual({
+        ok: false,
+        error: {
+          code: 'invalid-time-zone',
+          message: 'clientTimeZone must be UTC or a valid IANA Area/Location name',
+          details: { value: clientTimeZone },
+        },
+      })
+    }
+    expect(followup).toHaveBeenCalledTimes(3)
+  })
 })
 
 describe('degenerate composition (no persistence, no factory)', () => {
@@ -475,8 +691,8 @@ describe('degenerate composition (no persistence, no factory)', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    await ctx.plugin(UserQuestionService)
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const listed = await api.sessions.list(request({}))
     expect(listed.result.ok).toBe(true)
@@ -495,13 +711,13 @@ describe('degenerate composition (no persistence, no factory)', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const inspect = vi.fn()
     ctx.provide('sessionPersistence', {
       list: () => Promise.resolve([]),
       inspect,
     } as never)
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const response = await api.sessions.history(request({ sessionId: sid('session-missing') }))
     expect(response.result.ok).toBe(false)
@@ -515,10 +731,10 @@ describe('sessions.prompt synchronous rejection', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const session = ctx.sessions.create(sid('session-throwing'))
     // A live structural stub whose delivery verbs throw synchronously, the
-    // shape a disposed loop presents at this seam.
+    // shape a disposed loop presents at this gateway boundary.
     ctx.agents.register({
       id: session.id,
       session,
@@ -527,7 +743,7 @@ describe('sessions.prompt synchronous rejection', () => {
       followup: () => { throw new Error('agent "session-throwing" lifecycle disposed') },
       steer: () => { throw new Error('agent "session-throwing" lifecycle disposed') },
     } as unknown as Agent)
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     for (const mode of ['queue', 'steer'] as const) {
       const response = await api.sessions.prompt(request({
@@ -548,7 +764,7 @@ describe('sessions.prompt synchronous rejection', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(AgentRegistry)
-    await ctx.plugin(UserInteractionService)
+    await ctx.plugin(UserQuestionService)
     const sessionId = sid('race-resume')
     const meta: SessionHeader = header('race-resume', 1000)
     ctx.provide('sessionPersistence', {
@@ -571,7 +787,7 @@ describe('sessions.prompt synchronous rejection', () => {
       ctx.agents.register(child)
       throw new Error('session id already published')
     })
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
     const models = await api.sessions.models(request({ sessionId }))
     expect(models.result.ok).toBe(false)

@@ -1,6 +1,6 @@
 /* Visual spec mirrors deepsuite @deepseek/ui Tooltip.css (size m, no arrow),
-   except padding tightened 6/12 -> 3/7, type 14/22 -> 13/20, and radius
-   10 -> 8 by product ruling: tooltip-bg plate,
+   except padding tightened 6/12 -> 3/7, type 14/22 -> 13/20, radius
+   10 -> 8, a tooltip-bg plate,
    one text color across both themes (the plate stays dark in light and dark
    mode). Behavior (fixed positioning off the anchor rect) is local — the
    upstream Floating stack is intentionally not vendored. */

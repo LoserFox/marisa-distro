@@ -5,10 +5,17 @@
  * @module @deepseek-ai/dsh-time-context
  */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { UserMessage } from '@deepseek-ai/dsh-llm'
+import {
+  deriveBrowserTimeZoneContext,
+  renderBrowserTimeZoneContext,
+} from './request-zone.ts'
+import type { BrowserTimeZoneContext } from './request-zone.ts'
+import { createTimestampFormatter, formatTimestamp } from './timestamp.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'time-context'
@@ -18,7 +25,7 @@ export const inject = ['agents']
 
 /** Request-preparation clock formatting and append scheduling. Invalid values fail plugin load. */
 export interface Config {
-  /** IANA time zone used for the rendered timestamp. Omit to resolve the Node process's system zone at plugin load. */
+  /** Fallback display zone when the open turn has no unique browser zone. Omit to use the process zone. */
   timeZone?: string
   /** Minimum milliseconds between durable injections in one session. Omit or set to 0 to inject at every eligible step. */
   refreshIntervalMs?: number
@@ -29,17 +36,6 @@ export const Config: z<Config> = z.object({
   timeZone: z.string(),
   refreshIntervalMs: z.number(),
 })
-
-type TimestampPart = 'day' | 'hour' | 'minute' | 'month' | 'second' | 'timeZoneName' | 'year'
-
-/** Format an epoch millisecond value as an ISO-shaped timestamp with offset and IANA zone. */
-function formatTimestamp(now: number, formatter: Intl.DateTimeFormat, timeZone: string): string {
-  const parts = Object.fromEntries(
-    formatter.formatToParts(now).map(part => [part.type, part.value]),
-  ) as Record<TimestampPart, string>
-  const offset = parts.timeZoneName.replace(/^GMT$/, 'GMT+00:00').slice(3)
-  return `${parts['year']}-${parts['month']}-${parts['day']}T${parts['hour']}:${parts['minute']}:${parts['second']}${offset}[${timeZone}]`
-}
 
 /** Format a non-negative elapsed millisecond count as compact whole-second units. */
 function formatDuration(elapsedMs: number): string {
@@ -99,6 +95,18 @@ function latestInjectionTime(agent: Agent): number | undefined {
   return undefined
 }
 
+/** Collect already-entered and proposed user messages belonging to one open turn. */
+function requestMessages(agent: Agent, turn: number, proposed: readonly UserMessage[]): UserMessage[] {
+  const start = agent.session.events.findLastIndex(
+    event => event.type === 'turn/start' && event.data.turn === turn,
+  )
+  const entered = start < 0
+    ? []
+    : agent.session.events.slice(start + 1)
+      .flatMap(event => event.type === 'user/message' ? [event.data] : [])
+  return [...entered, ...proposed]
+}
+
 function renderText(
   now: number,
   turn: number,
@@ -106,10 +114,13 @@ function renderText(
   previous: number | undefined,
   formatter: Intl.DateTimeFormat,
   timeZone: string,
+  browserContext: BrowserTimeZoneContext,
 ): string {
   const elapsed = previous === undefined ? 'unavailable' : formatDuration(now - previous)
   const baseline = step === 1 ? 'model-visible message' : 'step context'
+  const browserText = renderBrowserTimeZoneContext(browserContext)
   return `Time sampled while preparing turn ${turn}, step ${step}: ${formatTimestamp(now, formatter, timeZone)}\n`
+    + `${browserText}\n`
     + `Elapsed since the preceding ${baseline}: ${elapsed}.`
 }
 
@@ -135,26 +146,26 @@ export function apply(ctx: Context, config: Config): void {
   const timeZone = config.timeZone
   const refreshIntervalMs = config.refreshIntervalMs
   validateRefreshInterval(refreshIntervalMs)
-  let formatter: Intl.DateTimeFormat
+  let fallbackFormatter: Intl.DateTimeFormat
   try {
-    formatter = new Intl.DateTimeFormat('en-US', {
-      ...(timeZone === undefined ? {} : { timeZone }),
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hourCycle: 'h23',
-      timeZoneName: 'longOffset',
-    })
+    fallbackFormatter = createTimestampFormatter(timeZone)
   } catch (error: unknown) {
     const message = timeZone === undefined
       ? 'time-context: failed to resolve the system time zone'
       : `time-context: invalid IANA timeZone ${JSON.stringify(timeZone)}`
     throw new Error(message, { cause: error })
   }
-  const resolvedTimeZone = formatter.resolvedOptions().timeZone
+  const fallbackTimeZone = fallbackFormatter.resolvedOptions().timeZone
+  const formatters = new Map<string, Intl.DateTimeFormat>([[fallbackTimeZone, fallbackFormatter]])
+
+  /** Resolve and cache one request-local timestamp formatter. */
+  const formatterFor = (selectedTimeZone: string): Intl.DateTimeFormat => {
+    const existing = formatters.get(selectedTimeZone)
+    if (existing !== undefined) return existing
+    const created = createTimestampFormatter(selectedTimeZone)
+    formatters.set(selectedTimeZone, created)
+    return created
+  }
 
   ctx.on('agent/pre-step', async (
     { agent, turn, step, signal },
@@ -172,7 +183,18 @@ export function apply(ctx: Context, config: Config): void {
     const previous = step === 1
       ? precedingMessageTime(agent)
       : precedingStepContextTime(agent, turn)
-    const text = renderText(now, turn, step, previous, formatter, resolvedTimeZone)
+    const messages = requestMessages(agent, turn, decision.messages)
+    const browser = deriveBrowserTimeZoneContext(messages)
+    const selectedTimeZone = browser.kind === 'resolved' ? browser.timeZone : fallbackTimeZone
+    const text = renderText(
+      now,
+      turn,
+      step,
+      previous,
+      formatterFor(selectedTimeZone),
+      selectedTimeZone,
+      browser,
+    )
     return {
       kind: 'enter',
       messages: [

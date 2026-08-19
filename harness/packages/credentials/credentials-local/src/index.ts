@@ -29,23 +29,24 @@
  * The document holds nothing but credentials, which is why it is a strict
  * `CredentialRef`-to-string mapping rather than a dotenv file: a store the
  * Harness owns and never materializes into the environment cannot also serve
- * as the user's environment layer, and conflating the two is what made a
- * non-secret in the old `$DSH_HOME/.env` silently unreachable.
+ * as the user's environment layer; a store that doubled as the environment
+ * layer would shadow non-secret entries behind its precedence, making them
+ * silently unreachable.
  * @module @deepseek-ai/dsh-credentials-local
  */
 
-import { Context, Service } from 'cordis'
-import z from 'schemastery'
+import { Context, Service } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { watch as chokidarWatch } from 'chokidar'
 import { mkdir, readFile, stat } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { Document, parseDocument, type YAMLError } from 'yaml'
 import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
-import { resolveDshHome } from '@deepseek-ai/dsh-paths'
-import { environmentOf } from '@deepseek-ai/dsh-environment'
-import { Credentials, credentialRef } from '@deepseek-ai/dsh-credentials'
+import { canonicalizeWatchPath, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
+import { CredentialProvider, credentialRef } from '@deepseek-ai/dsh-credentials'
 import type { CredentialInfo, CredentialRef, ResolvedCredential } from '@deepseek-ai/dsh-credentials'
-import type { EnvironmentEntry } from '@deepseek-ai/dsh-environment'
+import type { LaunchEnvironmentEntry } from '@deepseek-ai/dsh-launch-environment'
 
 /** Basename of the credentials document inside the harness home. */
 export const CREDENTIALS_FILENAME = '.credentials.yaml'
@@ -97,24 +98,27 @@ const GROUP_OTHER_BITS = 0o077
  * here — so the check is skipped rather than faked, and the file's protection
  * there is whatever the create and replace APIs express.
  * @param filename - absolute path of the document.
- * @throws when the file exists with group or other permission bits set.
+ * @throws when the path hierarchy is invalid or the file exists with group or other permission bits set.
  */
 async function assertOwnerOnly(filename: string): Promise<void> {
-  /* v8 ignore next -- native Windows coverage exercises the skip; POSIX covers the check */
-  if (process.platform === 'win32') return
   let mode: number
   try {
     mode = (await stat(filename)).mode
   } catch (error) {
     if (!isENOENT(error)) throw error
+    await canonicalizeWatchPath(filename)
     return
   }
+  /* v8 ignore next -- POSIX coverage cannot take the Windows peer; native Windows coverage does. */
+  if (process.platform === 'win32') return
+  /* v8 ignore start -- Windows has no POSIX mode enforcement; POSIX behavior tests enforce this peer. */
   const offending = mode & GROUP_OTHER_BITS
   if (offending === 0) return
   throw new Error(
     `credentials-local: ${filename} is readable beyond its owner (mode ${(mode & 0o777).toString(8)});`
     + ` run "chmod 600 ${filename}" before starting again`,
   )
+  /* v8 ignore stop */
 }
 
 /** Whether a filesystem error means absence; every non-ENOENT failure must surface. */
@@ -200,9 +204,9 @@ function renderDocument(text: string | undefined, ref: CredentialRef, value: str
 }
 
 /** File-backed credentials provider (`$DSH_HOME/.credentials.yaml`). */
-export class CredentialsLocal extends Credentials {
+export class LocalCredentialProvider extends CredentialProvider {
   /* jscpd:ignore-start -- deliberate config-surface and lifecycle symmetry with
-     settings-local (prefer symmetry for parallel values); extracting the shared
+     settings-file (prefer symmetry for parallel values); extracting the shared
      shape would couple the two providers' teardown semantics across packages. */
   static Config: z<Config> = z.object({
     path: z.string(),
@@ -244,7 +248,7 @@ export class CredentialsLocal extends Credentials {
 
   /** The inherited-environment value for a reference, or `undefined` when empty or unset. */
   private inherited(ref: CredentialRef): string | undefined {
-    const entry = environmentOf(this.ctx).getFrom(ref, ['process'])
+    const entry = launchEnvironmentOf(this.ctx).getFrom(ref, ['process'])
     return entry !== undefined && entry.value.length > 0 ? entry.value : undefined
   }
 
@@ -253,8 +257,8 @@ export class CredentialsLocal extends Credentials {
    * it. The invoking project ranks over the user's home file, matching the
    * environment layering: the more specific location wins.
    */
-  private dotenvFallback(ref: CredentialRef): EnvironmentEntry | undefined {
-    const entry = environmentOf(this.ctx).getFrom(ref, ['project-env', 'user-env'])
+  private dotenvFallback(ref: CredentialRef): LaunchEnvironmentEntry | undefined {
+    const entry = launchEnvironmentOf(this.ctx).getFrom(ref, ['project-env', 'user-env'])
     return entry !== undefined && entry.value.length > 0 ? entry : undefined
   }
 
@@ -267,10 +271,10 @@ export class CredentialsLocal extends Credentials {
     }
     await this.loadInitial()
     if (!this.spec.watch) return
-    /* jscpd:ignore-start -- same watcher discipline as settings-local by design:
+    /* jscpd:ignore-start -- same watcher discipline as settings-file by design:
        the serialized-refresh and quiesce-on-dispose shape is the reviewed
        lifecycle contract, not accidental repetition. */
-    const watcher = chokidarWatch(this.spec.filename, {
+    const watcher = chokidarWatch(await canonicalizeWatchPath(this.spec.filename), {
       ignoreInitial: true,
       awaitWriteFinish: {
         stabilityThreshold: this.spec.debounceMs,
@@ -338,9 +342,9 @@ export class CredentialsLocal extends Credentials {
   }
 
   /* jscpd:ignore-start -- the operation-chain and reload lifecycle is the same
-     reviewed contract as settings-local, deliberately mirrored (prefer symmetry
+     reviewed contract as settings-file, deliberately mirrored (prefer symmetry
      for parallel values); the two providers own different documents and
-     failure policies, so extracting the shape would couple their teardown
+     failure policies, so extracting a shared helper would couple their teardown
      semantics across packages for a handful of lines. */
   /** Queue one exclusive document operation behind every earlier one. */
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
@@ -351,7 +355,7 @@ export class CredentialsLocal extends Credentials {
 
   /** Queue a reload; only an invariant violation escaping the fan-out can reject it. */
   private queueRefresh(): void {
-    void this.enqueue(() => { return this.refresh() }).catch((error: unknown) => {
+    void this.enqueue(() => this.refresh()).catch((error: unknown) => {
       // Only an invariant violation escaping the update fan-out can reject a
       // refresh; keep the operation queue alive and surface it as an error so
       // one poisoned commit cannot silently end hot reloading forever.
@@ -430,7 +434,7 @@ export class CredentialsLocal extends Credentials {
     this.text = text
   }
 
-  /* jscpd:ignore-start -- same deliberate mirror of settings-local's reload and
+  /* jscpd:ignore-start -- same deliberate mirror of settings-file's reload and
      reconcile policy: warn-and-keep on a reload, throw on a write, invariant
      failures propagate. */
   /**
@@ -489,4 +493,4 @@ export class CredentialsLocal extends Credentials {
   }
 }
 
-export default CredentialsLocal
+export default LocalCredentialProvider

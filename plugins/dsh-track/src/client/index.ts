@@ -19,7 +19,9 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { TrackStripProps } from './strip-contract.ts'
 import { TrackStrip } from './strip.tsx'
 import { en, NS, zh, type TrackKey } from './locales.ts'
-import { mountRightPanel, openTrackPanel } from './right-panel.ts'
+import { mountRightPanel, openTrackPanel, jumpToConversation } from './right-panel.ts'
+import { GraphView } from './graph-view.tsx'
+import type { CalJump } from './calendar-yarn.tsx'
 
 export type { TrackStripProps } from './strip-contract.ts'
 export type { TrackKey } from './locales.ts'
@@ -58,4 +60,20 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
       inject: injectActions,
     }, TrackStrip))
+
+  // ---- 会话结构图 tab: register a native conversation.view entry so the
+  // host renders the tab, tracks the active underline, and mounts only the
+  // active view (ui-trajectory pattern — no DOM tab injection).
+  const t = ctx.locale.bind(NS)
+  ctx.slots.inject('conversation.view', () => ctx.slots.register({
+    name: 'conversation.view',
+    id: 'track-graph',
+    order: 20,
+    locale: NS,
+    label: () => t('view.graph'),
+    inject: (sessionId: string): { sessionId: string; onJump: (j: CalJump) => void } => ({
+      sessionId,
+      onJump: (j) => { void jumpToConversation({ sessionId: j.sessionId, messageId: j.messageId }) },
+    }),
+  }, GraphView))
 }

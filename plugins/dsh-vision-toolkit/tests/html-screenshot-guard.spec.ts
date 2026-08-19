@@ -2,7 +2,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
 import { afterEach, describe, expect, it } from 'vitest'
 import { resolveConfig } from '../src/config.ts'
@@ -47,8 +47,8 @@ describe.skipIf(process.platform === 'win32')('HTML screenshot Chrome isolation 
       'args=sys.argv[2:]',
       'output=args[args.index("-o")+1]',
       'command=[chrome,"--headless=new",f"--screenshot={output}",source]',
-      'result=subprocess.run(command,text=True,capture_output=True)',
-      'if result.returncode != 0: raise SystemExit(result.returncode)',
+      'process=subprocess.Popen(command)',
+      'if process.wait() != 0: raise SystemExit(process.returncode)',
       'print(f"wrote {output} (1x1)")',
       '',
     ].join('\n'))

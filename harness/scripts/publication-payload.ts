@@ -1,12 +1,11 @@
 /** Publication payload policy shared by static manifests and packed tarballs. */
 
-/** Publication exceptions required for TypeRT declaration-map navigation. */
-export interface PublicationPayloadPolicy {
-  readonly typeRTRemoteNavigation?: boolean
-}
-
-/** Whether a package manifest exports generated Host-for-Client metadata with source navigation. */
-export function hasTypeRTRemoteNavigation(manifest: unknown): boolean {
+/**
+ * Whether a package manifest exports generated Host-for-Client metadata.
+ * @param manifest - parsed package manifest to inspect.
+ * @returns whether the canonical `./remote` export pair is present.
+ */
+export function hasTypertRemoteNavigation(manifest: unknown): boolean {
   if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest)) return false
   const exportsField = (manifest as Record<string, unknown>).exports
   if (exportsField === null || typeof exportsField !== 'object' || Array.isArray(exportsField)) return false
@@ -23,35 +22,34 @@ function payloadPath(file: string): string {
   return normalized.startsWith('package/') ? normalized.slice('package/'.length) : normalized
 }
 
-/** Whether a package payload path exposes source or declaration-map intermediates. */
-export function isForbiddenPublicationFile(
-  file: string,
-  policy: PublicationPayloadPolicy = {},
-): boolean {
+/**
+ * Whether a package payload path exposes source or map intermediates. Maps
+ * serve editor navigation during development, where a workspace consumer
+ * resolves their source through the package link; a published map resolves
+ * nothing, so no payload publishes one.
+ * @param file - manifest path or tarball member to classify.
+ * @returns whether publishing this path is forbidden.
+ */
+export function isForbiddenPublicationFile(file: string): boolean {
   const normalized = payloadPath(file)
-  if (policy.typeRTRemoteNavigation === true
-    && (normalized === 'src'
-      || normalized.startsWith('src/')
-      || normalized === 'lib/typert.remote-client.d.ts.map')) {
-    return false
-  }
   return normalized === 'src'
     || normalized.startsWith('src/')
     || normalized.endsWith('.d.ts.map')
+    || normalized.endsWith('.js.map')
 }
 
-/** Reject source and declaration-map members in a packed npm tarball. */
-export function validateTarballPayload(
-  files: readonly string[],
-  context: string,
-  policy: PublicationPayloadPolicy = {},
-): void {
+/**
+ * Reject source and map members in a packed npm tarball.
+ * @param files - tarball members to validate.
+ * @param context - tarball identity named in the failure.
+ */
+export function validateTarballPayload(files: readonly string[], context: string): void {
   for (const file of files) {
-    if (!isForbiddenPublicationFile(file, policy)) continue
+    if (!isForbiddenPublicationFile(file)) continue
     const normalized = payloadPath(file)
     if (normalized === 'src' || normalized.startsWith('src/')) {
       throw new Error(`${context} publishes source file ${file}`)
     }
-    throw new Error(`${context} publishes declaration map ${file}`)
+    throw new Error(`${context} publishes source map ${file}`)
   }
 }

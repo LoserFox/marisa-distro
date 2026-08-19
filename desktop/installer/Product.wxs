@@ -26,7 +26,7 @@
         <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
       </Component>
       <Component Id="BackendArchive" Guid="6DEC949A-6B7C-4467-873F-D94C862310E8" Win64="yes">
-        <File Id="BackendZip" Source="$(var.BackendZip)" Name="backend.zip" KeyPath="yes" />
+        <File Id="BackendZip" Source="$(var.BackendZip)" Name="backend.tar.zst" KeyPath="yes" />
       </Component>
     </DirectoryRef>
 
@@ -35,7 +35,7 @@
       <ComponentRef Id="BackendArchive" />
     </Feature>
 
-    <CustomAction Id="PrepareBackend" FileKey="MarisaExe" ExeCommand="--prepare-installed-backend &quot;[INSTALLFOLDER]backend.zip&quot;" Execute="deferred" Impersonate="yes" Return="check" />
+    <CustomAction Id="PrepareBackend" FileKey="MarisaExe" ExeCommand="--prepare-installed-backend &quot;[INSTALLFOLDER]backend.tar.zst&quot;" Execute="deferred" Impersonate="yes" Return="check" />
     <CustomAction Id="RollbackPrepareBackend" FileKey="MarisaExe" ExeCommand="--remove-installed-backend &quot;[INSTALLFOLDER]backend&quot;" Execute="rollback" Impersonate="yes" Return="ignore" />
     <CustomAction Id="RemoveBackend" FileKey="MarisaExe" ExeCommand="--remove-installed-backend &quot;[INSTALLFOLDER]backend&quot;" Execute="deferred" Impersonate="yes" Return="ignore" />
     <InstallExecuteSequence>

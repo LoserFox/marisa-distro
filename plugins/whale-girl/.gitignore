@@ -1,5 +1,5 @@
 node_modules/
 .DS_Store
 *.log
-.dsh-plugin/assets/raw/
-.dsh-plugin/dsh-plugin-assets/
+lib/assets/raw/
+lib/dsh-plugin-assets/

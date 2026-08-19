@@ -1,17 +1,21 @@
 /**
- * Frozen input-machine contract (design §9.1, eng. plan §3.9-3.12). Types
+ * Frozen input-machine contract. Types
  * only. Three-tier visibility: business packages see InputState via the
  * InputZone currency; the scoped input events carry the mutation verbs; the
  * conversation wiring layer alone sees the full SessionInput. InputMachine
  * (machine.ts) is package-private and never exported.
  */
 import type { ClientContext, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Branded } from '@deepseek-ai/dsh-brand'
 import type {
   ArbitrateKey, ArbitrateOutcome, CommandClaim, ConsumeTokenRequest, PickOutcome,
   ReferenceInsert, SubmitOutcome, TokenSpan,
-} from '@deepseek-ai/dsh-client-ui-slash/client'
+} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { QueueRow } from '../contract/queue.ts'
 import type { InputSubmitMode } from '../contract/composer-submission.ts'
+
+/** Browser-runtime identity of one unsent image draft. */
+export type DraftAttachmentId = Branded<'DraftAttachmentId'>
 
 /**
  * The scoped-event application verbs: the hub's bail listeners call these,
@@ -29,6 +33,12 @@ export interface InputTarget {
 export interface SessionInput extends InputTarget {
   /** Single write path for draft text (all mutation rides machine events). */
   setDraft(text: string): void
+  /** Append ordered browser-owned image ids; busy admission phases refuse. */
+  addImages(ids: readonly DraftAttachmentId[]): boolean
+  /** Remove one browser-owned image id. */
+  removeImage(id: DraftAttachmentId): void
+  /** Drop ids whose browser-owned objects no longer exist. */
+  pruneImages(ids: readonly DraftAttachmentId[]): void
   /**
    * THE complexity sink: enter adjudication, submit transaction, and the default sink live inside.
    * @param mode - delivery intent retained through asynchronous adjudication and serialization.
@@ -37,7 +47,7 @@ export interface SessionInput extends InputTarget {
   /**
    * Surface a notice outside the machine's own effect stream: detached
    * command results and business notifications render through here.
-   * Session-routed — resolving the facade via InputService.for(actx) lands
+   * Session-routed — resolving the facade via SessionInputResolver.for(actx) lands
    * the notice on that session's composer, so a result arriving after a
    * session switch still reaches its own session.
    * @param level - severity tier.
@@ -49,20 +59,26 @@ export interface SessionInput extends InputTarget {
 }
 
 /** Session-addressed access to the per-session input facade. */
-export interface InputService {
+export interface SessionInputResolver {
   /** Resolve the facade for one session-scope ctx. */
   for(actx: ClientContext): SessionInput
 }
 
 /**
  * The public input action face provided to every session-scope slot
- * component (decision 20): two stable-identity void callbacks, mirroring the
+ * component: two stable-identity void callbacks, mirroring the
  * useStore+actions convention. Command-style handles (track/arbitrate/space/
  * undo/paste/…) stay InputBar-private and never ride this face.
  */
 export interface InputActions {
   /** Single public draft write path (full next draft; occurrence math via diff scan). */
   setDraft(text: string): void
+  /** Append ordered browser-owned image ids; busy admission phases refuse. */
+  addImages(ids: readonly DraftAttachmentId[]): boolean
+  /** Remove one browser-owned image id. */
+  removeImage(id: DraftAttachmentId): void
+  /** Drop ids whose browser-owned objects no longer exist. */
+  pruneImages(ids: readonly DraftAttachmentId[]): void
   /** Enter submission (adjudication / claim transaction / default sink inside). */
   submit(): void
 }
@@ -75,7 +91,7 @@ export interface InputNotice {
 }
 
 /**
- * The InputBar-exclusive keyboard/DOM command face (decision 20): synchronous
+ * The InputBar-exclusive keyboard/DOM command face: synchronous
  * returns and event-handler semantics that must not enter the public provide
  * channel. Handed to the composer-bar entry through its own inject —
  * package-internal, never across a plugin boundary. The session shell
@@ -88,6 +104,12 @@ export interface ComposerKeyboard {
   setDraft(text: string, editRange?: EditRange): void
   /** Submit with an explicit delivery mode resolved by the keyboard policy. */
   submit(mode: InputSubmitMode): void
+  /**
+   * Steer every still-pending queued message into the running turn (the
+   * empty-draft accelerated-Enter gesture; the queue dock's per-row steer
+   * button is the same operation applied to the whole queue).
+   */
+  steerQueue(): void
   undo(): void
   redo(): void
   /** Paste over the selection (sync components ride the same transaction). */
@@ -128,7 +150,7 @@ export interface EditRange extends EditSelection {
 
 /**
  * One reference chip occurrence, backing exactly one U+FFFC placeholder in
- * the draft (design §9.1 底层表示). Identity is occurrenceId — same-named
+ * the draft. Identity is occurrenceId — same-named
  * references stay independently addressable. label/clipboardText are the
  * owner's insert-time projections, cached so the chip survives owner loss
  * (invalid flips instead of dropping the occurrence).
@@ -157,7 +179,7 @@ export interface PasteComponent extends EditSelection {
 
 /**
  * Live paste-match attempt published while async matching may still upgrade
- * pasted tokens (design §9.1 剪贴板 round-trip). Any non-paste transaction,
+ * pasted tokens (the clipboard round-trip). Any non-paste transaction,
  * submit start, invalidate-paste, or release ends it; a paste-upgrade keeps
  * it current (later tokens re-CAS against the advanced draftRev).
  */
@@ -186,6 +208,8 @@ export interface InputMachineOptions {
 /** Published input state (the currency; per-session). */
 export interface InputState {
   readonly draft: string
+  /** Ordered runtime-only image ids; bytes and URLs stay in ConversationController. */
+  readonly imageIds: readonly DraftAttachmentId[]
   /** Monotonic draft revision (span CAS compares against this). */
   readonly draftRev: number
   readonly phase: 'plain' | 'adjudicating' | 'claimed' | 'submitting'

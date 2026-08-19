@@ -12,13 +12,13 @@ The human command arrives between turns and must summarize asynchronously. A pro
 
 Compaction also needs one mutual-exclusion fact shared by manual, pressure, overflow, and explicit-range entry points. A process-local flag alone cannot explain a crash-recovered log, while a summarize-first transaction leaves no durable evidence during the expensive interval. Conversely, treating marker pairs as exclusive containers would forbid valid idle injection even though injection is explicitly non-waking and immediate between turns.
 
-This note extends the [compaction capability seam](2026-06-18-compaction-capability-seam.md), the [session end-seed boundary](../architecture/2026-07-30-session-end-seed-log-boundary.md), and the [removal of synthetic log-only turns](../simplification/2026-07-28-remove-synthetic-log-only-turns.md). The supersession audit found partial overlap only: each remains active and owns its broader decision.
+This note extends the [compaction capability seam](2026-06-18-compaction-capability-seam.md), the [session end-seed boundary](../architecture/2026-07-30-session-end-seed-log-boundary.md), and the [removal of synthetic log-only turns](../simplification/2026-07-28-remove-synthetic-log-only-turns.md). Each remains active and owns its broader decision; the overlap is partial only.
 
 ## Decision
 
 ### `/compact` is a command over a backend-independent seam
 
-`@deepseek-ai/dsh-command-compact` registers one argument-free human command through `ctx.commands`. It calls the third abstract `CompactService` operation, `compactNow(agent, signal)`, and maps the closed `ManualCompactionError` taxonomy (`busy | changed | summary | commit | persistence`) to direct UI results. `command/run` and `command/done` preserve the command lifecycle without entering model history or consuming a model-loop turn.
+`@deepseek-ai/dsh-command-compact` registers one argument-free human command through `ctx.commands`. It calls the third abstract `CompactionEngine` operation, `compactNow(agent, signal)`, and maps the closed `ManualCompactionError` taxonomy (`busy | changed | summary | commit | persistence`) to direct UI results. `command/run` and `command/done` preserve the command lifecycle without entering model history or consuming a model-loop turn.
 
 The command plugin tracks each real handler promise independently of the command executor's abort-aware wait. Its composite lifecycle effect unregisters `/compact` before asynchronously draining handlers that already started, so root teardown reaches quiescence only after backend close and flush work settles.
 
@@ -34,34 +34,34 @@ Maintenance does not create a second queue. Later sends keep their `MessageId`, 
 
 ### One parameterized transaction owns every bracket
 
-`dsh-compact-basic` has one region transaction parameterized by bracket owner (`number | null`), stability rule (whole surface or selected span), and an optional flush. It performs one ordering:
+`dsh-compaction-basic` has one region transaction parameterized by bracket owner (`number | null`), stability rule (whole surface or selected span), and an optional flush. It performs one ordering:
 
 1. validate the selected positional range and inspect the durable tail;
 2. reject a live unmatched compaction marker;
-3. append `compact/start` synchronously;
+3. append `compaction/start` synchronously;
 4. prepare and await summarization;
 5. revalidate the required stability;
-6. append `compact/summary` and the replacement `user/message`;
-7. make exactly one `compact/end` attempt;
+6. append `compaction/summary` and the replacement `user/message`;
+7. make exactly one `compaction/end` attempt;
 8. flush when the manual caller requested durability.
 
 Automatic and explicit-region work use the numeric owner recovered from the open turn and require whole-surface stability. Manual work reserves admission first, selects a useful range before the transaction, and writes nothing when selection returns `null`. Its bracket uses `turn: null`, requires only selected-span stability, and flushes every successfully closed attempt before releasing admission in `finally`.
 
-`compact/start` is therefore the only compaction lock. There is no `WeakSet`, wrapper mutex, locked/unlocked method split, or redundant activity check around the transaction.
+`compaction/start` is therefore the only compaction lock. There is no `WeakSet`, wrapper mutex, locked/unlocked method split, or redundant activity check around the transaction.
 
 ### Bracket-first deliberately differs from the surveyed implementations
 
-Codex models manual compaction as a `CompactTask` occupying its active-turn slot while automatic compaction runs inline. Pi uses the existence of a compaction abort controller as its mutex and appends compaction only after success. Claude Code shares one compaction routine between automatic and manual paths but constructs its boundary after summary streaming.
+Codex models manual compaction as a `CompactionTask` occupying its active-turn slot while automatic compaction runs inline. Pi uses the existence of a compaction abort controller as its mutex and appends compaction only after success. Claude Code shares one compaction routine between automatic and manual paths but constructs its boundary after summary streaming.
 
-DSH deliberately records `compact/start` before calling the summarizer. A slow or crashed attempt is observable, automatic and manual paths share the same durable lock, and a later writer cannot mistake an in-flight summary for an unlocked session. This is a conscious divergence from summarize-first behavior, not an accidental event-order difference.
+DSH deliberately records `compaction/start` before calling the summarizer. A slow or crashed attempt is observable, automatic and manual paths share the same durable lock, and a later writer cannot mistake an in-flight summary for an unlocked session. This is a conscious divergence from summarize-first behavior, not an accidental event-order difference.
 
 ### Markers are time points, not an event container
 
-`compact/start` and `compact/end` mean lock acquisition and release. They do not claim exclusive ownership of every event between their seqs. An idle `inject()` may append a `user/message` while a manual summary is pending, so that unrelated event can sit inside the marker interval.
+`compaction/start` and `compaction/end` mean lock acquisition and release. They do not claim exclusive ownership of every event between their seqs. An idle `inject()` may append a `user/message` while a manual summary is pending, so that unrelated event can sit inside the marker interval.
 
 Manual stability checks only the selected span: it must remain present, contiguous, ordered, equally priced, and balanced. Append-only context outside it does not stale the summary. Positional replacement places the checkpoint at the old span's surface position and leaves injected context after it in derived model history, even though the injection's log seq precedes the later summary and replacement events.
 
-Failed `changed` or `summary` attempts leave the conversation surface unchanged, but the log is not unchanged: it contains `compact/start` and `compact/end { error }`. User-facing text states that distinction.
+Failed `changed` or `summary` attempts leave the conversation surface unchanged, but the log is not unchanged: it contains `compaction/start` and `compaction/end { error }`. User-facing text states that distinction.
 
 ### End-seed distinguishes live and stale orphans
 
@@ -69,7 +69,7 @@ Tail scanning finds the current turn, unmatched compaction start, and newest `se
 
 The compaction invariant uses the same transition logic during seed replay: `session/end-seed` clears an open historical trace. The boundary need not publish live from the constructor for this case; replay is the load-bearing path.
 
-The client request projection closes an unmatched compaction request as interrupted at the `session/end-seed` time and clears its active index. A later `compact/start` therefore creates an independent request instead of leaving or overwriting a permanently running orphan.
+The client request projection closes an unmatched compaction request as interrupted at the `session/end-seed` time and clears its active index. A later `compaction/start` therefore creates an independent request instead of leaving or overwriting a permanently running orphan.
 
 Once a transaction has appended its start, every later failure makes one closing attempt. A failed close leaves the unmatched start deliberately visible and blocking, and no flush is attempted. A closed manual attempt is flushed even when it reports an expected failure. Cancellation retains exact-reason precedence after required close and flush cleanup.
 
@@ -85,13 +85,13 @@ That reference also carried client-side replacement-anchor machinery to preserve
 
 **Queue the command itself.** Rejected because `/compact` is direct control, not model input, and a prompt already accepted first must retain right of way rather than being reordered around a second command queue.
 
-**Summarize before appending `compact/start`.** Rejected because the expensive in-flight operation would be invisible and would not participate in the lock shared by automatic compaction.
+**Summarize before appending `compaction/start`.** Rejected because the expensive in-flight operation would be invisible and would not participate in the lock shared by automatic compaction.
 
 **Use both a durable marker and a process-local mutex.** Rejected because two authorities can disagree after replay and require wrapper branches for states the bracket already expresses.
 
 **Hold injection with waking prompts.** Rejected because idle injection is non-waking durable context by contract; delaying it would make plugin ordering depend on a UI command.
 
-**Require the marker interval to contain only compaction events.** Rejected because markers represent lock time points. Provenance names the selected and shadowed seqs exactly; exclusivity would add no correctness and would reject valid injection.
+**Require the marker interval to contain only compaction events.** Rejected because markers represent lock time points. `compaction/summary` names the selected range and shadowed seqs exactly; exclusivity would add no correctness and would reject valid injection.
 
 **Treat every unmatched marker as permanently busy.** Rejected because a crash-recovered or forked session would remain wedged. `session/end-seed` is the explicit lifecycle evidence that distinguishes stale history from a live process-local attempt.
 
@@ -105,6 +105,6 @@ The command package pins registration, Loader composition, argument rejection, e
 
 Interactive users can compact useful history without spending a conversation-model turn. A prompt accepted before the command wins; one submitted during the command waits with its original queue identity. Manual compaction consumes session seqs but no turn number.
 
-The log exposes slow, failed, crashed, and successful attempts through the same bracket. A stale pre-boundary orphan no longer wedges a new lifecycle, while a current unmatched start remains a hard busy signal. Marker intervals may contain unrelated events, so consumers use provenance and relative ordering rather than assuming a contiguous compaction-only slice.
+The log exposes slow, failed, crashed, and successful attempts through the same bracket. A stale pre-boundary orphan no longer wedges a new lifecycle, while a current unmatched start remains a hard busy signal. Marker intervals may contain unrelated events, so consumers use the seqs recorded in `compaction/summary` and relative ordering rather than assuming a contiguous compaction-only slice.
 
 The shared transaction keeps one ordering and one lock across every entry point. Failure reporting is precise about whether only the log changed, the surface may have partially changed, or the in-memory commit could not be persisted.

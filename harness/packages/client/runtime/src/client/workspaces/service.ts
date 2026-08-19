@@ -1,10 +1,10 @@
-/** WorkspacesService projects the Workspace object manager for UI consumers. */
+/** WorkspaceRuntime projects the Workspace object manager for UI consumers. */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type {
   DirectoryListing, IApiClient, RpcError,
   SessionId, WorkspaceId, WorkspaceView,
-} from '@deepseek-ai/dsh-client-connection/client'
+} from '@deepseek-ai/dsh-api-remotes/client'
 import type { SnapshotStore } from '../contract/store.ts'
 import { createSnapshotStore } from '../contract/store.ts'
 import type { SessionsPort, SessionsPortList } from '../contract/sessions-port.ts'
@@ -48,7 +48,7 @@ export class DirectoryBrowseError extends Error {
 }
 
 /** Real Workspace object layer and Host actions. */
-export class WorkspacesService implements IWorkspaces {
+export class WorkspaceRuntime implements IWorkspaces {
   /** UI-facing immutable projection; the manager remains wire truth. */
   readonly list: SnapshotStore<WorkspaceListState>
   /** Workspace baseline and frame owner. */
@@ -167,14 +167,20 @@ export class WorkspacesService implements IWorkspaces {
   /**
    * The shared New Session action behind the shell entry points (sidebar
    * button, workspace browser): resolve the target Workspace — explicit wins,
-   * else the recent-Workspace projection — connect its blank session and
-   * navigate there; with no Workspace at all, clear the selection into the
-   * New Session view state. Connect failures are non-fatal (console
-   * diagnostics; the current view stays usable).
+   * then the current Session's Workspace, then the recent-Workspace
+   * projection — connect its blank session and navigate there; with no
+   * Workspace at all, clear the selection into the New Session view state.
+   * Connect failures are non-fatal (console diagnostics; the current view
+   * stays usable).
    * @param workspaceId - explicit target Workspace for scoped actions.
    */
   startSession(workspaceId?: WorkspaceId): void {
-    const target = workspaceId ?? this.list.getSnapshot().recentWorkspaceId
+    const workspace = this.list.getSnapshot()
+    const current = this.sessions.list.getSnapshot().current
+    const currentWorkspaceId = current === undefined
+      ? undefined
+      : workspace.items.find(item => item.sessionIds.includes(current))?.workspaceId
+    const target = workspaceId ?? currentWorkspaceId ?? workspace.recentWorkspaceId
     if (target === undefined) {
       this.sessions.clear()
       return
@@ -186,11 +192,11 @@ export class WorkspacesService implements IWorkspaces {
   }
 
   /**
-   * Create a Workspace by name or register an existing path.
-   * @param input - exactly one Host create spelling.
+   * Register an existing path as a Workspace.
+   * @param input - the Host create payload.
    * @returns the created or idempotently resolved Workspace.
    */
-  async create(input: { name: string } | { path: string }): Promise<WorkspaceView> {
+  async create(input: { path: string }): Promise<WorkspaceView> {
     const result = await this.manager.create(input)
     if (!result.ok) throw new WorkspaceCreateError(result.error)
     return result.value.workspace
@@ -263,6 +269,16 @@ export class WorkspacesService implements IWorkspaces {
   async delete(workspaceId: WorkspaceId): Promise<void> {
     const result = await this.manager.delete(workspaceId)
     if (!result.ok) throw new Error(`workspace delete failed: ${result.error.code}: ${result.error.message}`)
+  }
+
+  /**
+   * Move a Workspace within the durable registry display order.
+   * @param workspaceId - Workspace to move.
+   * @param beforeWorkspaceId - Anchor workspace; omitted appends.
+   */
+  async insertBefore(workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId): Promise<void> {
+    const result = await this.manager.insertBefore(workspaceId, beforeWorkspaceId)
+    if (!result.ok) throw new Error(`workspace reorder failed: ${result.error.code}: ${result.error.message}`)
   }
 
   /**

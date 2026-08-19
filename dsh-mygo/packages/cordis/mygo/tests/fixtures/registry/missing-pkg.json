@@ -1,0 +1,12 @@
+{
+  "source": "https://registry.npmjs.org/missing-pkg",
+  "capturedAt": "2026-08-12T00:52:48Z",
+  "status": 404,
+  "headers": {
+    "content-type": "application/json",
+    "cache-control": "public, max-age=300"
+  },
+  "body": {
+    "error": "Not found"
+  }
+}

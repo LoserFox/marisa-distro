@@ -2,12 +2,13 @@
  * Sidebar shell: column geometry only. Collapse is a slide plus crossfade:
  * content freezes at its expanded width (inline style) and fades out in place
  * while the sliding column (AppFrame grid tracks) clips it — nothing reflows
- * mid-slide. At settle the wide-only content unmounts and the control rows
- * snap to the 56px rail (one icon each, same top-down order) fading in as the
- * slide ends. The workspace/session browsing region between the New Session
- * button and the foot is the `sidebar.workspaces` registrant's, and the foot
- * is the `sidebar.settings` registrant's; the shell hands them the wide flag
- * (plus an expand request callback for the browser).
+ * mid-slide. At settle the wide-only content unmounts and the four upper
+ * controls enter the 56px rail from the same horizontal offset (one icon each,
+ * same top-down order) on one fade that ends with the slide. The bottom-pinned
+ * settings control only fades. The workspace/session browsing region between
+ * the New Session button and the foot is the `sidebar.workspaces` registrant's,
+ * and the foot holds `sidebar.settings` plus `sidebar.footer.action`; the shell
+ * hands them the wide flag (plus an expand request callback for the browser).
  *
  * The column also owns whether the scroll regions nested in it draw a
  * scrollbar at all: the shell tracks the pointer and rebinds ui-theme's
@@ -62,7 +63,7 @@ export function SidebarRoot({
   // && wide): the sliding column then clips it instead of reflowing it. The
   // rail layout (.collapsed styles) only applies once the fade settles.
   const lastWideWidth = useRef(width)
-  if (!collapsed) { lastWideWidth.current = width }
+  if (!collapsed) lastWideWidth.current = width
 
   // Rail-in only crossfades a live collapse: a refresh straight into the
   // collapsed state renders the rail statically (no delay-hidden icons).
@@ -150,7 +151,7 @@ export function SidebarRoot({
           >
             {!wide && <FishLogo className={css.railFish} size={24} />}
             {/* Rail icons render at 18 (figma rail spec); expanded keeps the glyph-native sizes. */}
-            <IconPanelLeftOutline16 className={css.panelIcon} size={!wide ? 18 : 16} />
+            <IconPanelLeftOutline16 className={css.panelIcon} size={wide ? 16 : 18} />
           </button>
         </Tooltip>
       </div>
@@ -177,9 +178,14 @@ export function SidebarRoot({
         })}
       </div>
 
-      {/* Foot seat: ui-settings registers the trigger row + panel here. */}
+      {/* Footer actions stack above Settings in both sidebar widths. */}
       <div className={css.footArea}>
-        {renderSlot('sidebar.settings', { wide })}
+        <div className={css.footerActions}>
+          {renderSlot('sidebar.footer.action', { wide })}
+        </div>
+        <div className={css.settingsArea}>
+          {renderSlot('sidebar.settings', { wide })}
+        </div>
       </div>
     </div>
   )

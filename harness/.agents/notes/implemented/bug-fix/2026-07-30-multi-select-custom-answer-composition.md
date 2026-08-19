@@ -6,7 +6,7 @@ English | [中文](2026-07-30-multi-select-custom-answer-composition.zh.md)
 
 ## Problem
 
-The user-interaction result vocabulary carries selected option labels and optional custom text in separate fields, but its original semantics made them mutually exclusive for every question. On a multi-select question, opening or typing the custom answer discarded labels the user had already selected. The TUI returned only the custom text, and the Web host rejected a client response that preserved both fields.
+The user-questions result vocabulary carries selected option labels and optional custom text in separate fields, but its original semantics made them mutually exclusive for every question. On a multi-select question, opening or typing the custom answer discarded labels the user had already selected. The TUI returned only the custom text, and the Web host rejected a client response that preserved both fields.
 
 ## Decision
 

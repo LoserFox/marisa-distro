@@ -11,7 +11,7 @@
  *
  * Policy: a package brands the ids it owns — `CallId` in dsh-llm (tool-call
  * correlation), the shared agent/session `SessionId` in dsh-session, and
- * `TaskId` in dsh-tasks. Branding is for ids that cross package boundaries and
+ * `JobId` in dsh-jobs. Branding is for ids that cross package boundaries and
  * could plausibly be confused; not every string needs a brand.
  * This package owns ONLY the primitive — no concrete id, no runtime code beyond
  * the (erased) type — so the brand vocabulary stays dependency-free and a

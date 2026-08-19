@@ -148,6 +148,15 @@ describe('renderToolsSdk', () => {
     expect(text).toContain('lossless JSON')
   })
 
+  it('names both required call arguments, not just the program', () => {
+    // The schema requires `code` AND `description`; instructions that mention
+    // only the program let a model emit `{code}` alone and fail INVALID_ARGS.
+    const text = renderToolsSdk([bash])
+    expect(text).toContain('`code`')
+    expect(text).toContain('`description`')
+    expect(text).toContain('two required arguments')
+  })
+
   it('is deterministic: same tool set, byte-identical text regardless of input order', () => {
     expect(renderToolsSdk([bash, exotic])).toBe(renderToolsSdk([exotic, bash]))
     // Equal names sort stably (the comparator's equal arm).

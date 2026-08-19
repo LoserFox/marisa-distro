@@ -104,7 +104,7 @@ An event about Agent A normally reaches unscoped listeners and A-scoped listener
 
 At the Cordis level, `Scoped<T>` is an opaque routing receiver. It carries the filter used to choose listeners but is not the domain object. Event signatures therefore keep the real `Agent`, tool execution, approval request, or other subject as an explicit argument that listeners can inspect.
 
-A listener registered with `{ global: true }` deliberately bypasses contextual audience filtering while its cleanup still follows the registering context. Registry-membership notifications remain unfiltered because they describe shared registry state rather than one agent's operation. The generated [event catalog](../../../../docs/cordis-catalog/events.md) is the exhaustive event reference.
+A listener registered with `{ global: true }` deliberately bypasses contextual audience filtering while its cleanup still follows the registering context. Registry-membership notifications remain unfiltered because they describe shared registry state rather than one agent's operation. The exhaustive event reference is the set of generated `cordis-surface` regions across the [subsystem pages](../../../../docs/subsystems/core.md) — each event scope on its owning page (`agent/*` and `agent-loop/*` on core.md itself).
 
 ### Creation publishes last and disposal revokes last
 

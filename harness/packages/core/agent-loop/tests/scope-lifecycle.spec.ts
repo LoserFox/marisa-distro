@@ -1,10 +1,10 @@
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { describe, expect, it } from 'vitest'
-import { Context, symbols, type EffectMeta, type Fiber } from 'cordis'
-import LlmService from '@deepseek-ai/dsh-llm'
+import { Context, symbols, type EffectMeta, type Fiber } from '@deepseek-ai/cordis'
+import LlmRuntime from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { agentEvents, assembleContextFor } from '@deepseek-ai/dsh-agent'
 
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -15,10 +15,10 @@ import { MockAdapter, textResponse } from './mock-adapter.ts'
 
 async function harnessWithLoop(adapter: MockAdapter = new MockAdapter([textResponse('ok')])): Promise<{ ctx: Context; loopFiber: Fiber }> {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt, { persona: 'You are the deployment.' })
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   const loopFiber = await ctx.plugin(AgentLoop, { agents: [] })
   ctx.llm.registerAdapter(['mock'], adapter)
@@ -605,7 +605,7 @@ describe('agent scope lifecycle', () => {
           agentCtx.systemPrompt.section({
             name: 'dependency-origin-section',
             order: 1,
-            text: 'factory dependency surface',
+            text: 'factory dependency API',
           })
         },
       })
@@ -750,7 +750,7 @@ describe('agent scope lifecycle', () => {
     let scopeDisposed = false
     let observerSawLive = false
     ctx.on('agent/status', ({ agent, status }) => {
-      if (agent.id === SessionId('session-start-dispose-s')) { statuses.push(status) }
+      if (agent.id === SessionId('session-start-dispose-s')) statuses.push(status)
     })
     ctx.on('agent/session-start', ({ agent }) => {
       if (agent.id !== SessionId('session-start-dispose-s')) return
@@ -787,7 +787,7 @@ describe('agent scope lifecycle', () => {
 
   it('a rejecting setup publishes nothing and unwinds the unpublished scope', async () => {
     const ctx = await harness()
-    const published: Array<string> = []
+    const published: string[] = []
     ctx.on('session/created', () => void published.push('session/created'))
     ctx.on('agent/created', () => void published.push('agent/created'))
     ctx.on('agent/session-start', () => void published.push('agent/session-start'))
@@ -1052,7 +1052,7 @@ describe('agent scope lifecycle', () => {
   })
 
   it('drains a run re-entered by cancel\'s own idle transition before removing the scope', async () => {
-    // Automation shaped like goal-session: the running→idle transition that
+    // Automation shaped like goal-round-driver: the running→idle transition that
     // disposal's cancel produces immediately queues a follow-up prompt. The
     // teardown must drain that replacement run to true quiescence instead of
     // awaiting only the first captured done and unwinding under a live run.

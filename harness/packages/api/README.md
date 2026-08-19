@@ -2,14 +2,14 @@
 
 English | [中文](README.zh.md)
 
-The application-facing Remote stack. `remotes` owns BFF policy and the selected business API, while `gateway` implements the TypeRT unary RPC endpoints shared by Host and Client environments.
+The application-facing Remote stack. `remotes` owns BFF policy and the selected business API, while `gateway` implements the Typert unary RPC endpoints shared by Host and Client environments.
 
 | Package | Role | ctx key |
 |---|---|---|
 | [`remotes/`](remotes/README.md) | Host Agent/Session lookup policy and Client Remote contribution assembly | no service; configures `ctx.typert` and consumes `ctx.remote` |
-| [`gateway/`](gateway/README.md) | Host TypeRT dispatcher and Client Remote endpoint | `ctx.typertGateway` / `ctx.remote` |
+| [`gateway/`](gateway/README.md) | Host Typert dispatcher and Client Remote endpoint | `ctx.typertGateway` / `ctx.remote` |
 
-The runtime dependency direction is `remotes → gateway → connection → webserver`: the BFF consumes the shared `TypeRTClientRemote` contract, Gateway delegates transport to Connection, and Connection mounts on the HTTP server. Cordis service injection and Client module metadata preserve this order without importing the concrete Gateway from the Remotes Client entry.
+The runtime dependency direction is `remotes → gateway → connection → webserver`: the BFF consumes the shared `TypertClientRemote` contract, Gateway delegates transport to Connection, and Connection mounts on the HTTP server. Cordis service injection and Client module metadata preserve this order without importing the concrete Gateway from the Remotes Client entry.
 
 ## Known Limitations and Deferred Work
 

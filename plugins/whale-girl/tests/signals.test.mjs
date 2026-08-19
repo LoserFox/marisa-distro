@@ -1,7 +1,7 @@
 // src/signals.mjs 单测（node:test）。归属：pet 服务信号器改动跑本文件。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createSignals } from '../.dsh-plugin/src/signals.mjs'
+import { createSignals } from '../lib/src/signals.mjs'
 
 test('订阅收到信号与 payload', () => {
   const s = createSignals()

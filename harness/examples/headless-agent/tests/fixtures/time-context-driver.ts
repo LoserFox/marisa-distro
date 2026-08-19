@@ -5,7 +5,7 @@ import { boot, resolveConfigPath } from '@deepseek-ai/dsh-app-boot'
 import { runFixtureTurn } from '@deepseek-ai/dsh-loader-smoke'
 
 const configPath = process.argv[2]
-if (configPath === undefined) { throw new Error('time-context driver requires a config path') }
+if (configPath === undefined) throw new Error('time-context driver requires a config path')
 
 const ctx = await boot('time-context-e2e', resolveConfigPath(configPath, undefined))
 try {

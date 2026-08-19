@@ -24,10 +24,10 @@
       "path": "../../core/scope"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
-      "path": "../../typert/type-meta"
+      "path": "../../typert/protocol"
     }
   ]
 }

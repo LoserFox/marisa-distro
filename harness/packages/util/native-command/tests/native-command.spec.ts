@@ -18,7 +18,7 @@ describe('runNativeCommand', () => {
       node,
       ['-e', 'process.stdout.write("partial"); process.stderr.write("boom"); process.exit(3)'],
       new AbortController().signal,
-    ).then(() => { throw new Error('unexpected resolve') }, (error: unknown) => { return error })
+    ).then(() => { throw new Error('unexpected resolve') }, (error: unknown) => error)
     expect(failure).toMatchObject({ code: 3, stdout: 'partial', stderr: 'boom' })
     expect((failure as Error).cause).toBeInstanceOf(Error)
   })

@@ -1,0 +1,6 @@
+# dsh-mygo-cli bundle patch：mygo 命令面行（dsh.bundle 原生形态）。
+# 依赖 dsh-mygo 行提供的 pluginManager 服务（经 bundle 层序在 dsh-mygo 之后）。
+
+- insert:
+    - id: dsh-mygo-cli
+      name: '@r05en1cu/dsh-mygo-cli'

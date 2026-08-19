@@ -2,10 +2,11 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import SessionPersistenceJsonl from '@deepseek-ai/dsh-session-persistence-jsonl'
-import SessionPersistenceSqlite from '@deepseek-ai/dsh-session-persistence-sqlite'
+import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import SqliteSessionPersistence from '@deepseek-ai/dsh-session-persistence-sqlite'
+import { RetryId } from '@deepseek-ai/dsh-llm-retry'
 import type {} from '../src/index.ts'
 
 const dirs: string[] = []
@@ -20,9 +21,9 @@ async function backend(kind: 'jsonl' | 'sqlite'): Promise<Context> {
   if (kind === 'jsonl') {
     const root = await mkdtemp(join(tmpdir(), 'dsh-llm-retry-jsonl-'))
     dirs.push(root)
-    await ctx.plugin(SessionPersistenceJsonl, { root })
+    await ctx.plugin(JsonlSessionPersistence, { root })
   } else {
-    await ctx.plugin(SessionPersistenceSqlite, { path: ':memory:' })
+    await ctx.plugin(SqliteSessionPersistence, { path: ':memory:' })
   }
   return ctx
 }
@@ -39,6 +40,7 @@ describe.each(['jsonl', 'sqlite'] as const)('%s retry-event persistence', (kind)
         reason: 'initial',
       })
       const event = session.append('llm/retry', {
+        retryId: RetryId(`retry-${kind}-chain`),
         turn: 1,
         step: 1,
         provider: 'mock',

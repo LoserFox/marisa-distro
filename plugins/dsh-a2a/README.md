@@ -1,6 +1,11 @@
-# @dpskh/a2a — Agent2Agent realtime mesh for the DeepSeek Harness
+<center>
+<h1>@dpskh/a2a — Agent2Agent realtime mesh for the DeepSeek Harness</h1>
 
 English | [中文](README.zh.md)
+
+[![dshfind](https://dshfind.com/api/card/dpskh/dsh-a2a?lang=zh)](https://dshfind.com/zh/plugins/dpskh/dsh-a2a?ref=badge)
+
+</center>
 
 One package, one entry plugin. Mounting `@dpskh/a2a` 0.3 provides the **realtime A2A mesh**: the hub host (`ctx.a2aHub`: project registry + immutable message history over the storage domain, with an optional listening hub server that also serves the realtime WebSocket), the mesh client (`ctx.a2aMesh`: one WebSocket presence per joined agent with serial injection), the `a2a_peers` / `a2a_message` / `a2a_history` tools, and the `/a2a` command surface. Presence is a live socket; messages are the durable record — realtime chat on a trusted private network.
 

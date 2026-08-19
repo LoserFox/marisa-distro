@@ -13,14 +13,14 @@ function bytes(...fragments: string[]): ReadableStream<Uint8Array<ArrayBuffer>> 
   const encoder = new TextEncoder()
   return new ReadableStream({
     start(controller) {
-      for (const fragment of fragments) { controller.enqueue(encoder.encode(fragment)) }
+      for (const fragment of fragments) controller.enqueue(encoder.encode(fragment))
       controller.close()
     },
   })
 }
 
 async function collect(stream: AsyncIterable<string>): Promise<string[]> {
-  const out: Array<string> = []
+  const out: string[] = []
   for await (const item of stream) out.push(item)
   return out
 }
@@ -28,6 +28,16 @@ async function collect(stream: AsyncIterable<string>): Promise<string[]> {
 describe('parseSse', () => {
   it('yields event payloads and the DONE sentinel', async () => {
     const events = await collect(parseSse(bytes('data: {"a":1}\n\ndata: [DONE]\n\n')))
+    expect(events).toEqual(['{"a":1}', DONE])
+  })
+
+  it('reports comments out of band without yielding them', async () => {
+    const comments: string[] = []
+    const events = await collect(parseSse(
+      bytes(': keep-alive\n\ndata: {"a":1}\n\ndata: [DONE]\n\n'),
+      (comment) => { comments.push(comment) },
+    ))
+    expect(comments).toEqual(['keep-alive'])
     expect(events).toEqual(['{"a":1}', DONE])
   })
 

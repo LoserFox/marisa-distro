@@ -3,7 +3,7 @@
 //
 // The 'conversation.input.dock' SlotMap declaration lives in
 // ../contract/slots.ts beside the other input-region slots.
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import { useEffect, useId, useMemo, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
@@ -214,7 +214,7 @@ export function QueueDock({ useSession, updateQueue, notify, t }: QueueDockProps
 
 /**
  * The dock entry as a plain registrant plugin. The conversation service is
- * the action seam; the slot declaration is its independent lifecycle seam.
+ * the action contract; the slot declaration has an independent lifecycle boundary.
  */
 export const queueDockEntry = {
   name: 'conversation-queue-dock',

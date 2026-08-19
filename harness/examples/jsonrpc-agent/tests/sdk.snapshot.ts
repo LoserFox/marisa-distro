@@ -2,8 +2,8 @@
  * Keyless snapshot coverage for the TypeScript SDK path: each scenario spawns
  * the REAL `dsh-jsonrpc-agent` runtime (per `DSH_EXAMPLE_MODE`) through the
  * REAL `@deepseek-ai/dsh-sdk-client`, drives one turn over stdio JSON-RPC,
- * and pins three surfaces — the SDK `RunResult`, the complete notification
- * stream, and the persisted session logs. Replay serves recorded model
+ * and pins the SDK `RunResult`, the complete notification stream, and the
+ * persisted session logs. Replay serves recorded model
  * responses via `llm-replay` (`cordis.snapshot.yml`); `DSH_SNAPSHOT=record`
  * re-records against the live API; `DSH_SNAPSHOT=refresh` replays committed
  * fixtures and rewrites expected outputs.
@@ -33,10 +33,20 @@ const testsDir = dirOf(import.meta.url)
 const snapshotsDir = join(testsDir, 'snapshots')
 const liveConfig = join(testsDir, '..', 'cordis.yml')
 const replayConfig = join(testsDir, '..', 'cordis.snapshot.yml')
-const persistentToolsLiveConfig = join(testsDir, '..', 'persistent-tools.cordis.yml')
-const persistentToolsReplayConfig = join(testsDir, '..', 'persistent-tools.snapshot.cordis.yml')
+const minimalLiveConfig = join(testsDir, '..', 'minimal.cordis.yml')
+const minimalReplayConfig = join(testsDir, '..', 'minimal.snapshot.cordis.yml')
 const runtimeBin = fileURLToPath(new URL('../../../packages/examples/jsonrpc-demo/src/bin.ts', import.meta.url))
 const repoTsconfig = fileURLToPath(new URL('../../../tsconfig.json', import.meta.url))
+
+const MINIMAL_SYSTEM_PROMPT = 'You are the environment-selected minimal software engineer.'
+const MINIMAL_BASH_DESCRIPTION = `Run commands in a bash shell
+* When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.
+* You don't have access to the internet via this tool.
+* You do have access to a mirror of common linux and python packages via apt and pip.
+* State is persistent across command calls and discussions with the user.
+* To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.
+* Please avoid commands that may produce a very large amount of output.
+* Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.`
 
 const mode = process.env.DSH_SNAPSHOT ?? 'replay'
 const recording = mode === 'record'
@@ -57,12 +67,18 @@ interface SdkScenario {
   children: number
   /** Optional scenario-specific live and replay compositions. */
   configs?: { live: string; replay: string }
+  /** Environment overrides passed to the runtime subprocess. */
+  environment?: Readonly<Record<string, string>>
   /** Cwd-relative files whose final contents are part of the scenario contract. */
   expectedFiles?: Readonly<Record<string, string>>
   /** Assembled model-facing tool names and required argument keys. */
   expectedTools?: Readonly<Record<string, readonly string[]>>
-  /** Stable policy-context clauses the real assembled request must include or omit. */
-  policyContext?: { includes: readonly string[]; excludes: readonly string[] }
+  /** Exact assembled system prompt for the root request. */
+  expectedSystem?: string
+  /** Exact model-facing descriptions for selected tools. */
+  expectedToolDescriptions?: Readonly<Record<string, string>>
+  /** Expected runtime-context state in the real assembled request. */
+  runtimeContext?: false | { includes: readonly string[]; excludes: readonly string[] }
 }
 
 const SCENARIOS: SdkScenario[] = [
@@ -79,7 +95,7 @@ const SCENARIOS: SdkScenario[] = [
     children: 0,
   },
   {
-    name: 'subagent-spawn',
+    name: 'subagent-spawn-in-process',
     prompt: "Use the subagent tool exactly once with description 'echo probe' and prompt: Reply with exactly: child answer 42. Then reply with the subagent's final answer verbatim.",
     sessionId: 'sdk-snapshot-subagent',
     children: 1,
@@ -89,13 +105,13 @@ const SCENARIOS: SdkScenario[] = [
     prompt: 'Prove that bash state persists. Then create {{cwd}}/note.txt with a tab-indented line, view it, replace that literal tab-indented line, and make the persistent shell exit with code 9.',
     sessionId: 'persistent-tools-snapshot',
     children: 0,
-    configs: { live: persistentToolsLiveConfig, replay: persistentToolsReplayConfig },
+    configs: { live: minimalLiveConfig, replay: minimalReplayConfig },
+    environment: { DSH_SYSTEM_PROMPT: MINIMAL_SYSTEM_PROMPT },
     expectedFiles: { 'note.txt': 'target:\n\tnew\n' },
     expectedTools: { bash: ['command'], str_replace_editor: ['command', 'path'] },
-    policyContext: {
-      includes: ['Current DSH file policy: danger-full-access.', 'file modifications by available operations'],
-      excludes: ['write and edit tools', 'terminal sessions', 'one-shot bash commands'],
-    },
+    expectedSystem: MINIMAL_SYSTEM_PROMPT,
+    expectedToolDescriptions: { bash: MINIMAL_BASH_DESCRIPTION },
+    runtimeContext: false,
   },
 ]
 
@@ -125,16 +141,33 @@ async function persistedLogs(sessionsRoot: string): Promise<PersistedLog[]> {
 
 interface LoggedRequestHeader {
   type?: string
-  data?: { header?: { system?: unknown; tools?: Array<{ name: string; parameters: { required?: string[] } }> } }
+  data?: { header?: { system?: unknown; tools?: LoggedTool[] } }
 }
 
-function assembledToolRequirements(log: PersistedLog): Record<string, string[]> {
+interface LoggedTool {
+  readonly name: string
+  readonly description?: unknown
+  readonly parameters: { readonly required?: string[] }
+}
+
+function assembledTools(log: PersistedLog): LoggedTool[] {
   const event = log.content.trimEnd().split('\n')
     .map(line => JSON.parse(line) as LoggedRequestHeader)
     .find(candidate => candidate.type === 'request/header')
   const tools = event?.data?.header?.tools
   if (tools === undefined) throw new Error('session log has no request/header tools')
-  return Object.fromEntries(tools.map(tool => [tool.name, tool.parameters.required ?? []]))
+  return tools
+}
+
+function assembledToolRequirements(log: PersistedLog): Record<string, string[]> {
+  return Object.fromEntries(assembledTools(log).map(tool => [tool.name, tool.parameters.required ?? []]))
+}
+
+function assembledToolDescriptions(log: PersistedLog): Record<string, string> {
+  return Object.fromEntries(assembledTools(log).map((tool) => {
+    if (typeof tool.description !== 'string') throw new Error(`tool ${tool.name} has no description`)
+    return [tool.name, tool.description]
+  }))
 }
 
 function assembledSystem(log: PersistedLog): string {
@@ -146,8 +179,8 @@ function assembledSystem(log: PersistedLog): string {
   return system
 }
 
-function assembledPolicyContext(log: PersistedLog): string {
-  const contexts = log.content.trimEnd().split('\n').flatMap((line) => {
+function assembledRuntimeContexts(log: PersistedLog): string[] {
+  return log.content.trimEnd().split('\n').flatMap((line) => {
     const event = JSON.parse(line) as {
       type?: string
       data?: { source?: { kind?: string; plugin?: string }; content?: Array<{ type?: string; text?: unknown }> }
@@ -157,8 +190,6 @@ function assembledPolicyContext(log: PersistedLog): string {
       || event.data.source.plugin !== '@deepseek-ai/dsh-system-prompt') return []
     return event.data.content?.flatMap(block => block.type === 'text' && typeof block.text === 'string' ? [block.text] : []) ?? []
   })
-  if (contexts.length !== 1) throw new Error(`session log has ${String(contexts.length)} runtime-context snapshots; expected one`)
-  return contexts[0] as string
 }
 
 function contextOf(logs: readonly { content: string; header: Record<string, unknown> }[], cwd: string): NormalizeContext {
@@ -258,6 +289,7 @@ async function runScenario(scenario: SdkScenario): Promise<{
       DSH_SNAPSHOT_FILE: parentFixture,
       ...childFixtures.length > 0 ? { DSH_SNAPSHOT_CHILD_FILES: childFixtures.join(delimiter) } : {},
     },
+    ...scenario.environment,
   }
 
   const harness = new DeepSeekHarness({
@@ -273,7 +305,7 @@ async function runScenario(scenario: SdkScenario): Promise<{
     model: 'deepseek-v4-flash',
   })
   try {
-    const notifications: Array<HarnessNotification> = []
+    const notifications: HarnessNotification[] = []
     const result = await harness.run(scenario.prompt.replaceAll('{{cwd}}', cwd), {
       sessionId: scenario.sessionId,
       onNotification: (notification) => { notifications.push(notification) },
@@ -400,14 +432,30 @@ describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
         if (parent === undefined) throw new Error(`${scenario.name} has no parent session log`)
         expect(assembledToolRequirements(parent)).toEqual(scenario.expectedTools)
       }
-      if (scenario.policyContext !== undefined) {
+      if (scenario.expectedSystem !== undefined) {
         const parent = ordered[0]
         if (parent === undefined) throw new Error(`${scenario.name} has no parent session log`)
-        const context = assembledPolicyContext(parent)
-        for (const clause of scenario.policyContext.includes) expect(context).toContain(clause)
-        for (const clause of scenario.policyContext.excludes) expect(context).not.toContain(clause)
-        const system = assembledSystem(parent)
-        for (const clause of scenario.policyContext.includes) expect(system).not.toContain(clause)
+        expect(assembledSystem(parent)).toBe(scenario.expectedSystem)
+      }
+      if (scenario.expectedToolDescriptions !== undefined) {
+        const parent = ordered[0]
+        if (parent === undefined) throw new Error(`${scenario.name} has no parent session log`)
+        expect(assembledToolDescriptions(parent)).toMatchObject(scenario.expectedToolDescriptions)
+      }
+      if (scenario.runtimeContext !== undefined) {
+        const parent = ordered[0]
+        if (parent === undefined) throw new Error(`${scenario.name} has no parent session log`)
+        const contexts = assembledRuntimeContexts(parent)
+        if (scenario.runtimeContext === false) {
+          expect(contexts).toEqual([])
+        } else {
+          expect(contexts).toHaveLength(1)
+          const context = contexts[0] as string
+          for (const clause of scenario.runtimeContext.includes) expect(context).toContain(clause)
+          for (const clause of scenario.runtimeContext.excludes) expect(context).not.toContain(clause)
+          const system = assembledSystem(parent)
+          for (const clause of scenario.runtimeContext.includes) expect(system).not.toContain(clause)
+        }
       }
       if (scenario.children > 0) {
         expect(notifications.some(n => n.method === 'subagent.started')).toBe(true)

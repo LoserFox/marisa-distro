@@ -24,7 +24,7 @@
       "path": "../../core/session"
     },
     {
-      "path": "../../session-persistence/session-persistence"
+      "path": "../../session/session-persistence"
     },
     {
       "path": "../../core/system-prompt"
@@ -39,7 +39,10 @@
       "path": "../../core/scope"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

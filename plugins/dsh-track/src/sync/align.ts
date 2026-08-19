@@ -152,12 +152,22 @@ export function mergeIntoIssue(existing: Issue, candidate: IssueCandidate): Issu
   const linkedSessionIds = Array.from(new Set([...(existing.linkedSessionIds ?? []), ...candidate.linkedSessionIds]))
   // State evolution: promote, never demote, and never auto-done.
   const state = promoteState(existing.state, candidate.suggestedState)
+  const citation = candidate.span !== undefined && candidate.sessionId !== undefined
+    ? { sessionId: candidate.sessionId, seqStart: candidate.span.seqStart, seqEnd: candidate.span.seqEnd, kind: 'span' as const }
+    : undefined
+  const citations = existing.citations ?? []
+  const mergedCitations = citation !== undefined && !citations.some((x) => x.sessionId === citation.sessionId && x.seqStart === citation.seqStart)
+    ? [...citations, citation]
+    : citations
   return {
     ...existing,
     state,
     linkedSessionIds,
     description: existing.description || candidate.description,
     labels: Array.from(new Set([...existing.labels, ...candidate.labels])),
+    semanticKind: existing.semanticKind ?? candidate.semanticKind,
+    citations: mergedCitations,
+    sourceSpan: existing.sourceSpan ?? mergedCitations[0],
     updatedAt: new Date().toISOString(),
   }
 }
@@ -219,7 +229,7 @@ function overlap(a: string, b: string, containmentThreshold: number): boolean {
 }
 
 /** Normalize content into comparable tokens: CJK bigrams + latin words. */
-function contentTokens(text: string): Set<string> {
+export function contentTokens(text: string): Set<string> {
   const tokens = new Set<string>()
   const lower = text.toLowerCase()
   for (const word of lower.match(/[a-z][a-z0-9-]*/g) ?? []) {

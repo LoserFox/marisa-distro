@@ -28,10 +28,13 @@ async function host(): Promise<{ ctx: Context; handler: ConnectionRpcHandler }> 
     handler = next
     return async () => {}
   })
+  const registerUpgrade = vi.fn(() => () => {})
   ctx.provide('connection', { rpc: { handle } } as never)
+  ctx.provide('webServer', { registerUpgrade } as never)
   ctx.provide('a2aMesh', mesh())
   await ctx.plugin({ inject: [...inject], apply }).await()
   expect(handle).toHaveBeenCalledWith(A2A_RPC_CHANNEL, expect.any(Function), { authority: 'trusted-host' })
+  expect(registerUpgrade).toHaveBeenCalledWith(expect.objectContaining({ path: '/dpskh-a2a/events' }))
   if (handler === undefined) throw new Error('A2A RPC handler was not registered')
   return { ctx, handler }
 }
@@ -51,20 +54,21 @@ describe('A2A Host bridge', () => {
     })
   })
 
-  it('invalidates only the changed session while project changes invalidate all sessions', async () => {
+  it('tracks per-session and global revisions across a2a/change', async () => {
     const { ctx, handler } = await host()
-    const signal = new AbortController().signal
-    const first = handler(A2A_RPC_ENDPOINTS.watch, { sessionId: 's1', revision: 0 }, signal)
+    // A session-scoped change bumps only that session's revision.
     ctx.emit('a2a/change', { scope: 'session', agentId: 's2' })
-    await expect(Promise.race([
-      first.then(() => 'resolved'),
-      new Promise<'pending'>(resolve => { setTimeout(() => { resolve('pending') }, 0) }),
-    ])).resolves.toBe('pending')
+    await expect(handler(A2A_RPC_ENDPOINTS.snapshot, { sessionId: 's1' }, new AbortController().signal))
+      .resolves.toMatchObject({ ok: true, value: { ok: true, value: { revision: 0, connected: false, peers: [], projects: [] } } })
     ctx.emit('a2a/change', { scope: 'session', agentId: 's1' })
-    await expect(first).resolves.toMatchObject({ ok: true, value: { ok: true, value: { revision: 2 } } })
-
-    const second = handler(A2A_RPC_ENDPOINTS.watch, { sessionId: 's1', revision: 2 }, signal)
+    await expect(handler(A2A_RPC_ENDPOINTS.snapshot, { sessionId: 's1' }, new AbortController().signal))
+      .resolves.toMatchObject({ ok: true, value: { ok: true, value: { revision: 2 } } })
+    // A global change invalidates every session.
     ctx.emit('a2a/change', { scope: 'all' })
-    await expect(second).resolves.toMatchObject({ ok: true, value: { ok: true, value: { revision: 3 } } })
+    await expect(handler(A2A_RPC_ENDPOINTS.snapshot, { sessionId: 's1' }, new AbortController().signal))
+      .resolves.toMatchObject({ ok: true, value: { ok: true, value: { revision: 3 } } })
+    // The watch RPC endpoint is gone: unknown endpoints are rejected.
+    await expect(handler('watch', { sessionId: 's1', revision: 0 }, new AbortController().signal))
+      .resolves.toMatchObject({ ok: true, value: { ok: false, error: { code: 'a2a-invalid-request' } } })
   })
 })

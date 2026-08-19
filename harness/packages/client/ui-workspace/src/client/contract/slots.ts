@@ -91,9 +91,9 @@ export type DirectoryPickingHooks = {
  */
 export type WorkspaceBrowserInjected = DirectoryPickingInjected & {
   /**
-   * Start a New Session in a Workspace: reuse-or-create its blank session
-   * and open it; with no workspace, clear the selection into the New Session
-   * pure view state (the conversation.empty seat).
+   * Start a New Session in a Workspace: reuse-or-create its blank session and
+   * open it; without an explicit workspace, inherit the current Session
+   * Workspace, then the recent Workspace, or clear into the New Session view.
    */
   startSession: (workspaceId?: WorkspaceId) => void
   /** Open a real Session. */
@@ -116,6 +116,11 @@ export type WorkspaceBrowserInjected = DirectoryPickingInjected & {
   renameWorkspace: (workspaceId: WorkspaceId, title: string) => Promise<void>
   /** Delete only a Host Workspace registration; directory and Session logs remain. */
   deleteWorkspace: (workspaceId: WorkspaceId) => Promise<void>
+  /**
+   * Reorder a Workspace in the durable registry display order.
+   * Omitted anchor appends to the end.
+   */
+  insertWorkspaceBefore: (workspaceId: WorkspaceId, beforeWorkspaceId?: WorkspaceId) => Promise<void>
   /**
    * Archive a Session into the registry-global set: hidden from grouping
    * surfaces, log and accounting slot retained. Archiving the current

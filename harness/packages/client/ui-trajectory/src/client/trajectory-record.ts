@@ -40,13 +40,15 @@ export interface TrajectoryCellProps extends HTMLAttributes<HTMLDivElement> {
   /** Projection-stable identity when no single source event owns the record lifecycle. */
   recordId?: string
   kind: TrajectoryCellKind
-  /** Single-line summary; CSS ellipsis when it overflows. */
+  /** Non-Markdown summary or prefix; CSS ellipsis when it overflows. */
   text: string
+  /** Raw Markdown source converted into the single-line summary at its consumer. */
+  previewMarkdown?: string
   /** Whether this user record opens a new model turn. */
   opensTurn?: boolean
   /** Source session-event seq for cross-record navigation. */
   sourceSeq?: number
-  /** Producer provenance from a user-role message or context injection. */
+  /** Producer role and name from a user-role message or context injection. */
   messageSource?: unknown
   /** Producer-owned model-hidden metadata carried beside the message source. */
   /** A separator-only anchor for an auxiliary request with no visible record. */
@@ -71,6 +73,8 @@ export interface TrajectoryCellProps extends HTMLAttributes<HTMLDivElement> {
   assistantMetrics?: AssistantMetricDetail
   /** Tool-only result summary paired with the call in the same record. */
   result?: string
+  /** Raw Markdown source converted into the tool-result summary at its consumer. */
+  resultPreviewMarkdown?: string
   /** Tool call id used to link message source blocks to tool records. */
   callId?: string
   /** Tool-only result failure state. */
@@ -112,7 +116,8 @@ export function trajectoryRecordId(cell: TrajectoryCellProps): string {
  */
 export function formatDurationMillis(milliseconds: number | null): string {
   if (milliseconds === null || !Number.isFinite(milliseconds)) return '—'
-  return `${Math.round(milliseconds).toLocaleString('en-US')} ms`
+  const integer = String(Math.round(milliseconds))
+  return `${integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ms`
 }
 
 /**

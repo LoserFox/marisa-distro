@@ -18,13 +18,16 @@
       "path": "../../llm/llm"
     },
     {
+      "path": "../../core/system-prompt"
+    },
+    {
       "path": "../../core/tools"
     },
     {
       "path": "../subagent"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

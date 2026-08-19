@@ -1,4 +1,4 @@
-# Agent Note（agent 决策记录）：slot 声明注入与重载生命周期
+# Agent Note: slot 声明注入与重载生命周期
 
 Status: implemented
 
@@ -12,7 +12,7 @@ slot 级热替换还要求两个相互独立的所有者。移除声明方插件
 
 ## 决策
 
-`SlotsService.inject(name, callback)` 以已声明的 slot 本身作为依赖。完整的 `SlotMap` key 会经过静态检查；系统不引入命名空间构建器、合成的 Cordis 服务或 slot 专属 `Context`。声明存在时回调同步执行，否则等待；回调返回一个同步 disposer，或由多个 disposer 构成的同步 iterable。iterable effect 的安装具有事务性：后续 setup 失败时，系统会按逆序 dispose（资源释放）之前 yield 的所有 effect。
+`SlotRegistry.inject(name, callback)` 以已声明的 slot 本身作为依赖。完整的 `SlotMap` key 会经过静态检查；系统不引入命名空间构建器、合成的 Cordis 服务或 slot 专属 `Context`。声明存在时回调同步执行，否则等待；回调返回一个同步 disposer，或由多个 disposer 构成的同步 iterable。iterable effect 的安装具有事务性：后续 setup 失败时，系统会按逆序 dispose（资源释放）之前 yield 的所有 effect。
 
 该账本记录独立于 slot 普通条目版本的 declaration epoch（声明代次）。每当子声明创建或折叠时，epoch 都会变化。注入会记住活跃 epoch；该 epoch 结束时，注入会 dispose 其回调 effect；即使最终观测到的状态始终为已声明，也会为替换声明重新执行回调。普通贡献变更不会重启注入。
 
@@ -20,7 +20,7 @@ slot 级热替换还要求两个相互独立的所有者。移除声明方插件
 
 动态重载代码使用普通 Cordis 插件 fiber 作为替换单元：通过 `ctx.plugin()` 激活新模块；挂载替换模块之前，先 dispose 并等待旧 fiber；该 fiber 的 `slots.inject` 与 `slots.register` effect 会随之退出。renderer 订阅会观察到账本移除并卸载组件；无需建立 slot 自有的 fiber 树。
 
-## 失败与生命周期契约
+## 失败与生命周期约定
 
 如果注入创建时声明已经存在，回调 setup 失败会同步上报。延迟声明出现后发生的回调失败，会先取消订阅并回滚已收集的 effect，再在 slot 通知刷新之外上报，避免一个注册方使其他 listener 得不到执行机会。直接调用 `slots.register()` 向未声明 slot 注册仍会抛出异常：注入是显式机制，不会削弱加载时验证。
 
@@ -28,11 +28,11 @@ slot 级热替换还要求两个相互独立的所有者。移除声明方插件
 
 ## 备选方案
 
-**将 `ConversationService` 或其他服务用作顺序屏障。** 服务存在并不能标识相应声明，也不会跟随声明的重载生命周期；只负责呈现的贡献方还会因此产生虚假的包（package）依赖。
+**将 `ConversationController` 或其他服务用作顺序屏障。** 服务存在并不能标识相应声明，也不会跟随声明的重载生命周期；只负责呈现的贡献方还会因此产生虚假的包依赖。
 
-**将每项声明桥接为 `slot:<name>` Cordis 服务。** 这会污染服务命名空间，使拼错的动态 key 变成静默的服务等待，并把账本状态伪装成业务 capability。原生 slot 注入无需改变 Cordis 拓扑，即可提供同样的等待能力。
+**将每项声明桥接为 `slot:<name>` Cordis 服务。** 这会污染服务命名空间，使拼错的动态 key 变成静默的服务等待，并把账本状态伪装成业务能力。原生 slot 注入无需改变 Cordis 拓扑，即可提供同样的等待能力。
 
-**为每个 slot 创建 Cordis 上下文或 fiber。** 贡献方需要的是自身插件生命周期与声明生命周期的交集，而不是声明方的 capability。slot 所有的上下文会引入 capability 继承和双父级拆卸问题，却无法改善账本所有权。
+**为每个 slot 创建 Cordis 上下文或 fiber。** 贡献方需要的是自身插件生命周期与声明生命周期的交集，而不是声明方的能力。slot 所有的上下文会引入 capability 继承和双父级拆卸问题，却无法改善账本所有权。
 
 **让 `register()` 隐式等待。** 对未声明目标立即失败是一项有价值的配置检查。显式注入能够区分有意独立排序的贡献与错误组合。
 

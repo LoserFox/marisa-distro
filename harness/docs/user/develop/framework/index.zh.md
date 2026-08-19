@@ -80,7 +80,7 @@ export function apply(ctx: Context) {
 当你需要提前终止一个插件实例：
 
 ```ts
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 
 declare const ctx: Context
 declare function myPlugin(ctx: Context): void
@@ -98,7 +98,7 @@ await fiber.dispose()
 
 ## HMR（热模块替换）
 
-通过 `cordis.yml` 加载 `@cordisjs/plugin-hmr` 后，修改插件源文件会触发：
+通过 `cordis.yml` 加载 `@deepseek-ai/cordis-plugin-hmr` 后，修改插件源文件会触发：
 
 1. 卸载旧插件（清理所有注册）
 2. 重新加载新代码
@@ -134,3 +134,4 @@ effect cleaned up
 
 - [服务与依赖](./service.md) — 让插件向其他插件提供能力
 - [事件系统](./events.md) — 在插件之间通信
+- [Cordis 框架教程](../../../cordis-tutorial/index.md) — 在 Cordis 运行时上逐步搭出同一套生命周期、服务与事件

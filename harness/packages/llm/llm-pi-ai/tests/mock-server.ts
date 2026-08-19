@@ -47,7 +47,7 @@ export async function mockServer(script: {
     request.on('data', (chunk: Buffer) => { body += chunk.toString('utf8') })
     request.on('end', () => {
       paths.push(request.url ?? '')
-      requests.push(body.length !== 0 ? JSON.parse(body) : undefined)
+      requests.push(body.length === 0 ? undefined : JSON.parse(body))
       headers.push(request.headers)
       const behavior = script.shift() ?? { status: 500, body: 'script exhausted' }
       if (behavior.status !== undefined && behavior.status !== 200) {

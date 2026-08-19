@@ -8,7 +8,7 @@
 // above the composer, so the row stays one line until expanded.
 
 import { IconChecklistOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ToolCallViewProps } from '../../contract/slots.ts'
 import { toolRowModel } from '../models/tool-call-model.ts'
@@ -41,7 +41,7 @@ function summarize(argsRaw: string, t: TodoRowProps['t']): RowSummary | null {
     // Mid-stream truncation or malformed model JSON: fall back to the generic summary.
     return null
   }
-  // Valid JSON with an invalid shape (null root, non-array todos, null items —
+  // Valid JSON with invalid todo fields (null root, non-array todos, null items —
   // a rejected tool/call retains such args verbatim): same generic fallback.
   if (typeof parsed !== 'object' || parsed === null) return null
   const todos = (parsed as { todos?: unknown }).todos

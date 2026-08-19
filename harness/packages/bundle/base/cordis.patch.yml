@@ -14,19 +14,12 @@
 
 - insert:
     - id: timer
-      name: '@cordisjs/plugin-timer'
+      name: '@deepseek-ai/cordis-plugin-timer'
 
     - id: hmr
-      name: '@cordisjs/plugin-hmr'
+      name: '@deepseek-ai/cordis-plugin-hmr'
       config:
         root: ['.']
-
-    # The profile's cordis.patch.yml replaces this row's config to select exact GitHub
-    # repository Plugin generations. The app registers the DSH-owned runtime even
-    # when the list is empty so a later personal-config edit can load
-    # transactionally; one-shot headless runs consume the startup value only.
-    - id: repository-plugins
-      name: '@deepseek-ai/dsh-repository-plugin'
 
     - id: llm
       name: '@deepseek-ai/dsh-llm'
@@ -51,7 +44,7 @@
         maxTitleBytes: 80
 
     - id: session-title-llm
-      name: '@deepseek-ai/dsh-session-title-first-message-llm'
+      name: '@deepseek-ai/dsh-session-title-first-prompt-llm'
       config:
         targetWords: 5
         targetCjkCharacters: 10
@@ -59,14 +52,22 @@
         maxOutputTokens: 64
         timeoutMs: 60000
 
-    - id: user-interaction
-      name: '@deepseek-ai/dsh-user-interaction'
+    - id: user-questions
+      name: '@deepseek-ai/dsh-user-questions'
 
     - id: agent
       name: '@deepseek-ai/dsh-agent'
 
-    - id: tasks
-      name: '@deepseek-ai/dsh-tasks-local'
+    # The transport-independent default for Agents created by entry points.
+    # Settings may supply a saved selection; consumers read it at creation time.
+    - id: agent-default-model
+      name: '@deepseek-ai/dsh-agent-default-model'
+      config:
+        provider: deepseek-official
+        model: deepseek-v4-flash
+
+    - id: jobs
+      name: '@deepseek-ai/dsh-jobs-local'
 
     - id: llm-retry
       name: '@deepseek-ai/dsh-llm-retry'
@@ -75,7 +76,7 @@
     # `llm-deepseek:` or `llm-pi-ai:` section there overrides the adapter entries
     # below without a restart, and is what the web Models page writes.
     - id: settings
-      name: '@deepseek-ai/dsh-settings-local'
+      name: '@deepseek-ai/dsh-settings-file'
 
     # Credential sources: inherited environment over the managed
     # `$DSH_HOME/.credentials.yaml`, with project and user `.env` fallbacks.
@@ -99,13 +100,25 @@
       config:
         root: !!js dshHomePath('sessions')
 
-    # Raw configs can supply a process-local path or disable this shared session
-    # capability. The neutral default is process-local and opens only when used.
+    # Durable image bytes live outside the append-only session log. Messages
+    # keep content-addressed references that this shared backend resolves for
+    # provider requests and authorized history reads.
+    - id: attachment-local
+      name: '@deepseek-ai/dsh-attachment-local'
+
+    # Full-text session search is opt-in. `openAt: never` keeps
+    # ctx.sessionQuery mounted — exact reads, titles, and lineage traces
+    # (session export, subagent-fork Workspace inheritance) stay available —
+    # while search calls fail with SESSION_QUERY_SEARCH_DISABLED and SQLite is
+    # never opened; the Web sidebar search matches titles and workspace names
+    # only. Deployments enabling content search override `openAt` to
+    # `first-search` or `startup` in a later patch layer (profile
+    # cordis.patch.yml or a --patch overlay), typically with a durable `path`.
     - id: session-query-sqlite
       name: '@deepseek-ai/dsh-session-query-sqlite'
       config:
         path: ':memory:'
-        openAt: first-search
+        openAt: never
 
     # Shared projection registry: subagent catalog identity (mode/label) folds
     # through its registered units, so the `list_agents` surface below fails
@@ -113,17 +126,15 @@
     - id: session-projection
       name: '@deepseek-ai/dsh-session-projection'
 
-    # Session telemetry, on for every dsh mode: mirrors every session-log
-    # event (assistant/chunk projected to first-of-step) plus ops markers onto
-    # OTLP/HTTP log records, streaming on the batch processor's cadence
-    # (10s/batch here) — not at exit; a crash loses at most the last unexported
-    # interval. No telemetry/record redaction rule is mounted yet, so exports
-    # are the raw captured copy; the deployment stance, env seams, and
-    # follow-ups are pinned in the web-telemetry-default-mount Agent Note.
-    # DSH_TELEMETRY_OTLP_URL overrides the production endpoint, and a non-empty
+    # Session telemetry is mounted but disabled by default. DSH_TELEMETRY_MODE
+    # explicitly opts into FULL or FEEDBACK_ONLY reporting; uploading mirrors
+    # session-log records onto OTLP/HTTP logs with no session-telemetry/record redaction
+    # rule, so exports are the raw captured copy. The deployment stance, env
+    # seams, and follow-ups are pinned in the default-off Agent Note.
+    # DSH_TELEMETRY_OTLP_URL overrides the production endpoint. A non-empty
     # DSH_TELEMETRY_DISABLED — any value, including '0'/'false' — opts the
     # process out (the launchers patch the row disabled; config cannot disable
-    # a row). Exports carry the harness home's anonymous user id ($DSH_HOME/.userid,
+    # a row). Exports carry the harness home's anonymous user id ($DSH_HOME/.anonymous-user-id,
     # random UUID; delete the file to reset the identity) as the Resource's
     # user.id. The exporter/processor values normally bound the shutdown drain
     # to ~1s against an unreachable collector: exporter.timeoutMillis is both
@@ -134,9 +145,10 @@
     # shutdownTimeoutMillis is the load-bearing outer bound when a transport
     # promise never settles. Every CLI exit path drains it by disposing the root
     # on SIGINT/SIGTERM.
-    - id: telemetry-otel
+    - id: session-telemetry-otel
       name: '@deepseek-ai/dsh-session-telemetry-otel'
       config:
+        mode: !!js process.env.DSH_TELEMETRY_MODE || 'DISABLED'
         shutdownTimeoutMillis: 3000
         exporter:
           url: !!js process.env.DSH_TELEMETRY_OTLP_URL ?? 'https://harness-telemetry.deepseeksvc.com/v1/logs'
@@ -165,8 +177,13 @@
 
     - id: bash-sandbox
       name: '@deepseek-ai/dsh-bash-sandbox'
+      disabled: !!js process.platform === 'win32'
       config:
         timeoutMs: 60000
+
+    - id: pwsh-sandbox
+      name: '@deepseek-ai/dsh-pwsh-sandbox'
+      disabled: !!js process.platform !== 'win32'
 
     - id: approval
       name: '@deepseek-ai/dsh-user-approval'
@@ -174,7 +191,7 @@
         policy: !!js "(process.env.DSH_PERMISSION_MODE ?? 'workspace-write') === 'danger-full-access' ? 'never' : 'ask'"
 
     - id: permission
-      name: '@deepseek-ai/dsh-permission'
+      name: '@deepseek-ai/dsh-permission-presets'
       config:
         presets:
           read-only:
@@ -187,17 +204,22 @@
             sandbox: danger-full-access
             approval: never
 
-    - id: bash-env
-      name: '@deepseek-ai/dsh-bash-env'
+    - id: shell-env
+      name: '@deepseek-ai/dsh-shell-env'
 
     - id: tool-bash
       name: '@deepseek-ai/dsh-tool-bash'
+      disabled: !!js process.platform === 'win32'
 
-    - id: tool-tasks
-      name: '@deepseek-ai/dsh-tool-tasks'
+    - id: tool-pwsh
+      name: '@deepseek-ai/dsh-tool-pwsh'
+      disabled: !!js process.platform !== 'win32'
 
-    - id: fs-policy
-      name: '@deepseek-ai/dsh-fs-policy'
+    - id: tool-jobs
+      name: '@deepseek-ai/dsh-tool-jobs'
+
+    - id: fs-observation-policy
+      name: '@deepseek-ai/dsh-fs-observation-policy'
 
     - id: tool-fs
       name: '@deepseek-ai/dsh-tool-fs'
@@ -207,16 +229,16 @@
       config:
         sampleOverCapGlobResults: false
 
-    - id: workspace-context
-      name: '@deepseek-ai/dsh-workspace-context'
+    - id: agent-instructions
+      name: '@deepseek-ai/dsh-agent-instructions'
       config:
         maxBytes: 65536
 
     - id: skill
       name: '@deepseek-ai/dsh-skill'
 
-    - id: skill-local
-      name: '@deepseek-ai/dsh-skill-local'
+    - id: skill-filesystem
+      name: '@deepseek-ai/dsh-skill-filesystem'
 
     - id: skill-badge
       name: '@deepseek-ai/dsh-skill-badge'
@@ -234,8 +256,8 @@
     - id: goal
       name: '@deepseek-ai/dsh-goal'
 
-    - id: goal-session
-      name: '@deepseek-ai/dsh-goal-session'
+    - id: goal-round-driver
+      name: '@deepseek-ai/dsh-goal-round-driver'
 
     - id: command-goal
       name: '@deepseek-ai/dsh-command-goal'
@@ -259,8 +281,8 @@
     - id: token-meter
       name: '@deepseek-ai/dsh-token-meter'
 
-    - id: compact-basic
-      name: '@deepseek-ai/dsh-compact-basic'
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
 
     # Human `/compact`: one useful reduction below the automatic threshold. Backend
     # independent, so it follows whichever compaction service this leaf mounts.
@@ -270,13 +292,13 @@
     - id: subagent
       name: '@deepseek-ai/dsh-subagent'
 
-    - id: subagent-spawn
-      name: '@deepseek-ai/dsh-subagent-spawn'
+    - id: subagent-spawn-in-process
+      name: '@deepseek-ai/dsh-subagent-spawn-in-process'
       config:
         providerName: spawn
 
-    - id: subagent-fork
-      name: '@deepseek-ai/dsh-subagent-fork'
+    - id: subagent-fork-in-process
+      name: '@deepseek-ai/dsh-subagent-fork-in-process'
       config:
         providerName: fork
 
@@ -295,19 +317,23 @@
         toolName: subagent
         backgroundMode: continuable
 
+    # Fork stays one-shot: a continuable child's `report` tool and prompt
+    # section precede the inherited history a fork exists to reuse; one-shot
+    # fork children install neither, keeping the parent's request prefix.
+    # See .agents/notes/implemented/architecture/2026-08-10-fork-children-stay-one-shot.md.
     - id: tool-subagent-fork
       name: '@deepseek-ai/dsh-tool-subagent'
       config:
         provider: fork
         toolName: subagent_fork
-        backgroundMode: continuable
+        backgroundMode: one-shot
 
     # Optional direct-child return channel; absent from roots and one-shot agents.
     - id: tool-subagent-report
       name: '@deepseek-ai/dsh-tool-subagent-report'
 
-    - id: workflow-workerthread
-      name: '@deepseek-ai/dsh-workflow-workerthread'
+    - id: workflow-worker-thread
+      name: '@deepseek-ai/dsh-workflow-worker-thread'
       config:
         provider: spawn
 
@@ -315,7 +341,7 @@
       name: '@deepseek-ai/dsh-tool-workflow'
 
     - id: timeout-policy
-      name: '@deepseek-ai/dsh-timeout-policy'
+      name: '@deepseek-ai/dsh-tool-call-timeout-policy'
 
     - id: spill-local
       name: '@deepseek-ai/dsh-spill-local'
@@ -331,8 +357,8 @@
 
     # Compacts oversized tool results before the broader conversation compactor
     # runs, preserving the model-visible result within the configured budget.
-    - id: tool-result-prune
-      name: '@deepseek-ai/dsh-compact-tool-result-prune'
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
       config:
         thresholdChars: 8192
         headChars: 4096
@@ -361,13 +387,13 @@
         maxOutputChars: 16000
 
     # Consecutive-repeat reminders on the tool chain.
-    - id: repeat-tool-guard
-      name: '@deepseek-ai/dsh-repeat-tool-guard'
+    - id: repeat-tool-reminder
+      name: '@deepseek-ai/dsh-repeat-tool-reminder'
       config:
         thresholds: [3, 5, 8]
         argumentsPreviewChars: 500
 
-    # Every mode enables the stable web_search model surface. DeepSeek search
+    # Every mode enables the stable model-facing web_search tool. DeepSeek search
     # resolves the same DEEPSEEK_API_KEY credential the Models page manages for
     # chat, at each search; its Messages endpoint is separate from the
     # chat-completions endpoint, so it takes its own base-URL override. Fetch stays

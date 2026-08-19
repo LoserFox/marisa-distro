@@ -2,8 +2,8 @@
 # stdio JSON-RPC harness whose scripted model echoes its process cwd. The
 # parent's subagent-sdk backend spawns this composition per run; stdout is
 # reserved for JSON-RPC frames.
-- id: jsonrpc
-  name: '@deepseek-ai/dsh-jsonrpc'
+- id: sdk-jsonrpc-server
+  name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
 
 - id: child-mock-llm
   name: './child-mock-llm.ts'
@@ -17,7 +17,7 @@
       enabled: false
     toolBash:
       enableRunInBackground: false
-    toolTasks: false
+    toolJobs: false
 
 # The child persists its own session log beside the parent's (distinct root),
 # so the driving e2e can inspect both transcripts after the run.

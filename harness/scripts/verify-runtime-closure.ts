@@ -40,7 +40,7 @@ for (const dependency of Object.keys(runtimeDependencies).sort()) {
   queue.push(dependency)
 }
 
-const failures: Array<string> = []
+const failures: string[] = []
 for (let index = 0; index < queue.length; index += 1) {
   const packageName = queue[index]
   if (packageName === undefined) continue

@@ -4,13 +4,13 @@
  * cordis fiber states (display the truth, not a retelling) — the boot chain
  * subscribes `internal/status` and recomputes one row per loader entry.
  *
- * The store is hand-rolled here because of the shell self-sufficiency rule
- * (web2 §0): the snapshot-store machinery lives in the runtime PLUGIN
+ * The store is hand-rolled here because of the shell self-sufficiency rule:
+ * the snapshot-store machinery lives in the runtime PLUGIN
  * package, and the shell kernel must not value-import any plugin package —
  * the loading page has to work while (and especially when) plugins fail.
  * @module @deepseek-ai/dsh-client-web/src/loader-status
  */
-import type { FiberState } from 'cordis'
+import type { FiberState } from '@deepseek-ai/cordis'
 
 /**
  * Value mirror of cordis's `FiberState` const enum: a const enum has no
@@ -101,7 +101,7 @@ export function createLoaderStatusStore(): LoaderStatusStore {
   let value: LoaderStatus = {}
   const listeners = new Set<() => void>()
   return {
-    getSnapshot: () => { return value },
+    getSnapshot: () => value,
     subscribe: (fn) => { listeners.add(fn); return () => { listeners.delete(fn) } },
     set: (id, state) => {
       value = { ...value, [id]: state }

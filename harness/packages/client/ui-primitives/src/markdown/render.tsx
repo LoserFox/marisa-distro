@@ -100,6 +100,21 @@ export function collectReferenceTargets(
 }
 
 /**
+ * File-mention affordance for inline code: the owner resolves an authored
+ * token to the file it names, using its own vocabulary of real files — the
+ * renderer never guesses at what looks like a path.
+ */
+export interface MarkdownFileMentions {
+  /**
+   * Resolve one inline-code token.
+   * @param value - The authored token, exactly as written.
+   * @returns The opener with its accessible label and full-path title, or
+   * undefined when the token names no known file — it then stays inert code.
+   */
+  resolve(value: string): { open: () => void; label: string; title: string } | undefined
+}
+
+/**
  * One render pass's state: immutable options and targets plus the footnote
  * numbering accumulated in document order while references render.
  */
@@ -108,6 +123,10 @@ export interface MarkdownRenderContext {
   readonly streaming: boolean
   /** Localized fence copy-button labels. */
   readonly codeLabels: MarkdownCodeLabels | undefined
+  /** Inline-code file mentions; absent wherever no opener vocabulary exists. */
+  readonly fileMentions: MarkdownFileMentions | undefined
+  /** Inside an anchor's children: interactive mentions must not nest there. */
+  readonly inLink?: boolean
   /** Reference targets visible to this pass. */
   readonly targets: ReferenceTargets
   /** Footnote identifiers in first-reference order; a footnote's number is its 1-based index here. */
@@ -217,7 +236,27 @@ function renderNode(node: Md.RootContent, key: Key, context: MarkdownRenderConte
       // authored text, not a parsed destination, so no normalizeUri: port,
       // path, and query render unchanged.
       const href = inlineCodeHttpUrl(value)
-      return <code key={key}>{href === undefined ? value : renderSafeLink(href, [value], 'link')}</code>
+      if (href !== undefined) return <code key={key}>{renderSafeLink(href, [value], 'link')}</code>
+      // A token the owner's file-mention vocabulary recognizes opens that
+      // file; the resolver, not this renderer, decides what names a file.
+      // Inside an anchor the token stays inert — a button cannot nest there.
+      const mention = context.inLink === true ? undefined : context.fileMentions?.resolve(value)
+      if (mention !== undefined) {
+        return (
+          <code key={key}>
+            <button
+              type="button"
+              className={css.fileMention}
+              title={mention.title}
+              aria-label={mention.label}
+              onClick={mention.open}
+            >
+              {value}
+            </button>
+          </code>
+        )
+      }
+      return <code key={key}>{value}</code>
     }
     case 'html':
       // No HTML parser enters the pipeline: raw HTML stays literal text.
@@ -236,7 +275,7 @@ function renderNode(node: Md.RootContent, key: Key, context: MarkdownRenderConte
     case 'table':
       return renderTable(node, key, context)
     case 'link':
-      return renderAnchor(node.url, renderChildren(node.children, context), key)
+      return renderAnchor(node.url, renderChildren(node.children, { ...context, inLink: true }), key)
     case 'linkReference':
       return renderLinkReference(node, key, context)
     case 'image':
@@ -460,14 +499,14 @@ function renderLinkReference(
   context: MarkdownRenderContext,
 ): ReactNode {
   const definition = context.targets.definitions.get(node.identifier.toUpperCase())
-  const children = renderChildren(node.children, context)
   if (definition === undefined) {
     // The grammar only emits references whose definitions exist somewhere in
     // the same parse, but incremental segments and hand-built trees may still
-    // present unresolved ones: revert to the bracketed source text.
-    return <Fragment key={key}>{'['}{children}{referenceSuffix(node)}</Fragment>
+    // present unresolved ones: revert to the bracketed source text — which is
+    // not an anchor, so mentions inside it stay live.
+    return <Fragment key={key}>{'['}{renderChildren(node.children, context)}{referenceSuffix(node)}</Fragment>
   }
-  return renderAnchor(definition.url, children, key)
+  return renderAnchor(definition.url, renderChildren(node.children, { ...context, inLink: true }), key)
 }
 
 function renderImageReference(

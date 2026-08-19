@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Schema/draft model layer for settings editors. The wire's `settings.describe` carries each namespace's serialized schemastery schema (`schema.toJSON()` ref envelope); `rehydrateSchema` turns it back into a live validator with `new Schema(json)` — the same schema object that validates a section on the host validates drafts in the browser, so client-side validation never drifts from the seam's. Editors render their own controls (the Models page hand-writes its card around the fields it probes here); this package owns no React and no rendering.
+Schema/draft model layer for settings editors. The wire's `settings.describe` carries each namespace's serialized schemastery schema (`schema.toJSON()` ref envelope); `rehydrateSchema` turns it back into a live validator with `new Schema(json)` — the same schema object that validates a section on the host validates drafts in the browser, so client-side validation never drifts from the Service Definition's. Editors render their own controls (the Models page hand-writes its card around the fields it probes here); this package owns no React and no rendering.
 
 ## Contract
 

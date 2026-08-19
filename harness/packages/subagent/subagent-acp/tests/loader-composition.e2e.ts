@@ -30,7 +30,7 @@ async function jsonlFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true })
   const paths = await Promise.all(entries.map(async (entry) => {
     const path = join(dir, entry.name)
-    if (entry.isDirectory()) { return jsonlFiles(path) }
+    if (entry.isDirectory()) return jsonlFiles(path)
     return entry.isFile() && entry.name.endsWith('.jsonl') ? [path] : []
   }))
   return paths.flat()
@@ -38,7 +38,7 @@ async function jsonlFiles(dir: string): Promise<string[]> {
 
 describe('ACP subagent cwd inheritance through a real cordis.yml', () => {
   it('runs the child in the parent session workspace and announces it as the ACP session cwd', async () => {
-    let events: Array<SessionEvent> = []
+    let events: SessionEvent[] = []
     let workspace = ''
     const { stderr } = await runLoaderSmoke({
       label: 'acp-subagent cwd composition smoke',

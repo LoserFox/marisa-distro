@@ -14,9 +14,9 @@ Goal 领域需要持久状态，但不需要拥有待处理的模型输入。继
 
 `@deepseek-ai/dsh-goal` 拥有持久的 `goal/change` 会话事件。每个事件携带变更后的完整 goal 快照，或带修订号的清除墓碑。`GoalService` 同步追加该事件，再发出 `goal/changed`；严格回放与 `goal` 会话投影只折叠 `goal/change` 来获得生命周期状态。
 
-`GoalMessageSource` 只标识已准入且为正数的继续执行 Round。匹配的 `user/message` 会推进 `roundsStarted`；普通用户消息与 inbox splice 事件不会改变 goal 状态。Goal 包不会插入、领取、移除或检查 inbox 消息。`@deepseek-ai/dsh-goal-session` 仍通过公开 inbox 生命周期负责排队和跟踪自己的继续执行提示词。
+`GoalMessageSource` 只标识已准入且为正数的继续执行 Round。匹配的 `user/message` 会推进 `roundsStarted`；普通用户消息与 inbox splice 事件不会改变 goal 状态。Goal 包不会插入、领取、移除或检查 inbox 消息。`@deepseek-ai/dsh-goal-round-driver` 仍通过公开 inbox 生命周期负责排队和跟踪自己的继续执行提示词。
 
-激活态仍只存在于进程中。服务在缓存观察事件时，将同步追加的事件序号与目标激活态关联；回放或外部追加的变更默认处于 `disarmed`。会话日志仍是唯一的持久权威。
+激活态仍只存在于进程中。服务在缓存观察事件时，将同步追加的事件序号与所请求的激活状态关联；回放或外部追加的变更默认处于 disarmed 状态。会话日志仍是唯一的持久权威。
 
 该领域不会自动把每次变更投影为模型输入。Goal 工具返回当前状态；真正调度工作时，继续执行提示词包含目标描述与 Round 状态。未来如果需要始终可见的 goal 上下文，应由独立上下文插件拥有其 inbox 消息，而不是把它作为持久化副作用。
 
@@ -28,6 +28,6 @@ Goal 领域需要持久状态，但不需要拥有待处理的模型输入。继
 
 ## 后果
 
-Goal 状态不依赖 inbox 放置与准入。回放只有一条变更路径，投影直接由 `goal/change` 推进，继续执行消息只携带 Round 归属。模型不会收到仅用于变更的 `<goal_state>` 消息；模型可见状态来自 goal 工具与已调度的继续执行提示词。直接写入会话的插件仍受信任，并且可以追加畸形变更；严格折叠与 invariant 配套模块会拒绝这些变更。
+Goal 状态不依赖 inbox 放置与准入。回放只有一条变更路径，投影直接由 `goal/change` 推进，继续执行消息只携带 Round 归属。模型不会收到仅用于变更的 `<goal_state>` 消息；模型可见状态来自 goal 工具与已调度的继续执行提示词。直接写入会话的写入方仍受信任，并且可以追加畸形变更；严格折叠与 invariant 配套模块会拒绝这些变更。
 
-聚焦的 goal、goal-session、command、TUI 与 client fixture 测试固定持久回放、正数 Round 计数、inbox 独立性、投影更新和恢复会话行为。无密钥进程测试检查持久的 `goal/change` 事件，并验证仅创建 goal 不会启动继续执行 Round。
+聚焦的 goal、goal-round-driver、command、TUI 与 client fixture（测试前置数据）测试固定持久回放、正数 Round 计数、inbox 独立性、投影更新和恢复会话行为。无密钥进程测试检查持久的 `goal/change` 事件，并验证仅创建 goal 不会启动继续执行 Round。

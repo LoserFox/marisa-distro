@@ -4,7 +4,7 @@
  */
 
 /* jscpd:ignore-start */
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-api-gateway'
@@ -15,8 +15,9 @@ export const name = 'api-gateway-invariant'
 export const inject = ['invariants']
 
 /**
- * No runtime invariant: Host calls re-read authoritative Cordis and TypeRT
- * state, while Client methods and descriptors mutate in one owned effect.
+ * No runtime invariant: Host calls re-read authoritative Cordis and Typert
+ * state, while Client methods, descriptors, and `$on` subscriptions mutate in
+ * one owned effect.
  */
 const install: InvariantInstaller = () => {}
 

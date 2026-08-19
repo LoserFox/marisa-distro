@@ -8,8 +8,8 @@
 
 ```
 vendor/<dir>/
-  package.json     # from upstream; set "private": true, keep name/exports/type
-  tsconfig.json    # extends ../../tsconfig.base.json (see shape below)
+  package.json     # from upstream; set "private": true, rescope the name, keep exports/type
+  tsconfig.json    # extends ../../tsconfig.base.json (see configuration below)
   src/             # the upstream src/ verbatim
   README.md LICENSE # if upstream ships them
 ```
@@ -29,9 +29,9 @@ vendor/<dir>/
 }
 ```
 
-`package.json` 的不变式：`"private": true`（vendored 包永不发布）；保留上游的 `name`/`version`/`exports`/`type`；声明元数据指向 `lib/types`；发布 `.d.ts` 与 `.d.ts.map` 声明输出；在 `peerDependencies` 中列出其 Cordis 依赖（与上游 manifest（元数据清单）一致）。传递性上游依赖本身也必须被 vendor 或已存在于仓库中——vendor 一个包往往意味着 vendor 其整条依赖树（如 `@cordisjs/plugin-http` 会拉入 `@cordisjs/fetch-file`）。
+`package.json` 的不变式：`"private": true`（vendored 包永不发布）；改写 `name` 的 scope（[映射](../rescope.md)），保留上游的 `version`/`exports`/`type`；声明元数据指向 `lib/types`；发布 `.d.ts` 与 `.d.ts.map` 声明输出；在 `peerDependencies` 中列出其 Cordis 依赖（与上游 manifest（元数据清单）一致）。传递性上游依赖本身也必须被 vendor 或已存在于仓库中——vendor 一个包往往意味着 vendor 其整条依赖树（如 `@cordisjs/plugin-http` 会拉入 `@cordisjs/fetch-file`）。
 
-vendored TypeScript 源码中的本地相对导入/导出在复制后使用显式 `.ts` 后缀。这是仓库本地的构建形态与上游的差异：`rewriteRelativeImportExtensions` 输出 `.js` 运行时导入，而声明文件保留显式 `.ts` 后缀，使 NodeNext/Node16 的 TypeScript 消费方能够解析。
+vendored TypeScript 源码中的本地相对导入/导出在复制后使用显式 `.ts` 后缀。这是仓库本地构建与上游的差异：`rewriteRelativeImportExtensions` 输出 `.js` 运行时导入，而声明文件保留显式 `.ts` 后缀，使 NodeNext/Node16 的 TypeScript 消费方能够解析。
 
 ## 2. 在根配置中注册
 
@@ -42,7 +42,7 @@ vendored TypeScript 源码中的本地相对导入/导出在复制后使用显�
 | `vendor/README.md` | 添加一行 manifest 表格行（dir、npm name、version、upstream repo、commit SHA）并记录所有本地修改 |
 | `scripts/publint-all.ts` | 仅当该 vendored 包本身从此仓库发布时才需要（vendored 依赖通常不发布——跳过） |
 
-以下由 glob 自动覆盖，无需手动编辑：根 `package.json` 的 workspaces（`vendor/*`）、`tsdown.config.ts`、`vitest.config.ts`、`.oxlintrc.json`。只有当构建形态偏离根默认值时（双 ESM/CJS 或多入口——参见 `vendor/schemastery` 和 `vendor/logger-console`），才需要单独的 `vendor/<dir>/tsdown.config.ts`；其入口应读取 `lib/types` 下输出的 JS。
+以下由 glob 自动覆盖，无需手动编辑：根 `package.json` 的 workspaces（`vendor/*`）、`tsdown.config.ts`、`vitest.config.ts`、`.oxlintrc.json`。只有当构建配置与根默认值不同时（双 ESM/CJS 或多入口——参见 `vendor/schemastery` 和 `vendor/logger-console`），才需要单独的 `vendor/<dir>/tsdown.config.ts`；其入口应读取 `lib/types` 下输出的 JS。
 
 ## 3. 注意 manifest 守卫
 
@@ -56,4 +56,4 @@ pnpm run typecheck
 pnpm run build && pnpm run constraints
 ```
 
-请运行[测试政策](../testing.md)所选择的行为检查。源码 `paths` 映射只在 `tsconfig.base.json` 存在一份，服务所有图。重要的隔离边界是 project-reference 图：vendored 源码必须通过其自身的 `vendor/<dir>/tsconfig.json` 被引用，而非被拉入某个聚合的严格程序中（[布局](../development.md#typescript-project-layout)）。
+请运行[测试政策](../testing.md)所选择的行为检查。源码 `paths` 映射只在 `tsconfig.base.json` 存在一份，服务所有图。重要的隔离边界是 project-reference 图：vendored 源码必须通过其自身的 `vendor/<dir>/tsconfig.json` 被引用，而非被拉入某个聚合项目启用严格检查的 TypeScript 程序中（[布局](../development.md#typescript-project-layout)）。

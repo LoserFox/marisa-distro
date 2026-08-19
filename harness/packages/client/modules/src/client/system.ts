@@ -1,6 +1,6 @@
 /**
  * ClientModuleSystem — the implementation behind the {@link ClientModuleLoader}
- * seam. The conceptual contract (lazy CJS model, resolution branch order) is
+ * contract. The conceptual contract (lazy CJS model, resolution branch order) is
  * documented on the public interfaces in `./manifest.ts`; this file owns the
  * state tables and the load/materialize machinery.
  */
@@ -9,7 +9,7 @@ import type {
   ClientModuleSystemOptions, ClientPluginHandoff, DshWindow,
 } from './manifest.ts'
 
-/** Default bundle-load seam: same-origin external classic script. */
+/** Default bundle-load hook: same-origin external classic script. */
 const defaultLoadBundle = (url: string): Promise<void> => new Promise((resolve, reject) => {
   const el = document.createElement('script')
   el.async = true
@@ -28,10 +28,10 @@ const defaultLoadBundle = (url: string): Promise<void> => new Promise((resolve, 
 /**
  * A plugin bundle IS its package's client half: `<id>/client` (the exports
  * subpath external bundles emit) and the bare graph id name the same
- * surface, so table lookups normalize the suffix away.
+ * exports, so table lookups normalize the suffix away.
  */
 const stripClientSuffix = (spec: string): string =>
-  !spec.endsWith('/client') ? spec : spec.slice(0, -'/client'.length)
+  spec.endsWith('/client') ? spec.slice(0, -'/client'.length) : spec
 
 /**
  * Claim and inventory the <style> tags a factory injected during
@@ -53,8 +53,8 @@ const claimStyles = (id: string): string[] => {
 /**
  * The client module system: state tables plus the arrival/materialization
  * machinery implementing {@link ClientModuleLoader} (whose members carry the
- * seam contract docs). Construction indexes the boot rows and installs the
- * `window.__ModuleLoader__` registration sink (contract C6) — once per page.
+ * contract documentation). Construction indexes the boot rows and installs the
+ * `window.__ModuleLoader__` registration sink — once per page.
  */
 export class ClientModuleSystem implements ClientModuleLoader {
   readonly version = 'client'
@@ -72,7 +72,7 @@ export class ClientModuleSystem implements ClientModuleLoader {
 
   /**
    * Build the module system over the parsed boot rows.
-   * @param options - module rows, module-table staticModules, and bundle-load seam.
+   * @param options - Module rows, module-table staticModules, and bundle-load hook.
    */
   constructor(options: ClientModuleSystemOptions) {
     this.seed = new Map(Object.entries(options.staticModules))
@@ -123,8 +123,8 @@ export class ClientModuleSystem implements ClientModuleLoader {
     this.materializing.add(id)
     try {
       const edges = new Set<string>()
-      const surface = registered(this.makeRequire(edges))
-      const record: ClientModuleRecord = { id, surface, styles: claimStyles(id), edges }
+      const exports = registered(this.makeRequire(edges))
+      const record: ClientModuleRecord = { id, exports, styles: claimStyles(id), edges }
       this.loadCache.set(id, record)
       return record
     } finally {
@@ -146,8 +146,8 @@ export class ClientModuleSystem implements ClientModuleLoader {
       if (this.statics.has(spec)) return this.statics.get(spec)
       const id = stripClientSuffix(spec)
       const record = this.loadCache.get(id)
-      if (record !== undefined) return record.surface
-      if (this.factories.has(id)) return this.materialize(id).surface
+      if (record !== undefined) return record.exports
+      if (this.factories.has(id)) return this.materialize(id).exports
       throw new Error(
         `client-modules: require("${spec}") missed the module table — not a platform seed word, not a shell-own module, `
         + 'and no registered factory (a build-time externals drift, or a forbidden cross-plugin value import)',
@@ -158,11 +158,11 @@ export class ClientModuleSystem implements ClientModuleLoader {
   async import(specifier: string): Promise<unknown> {
     if (this.seed.has(specifier)) return this.seed.get(specifier)
     const existing = this.loadCache.get(specifier)
-    if (existing !== undefined) return existing.surface
+    if (existing !== undefined) return existing.exports
     if (this.statics.has(specifier)) {
-      const surface = this.statics.get(specifier)
-      this.loadCache.set(specifier, { id: specifier, surface, styles: [], edges: new Set() })
-      return surface
+      const exports = this.statics.get(specifier)
+      this.loadCache.set(specifier, { id: specifier, exports, styles: [], edges: new Set() })
+      return exports
     }
     if (!this.factories.has(specifier)) {
       const row = this.graphRows.get(specifier)
@@ -174,7 +174,7 @@ export class ClientModuleSystem implements ClientModuleLoader {
       }
       await this.arrive(row)
     }
-    return this.materialize(specifier).surface
+    return this.materialize(specifier).exports
   }
 
   registerStatic(id: string, module: unknown): void {

@@ -1,0 +1,85 @@
+{
+  "name": "@r05en1cu/dsh-mygo-loader-hub",
+  "description": "mygo hub LoaderAdapter: dsh-hub registry (omdsh-registry/v1) fetch/verify/fallback, install-intent translation, and collections — as a mygo governed plugin",
+  "version": "0.2.0-rc.7",
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omdsh-dev/dsh-mygo.git"
+  },
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts",
+    "src",
+    "assets/registry-v1.json"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -b && tsdown",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "verify:self-contained": "node scripts/verify-self-contained.mjs",
+    "prepare": "node scripts/prepare.mjs",
+    "prepack": "node -e \"const fs=require('fs'); if(!fs.existsSync('lib/index.js')||!fs.existsSync('lib/types/index.d.ts')){console.error('lib 缺失：请先在仓库内构建（pnpm run build：tsc -b + tsdown）'); process.exit(1)}\""
+  },
+  "dependencies": {
+    "@r05en1cu/dsh-mygo-api": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@r05en1cu/dsh-mygo-api": "workspace:^",
+    "@r05en1cu/dsh-mygo-loader-profile": "workspace:^",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "dsh": {
+    "mygo": {
+      "formatVersion": 1,
+      "id": "dsh-mygo-loader-hub",
+      "version": "0.2.0-rc.7",
+      "entry": "lib/index.js",
+      "requires": {},
+      "core": "^0.0.1-rc.1",
+      "loader": {
+        "id": "standard",
+        "range": "^1.0.0"
+      }
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "author": "r05En1cU",
+  "maintainers": [
+    "r05En1cU"
+  ]
+}

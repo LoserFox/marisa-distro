@@ -176,7 +176,7 @@ export function GoalDock({ useProjection, onEdit, onPause, onResume, onClear, t 
   const projection = useProjection('goal')
   return (
     <GoalBar
-      goal={projection === undefined ? undefined : projection !== null ? projection.goal : null}
+      goal={projection === undefined ? undefined : projection === null ? null : projection.goal}
       onEdit={onEdit}
       onPause={onPause}
       onResume={onResume}

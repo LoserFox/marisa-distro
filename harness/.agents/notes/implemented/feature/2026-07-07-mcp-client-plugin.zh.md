@@ -8,7 +8,7 @@ Status: implemented
 
 harness 此前无法消费 MCP（Model Context Protocol）生态中的工具。MCP 是工具服务器的新兴标准——GitHub、文件系统、数据库、代码搜索以及数百个社区服务器都通过 MCP 暴露工具。用户希望将 harness 指向一个或多个 MCP 服务器，让其工具以原生的模型可见工具形式出现，而无需为每个服务器编写胶水代码。
 
-`ToolRegistry` 已经接受原始 JSON Schema 工具定义（`dsh-tools` README 中有记录：「Raw JSON-Schema tool definitions (from MCP servers) are still accepted by `ToolRegistry.register()` directly」），扩展实操手册（cookbook）也勾勒了预期模式（「MCP | one plugin per server: discover tools → `ctx.tools.register()`」）。基础设施已就绪，缺的是桥接插件。
+`ToolRuntime` 已经接受原始 JSON Schema 工具定义（`dsh-tools` README 中有记录：「Raw JSON-Schema tool definitions (from MCP servers) are still accepted by `ToolRuntime.register()` directly」），扩展实操手册（cookbook）也勾勒了预期模式（「MCP | one plugin per server: discover tools → `ctx.tools.register()`」）。基础设施已就绪，缺的是桥接插件。
 
 ## 决策
 
@@ -90,7 +90,7 @@ type Config = StdioConfig | StreamableHttpConfig
 每个 MCP 工具有两个名称：
 
 - `rawName`——MCP `Tool.name` 的原始值，仅用于协议通信（`tools/call`）。
-- `publicName`——在 `ToolRegistry` 中注册的全局唯一模型可见名称：
+- `publicName`——在 `ToolRuntime` 中注册的全局唯一模型可见名称：
 
       mcp__<serverName>__<rawName>
 
@@ -104,7 +104,7 @@ type Config = StdioConfig | StreamableHttpConfig
 
 ### 公开名称规范化
 
-MCP 允许工具名最长 128 字符且可包含 `.`；DeepSeek 的函数名契约允许 `[A-Za-z0-9_-]` 且最多 64 字符。公开名称按确定性规则规范化：非法字符替换为 `_`，当替换或截断改变了名称时，追加 `(serverName, rawName)` 标识的 12 位十六进制 SHA-256 hash，确保不同的 MCP 标识永远不会坍缩为同一个公开名称：
+MCP 允许工具名最长 128 字符且可包含 `.`；DeepSeek 的函数名约定允许 `[A-Za-z0-9_-]` 且最多 64 字符。公开名称按确定性规则规范化：非法字符替换为 `_`，当替换或截断改变了名称时，追加 `(serverName, rawName)` 标识的 12 位十六进制 SHA-256 hash，确保不同的 MCP 标识永远不会坍缩为同一个公开名称：
 
 ```typescript
 function publicToolName(serverName: string, rawName: string): string {
@@ -131,7 +131,7 @@ MCP 仅保证工具名在[单个服务器内](https://modelcontextprotocol.io/sp
 ### 命名不变式
 
 1. 每个 MCP 工具拥有稳定标识 `(serverName, rawName)`；每个活跃标识恰好对应一个公开名称。
-2. 公开名称是确定性的、全局唯一的，且满足 DeepSeek 64 字符 `[A-Za-z0-9_-]` 契约。
+2. 公开名称是确定性的、全局唯一的，且满足 DeepSeek 64 字符 `[A-Za-z0-9_-]` 约定。
 3. MCP `tools/call` 始终接收原始的 raw name。
 4. 连接、断开或重新同步不相关的服务器永远不会重命名已有工具。
 5. 注册顺序永远不决定哪个工具可用。
@@ -141,11 +141,11 @@ MCP 仅保证工具名在[单个服务器内](https://modelcontextprotocol.io/sp
 为来自同一个 MCP 服务器的所有工具提供统一的 `execute` 处理器：
 
 1. 解析 `rawName`（执行器闭包持有它），以配置的超时时间调用 `client.callTool({ name: rawName, arguments }, { signal: exec.signal })`——公开名称永远不发送给服务器。
-2. 映射结果：
-   - 多个 `text` 内容块 → 以 `'\n'` 连接为单个 `TextBlock`（之所以必须这样做，是因为 `flattenText` 使用无分隔符的 `join('')`，多个内容块会丢失块间边界）。
-   - `image` 内容块 → 丢弃并 `ctx.logger.warn`（harness 没有图片内容块类型；[删除图片 Agent Note](../simplification/2026-07-04-drop-image-content-block.md)）。
-   - `isError: true` → 映射到 harness 的 `isError` 结果路径（`{ content: [...], isError: true }`）。
-3. 取消：`exec.signal`（来自 agent loop（智能体循环）的取消）透传给 MCP SDK 的 `callTool`，后者向服务器发送 `$/cancelRequest`。
+2. 把规范成功值保留为 `{ content: JsonValue[], structuredContent? }`；完整 MCP JSON 块仍是程序化调用／Code Mode 值。`isError: true` 会在持久化任何图片前抛出，使失败路径归注册表所有。
+3. 另行准备有序 Native 投影。连续文本块以 `'\n'` 连接；资源链接以文本保留名称和 URI；音频、嵌入资源、格式错误的块和未知类型成为明确诊断。只要存在图片，桥接层就严格解码完整批次，解析调用 agent 的最新确切路由，要求附件存储以及模型明确支持图片输入，再把全成员校验和有序持久化委托给 `AttachmentStore.saveImages()`。任何解码、能力或存储拒绝都会把全部图片渲染为诊断文本，且不返回部分引用。
+4. 保持 `output.render` 同步且纯净。执行器把更丰富的投影暂存在按同步世代创建、以确切执行为键的 `WeakMap` 中；只有注册表的 post-execute 结果仍保留原规范值和兜底内容时，`finalizeContent` 才安装该投影。策略阻止、值替换或内容替换仍具有权威性，重新同步也无法让旧世代消费新执行状态。
+5. Code Mode 接收未改动的规范值。其通用分发桥接层会把包含图片的成功最终内容序列经外层 `run_code` 结果延后，因此 MCP 无需私有父 token 特例。
+6. 取消：`exec.signal`（来自 agent loop 的取消）透传给 MCP SDK 的 `callTool`、确切模型查询和存储前门禁。
 
 ### 子进程环境（stdio 传输）
 
@@ -153,13 +153,7 @@ MCP 仅保证工具名在[单个服务器内](https://modelcontextprotocol.io/sp
 
 ### 断连 / 崩溃
 
-不自动重连。如果 MCP 服务器进程退出或传输层关闭：
-
-1. effect dispose → 所有已注册工具被注销（fiber 作用域的 disposer）。
-2. 后续模型对这些工具的调用 → `ToolNotFoundError` → `isError: true`。
-3. 恢复：用户编辑 `cordis.yml`（触发 HMR 重载）或重启 harness。
-
-这与 ACP subagent 模式一致：「崩溃即终态，报告错误，清理资源，不重试。」
+每个实例的连接监督器在连接丢失后以有界指数退避和单次故障尝试预算自动重连，成功后重新执行发现流程；尝试耗尽则注销该服务器的工具并停止，直到重新加载。[自动重连 Agent Note](2026-08-06-mcp-client-auto-reconnect.md) 拥有该决策，包括 `reconnect` 配置块和恢复手动 HMR/重启恢复的 `reconnect.enabled: false` opt-out。
 
 ## 曾考虑的替代方案
 
@@ -173,7 +167,7 @@ MCP 仅保证工具名在[单个服务器内](https://modelcontextprotocol.io/sp
 
 ### 指数退避自动重连
 
-v1 否决。引入复杂性（工具已注册但暂时不可用的部分可用状态），且 stdio 进程崩溃通常表明配置问题，重试无法修复。HMR 已提供手动恢复路径。如有需要，可在未来作为 `reconnect: boolean` 配置项添加。
+v1 否决：引入了部分可用状态（工具已注册但暂时不可用），且 stdio 崩溃往往表明配置问题，重试无法修复；HMR 曾是恢复路径。运营反馈扭转了该延期决定——[自动重连 Agent Note](2026-08-06-mcp-client-auto-reconnect.md) 以有界的单次故障预算和 opt-out 实现了自动重连。
 
 ### 桥接 Resources 和 Prompts
 
@@ -185,7 +179,7 @@ v1 否决。引入复杂性（工具已注册但暂时不可用的部分可用�
 
 ### 仅服务器命名空间（`github__create_issue`，无 `mcp__` 前缀）
 
-v1 否决。它能防止跨服务器冲突，但无法将 MCP 注册与原生 harness 工具分离，也丧失了 MCP 全局策略匹配模式（`mcp__*`）。前缀仅多花 5 个字符；`mcp__<server>__<tool>` 拼写与 Claude Code 和 Codex 一致，最大化模型的熟悉度。如果 ToolRegistry 未来引入源感知命名空间，届时可作为命名策略变更重新考虑去掉字面前缀。
+v1 否决。它能防止跨服务器冲突，但无法将 MCP 注册与原生 harness 工具分离，也丧失了 MCP 全局策略匹配模式（`mcp__*`）。前缀仅多花 5 个字符；`mcp__<server>__<tool>` 拼写与 Claude Code 和 Codex 一致，最大化模型的熟悉度。如果 ToolRuntime 未来引入源感知命名空间，届时可作为命名策略变更重新考虑去掉字面前缀。
 
 ### 从服务器公告的 `serverInfo.name` 派生命名空间
 
@@ -195,20 +189,33 @@ v1 否决。它能防止跨服务器冲突，但无法将 MCP 注册与原生 ha
 
 否决。DeepSeek 序列化器中的 `flattenText()` 在将 `ContentBlock[]` 扁平化为协议格式（wire format）时使用 `join('')`（无分隔符）。多个 text 块会静默丢失块间边界——这是正确性缺陷。所有现有工具返回单个 TextBlock；MCP 桥接遵循同一做法。
 
+### 用核心 `ContentBlock[]` 替换规范 MCP 结果
+
+不予采用。程序化调用方需要协议完整的 MCP 块和 `structuredContent`，Native 消费方则需要持久核心图片而不是 base64。一份规范协议值加一份独立投影可以同时保留两项契约。
+
+### 添加通用 RichContent 服务，或在 `output.render` 中执行 I/O
+
+不予采用。核心已经拥有角色无关的内容词汇，第二套服务会重复其日志与顺序契约。`output.render` 必须纯净、同步且可回放，因此附件 I/O 属于异步执行，再经确切的最终化交接安装结果。
+
+### 让每个返回图片的工具分别特殊处理 Code Mode 父调用
+
+不予采用。这会把叶子工具与组合工具内部机制耦合，并漏掉未来丰富工具。通用 Code Mode 桥接层观察最终 post-policy 内容，统一转发含图片结果。
+
 ## 测试
 
 覆盖范围按层级列出；每项行为都放在能够表达它的最低成本层级。
 
-- **单元测试**（`tests/mcp-client.spec.ts`、`tests/apply.spec.ts`，mock MCP SDK）：`publicToolName` 算法（干净名称、规范化、截断加 hash、确定性、不同标识的分离）、raw 与 public 的协议纪律、跨服务器与原生工具共存、重复 `serverName` 加载失败与预留释放、无效工具列表拒绝、注册代切换/回滚、重新同步失败时保留上一代注册、结果映射、取消、配置 schema 校验。100% 逐文件覆盖率门禁约束该包。
-- **E2E**（`tests/mcp-client.e2e.ts`，无需密钥）：使用真实 MCP 协议对接仓库内的 fixture（测试前置数据）服务器、`@modelcontextprotocol/server-everything` 和 `@modelcontextprotocol/server-filesystem`（stdio 传输），以及进程内 `StreamableHTTPServerTransport` 服务器（Streamable HTTP 传输）——命名空间下的发现、带点号名称的端到端规范化、执行往返、重复 `serverName` 拒绝、dispose。
-- **快照**：刻意不做。MCP 工具不引入新的展示形态——它们以原始 `ToolDefinition` 注册，UI 消费方使用各自展示测试套件已固定的通用卡片兜底。将 MCP 服务器添加到某个可运行的快照组合会改变其已固定的系统提示词 fixture，且使每次回放依赖于 spawn 外部 MCP 服务器进程，而新增行为为零。如果后续变更为 MCP 工具引入专属渲染意图，该变更届时自行声明快照覆盖。
+- **单元测试**（`tests/mcp-client.spec.ts`、`tests/apply.spec.ts`，mock MCP SDK）：`publicToolName` 算法（干净名称、规范化、截断加 hash、确定性、不同标识的分离）、raw 与 public 的协议纪律、跨服务器与原生工具共存、重复 `serverName` 加载失败与预留释放、无效工具列表拒绝、注册代切换/回滚、重新同步失败时保留上一代注册、无损规范结果、丰富内容混合顺序、格式错误批次原子性、确切能力／存储拒绝、明确的非图片诊断、post-execute 策略优先级、取消，以及配置 schema 校验。100% 逐文件覆盖率门禁约束该包。
+- **E2E**（`tests/mcp-client.e2e.ts`，无需密钥）：使用真实 MCP 协议对接仓库内的 fixture（测试前置数据）服务器、`@modelcontextprotocol/server-everything` 和 `@modelcontextprotocol/server-filesystem`（stdio 传输），以及进程内 `StreamableHTTPServerTransport` 服务器（Streamable HTTP 传输）——命名空间下的发现、带点号名称的端到端规范化、执行往返、持久图片保存／读取且 base64 只保留在规范值中、缺少图片路由时明确拒绝、重复 `serverName` 拒绝，以及 dispose。
+- **快照**：组装后的 ACP 示例负责传输可见的内联图片 transcript 与 Code Mode 图片转发 transcript；包 E2E 负责真实 MCP 协议，因为可运行快照必须保持无密钥且确定，而不是 spawn 第三方服务器包。MCP 工具卡片仍使用通用卡片兜底，无需包专属 UI 快照。
 
 ## 后果
 
 - 每个 MCP 服务器只需 `cordis.yml` 中的一条配置即完成集成：`serverName: filesystem` 加一条 stdio 命令（或一个 Streamable HTTP URL），就能将 `mcp__filesystem__read_file` 放入模型的工具列表，可调用，协议上使用原始的 `read_file`。
-- 公开名称是会话历史和权限/配置表面的一部分；命名算法是由测试固定的 v1 契约，发布后变更即为破坏性变更。
+- 公开名称是会话历史和权限/配置 API 的一部分；命名算法是由测试固定的 v1 约定，发布后变更即为破坏性变更。
 - `mcp__<serverName>__` 限定符在每个名称上消耗 token。已接受：描述和 JSON Schema 在工具定义 token 中占主导，而限定符换来了稳定标识、冲突隔离和 MCP 全局策略匹配模式（`mcp__*`、`mcp__github__*`）。
 - **MCP SDK 稳定性**：`@modelcontextprotocol/sdk` 仍在演进中；破坏性变更需要更新桥接。版本已固定，且该 SDK 被广泛采用（Claude Desktop、Cursor、VS Code），因此破坏性变更不太可能悄然发生。
 - **工具 schema 质量**：MCP 服务器可能暴露描述不佳的工具（模糊的描述、不完整的 JSON Schema）。harness 原样透传——垃圾进垃圾出；这是服务器作者的责任，不是桥接的。
 - **Stdio 进程管理**：行为异常的 MCP 服务器如果忽略信号，可能卡住 dispose。Cordis fiber 的 dispose 具有有界的完全停稳过程；卡住的传输层最终会在框架层面超时。
-- 崩溃恢复是手动的（HMR 编辑或重启）——v1 已接受；`reconnect` 配置作为未来工作保持开放。
+- 崩溃恢复在[重连预算](2026-08-06-mcp-client-auto-reconnect.md)内自动进行；耗尽后或配置 `reconnect.enabled: false` 时回退为手动重新加载。
+- 图片载荷只有通过共享持久附件存储和确切正向路由能力，才能进入模型上下文。音频与嵌入资源载荷仍只存在于执行局部，并附带明确诊断。

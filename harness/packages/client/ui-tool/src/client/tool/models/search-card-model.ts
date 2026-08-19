@@ -77,9 +77,9 @@ export interface SearchCardModel {
 /**
  * Whether every file group in a matches view is structurally valid: the wire
  * frame carries `shape` and `card` as strings the host schema checks, but not the
- * grouped shape, so a version mismatch or loose producer could deliver
+ * grouped `files` fields, so a version mismatch or loose producer could deliver
  * `shape: 'matches'` with a missing or malformed `files`. Rendering that would
- * crash {@link SearchBlock} at `.reduce`/`.map`; an invalid shape falls to the
+ * crash {@link SearchBlock} at `.reduce`/`.map`; invalid fields select the
  * generic path instead.
  * @param files - the candidate `files` field off the untrusted result view.
  * @returns whether `files` is a valid {@link SearchFileGroup} array.
@@ -106,7 +106,7 @@ function isValidFiles(files: unknown): files is SearchFileGroup[] {
  */
 function flattenContent(content: readonly { type: string; text?: string }[]): string | undefined {
   const text = content
-    .filter((block): block is { type: 'text'; text: string } => { return block.type === 'text' && typeof block.text === 'string' })
+    .filter((block): block is { type: 'text'; text: string } => block.type === 'text' && typeof block.text === 'string')
     .map(block => block.text)
     .join('\n')
   return text === '' ? undefined : text
@@ -136,12 +136,13 @@ export function searchCardModel(block: ToolCallBlock): SearchCardModel | null {
   // The recovery footer only matters when the tool capped the result: an
   // uncapped card holds every match/path, so the raw text adds nothing the card
   // does not already show. When capped, the raw result's `Full … stored at …`
-  // locator is the only path to the dropped rows, so surface it.
+  // locator is the only way to retrieve the omitted rows, so include it.
   const recovery = result.truncated ? flattenContent(block.content) : undefined
   if (result.shape === 'matches') {
     // `files` rides the untrusted wire frame: the host schema checks `card`/`shape`
-    // strings but not the grouped shape, so validate it before SearchBlock, which
-    // would crash on a missing/malformed `files`. An invalid shape falls to generic.
+    // strings but not the grouped `files` fields, so validate them before
+    // SearchBlock, which would crash on a missing or malformed `files`.
+    // Invalid fields select the generic view.
     if (!isValidFiles(result.files)) return null
     return { title: result.title, recovery, card: { kind: 'matches', files: result.files, ...common } }
   }

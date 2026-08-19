@@ -1,0 +1,26 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "paths": {
+      "@r05en1cu/dsh-mygo": [
+        "../../cordis/mygo/src/index.ts"
+      ],
+      "@r05en1cu/dsh-mygo-api": [
+        "../../core/mygo-api/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../cordis/mygo"
+    },
+    {
+      "path": "../../core/mygo-api"
+    }
+  ]
+}

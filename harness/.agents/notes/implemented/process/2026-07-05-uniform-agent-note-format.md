@@ -23,7 +23,7 @@ The whole corpus was normalized in the same change that defined the format — t
 - **A bare `# <title>` H1** — rejected: the `Agent Note: ` prefix self-describes the genre when a file is read outside its tree, and the format gate prevents it from drifting.
 - **`## What we give up` as the implemented closer** (the README's own phrase for what an Agent Note records) — rejected: it names only costs, and an honest consequences section records what the trade-off bought as well.
 - **Convention without a gate** (write the contract down, enforce by review) — rejected: the slop checklist already outlawed spec-speak in `implemented/` by convention, and nineteen files show what convention alone achieves here.
-- **A standalone `FORMAT.md` contract file** — rejected because one front door carrying layout, classification, and format is easier to discover and maintain than two contract files.
+- **A standalone `FORMAT.md` contract file** — rejected because one entry point carrying layout, classification, and format is easier to discover and maintain than two contract files.
 
 ## Consequences
 

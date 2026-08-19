@@ -48,7 +48,7 @@ JSONL persistence tests prove that omission writes a packed row, explicit `false
 
 **Remove `packChunks` and always pack.** One writer is simpler, but one-event-per-line output remains useful for diagnostics and for focused mixed-layout compatibility tests. The explicit opt-out preserves those current consumers without weakening the default.
 
-**Batch chunks as logical session events.** This reduces event count, but it delays or reshapes live delivery, renumbers provenance, and requires every UI and replay consumer to understand another streaming unit. Physical packing obtains the storage benefit behind the existing persistence interface.
+**Batch chunks as logical session events.** This reduces event count, but it delays or reshapes live delivery, renumbers the chunk seqs cited by assistant messages, and requires every UI and replay consumer to understand another streaming unit. Physical packing obtains the storage benefit behind the existing persistence interface.
 
 **Keep the branch migrator permanently.** The read-only canonicalizer and snapshot gate own continuing enforcement. A mutation command has value only while in-flight branches still carry the former fixture layout, so its lifetime is explicitly bounded by the removal proposal.
 

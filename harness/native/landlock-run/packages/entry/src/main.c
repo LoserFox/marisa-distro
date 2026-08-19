@@ -51,7 +51,7 @@
  * The Landlock UAPI, defined locally instead of via <linux/landlock.h>: the
  * kernel's user-space ABI is stable by contract, self-defining it keeps the
  * build independent of the toolchain's header vintage, and the definitions
- * double as the audit record of exactly which kernel surface this launcher
+ * double as the audit record of exactly which kernel API this launcher
  * touches. Layouts and values are verbatim from the kernel header (the
  * path-beneath struct is packed there, so it must be packed here).
  */
@@ -89,8 +89,7 @@ struct landlock_path_beneath_attr {
 
 /*
  * Newest ABI this build knows; the negotiation below scales the actual
- * ruleset down to what the running kernel supports (the best-effort compat
- * stance of the previous Rust launcher, made explicit).
+ * ruleset down to what the running kernel supports.
  */
 #define MAX_ABI 5L
 
@@ -141,8 +140,7 @@ struct cli {
 };
 
 /*
- * Hand-rolled argv parsing — four flags do not justify a parsing library,
- * and the previous Rust launcher made the same call for the same reason.
+ * Hand-rolled argv parsing — four flags do not justify a parsing library.
  * Returns 0 on success, else the process exit code (message already printed).
  */
 static int parse(int argc, char **argv, struct cli *cli) {
@@ -204,8 +202,7 @@ static int add_rule(int ruleset_fd, const char *path, uint64_t access) {
   }
   /* The kernel rejects directory-only accesses on a non-directory rule
    * (EINVAL), so a file grant keeps only the file-compatible bits — how the
-   * `--rw /dev/null` grant works. Same clamp the Rust crate's
-   * path_beneath_rules helper applied. */
+   * `--rw /dev/null` grant works. */
   struct stat st;
   if (fstat(path_fd, &st) == 0 && !S_ISDIR(st.st_mode)) {
     access &= LL_FS_EXECUTE | LL_FS_WRITE_FILE | LL_FS_READ_FILE | LL_FS_TRUNCATE | LL_FS_IOCTL_DEV;

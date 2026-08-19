@@ -24,7 +24,7 @@
       "path": "../ui-primitives"
     },
     {
-      "path": "../ui-slash"
+      "path": "../ui-input-trigger"
     },
     {
       "path": "../ui-slots"
@@ -36,7 +36,7 @@
       "path": "../../subagent/subagent"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

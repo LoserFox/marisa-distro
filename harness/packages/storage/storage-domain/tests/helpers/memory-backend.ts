@@ -39,7 +39,7 @@ export class MemoryMediaPool {
   /**
    * When positive, that many subsequent write primitives (putRecord /
    * deleteRecord / setGlobal) reject without touching the medium, decrementing
-   * per rejection. Negative-path seam: callers assert their state is
+   * per rejection. Negative path: callers assert their state is
    * untouched after a durability failure.
    */
   failNextWrites = 0

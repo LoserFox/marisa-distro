@@ -10,14 +10,12 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	_ "embed"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -57,8 +55,8 @@ func startServer(ctx context.Context, port string) (cmd *exec.Cmd, url string, e
 	if err != nil {
 		return cmd, "", nil, fmt.Errorf("stdout pipe: %w", err)
 	}
-	// 后端 stderr 直接透传到壳的 stderr，便于诊断。
-	cmd.Stderr = os.Stderr
+	// 后端 stderr 同时写入终端与桌面持久日志。
+	cmd.Stderr = backendLogOutput
 	if err := cmd.Start(); err != nil {
 		return cmd, "", nil, fmt.Errorf("start dsh web: %w", err)
 	}
@@ -70,19 +68,8 @@ func startServer(ctx context.Context, port string) (cmd *exec.Cmd, url string, e
 		exitChRaw <- serverExit{err: err}
 	}()
 
-	// 逐行读 stdout，直到出现 URL 行。
-	urlCh := make(chan string, 1)
-	go func() {
-		defer close(urlCh)
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "dsh web: ") {
-				urlCh <- strings.TrimSpace(strings.TrimPrefix(line, "dsh web: "))
-				return
-			}
-		}
-	}()
+	// 持续消费并记录 stdout；首次 URL 行单独通知启动流程。
+	urlCh := scanBackendStdout(stdout)
 
 	select {
 	case u := <-urlCh:
@@ -160,6 +147,14 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 }
 
 func main() {
+	logPath, closeLog, err := setupLogging()
+	if err != nil {
+		log.Printf("persistent logging unavailable: %v", err)
+	} else {
+		defer closeLog()
+		log.Printf("persistent log: %s", logPath)
+	}
+
 	if handled, err := handleBackendMaintenance(); handled {
 		if err != nil {
 			log.Fatalf("backend maintenance: %v", err)
@@ -199,6 +194,16 @@ func main() {
 		os.Setenv("DSH_WEB_CMD", backendWebCommand(backendDir))
 		log.Printf("DSH_WEB_CMD set to embedded backend launcher: %s", os.Getenv("DSH_WEB_CMD"))
 	}
+
+	// 注入安装形态与后端版本：后端子进程整体继承壳环境，后端插件（如
+	// dsh-update-check）据此决定检查行为与下载资产形态。VERSION 读取失败
+	// 不致命——版本为空时插件自动隐身，仅失去更新提示能力。
+	version, err := backendVersion(backendDir)
+	if err != nil {
+		log.Printf("read backend version: %v (update checks will be disabled)", err)
+	}
+	injectBackendEnv(installForm, version)
+	log.Printf("backend env injected: MARISA_INSTALL_FORM=%s MARISA_VERSION=%s", installForm, version)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

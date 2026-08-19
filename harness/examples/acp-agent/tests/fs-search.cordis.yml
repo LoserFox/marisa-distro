@@ -21,7 +21,7 @@
     workspaceContext: false
     skills:
       enabled: false
-    toolTasks: false
+    toolJobs: false
     goals: false
     persona: You are a concise snapshot agent working in {{cwd}}.
 

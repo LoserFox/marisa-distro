@@ -1,7 +1,7 @@
 // 持久化纯逻辑单测（node:test）。归属：src/persistence.mjs 的行为改动跑本文件。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeState, serializeState } from '../.dsh-plugin/src/persistence.mjs'
+import { normalizeState, serializeState } from '../lib/src/persistence.mjs'
 
 test('normalizeState: 合法账本原样归一化', () => {
   const s = normalizeState({

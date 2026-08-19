@@ -24,7 +24,7 @@ export const SEMANTIC_KEYS = new Set([
  */
 export function check(root = ROOT) {
   const errors = []
-  const src = readFileSync(join(root, '.dsh-plugin', 'src', 'config.mjs'), 'utf8')
+  const src = readFileSync(join(root, 'lib', 'src', 'config.mjs'), 'utf8')
 
   // 提取 buildSchema 函数体内的 schema 声明段
   const fnMatch = /export function buildSchema\(\) \{([\s\S]*?)\n\}/.exec(src)

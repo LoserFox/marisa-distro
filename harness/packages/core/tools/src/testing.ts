@@ -36,7 +36,7 @@ export function defineContentToolFixture<const S extends ParameterSchemaSpec>(
       render: (_args, value) => value as unknown as ContentBlock[],
     },
     async execute(args, exec) {
-      return await execute(args, exec) as unknown as Array<JsonValue>
+      return await execute(args, exec) as unknown as JsonValue[]
     },
   })
 }

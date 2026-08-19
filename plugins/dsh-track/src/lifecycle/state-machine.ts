@@ -18,7 +18,9 @@ export const SIGNAL_WEIGHT: Record<Exclude<LifecycleSignal, 'model-propose'>, nu
   'user-confirm': 1.0,   // explicit user "可以了/完成/验收通过" — strongest
   'todo-all-done': 0.6,  // todo snapshot completed === total > 0
   'turn-completed': 0.3, // turn/end reason.kind === 'completed'
+  'commit-observed': 0.55, // an implements/landed-in commit link landed in the window (P0: Output-first)
   activity: 0.2,         // file write/edit / shell heartbeat
+  'user-delete': -1.0,   // user deleted the issue — absolute negation
   'turn-error': -0.4,    // penalty
   'turn-blocked': -0.4,  // penalty
   'tool-error': -0.2,    // penalty
@@ -124,13 +126,22 @@ export function nextInferred(current: Issue, signals: readonly EvidenceRef[], no
   }
 
   // 2. Done proposal — only from an in-progress issue, and only gated.
+  //    P0 (Output-first, 2026-08-18): process-completion evidence alone
+  //    (todo-all-done + turn-completed) no longer proposes done — a
+  //    commit-observed signal (an implements/landed-in link in the window)
+  //    is required, or the user must explicitly confirm completion (which is
+  //    the panel's "确认无代码产出" nod when no commit evidence exists).
   if (current.state === 'in_progress') {
     const userSaidDone = has('user-confirm') && conf >= 0.85
-    const evidenceSaysDone = has('todo-all-done') && has('turn-completed') && conf >= 0.7
+    const evidenceSaysDone = has('todo-all-done') && has('turn-completed') && has('commit-observed') && conf >= 0.7
     if (userSaidDone || evidenceSaysDone) {
+      const noCommit = !has('commit-observed')
+      const reason = userSaidDone && noCommit
+        ? `${describeEvidence(fresh)} — 无 commit 证据（确认无代码产出？）`
+        : describeEvidence(fresh)
       return {
         inferred: { ...base, state: 'done', confidence: conf, by: 'auto' },
-        confirm: { to: 'done', reason: describeEvidence(fresh) },
+        confirm: { to: 'done', reason },
       }
     }
   }
@@ -158,8 +169,9 @@ export function sweepProposal(current: Issue, now = Date.now()): { to: 'done' | 
   const conf = compositeConfidence(fresh)
   const has = (s: LifecycleSignal): boolean => fresh.some((x) => x.signal === s)
   // Completion evidence (stale allowed up to the sweep window) → propose done.
+  // P0: requires commit-observed (Output-first) unless the user confirmed.
   const userSaidDone = has('user-confirm') && conf >= 0.85
-  const evidenceSaysDone = has('todo-all-done') && has('turn-completed') && conf >= 0.7
+  const evidenceSaysDone = has('todo-all-done') && has('turn-completed') && has('commit-observed') && conf >= 0.7
   if (userSaidDone || evidenceSaysDone) {
     return { to: 'done', reason: describeEvidence(fresh) }
   }

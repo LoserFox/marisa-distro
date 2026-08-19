@@ -24,7 +24,9 @@ const port = await new Promise((resolve, reject) => {
   });
 });
 
-const child = spawn(process.execPath, [bin, 'web', '--profile', 'marisa', '--host', '127.0.0.1', '--port', String(port)], {
+// rc7 CLI syntax: --profile is a launcher flag; `web` subcommand does not
+// accept it (rc7 sync, 2026-08-18).
+const child = spawn(process.execPath, [bin, '--profile', 'marisa', '--host', '127.0.0.1', '--port', String(port)], {
   cwd: repo,
   env: process.env,
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -80,10 +82,10 @@ try {
   assert.ok(payload && typeof payload === 'object', 'MyGO plugins endpoint must return JSON');
   assert.ok(Array.isArray(payload.plugins), 'MyGO plugins endpoint must expose its managed-plugin inventory');
   const expectedMygoPlugins = [
-    ['dsh-mygo', '0.2.0-rc.6'],
-    ['dsh-mygo-loader-hub', '0.2.0-rc.6'],
-    ['dsh-mygo-cli', '0.2.0-rc.6'],
-    ['dsh-mygo-ext-panel', '0.2.0-rc.6'],
+    ['dsh-mygo', '0.2.0-rc.7'],
+    ['dsh-mygo-loader-hub', '0.2.0-rc.7'],
+    ['dsh-mygo-cli', '0.2.0-rc.7'],
+    ['dsh-mygo-ext-panel', '0.2.0-rc.7'],
   ];
   for (const [id, version] of expectedMygoPlugins) {
     const plugin = payload.plugins.find((candidate) => candidate.id === id);

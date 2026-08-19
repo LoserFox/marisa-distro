@@ -22,7 +22,7 @@ Neither result view carries a `content` copy. A UI that does not render the stru
 
 ## Consequences
 
-The frontend consumer was a separate later PR: this producer change adds the contract arm and makes the two tools emit it, with no client-side rendering. Its one observable change is that the `web_search`/`web_fetch` `tool/result` events persist a `data.meta` payload (the `web-fetch` keyless snapshot was refreshed accordingly); model-facing render text and generic fallback content stay unchanged. The assembled-application transcript snapshot that exercises a `web` card belongs to the consumer change that renders it. Any `ToolResultView` consumer that switches exhaustively must add a `web` arm; a non-exhaustive consumer may use the raw-result fallback. `apiproxy`'s session schema already accepts any `card` string (`packages/host/apiproxy/src/api/sessions.schema.ts`), so the new view crosses the wire without a schema change.
+The frontend consumer is owned by the [web result card frontend note](2026-07-30-web-result-card-frontend.md): this producer change adds the contract arm and makes the two tools emit it, with no client-side rendering. Its one observable change is that the `web_search`/`web_fetch` `tool/result` events persist a `data.meta` payload (the `web-fetch` keyless snapshot was refreshed accordingly); model-facing render text and generic fallback content stay unchanged. The assembled-application transcript snapshot that exercises a `web` card belongs to the consumer change that renders it. Any `ToolResultView` consumer that switches exhaustively must add a `web` arm; a non-exhaustive consumer may use the raw-result fallback. `apiproxy`'s session schema already accepts any `card` string (`packages/host/apiproxy/src/api/sessions.schema.ts`), so the new view crosses the wire without a schema change.
 
 A future web tool that wants this card declares `presentResult` returning a `card: 'web'` view with its own `kind`; adding a third `kind` is a union edit plus the frontend's branch, not a new card tag.
 
@@ -41,4 +41,4 @@ A future web tool that wants this card declares `presentResult` returning a `car
 ## Related
 
 - [Tagged render-intent union for tool-call presentation](../architecture/2026-07-02-tool-render-intent-union.md) — the `card`-tagged vocabulary this extends with the `web` arm.
-- [Web terminal card](2026-07-28-web-terminal-card.md) — the precedent that carried the bash `terminal` render intent to the browser; the web frontend consumer of this arm is its analogue, deferred to a later PR.
+- [Web terminal card](2026-07-28-web-terminal-card.md) — the precedent that carried the bash `terminal` render intent to the browser; the [web result card frontend](2026-07-30-web-result-card-frontend.md) is its analogue for this arm.

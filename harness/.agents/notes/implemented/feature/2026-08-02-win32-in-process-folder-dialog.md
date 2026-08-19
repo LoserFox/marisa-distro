@@ -6,7 +6,7 @@ English | [中文](2026-08-02-win32-in-process-folder-dialog.zh.md)
 
 ## Problem
 
-The Windows directory picker's primary tier was a spawned PowerShell script around WinForms `FolderBrowserDialog`: the modern dialog only where PowerShell 7 happens to be installed, a review-flagged regression where PowerShell 6 resolves but has no WinForms (exit 1 is not `ENOENT`, so the 5.1 fallback never ran), a `SetProcessDPIAware` ceiling of system DPI, and a picker whose behavior depended on which shells a machine ships rather than on Windows itself.
+The Windows directory picker's primary tier was a spawned PowerShell script around WinForms `FolderBrowserDialog`: the modern dialog only where PowerShell 7 happens to be installed, a regression where PowerShell 6 resolves but has no WinForms (exit 1 is not `ENOENT`, so the 5.1 fallback never ran), a `SetProcessDPIAware` ceiling of system DPI, and a picker whose behavior depended on which shells a machine ships rather than on Windows itself.
 
 ## Decision
 

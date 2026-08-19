@@ -1,6 +1,6 @@
 /** State owner for the optional local settings-document action. */
 
-import type { IApiClient } from '@deepseek-ai/dsh-client-connection/client'
+import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 
 /** Browser state of the Host-owned settings document. */
@@ -52,7 +52,7 @@ export class SettingsDocumentStore {
         return
       }
       this.store.update((state) => {
-        state.status = !result.value.hasDocument ? 'unavailable' : 'ready'
+        state.status = result.value.hasDocument ? 'ready' : 'unavailable'
         state.error = null
       })
     } catch (error) {

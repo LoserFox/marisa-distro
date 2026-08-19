@@ -30,7 +30,7 @@
       "path": "../../../vendor/schemastery"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

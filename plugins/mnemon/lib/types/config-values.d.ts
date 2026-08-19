@@ -1,0 +1,9 @@
+export declare const DEFAULT_TIMEOUT_MS = 10000;
+export declare const DEFAULT_RECALL_LIMIT = 10;
+export declare const DEFAULT_IDLE_REVIEW_MS = 30000;
+export declare const DEFAULT_RECALL_QUALITY_POLICY = "strict-v1";
+export declare const DEFAULT_RECALL_LOW_SCORE_THRESHOLD = 0.25;
+export declare const DEFAULT_RECALL_HIGH_SCORE_THRESHOLD = 0.6;
+export declare const DEFAULT_RECALL_CANDIDATE_MULTIPLIER = 3;
+export declare const DEFAULT_RECALL_MAX_MEDIUM_RESULTS = 4;
+export declare const DEFAULT_RECALL_MAX_UNKNOWN_RESULTS = 2;

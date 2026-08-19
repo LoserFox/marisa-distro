@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import LlmService, { createUserMessage, CallId  } from '@deepseek-ai/dsh-llm'
+import { Context } from '@deepseek-ai/cordis'
+import LlmRuntime, { createUserMessage, CallId  } from '@deepseek-ai/dsh-llm'
 import SessionStore, {
   SessionId,
   type SessionEvent,
@@ -8,7 +8,7 @@ import SessionStore, {
   type UserMessage,
 } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { defineContentToolFixture, type PostToolDecision, type PreToolDecision } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { defineContentToolFixture, type PostToolDecision, type PreToolDecision } from '@deepseek-ai/dsh-tools'
 import AgentRegistry, {
   type Agent,
   type PreStepDecision,
@@ -19,20 +19,20 @@ import AgentLoop from '@deepseek-ai/dsh-agent-loop'
 import { MockAdapter, textResponse, toolCallResponse } from './mock-adapter.ts'
 
 /**
- * The interception seams introduced by the hooks taxonomy: `agent/pre-step`,
+ * The interception points introduced by the hooks taxonomy: `agent/pre-step`,
  * `agent/session-start`, `agent/turn-stopping`, and the
  * `tools/pre-execute` / `tools/post-execute`
  * split with `additionalContexts` buffering. These verify the canonical event
- * surface a hook bridge (or a native plugin) programs against, WITHOUT any
+ * API a hook bridge (or a native plugin) programs against, WITHOUT any
  * external protocol — a native plugin uses the typed decisions directly.
  */
 
 async function harness(adapter: MockAdapter) {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt)
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, { agents: [] })
   ctx.llm.registerAdapter(['mock'], adapter)
@@ -527,7 +527,7 @@ describe('agent/pre-step', () => {
     const reasons: TurnEndReason[] = []
     const statuses: string[] = []
     ctx.on('agent/error', ({ error }) => {
-      if (error instanceof Error) { errors.push(error) }
+      if (error instanceof Error) errors.push(error)
     })
     ctx.on('agent/status', ({ agent: subject, status }) => { if (subject === agent) statuses.push(status) })
     ctx.on('session/event', (session, event) => {

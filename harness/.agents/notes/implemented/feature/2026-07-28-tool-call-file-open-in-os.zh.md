@@ -10,9 +10,9 @@ Status: implemented
 
 ## 决策
 
-文件工具的路径摘要（`read`／`write`／`edit` 参数中的 `path` 或 `file_path`）渲染为静止状态下即带下划线的链接，并使用 pointer 光标。点击路径会经 `WorkspacesService.openPath` 调用 `host.openPath`，相对路径以会话 cwd 为基准解析。带文件链接的行关闭参数展开（左侧图标不可点）；工具行（含 bash 与 todo 注册）去掉整行点击、整行悬停底色，以及点击打开 details 的手势。details 面板及其 inject 面仍保留供程序化选择；工具行不再驱动它们。
+文件工具的路径摘要（`read`／`write`／`edit` 参数中的 `path` 或 `file_path`）渲染为静止状态下即带下划线的链接，并使用 pointer 光标。点击路径会经 `WorkspaceRuntime.openPath` 调用 `host.openPath`，相对路径以会话 cwd 为基准解析。带文件链接的行关闭参数展开（左侧图标不可点）；工具行（含 bash 与 todo 注册）去掉整行点击、整行悬停底色，以及点击打开 details 的手势。details 面板及其 inject 面仍保留供程序化选择；工具行不再驱动它们。
 
-`host.openPath` 是特权一元 RPC，仅接受来自回环地址且同源的浏览器请求（与 `host.pickDirectory` 相同的载体守卫）。平台适配器不经 shell 打开：macOS 为 `open`，Windows 为 PowerShell `Invoke-Item`，桌面 Linux 为 `xdg-open`；浏览器可渲染的文档会在 macOS 与桌面 Linux 上优先使用能够确定的默认浏览器。尽管 Node 将 WSL 报告为 `linux`，WSL 仍是一种独立的宿主形态：适配器根据其环境或 Microsoft 内核 release 识别它，用 `wslpath -w` 转换 Linux 路径，并将所得 Windows/UNC 路径交给同一 PowerShell 交接。打开器的平台信息和命令运行器可在测试中注入。仅含 URL 的 read 参数（`web_fetch`）不是文件链接。
+`host.openPath` 是特权一元 RPC，仅接受来自回环地址且同源的浏览器请求（与 `host.pickDirectory` 相同的载体守卫）。平台适配器不经 shell 打开：macOS 为 `open`，Windows 为 PowerShell `Invoke-Item`，桌面 Linux 为 `xdg-open`；浏览器可渲染的文档会在 macOS 与桌面 Linux 上优先使用指定的默认浏览器。尽管 Node 将 WSL 报告为 `linux`，WSL 仍是一种独立的宿主形态：适配器根据其环境或 Microsoft 内核 release 识别它，用 `wslpath -w` 转换 Linux 路径，并将所得 Windows/UNC 路径交给同一 PowerShell 交接。打开器的平台信息和命令运行器可在测试中注入。仅含 URL 的 read 参数（`web_fetch`）不是文件链接。
 
 ## 考虑过的替代方案
 

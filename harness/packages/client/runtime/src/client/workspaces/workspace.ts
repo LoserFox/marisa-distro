@@ -2,13 +2,13 @@
 
 import type {
   IApiClient, RpcResult, WorkspaceView,
-} from '@deepseek-ai/dsh-client-connection/client'
+} from '@deepseek-ai/dsh-api-remotes/client'
 import { transportError } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type { ObservableSnapshot } from '../contract/store.ts'
 import { Notifier } from '../sessions/notifier.ts'
 
 /** Host input retained by a local Workspace until materialization succeeds. */
-export type WorkspaceCreateInput = { name: string } | { path: string }
+export type WorkspaceCreateInput = { path: string }
 
 /** Observable state of a client-local Workspace intent. */
 export interface WorkspaceIntentSnapshot {
@@ -59,14 +59,14 @@ export class Workspace implements ObservableSnapshot<WorkspaceSnapshot> {
   }
 
   /**
-   * Materialize this local Workspace through the Host create seam.
+   * Materialize this local Workspace through the Host create API.
    * Re-entry shares the in-flight completion; a materialized instance returns undefined.
    * @returns the Host result, or undefined when this Workspace is already materialized.
    */
   materialize(): Promise<RpcResult<{ workspace: WorkspaceView; created: boolean }>> | undefined {
     if (this.materialization !== null) return this.materialization
     const intent = this.intent
-    if (intent === undefined) { return undefined }
+    if (intent === undefined) return undefined
     intent.snapshot = { name: intent.snapshot.name, phase: 'creating' }
     this.notifier.notifyNow()
     const completion = this.completeMaterialization(intent).finally(() => {
@@ -137,7 +137,6 @@ export class Workspace implements ObservableSnapshot<WorkspaceSnapshot> {
 }
 
 function intentName(input: WorkspaceCreateInput): string {
-  if ('name' in input) return input.name
   const trimmed = input.path.replace(/[\\/]+$/, '')
   return trimmed.split(/[\\/]/).pop() ?? input.path
 }

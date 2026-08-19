@@ -1,7 +1,13 @@
 // Web e2e scenario for the opt-in Cordis tools. Record mode drives a real
-// model through inspect, mount, and unmount; replay pins the same shipped Web
-// composition, durable calls, generic rows, highlighted Plugin source, and
-// conversation accessibility tree.
+// model through inspect, define, run, and stop; replay pins the same shipped Web
+// composition, durable calls, Cordis-owned rows, the define card's own source view,
+// and conversation accessibility tree.
+//
+// The approval is never in the fixture. The fixture pins what the MODEL said;
+// tools execute for real, and this test answers the approval before starting the
+// stop turn. The package therefore carries a browser half whose only
+// job is to be visible (`[data-snapshot-probe]`): its absence before the answer
+// and presence after it is the v3 user gate, proven rather than described.
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import type { Browser, Page } from 'playwright'
@@ -17,20 +23,31 @@ import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './suppor
 const FIXTURE = fileURLToPath(new URL('./snapshots/cordis-tool-round/session.jsonl', import.meta.url))
 const UI_EXPECTED = fileURLToPath(new URL('./snapshots/cordis-tool-round/ui.expected.md', import.meta.url))
 const MODE = webSnapshotMode()
-const CORDIS_TOOLS = ['cordis_inspect', 'cordis_mount', 'cordis_unmount'] as const
-const MOUNT_CODE = 'return { name: "snapshot-noop", apply(ctx) {} }'
-const PROMPT = 'Use only Cordis tools. First call cordis_inspect with what "temporary". '
-  + `Then call cordis_mount with this exact code: ${JSON.stringify(MOUNT_CODE)}. `
-  + 'Read its returned id and call cordis_unmount with that exact id. '
-  + 'After all three calls succeed, reply exactly CORDIS_UI_DONE and stop.'
+const CORDIS_TOOLS = ['cordis_inspect_self', 'cordis_define', 'cordis_run', 'cordis_stop'] as const
+const PACKAGE_CODE = 'return { name: "snapshot-noop", apply(ctx) {} }'
+// The browser half is the PROBE this scenario turns on: it renders a marker into
+// the frame-wide overlay, so "did the plugin actually run in this page" becomes a
+// DOM fact. A host-only package would sidestep the approval round trip entirely
+// (the host runs those immediately), which would drop the v3 user gate out of
+// coverage — the one thing this scenario exists to prove.
+const CLIENT_CODE = 'return { inject: ["slots"], apply(ctx) { ctx.slots.register('
+  + '{ name: "shell.overlay", id: "snapshot-probe" }, '
+  + '() => React.createElement("div", { "data-snapshot-probe": "loaded" })) } }'
+const PROMPT = 'Use only Cordis tools. First call cordis_inspect_self with no arguments. '
+  + 'Then call cordis_define with plugin kind "new", idPrefix "snap", name "snapshot noop", '
+  + 'purpose "does nothing, for the snapshot", '
+  + `code.host exactly ${JSON.stringify(PACKAGE_CODE)} and code.client exactly ${JSON.stringify(CLIENT_CODE)}. `
+  + 'Read its returned pluginId and packageId, then call cordis_run with those exact IDs and mode "run". '
+  + 'After the run request returns, reply exactly CORDIS_UI_READY and stop.'
+const STOP_PROMPT = 'Use only Cordis tools. Call cordis_stop with pluginId "snap-1". '
+  + 'After it succeeds, reply exactly CORDIS_UI_DONE and stop.'
 
 function assertCompleteCordisLifecycle(events: readonly SessionEvent[]): void {
   const turnEnd = events.findLast(
     (event): event is Extract<SessionEvent, { type: 'turn/end' }> => event.type === 'turn/end',
   )
   const reason = turnEnd?.data.reason
-  const reasonSummary = { kind: reason?.kind }
-  expect(reasonSummary).toEqual({ kind: 'completed' })
+  expect(reason).toEqual({ kind: 'completed' })
 
   const calls = events.filter(
     (event): event is Extract<SessionEvent, { type: 'tool/call' }> => event.type === 'tool/call',
@@ -46,7 +63,7 @@ function assertCompleteCordisLifecycle(events: readonly SessionEvent[]): void {
   expect(results.every(event => !event.data.message.content[0].isError)).toBe(true)
 }
 
-describe('web e2e: Cordis tools use the generic row variants', () => {
+describe('web e2e: Cordis tools use their owned cards', () => {
   let scaffold: WebScaffold
   let browser: Browser
   let page: Page
@@ -56,7 +73,7 @@ describe('web e2e: Cordis tools use the generic row variants', () => {
   beforeAll(async () => {
     scaffold = await launchWebScaffold({
       cordisTools: true,
-      ...(MODE !== 'record' ? { replayFixture: FIXTURE, paceMs: 15 } : {}),
+      ...(MODE === 'record' ? {} : { replayFixture: FIXTURE, paceMs: 15 }),
     })
     scaffold.ctx.on('session/event', (_session, event: SessionEvent) => { sessionEvents.push(event) })
     browser = await chromium.launch()
@@ -75,14 +92,30 @@ describe('web e2e: Cordis tools use the generic row variants', () => {
   it('drives the recorded Cordis lifecycle to a settled turn (all modes)', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-cordis-drive'))
     if (MODE !== 'record') {
-      expect(fixtureUserPrompts(await readFile(FIXTURE, 'utf8'))).toEqual([PROMPT])
+      expect(fixtureUserPrompts(await readFile(FIXTURE, 'utf8'))).toEqual([PROMPT, STOP_PROMPT])
     }
     const input = page.locator('textarea').first()
     await input.waitFor({ timeout: 10_000 })
-    const settled = scaffold.whenTurnSettled()
+    const runTurnSettled = scaffold.whenTurnSettled()
     await input.fill(PROMPT)
     await input.press('Enter')
-    const sessionId = await settled
+
+    // The approval is the TEST's action in every mode: the fixture pins what the
+    // model said, and the gate is a real round trip through the real panel.
+    const approve = page.locator('[data-cordis-approve]').first()
+    await approve.waitFor({ timeout: 90_000 })
+    // The one assertion this scenario cannot give up: the model asking to run is
+    // NOT the plugin running. Until a person answers, the browser half has not
+    // been fetched, evaluated, or mounted anywhere on this page.
+    expect(await page.locator('[data-snapshot-probe]').count()).toBe(0)
+    await approve.click()
+    await expect.poll(() => page.locator('[data-snapshot-probe]').count(), { timeout: 30_000 }).toBe(1)
+
+    const sessionId = await runTurnSettled
+    const stopTurnSettled = scaffold.whenTurnSettled()
+    await input.fill(STOP_PROMPT)
+    await input.press('Enter')
+    await stopTurnSettled
     if (MODE === 'record') {
       assertCompleteCordisLifecycle(sessionEvents)
       await expect.poll(() => page.getByText('CORDIS_UI_DONE', { exact: true }).count(), { timeout: 15_000 })
@@ -95,25 +128,36 @@ describe('web e2e: Cordis tools use the generic row variants', () => {
     assertCompleteCordisLifecycle(sessionEvents)
   })
 
-  it.skipIf(MODE === 'record')('renders Cordis lifecycle titles over the generic row mechanics', async () => {
+  it.skipIf(MODE === 'record')('renders localized Cordis lifecycle cards', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-cordis-rows'))
     await expect.poll(() => page.getByText('CORDIS_UI_DONE', { exact: true }).count(), { timeout: 15_000 })
       .toBeGreaterThanOrEqual(1)
 
-    const inspectRow = page.locator('[data-tool="cordis_inspect"]').filter({ hasText: 'Inspect' }).first()
+    const inspectRow = page.locator('[data-tool="cordis_inspect_self"]').filter({ hasText: 'Inspect' }).first()
     await inspectRow.waitFor({ timeout: 10_000 })
 
-    const mountRow = page.locator('[data-tool="cordis_mount"]').filter({ hasText: 'Mount temporary Plugin' }).first()
-    await mountRow.waitFor({ timeout: 10_000 })
+    // cordis_define does NOT go through the generic row: ui-cordis registers a
+    // keyed toolview for it, and a keyed hit replaces the generic card. So the
+    // title here is the CARD's ("Cordis Plugin"), and the expanded body is the
+    // card's own two code sections rather than a generic args dump.
+    const defineRow = page.locator('[data-tool="cordis_define"]').filter({ hasText: 'Cordis Plugin' }).first()
+    await defineRow.waitFor({ timeout: 10_000 })
     // The whole summary row is the expand toggle (unified tool-row interaction).
-    await mountRow.locator('[aria-expanded]').first().click()
-    await expect.poll(() => mountRow.locator('pre.shiki').textContent(), { timeout: 10_000 })
-      .toContain(MOUNT_CODE)
+    await defineRow.locator('[aria-expanded]').first().click()
+    await expect.poll(() => defineRow.textContent(), { timeout: 10_000 }).toContain('data-snapshot-probe')
+    await defineRow.getByRole('tab', { name: 'Host' }).click()
+    await expect.poll(() => defineRow.textContent()).toContain(PACKAGE_CODE)
 
-    const unmountRow = page.locator('[data-tool="cordis_unmount"]').filter({ hasText: 'Unmount temporary Plugin' }).first()
-    await unmountRow.waitFor({ timeout: 10_000 })
-    await expect.poll(() => unmountRow.textContent()).toContain('dyn-')
-    await expect(unmountRow.getAttribute('data-state')).resolves.toBe('ok')
+    const runRow = page.locator('[data-tool="cordis_run"]').filter({ hasText: 'Run Cordis Plugin' }).first()
+    await runRow.waitFor({ timeout: 10_000 })
+    await expect.poll(() => runRow.textContent()).toContain('snap-')
+
+    const stopRow = page.locator('[data-tool="cordis_stop"]').filter({ hasText: 'Stop Cordis Plugin' }).first()
+    await stopRow.waitFor({ timeout: 10_000 })
+    await expect.poll(() => stopRow.textContent()).toContain('snap-')
+    await expect(stopRow.getAttribute('data-state')).resolves.toBe('ok')
+    // Stopping withdraws the browser half from every page, probe included.
+    await expect.poll(() => page.locator('[data-snapshot-probe]').count(), { timeout: 15_000 }).toBe(0)
   })
 
   it.skipIf(MODE === 'record')('matches the conversation aria golden', async () => {

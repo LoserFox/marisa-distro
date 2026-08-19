@@ -21,7 +21,7 @@
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /**
      * The session's sandbox mode was switched — log-only (like `approval/*`;
@@ -52,7 +52,7 @@ export const SANDBOX_MODES: readonly SandboxMode[] = ['read-only', 'workspace-wr
 export function effectiveSandboxMode(events: readonly SessionEvent[]): SandboxMode | undefined {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index] as SessionEvent
-    if (event.type === 'sandbox/mode') { return event.data.mode }
+    if (event.type === 'sandbox/mode') return event.data.mode
   }
   return undefined
 }

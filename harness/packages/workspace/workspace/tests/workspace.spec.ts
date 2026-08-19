@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import Storage from '@deepseek-ai/dsh-storage'
 import type { StorageBackend } from '@deepseek-ai/dsh-storage'
 import { DomainFacility } from '@deepseek-ai/dsh-storage-domain'
@@ -10,7 +10,11 @@ import type { DomainChanged } from '@deepseek-ai/dsh-storage-domain'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionHeader } from '@deepseek-ai/dsh-session'
 import { MemoryMediaPool, MemoryStorageBackend } from '../../../storage/storage-domain/tests/helpers/memory-backend.ts'
-import WorkspaceRegistry, { WorkspaceId, WorkspaceMoveInvalidError } from '../src/index.ts'
+import WorkspaceRegistry, {
+  WorkspaceId,
+  WorkspaceMoveInvalidError,
+  WorkspaceOrderInvalidError,
+} from '../src/index.ts'
 import type { WorkspaceDomainState, WorkspaceRecord } from '../src/index.ts'
 
 const DOMAIN_VERSION = 2
@@ -65,7 +69,7 @@ async function harness(options: HarnessOptions = {}) {
     ctx,
     fiber,
     pool,
-    registry: ctx.workspace,
+    registry: ctx.workspaceRegistry,
     changes,
     initChanges,
     list,
@@ -184,13 +188,13 @@ describe('WorkspaceRegistry lifecycle and bootstrap', () => {
     const pool = new MemoryMediaPool()
     const ctx = await storageContext(pool)
     const fiber = await ctx.plugin(WorkspaceRegistry)
-    expect(ctx.get('workspace')).toBeUndefined()
+    expect(ctx.get('workspaceRegistry')).toBeUndefined()
     expect(pool.media.has('workspace')).toBe(false)
 
     const list = vi.fn(async () => [] as SessionHeader[])
     ctx.provide('sessionPersistence', { list } as never)
     await fiber.await()
-    expect(ctx.workspace.list()).toEqual([])
+    expect(ctx.workspaceRegistry.list()).toEqual([])
     expect(list).toHaveBeenCalledTimes(1)
     expect(storedState(pool)).toEqual({ initialized: true, workspaceIds: [], archivedSessionIds: [] })
   })
@@ -342,7 +346,7 @@ describe('WorkspaceRegistry lifecycle and bootstrap', () => {
     const first = await result.registry.create(dir)
     await result.fiber.dispose()
     const nextFiber = await result.ctx.plugin(WorkspaceRegistry)
-    expect(result.ctx.workspace.list().map(workspace => workspace.id)).toEqual([first.id])
+    expect(result.ctx.workspaceRegistry.list().map(workspace => workspace.id)).toEqual([first.id])
     await nextFiber.dispose()
   })
 })
@@ -565,6 +569,49 @@ describe('WorkspaceRegistry create and lookup', () => {
     expect(() => registry.list()).toThrow(/not started/)
     const internals = registry as unknown as { requireTable(): unknown }
     expect(() => internals.requireTable()).toThrow(/not started/)
+  })
+})
+
+describe('Workspace registry ordering', () => {
+  it('moves a workspace before an anchor or to the end and restores that order after restart', async () => {
+    const firstDir = await makeDir('order-first')
+    const secondDir = await makeDir('order-second')
+    const thirdDir = await makeDir('order-third')
+    const result = await harness()
+    const first = await result.registry.create(firstDir)
+    const second = await result.registry.create(secondDir)
+    const third = await result.registry.create(thirdDir)
+    expect(result.registry.list().map(item => item.id)).toEqual([third.id, second.id, first.id])
+
+    await expect(result.registry.insertBefore(first.id, second.id))
+      .resolves.toEqual([third.id, first.id, second.id])
+    await expect(result.registry.insertBefore(third.id))
+      .resolves.toEqual([first.id, second.id, third.id])
+    expect(storedState(result.pool).workspaceIds).toEqual([first.id, second.id, third.id])
+
+    const restarted = await harness({ pool: result.pool })
+    expect(restarted.registry.list().map(item => item.id)).toEqual([first.id, second.id, third.id])
+  })
+
+  it('keeps self-anchored and already-positioned moves write-free and rejects unknown ids', async () => {
+    const firstDir = await makeDir('order-noop-first')
+    const secondDir = await makeDir('order-noop-second')
+    const result = await harness()
+    const first = await result.registry.create(firstDir)
+    const second = await result.registry.create(secondDir)
+    const written = result.changes.length
+
+    await result.registry.insertBefore(second.id, second.id)
+    await result.registry.insertBefore(second.id, first.id)
+    await result.registry.insertBefore(first.id)
+    expect(result.changes).toHaveLength(written)
+    expect(result.registry.list().map(item => item.id)).toEqual([second.id, first.id])
+
+    await expect(result.registry.insertBefore(WorkspaceId('missing')))
+      .rejects.toBeInstanceOf(WorkspaceOrderInvalidError)
+    await expect(result.registry.insertBefore(second.id, WorkspaceId('missing-anchor')))
+      .rejects.toMatchObject({ workspaceId: 'missing-anchor' })
+    expect(result.changes).toHaveLength(written)
   })
 })
 

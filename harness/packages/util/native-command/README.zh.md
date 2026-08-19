@@ -24,4 +24,4 @@ import { runNativeCommand, type NativeCommandRunner } from '@deepseek-ai/dsh-nat
 
 ## 已知限制与暂缓事项
 
-- **不做输出限量**——两路流在内存中无界缓冲；当前每个调用方只运行输出为一个路径或一行错误的小型原生工具。把它指向输出量可观的命令之前，先接入 `dsh-retention` 限量。
+- **不做输出限量**——两路流在内存中无界缓冲；当前每个调用方只运行输出为一个路径或一行错误的小型原生工具。把它指向输出量可观的命令之前，先接入 `dsh-output-retention` 限量。

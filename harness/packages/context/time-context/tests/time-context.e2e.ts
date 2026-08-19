@@ -49,7 +49,7 @@ describe('time-context through a real headless cordis.yml', () => {
     expect(events.filter(event => event.type === 'turn/end')).toHaveLength(2)
 
     const contexts = events.filter(
-      (event): event is SessionEvent<'user/message'> => { return event.type === 'user/message' && event.data.source.kind === 'plugin' })
+      (event): event is SessionEvent<'user/message'> => event.type === 'user/message' && event.data.source.kind === 'plugin')
     const starts = events.filter(event => event.type === 'step/start')
     expect(contexts).toHaveLength(2)
     expect(starts).toHaveLength(2)

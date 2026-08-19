@@ -1,25 +1,17 @@
 {
   "schemaVersion": 1,
   "harness": {
-    "mode": "fork",
+    "mode": "mirror",
     "path": "harness",
     "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
-    "baseline": "4e7fb95f",
-    "baselineReviewed": "2026-08-16",
-    "dshVersion": "0.1.0-rc.6",
-    "channel": "testing",
-    "diffDocument": "docs/upstream-diff.md"
+    "baseline": "99f6f02fecdb7dff40c3fbc9470f5907c29f74ca",
+    "baselineReviewed": "2026-08-18",
+    "dshVersion": "0.1.0-rc.7",
+    "channel": "next",
+    "diffDocument": "docs/upstream-diff.md",
+    "note": "rc7 sync 2026-08-18: replaced the private 4e7fb95f snapshot (which lacked host.describe.canOpenPath) with public rc7; client+host now share one rc7 tree"
   },
   "plugins": [
-    {
-      "id": "aigc-canvas",
-      "source": "npm",
-      "mode": "fork",
-      "repository": null,
-      "version": "0.1.0",
-      "diffDocument": "docs/plugins/aigc-canvas.md",
-      "note": "npm snapshot; client module id compatibility patch"
-    },
     {
       "id": "dsh_workflow",
       "mode": "fork",
@@ -31,7 +23,7 @@
       "id": "dsh-a2a",
       "mode": "mirror",
       "repository": "https://github.com/dsh-external/dsh-a2a.git",
-      "baseline": "4da1129c201984cda7aaffa31c9ac7fdf158eb92"
+      "baseline": "220de3a5cf8b57627107e91991227ad2184ed977"
     },
     {
       "id": "dsh-artifact",
@@ -95,7 +87,7 @@
       "repository": "https://github.com/omdsh-dev/dsh-llm-fallbacks.git",
       "version": "0.1.0-alpha.1",
       "diffDocument": "docs/plugins/dsh-llm-fallbacks.md",
-      "note": "npm snapshot; install-time lifecycle scripts removed, mounted only after rc6 client-event compat"
+      "note": "npm snapshot; install-time lifecycle scripts removed, mounted only after rc7 client-event compatibility is verified"
     },
     {
       "id": "dsh-multimedia-webui-input",
@@ -113,7 +105,7 @@
       "id": "dsh-sidechain",
       "mode": "mirror",
       "repository": "https://github.com/dsh-external/dsh-sidechain.git",
-      "baseline": "ee6fadd9bae9efb36477ec17c58e1409eeabaf88"
+      "baseline": "9dc75fefc1f79d1a28e388e14012a45da83f474e"
     },
     {
       "id": "dsh-sonar",
@@ -139,8 +131,9 @@
       "id": "dsh-track",
       "mode": "fork",
       "repository": "https://github.com/dsh-external/dsh-track.git",
-      "baseline": "4e6112b6b3c243e1867f876a68b16af2e2f2eb3c",
-      "diffDocument": "docs/plugins/dsh-track.md"
+      "baseline": "0efb17966fa77e0f3417a6b6ec317a7d518b36d0",
+      "diffDocument": "docs/plugins/dsh-track.md",
+      "note": "2026-08-19 sync from 4e6112b: replayed checkout-path fixes portably (../../harness); vitest.config.ts -> vitest.config.mjs upstream; still not mounted (rc7 contracts)"
     },
     {
       "id": "dsh-ui-progress",
@@ -150,10 +143,20 @@
       "diffDocument": "docs/plugins/dsh-ui-progress.md"
     },
     {
+      "id": "dsh-update-check",
+      "mode": "fork",
+      "repository": "https://github.com/omdsh-dev/marisa-distro.git",
+      "baseline": "67a766806e429b512fb03832431c1c5e207f7bc2",
+      "diffDocument": "docs/plugins/dsh-update-check.md",
+      "note": "本地第一方插件（2026-08-19）：Marisa 发行版自研的检查更新插件，非上游 mirror；repository 指向发行版仓库自身，baseline 为引入时的仓库基线 commit（67a7668）"
+    },
+    {
       "id": "dsh-vision-toolkit",
-      "mode": "mirror",
-      "repository": "https://github.com/dsh-external/dsh-vision-toolkit.git",
-      "baseline": "8d35621cf955d10d9a76a02cd7b5b946fcc769ad"
+      "mode": "fork",
+      "repository": "https://github.com/Anionex/dsh-vision-toolkit.git",
+      "baseline": "a4344e441b3786ce45868608a17383317ce63c9e",
+      "diffDocument": "docs/plugins/dsh-vision-toolkit.md",
+      "note": "2026-08-19 sync 8d35621 -> v0.1.32 (Python bootstrap, Windows CI, MAX_PATH fix, paste-images, image-input variants); package scope renamed @anionex -> @dsh-external; replay: authMode none + Zen/GLM presets"
     },
     {
       "id": "dsh-web-review",
@@ -178,18 +181,18 @@
       "note": "npm snapshot; upstream repository not published"
     },
     {
-      "id": "mineru",
+      "id": "mnemon",
       "source": "npm",
       "mode": "mirror",
-      "repository": null,
-      "version": "0.2.1",
-      "note": "npm snapshot; upstream repository not published"
+      "repository": "https://github.com/omdsh-dev/dsh-mnemon.git",
+      "version": "0.2.9",
+      "note": "npm snapshot (2026-08-19 eval: conditional recommendation, integrated with hardened bundle defaults); the mnemon Go engine binary v0.2.3 ships at desktop/bundle/mnemon.exe and resolves via the launcher PATH"
     },
     {
       "id": "whale-girl",
       "mode": "mirror",
       "repository": "https://github.com/dsh-external/whale-girl.git",
-      "baseline": "ecba322be408138fcc265588cacf00737154d31e"
+      "baseline": "90c1a02746600f2ff84068ea6016df08988200c4"
     },
     {
       "id": "ya-workspace-sidebar",

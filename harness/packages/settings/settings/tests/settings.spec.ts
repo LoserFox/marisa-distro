@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from 'cordis'
-import z from 'schemastery'
-import { Settings, SettingsConflictError, deepEqualJson, installSettingsSection, settingsNamespace, type SettingsNamespace, type SettingsScope, type SettingsUpdateSource } from '../src/index.ts'
+import { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
+import { SettingsProvider, SettingsConflictError, deepEqualJson, installSettingsSection, settingsNamespace, type SettingsNamespace, type SettingsScope, type SettingsUpdateSource } from '../src/index.ts'
 import { MemorySettings } from './memory.ts'
 
-/** A provider implementing only the three primitives: the seam owns init. */
-class BareProvider extends Settings {
+/** A provider implementing only the three primitives: the Service Definition owns initialization. */
+class BareProvider extends SettingsProvider {
   doc: Record<string, unknown>
 
-  constructor(ctx: ConstructorParameters<typeof Settings>[0], options?: { doc?: Record<string, unknown> }) {
+  constructor(ctx: ConstructorParameters<typeof SettingsProvider>[0], options?: { doc?: Record<string, unknown> }) {
     super(ctx)
     this.doc = structuredClone(options?.doc ?? {})
   }
@@ -479,11 +479,11 @@ describe('second review regressions', () => {
     expect(applied).toEqual([1, 2])
   })
 
-  it('rejects a function value as not JSON-shaped', async () => {
+  it('rejects a function value as not JSON-compatible', async () => {
     const { ctx } = await boot()
     const scope = ctx.settings.register(settingsNamespace('ui-theme'), ThemeSchema)
     await expect(scope.update({ theme: () => 'dark' }))
-      .rejects.toThrow(/JSON-shaped.*function at \$\.theme/)
+      .rejects.toThrow(/JSON-compatible.*function at \$\.theme/)
   })
 
   it('rejects a write still queued when the service disposes', async () => {
@@ -616,7 +616,7 @@ describe('third review regressions', () => {
     const { ctx, provider } = await boot()
     const scope = ctx.settings.register(settingsNamespace('ui-theme'), z.object({ value: z.any() }))
     await expect(scope.update({ value: { at: new Date(0) } }))
-      .rejects.toThrow(/JSON-shaped.*Date at \$\.value\.at/)
+      .rejects.toThrow(/JSON-compatible.*Date at \$\.value\.at/)
     expect(provider.persisted).toEqual([])
   })
 
@@ -914,10 +914,10 @@ describe('mutate (path-addressed writes)', () => {
     expect(ctx.settings.describe().find(d => d.ns === KEYED)!.user).toEqual({ apiKey: 'sk-stored' })
   })
 
-  it('rejects a value the JSON-shape boundary refuses', async () => {
+  it('rejects a value that lossless JSON cannot represent', async () => {
     const ctx = await mounted({ keyed: {} })
     await expect(ctx.settings.mutate(KEYED, [{ op: 'set', path: ['baseURL'], value: new Date() }]))
-      .rejects.toThrow(/must be JSON-shaped data/)
+      .rejects.toThrow(/must contain only JSON-compatible data/)
   })
 })
 

@@ -1,7 +1,7 @@
 // Web e2e scenario: assistant IconActions belong to the settled answer, so
 // they arrive with `turn/end` and not before. The recorded turn narrates in
-// plain text before its tool call, which is the shape that used to hand the
-// footer to mid-turn narration for the seconds a tool runs and then move it
+// plain text before its tool call, which is the event order that would show the
+// footer beside mid-turn narration for the seconds a tool runs and then move it
 // down. A `hang` sidecar on the SECOND model call parks the turn after the
 // narration and the tool result are durable, so the running state is stable by
 // construction rather than by timing; stopping from that park writes the

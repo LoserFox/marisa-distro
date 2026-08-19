@@ -6,7 +6,7 @@ English | [中文](2026-06-11-dev-invariants-over-deep-readonly.zh.md)
 
 ## Problem
 
-The session log needs two different protections: immutable ownership of each stored fact, and checks for relationships among facts across time and service seams. Conflating them in an optional development plugin would leave production history vulnerable; trying to express both through TypeScript readonly types would not create a runtime boundary or describe relational rules.
+The session log needs two different protections: immutable ownership of each stored fact, and checks for relationships among facts across time and service contracts. Conflating them in an optional development plugin would leave production history vulnerable; trying to express both through TypeScript readonly types would not create a runtime boundary or describe relational rules.
 
 The session log is the durable source of truth for replay, request reconstruction, persistence, and user-visible history. Code outside the session package must be able to inspect that history without retaining a reference that can rewrite it later, and inputs accepted from callers must not remain connected to caller-owned mutable objects.
 

@@ -110,7 +110,7 @@ function installFakeKoffi(world: ComWorld): void {
               if (!world.hasThreadDpi) throw new Error(`${dll}: SetThreadDpiAwarenessContext not found`)
               return (context: unknown) => {
                 world.dpiContexts.push(context)
-                return !world.supportedDpiContexts.includes(context as number) ? null : { kind: 'previous-context' }
+                return world.supportedDpiContexts.includes(context as number) ? { kind: 'previous-context' } : null
               }
             }
             case 'EnumThreadWindows': return (_tid: unknown, callback: { fn: (hwnd: unknown, lparam: unknown) => number }, lparam: unknown) => {

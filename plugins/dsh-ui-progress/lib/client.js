@@ -7,7 +7,7 @@ window.__ModuleLoader__.load({
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region node_modules/.pnpm/clsx@2.1.1/node_modules/clsx/dist/clsx.mjs
+		//#region ../../node_modules/clsx/dist/clsx.mjs
 		function r(e) {
 			var t, f, n = "";
 			if ("string" == typeof e || "number" == typeof e) n += e;
@@ -22,8 +22,8 @@ window.__ModuleLoader__.load({
 			return n;
 		}
 		//#endregion
-		//#region \0dsh-css:E:\deepseek-harness\dsh-ui-progress\src\client\SessionProgressBar.module.css.mjs
-		const css = ".Jn-3TW_dock{box-sizing:border-box;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));margin:0 auto}.Jn-3TW_bar{box-sizing:border-box;width:100%;max-width:calc(var(--dsh-composer-card-max-width) - 4 * var(--dsh-composer-dock-inset));border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-specific-tip);border-radius:12px;align-items:center;gap:10px;height:36px;margin:0 auto;padding:4px 5px 4px 12px;display:flex}.Jn-3TW_bar[data-state=running]{border-color:color-mix(in srgb, var(--dsw-alias-state-business-primary) 40%, transparent);animation:2s ease-in-out infinite Jn-3TW_dsh-session-progress-glow}.Jn-3TW_bar[data-state=done]{border-color:color-mix(in srgb, var(--dsw-alias-state-success-primary) 40%, transparent);background:var(--dsw-alias-state-success-tertiary)}.Jn-3TW_bar[data-state=done] .Jn-3TW_glyph{color:var(--dsw-alias-state-success-primary)}.Jn-3TW_bar[data-state=done] .Jn-3TW_fill{background:var(--dsw-alias-state-success-primary)}.Jn-3TW_bar[data-state=pending]{border-color:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 40%, transparent);background:var(--dsw-alias-state-warn-tertiary);animation:1.6s ease-in-out infinite Jn-3TW_dsh-session-progress-warn-glow}.Jn-3TW_bar[data-state=pending] .Jn-3TW_glyph{color:var(--dsw-alias-state-warn-primary)}.Jn-3TW_bar[data-state=pending] .Jn-3TW_fill{background:var(--dsw-alias-state-warn-primary)}.Jn-3TW_bar[data-state=interrupted]{--ui-progress-interrupted:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 45%, var(--dsw-alias-state-error-primary));border-color:color-mix(in srgb, var(--ui-progress-interrupted) 40%, transparent);background:color-mix(in srgb, var(--dsw-alias-state-warn-tertiary) 85%, var(--dsw-alias-state-error-secondary));animation:1.6s ease-in-out infinite Jn-3TW_dsh-session-progress-interrupted-glow}.Jn-3TW_bar[data-state=interrupted] .Jn-3TW_glyph{color:var(--ui-progress-interrupted)}.Jn-3TW_bar[data-state=interrupted] .Jn-3TW_fill{background:var(--ui-progress-interrupted)}.Jn-3TW_bar[data-state=interrupted] .Jn-3TW_percent{color:var(--ui-progress-interrupted)}@keyframes Jn-3TW_dsh-session-progress-interrupted-glow{0%,to{box-shadow:0 0 0 0 color-mix(in srgb, var(--ui-progress-interrupted) 0%, transparent)}50%{box-shadow:0 0 10px 1px color-mix(in srgb, var(--ui-progress-interrupted) 30%, transparent)}}@keyframes Jn-3TW_dsh-session-progress-warn-glow{0%,to{box-shadow:0 0 0 0 color-mix(in srgb, var(--dsw-alias-state-warn-primary) 0%, transparent)}50%{box-shadow:0 0 10px 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 30%, transparent)}}@keyframes Jn-3TW_dsh-session-progress-glow{0%,to{box-shadow:0 0 0 0 color-mix(in srgb, var(--dsw-alias-state-business-primary) 0%, transparent)}50%{box-shadow:0 0 10px 1px color-mix(in srgb, var(--dsw-alias-state-business-primary) 28%, transparent)}}.Jn-3TW_glyph{color:var(--dsw-alias-state-business-primary);flex:none;display:inline-flex}.Jn-3TW_glyphRunning{animation:1s linear infinite Jn-3TW_dsh-session-progress-spin}@keyframes Jn-3TW_dsh-session-progress-spin{to{transform:rotate(360deg)}}.Jn-3TW_label{color:var(--dsw-alias-label-primary);flex:none;font-size:13px;font-weight:500;line-height:24px}.Jn-3TW_track{background:var(--dsw-alias-bg-layer-2);border-radius:999px;flex:1;min-width:60px;height:6px;position:relative;overflow:hidden}.Jn-3TW_fill{background:var(--dsw-alias-state-business-primary);border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);position:absolute;top:0;bottom:0;left:0}.Jn-3TW_fillRunning{background:linear-gradient(90deg, var(--dsw-alias-state-business-primary), var(--dsw-alias-brand-primary))}.Jn-3TW_shimmer{background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent), transparent);pointer-events:none;border-radius:999px;width:40%;animation:1.4s ease-in-out infinite Jn-3TW_dsh-session-progress-shimmer;position:absolute;top:0;bottom:0;left:0}@keyframes Jn-3TW_dsh-session-progress-shimmer{0%{transform:translate(-120%)}to{transform:translate(320%)}}.Jn-3TW_counter{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary);white-space:nowrap;flex:none;font-size:12px;line-height:18px}.Jn-3TW_eta{font-variant-numeric:tabular-nums;color:var(--dsw-alias-state-business-primary);white-space:nowrap;flex:none;font-size:12px;font-weight:500;line-height:18px}.Jn-3TW_rate{text-align:right;font-variant-numeric:tabular-nums;min-width:60px;color:var(--dsw-alias-state-business-primary);white-space:nowrap;flex:none;font-size:12px;font-style:italic;font-weight:500;line-height:18px}.Jn-3TW_percent{text-align:right;font-variant-numeric:tabular-nums;min-width:34px;color:var(--dsw-alias-label-secondary);white-space:nowrap;flex:none;font-size:12px;line-height:18px}";
+		//#region \0dsh-css:C:\Users\lf\Documents\Workspace\marisa-distro\plugins\dsh-ui-progress\src\client\SessionProgressBar.module.css.mjs
+		const css = "._0328Na_dock{box-sizing:border-box;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));margin:0 auto}._0328Na_bar{box-sizing:border-box;width:100%;max-width:calc(var(--dsh-composer-card-max-width) - 4 * var(--dsh-composer-dock-inset));border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-specific-tip);border-radius:12px;align-items:center;gap:10px;height:36px;margin:0 auto;padding:4px 5px 4px 12px;display:flex}._0328Na_bar[data-state=running]{border-color:color-mix(in srgb, var(--dsw-alias-state-business-primary) 40%, transparent);animation:2s ease-in-out infinite _0328Na_dsh-session-progress-glow}._0328Na_bar[data-state=done]{border-color:color-mix(in srgb, var(--dsw-alias-state-success-primary) 40%, transparent);background:var(--dsw-alias-state-success-tertiary)}._0328Na_bar[data-state=done] ._0328Na_glyph{color:var(--dsw-alias-state-success-primary)}._0328Na_bar[data-state=done] ._0328Na_fill{background:var(--dsw-alias-state-success-primary)}._0328Na_bar[data-state=pending]{border-color:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 40%, transparent);background:var(--dsw-alias-state-warn-tertiary);animation:1.6s ease-in-out infinite _0328Na_dsh-session-progress-warn-glow}._0328Na_bar[data-state=pending] ._0328Na_glyph{color:var(--dsw-alias-state-warn-primary)}._0328Na_bar[data-state=pending] ._0328Na_fill{background:var(--dsw-alias-state-warn-primary)}._0328Na_bar[data-state=interrupted]{--ui-progress-interrupted:color-mix(in srgb, var(--dsw-alias-state-warn-primary) 45%, var(--dsw-alias-state-error-primary));border-color:color-mix(in srgb, var(--ui-progress-interrupted) 40%, transparent);background:color-mix(in srgb, var(--dsw-alias-state-warn-tertiary) 85%, var(--dsw-alias-state-error-secondary));animation:1.6s ease-in-out infinite _0328Na_dsh-session-progress-interrupted-glow}._0328Na_bar[data-state=interrupted] ._0328Na_glyph{color:var(--ui-progress-interrupted)}._0328Na_bar[data-state=interrupted] ._0328Na_fill{background:var(--ui-progress-interrupted)}._0328Na_bar[data-state=interrupted] ._0328Na_percent{color:var(--ui-progress-interrupted)}@keyframes _0328Na_dsh-session-progress-interrupted-glow{0%,to{box-shadow:0 0 0 0 color-mix(in srgb, var(--ui-progress-interrupted) 0%, transparent)}50%{box-shadow:0 0 10px 1px color-mix(in srgb, var(--ui-progress-interrupted) 30%, transparent)}}@keyframes _0328Na_dsh-session-progress-warn-glow{0%,to{box-shadow:0 0 0 0 color-mix(in srgb, var(--dsw-alias-state-warn-primary) 0%, transparent)}50%{box-shadow:0 0 10px 1px color-mix(in srgb, var(--dsw-alias-state-warn-primary) 30%, transparent)}}@keyframes _0328Na_dsh-session-progress-glow{0%,to{box-shadow:0 0 0 0 color-mix(in srgb, var(--dsw-alias-state-business-primary) 0%, transparent)}50%{box-shadow:0 0 10px 1px color-mix(in srgb, var(--dsw-alias-state-business-primary) 28%, transparent)}}._0328Na_glyph{color:var(--dsw-alias-state-business-primary);flex:none;display:inline-flex}._0328Na_glyphRunning{animation:1s linear infinite _0328Na_dsh-session-progress-spin}@keyframes _0328Na_dsh-session-progress-spin{to{transform:rotate(360deg)}}._0328Na_label{color:var(--dsw-alias-label-primary);flex:none;font-size:13px;font-weight:500;line-height:24px}._0328Na_track{background:var(--dsw-alias-bg-layer-2);border-radius:999px;flex:1;min-width:60px;height:6px;position:relative;overflow:hidden}._0328Na_fill{background:var(--dsw-alias-state-business-primary);border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);position:absolute;top:0;bottom:0;left:0}._0328Na_fillRunning{background:linear-gradient(90deg, var(--dsw-alias-state-business-primary), var(--dsw-alias-brand-primary))}._0328Na_shimmer{background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--dsw-alias-bg-base) 55%, transparent), transparent);pointer-events:none;border-radius:999px;width:40%;animation:1.4s ease-in-out infinite _0328Na_dsh-session-progress-shimmer;position:absolute;top:0;bottom:0;left:0}@keyframes _0328Na_dsh-session-progress-shimmer{0%{transform:translate(-120%)}to{transform:translate(320%)}}._0328Na_counter{font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary);white-space:nowrap;flex:none;font-size:12px;line-height:18px}._0328Na_eta{font-variant-numeric:tabular-nums;color:var(--dsw-alias-state-business-primary);white-space:nowrap;flex:none;font-size:12px;font-weight:500;line-height:18px}._0328Na_rate{text-align:right;font-variant-numeric:tabular-nums;min-width:60px;color:var(--dsw-alias-state-business-primary);white-space:nowrap;flex:none;font-size:12px;font-style:italic;font-weight:500;line-height:18px}._0328Na_percent{text-align:right;font-variant-numeric:tabular-nums;min-width:34px;color:var(--dsw-alias-label-secondary);white-space:nowrap;flex:none;font-size:12px;line-height:18px}";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=\"@dsh-external/dsh-ui-progress/SessionProgressBar.module.css\"]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@dsh-external/dsh-ui-progress";
@@ -32,24 +32,24 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var SessionProgressBar_module_css_default = {
-			"dsh-session-progress-spin": "Jn-3TW_dsh-session-progress-spin",
-			"label": "Jn-3TW_label",
-			"dsh-session-progress-interrupted-glow": "Jn-3TW_dsh-session-progress-interrupted-glow",
-			"counter": "Jn-3TW_counter",
-			"fillRunning": "Jn-3TW_fillRunning",
-			"glyph": "Jn-3TW_glyph",
-			"dsh-session-progress-shimmer": "Jn-3TW_dsh-session-progress-shimmer",
-			"glyphRunning": "Jn-3TW_glyphRunning",
-			"eta": "Jn-3TW_eta",
-			"dsh-session-progress-warn-glow": "Jn-3TW_dsh-session-progress-warn-glow",
-			"percent": "Jn-3TW_percent",
-			"rate": "Jn-3TW_rate",
-			"fill": "Jn-3TW_fill",
-			"dsh-session-progress-glow": "Jn-3TW_dsh-session-progress-glow",
-			"bar": "Jn-3TW_bar",
-			"dock": "Jn-3TW_dock",
-			"track": "Jn-3TW_track",
-			"shimmer": "Jn-3TW_shimmer"
+			"fill": "_0328Na_fill",
+			"bar": "_0328Na_bar",
+			"dsh-session-progress-interrupted-glow": "_0328Na_dsh-session-progress-interrupted-glow",
+			"track": "_0328Na_track",
+			"dsh-session-progress-glow": "_0328Na_dsh-session-progress-glow",
+			"glyphRunning": "_0328Na_glyphRunning",
+			"dsh-session-progress-warn-glow": "_0328Na_dsh-session-progress-warn-glow",
+			"label": "_0328Na_label",
+			"eta": "_0328Na_eta",
+			"dock": "_0328Na_dock",
+			"glyph": "_0328Na_glyph",
+			"fillRunning": "_0328Na_fillRunning",
+			"percent": "_0328Na_percent",
+			"dsh-session-progress-spin": "_0328Na_dsh-session-progress-spin",
+			"dsh-session-progress-shimmer": "_0328Na_dsh-session-progress-shimmer",
+			"shimmer": "_0328Na_shimmer",
+			"counter": "_0328Na_counter",
+			"rate": "_0328Na_rate"
 		};
 		//#endregion
 		//#region src/client/token-rate.ts
@@ -584,10 +584,12 @@ window.__ModuleLoader__.load({
 			const ownText = ownKind === "approval" ? t("bar.pendingApproval") : ownKind === "question" ? t("bar.pendingQuestion") : null;
 			const total = sub.approvals + sub.questions + sub.plans;
 			let subText = null;
-			if (total > 0) if (total === 1 && sub.approvals === 1) subText = t("bar.pendingSubagentApproval");
-			else if (total === 1 && sub.questions === 1) subText = t("bar.pendingSubagentQuestion");
-			else if (total === 1 && sub.plans === 1) subText = t("bar.pendingSubagentPlan");
-			else subText = t("bar.pendingSubagentCount", { count: total });
+			if (total > 0) {
+				if (total === 1 && sub.approvals === 1) subText = t("bar.pendingSubagentApproval");
+				else if (total === 1 && sub.questions === 1) subText = t("bar.pendingSubagentQuestion");
+				else if (total === 1 && sub.plans === 1) subText = t("bar.pendingSubagentPlan");
+				else subText = t("bar.pendingSubagentCount", { count: total });
+			}
 			if (ownText !== null && subText !== null) return `${ownText} · ${subText}`;
 			return ownText ?? subText ?? "";
 		}

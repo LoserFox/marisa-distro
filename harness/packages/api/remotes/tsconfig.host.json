@@ -8,7 +8,9 @@
   "files": [
     "src/agent-lookup.ts",
     "src/index.ts",
-    "src/invariant.ts"
+    "src/invariant.ts",
+    "src/remote-events.ts",
+    "src/types.ts"
   ],
   "references": [
     {
@@ -21,16 +23,34 @@
       "path": "../../core/session"
     },
     {
-      "path": "../../session-persistence/session-persistence"
+      "path": "../../credentials/credentials"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../interaction/commands"
+    },
+    {
+      "path": "../../llm/llm"
+    },
+    {
+      "path": "../../preset/agent-presets"
+    },
+    {
+      "path": "../../session/session-persistence"
+    },
+    {
+      "path": "../../extensions/cordis-host-runner"
+    },
+    {
+      "path": "../../settings/settings"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     },
     {
       "path": "../../typert/registry"
     },
     {
-      "path": "../../typert/type-meta"
+      "path": "../../typert/protocol"
     }
   ]
 }

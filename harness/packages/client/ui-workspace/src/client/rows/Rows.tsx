@@ -67,29 +67,60 @@ function WorkspaceHoverContent({ label, cwd, createdAt, t }: {
 }
 
 /**
- * Project (workspace) header row: 54px, folder + title + session count;
+ * Row drag wiring supplied by the tree owner. `drop` reports the half of the
+ * row where the pointer released so the owner can resolve an insert anchor.
+ */
+export interface RowDragProps {
+  /** Start dragging this row. */
+  start: () => void
+  /** A compatible row drag is in flight. */
+  active: boolean
+  /** Current marker on this row: insert line above, below, or none. */
+  marker: 'before' | 'after' | null
+  /** Report the hovered half while a compatible drag passes over this row. */
+  hover: (half: 'before' | 'after') => void
+  drop: (half: 'before' | 'after') => void
+  end: () => void
+}
+
+/** Drag lifecycle owned by a workspace row; its enclosing group owns hit testing. */
+interface WorkspaceRowDragProps {
+  start: () => void
+  end: () => void
+}
+
+/** Pointer-position half of a row (insert line above or below). */
+function rowHalf(e: { clientY: number; currentTarget: HTMLElement }): 'before' | 'after' {
+  const rect = e.currentTarget.getBoundingClientRect()
+  return e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+}
+
+/**
+ * Project (workspace) header row: folder + title;
  * hover reveals the chevron and create button, and dwelling on a real
  * Workspace shows its hover card (the ungrouped bucket has none).
  * `containsCurrent` arrives on the node (derivation fact, no renderer scan).
  * @param props.group - derived group node.
  * @param props.onToggle - expand/collapse the group.
  * @param props.onCreate - start a frontend Session inside this Workspace.
+ * @param props.drag - optional workspace-row drag wiring.
  * @param props.t - the browser root's locale seat.
  * @returns the row element.
  */
-export function ProjectRowItem({ group, onToggle, onCreate, actions, t }: {
+export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, t }: {
   group: GroupNode
   onToggle: () => void
   onCreate: () => void
   /** Real-Workspace actions; absent for the ungrouped bucket (no menu shown). */
   actions?: { rename: () => void; delete: () => void } | undefined
+  /** Present only for real Workspace rows in the grouped view. */
+  drag?: WorkspaceRowDragProps | undefined
   t: RowTranslate
 }) {
   const row = group
   // The ungrouped bucket has no workspace title: its label is dictionary copy.
   const label = row.workspaceId === undefined ? t('group.ungrouped') : row.label
   const active = group.expanded && group.containsCurrent
-  const count = t(row.sessionCount === 1 ? 'sessions.count.one' : 'sessions.count.other', { n: row.sessionCount })
   const [menuOpen, setMenuOpen] = useState(false)
   const workspaceMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
@@ -101,6 +132,15 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, t }: {
       role="treeitem"
       aria-expanded={row.expanded}
       onClick={onToggle}
+      draggable={drag !== undefined}
+      onDragStart={drag === undefined
+        ? undefined
+        : (e) => {
+          e.dataTransfer.effectAllowed = 'move'
+          e.dataTransfer.setData('text/plain', row.key)
+          drag.start()
+        }}
+      onDragEnd={drag?.end}
     >
       <span className={clsx(css.slot, css.folder, active && css.folderActive)}>
         {row.expanded ? <IconFolderOpen16 /> : <IconFolderClose16 />}
@@ -110,7 +150,6 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, t }: {
       </span>
       <span className={css.projectText}>
         <span className={css.title}>{label}</span>
-        <span className={css.meta}>{count}</span>
       </span>
       <span className={css.rowActions}>
         {actions !== undefined && (
@@ -220,6 +259,18 @@ function sessionStatuses(
   return [{ state: 'done', label: t('status.idle') }]
 }
 
+/** Primary status dot plus every status's screen-reader label, shared by the search and session rows. */
+function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ...SessionStatus[]] }) {
+  return (
+    <>
+      <StateDot state={statuses[0].state} />
+      {statuses.map(status => (
+        <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
+      ))}
+    </>
+  )
+}
+
 /** Hover-card body: full title, relative time, and every relevant live status. */
 function SessionHoverContent({ node, now, t }: { node: SessionNode; now: number; t: RowTranslate }) {
   const statuses = sessionStatuses(node, t)
@@ -237,24 +288,6 @@ function SessionHoverContent({ node, now, t }: { node: SessionNode; now: number;
       ))}
     </div>
   )
-}
-
-/**
- * Session-row drag wiring supplied by the group owner (workspace groups only).
- * `drop` reports the half of the row the pointer released on: 'before'
- * inserts above this row, 'after' below it (the owner resolves the anchor).
- */
-export interface RowDragProps {
-  /** Start dragging this row. */
-  start: () => void
-  /** A drag from the same group is in flight (rows show insert markers). */
-  active: boolean
-  /** Current marker on this row: insert line above, below, or none. */
-  marker: 'before' | 'after' | null
-  /** Report the hovered half while a same-group drag passes over this row. */
-  hover: (half: 'before' | 'after') => void
-  drop: (half: 'before' | 'after') => void
-  end: () => void
 }
 
 /**
@@ -287,28 +320,19 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
       <span className={css.searchResultHeading}>
         <span className={css.slot}>
           {(primaryStatus.state !== 'done' || result.completed) && (
-            <>
-              <StateDot state={primaryStatus.state} />
-              {statuses.map(status => (
-                <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
-              ))}
-            </>
+            <SessionStatusDots statuses={statuses} />
           )}
         </span>
         <span className={css.searchResultTitle}>{result.title}</span>
       </span>
-      <span className={css.searchResultWorkspace}>{result.workspace}</span>
-      {result.snippet !== undefined && (
-        <span className={css.searchResultSnippet}>{result.snippet}</span>
-      )}
+      <span className={css.searchResultMeta}>
+        <span className={css.searchResultWorkspace}>{result.workspace}</span>
+        {result.snippet !== undefined && (
+          <span className={css.searchResultSnippet}>{result.snippet}</span>
+        )}
+      </span>
     </button>
   )
-}
-
-/** Pointer-position half of a row (insert line above or below). */
-function rowHalf(e: { clientY: number; currentTarget: HTMLElement }): 'before' | 'after' {
-  const rect = e.currentTarget.getBoundingClientRect()
-  return e.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
 }
 
 /**
@@ -322,10 +346,11 @@ function rowHalf(e: { clientY: number; currentTarget: HTMLElement }): 'before' |
  * @param props.onFork - fork a session at its last completed turn.
  * @param props.onArchive - archive a session by id.
  * @param props.drag - optional draggable-row wiring.
+ * @param props.flat - omit the empty status slot in the hierarchy-free flat list.
  * @param props.t - the browser root's locale seat.
  * @returns the session row.
  */
-export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, t }: {
+export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork, onArchive, drag, flat = false, t }: {
   node: SessionNode
   currentId: string | undefined
   now: number
@@ -338,6 +363,8 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   onArchive: (id: SessionNode['id']) => void
   /** Present only on draggable rows (workspace-group sessions outside search). */
   drag?: RowDragProps | undefined
+  /** The row is rendered without a parent Workspace header. */
+  flat?: boolean | undefined
   t: RowTranslate
 }) {
   const row = node
@@ -345,10 +372,11 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
   const selected = node.id === currentId
   const statuses = sessionStatuses(node, t)
   const primaryStatus = statuses[0]
+  const showStatus = primaryStatus.state !== 'done' || row.completed
   const [menuOpen, setMenuOpen] = useState(false)
-  // Archive replaces the former Delete placeholder: it hides the row through
-  // the registry-global archive set and never touches the session log, so it
-  // is not styled as destructive and needs no confirmation dialog.
+  // Archive hides the row through the registry-global archive set and never
+  // touches the session log, so it is not styled as destructive and needs no
+  // confirmation dialog.
   const sessionMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
     { id: 'fork', label: t('menu.fork'), icon: <IconBranchOutline16 /> },
@@ -360,6 +388,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
     <div
       className={clsx(
         css.sessionRow, selected && css.selected, menuOpen && css.menuOpen,
+        flat && !showStatus && css.flatSessionRowWithoutStatus,
         drag?.marker === 'before' && css.dropBefore, drag?.marker === 'after' && css.dropAfter,
       )}
       role="treeitem"
@@ -370,6 +399,7 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
         ? undefined
         : (e) => {
           e.dataTransfer.effectAllowed = 'move'
+          e.dataTransfer.setData('text/plain', node.id)
           drag.start()
         }}
       onDragEnd={drag?.end}
@@ -392,16 +422,11 @@ export function SessionNodeItem({ node, currentId, now, onOpen, onRename, onFork
       {/* Pending interaction and own or descendant activity outrank the
           finished-but-unviewed reminder, which returns after activity stops
           and is cleared by opening the session. */}
-      <span className={css.slot}>
-        {(primaryStatus.state !== 'done' || row.completed) && (
-          <>
-            <StateDot state={primaryStatus.state} />
-            {statuses.map(status => (
-              <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
-            ))}
-          </>
-        )}
-      </span>
+      {(!flat || showStatus) && (
+        <span className={css.slot}>
+          {showStatus && <SessionStatusDots statuses={statuses} />}
+        </span>
+      )}
       <span className={css.title}>{title}</span>
       {/* A blank New Session row is a provisional placeholder: nothing has
           happened in it yet, so a "now" timestamp and the row verbs

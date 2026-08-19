@@ -1,23 +1,25 @@
 /**
  * Web session model-directory and selection behavior: dynamic provider grouping,
- * provider-local catalog failures, logged-target restoration without stale
+ * provider-local catalog failures, logged-selection restoration without stale
  * catalog injection, advisory pass-through models, and the prompt-assembly
  * boundary for a running selection change.
  */
 
-import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { describe, expect, it, vi } from 'vitest'
+import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry, { agentEvents } from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import LlmService, { LlmAdapter, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import AttachmentStore from '@deepseek-ai/dsh-attachment'
+import LlmRuntime, { LlmAdapter, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type {
   GenerateOptions, LlmCallConfig, LlmModelInfo, LlmModelReasoningInfo, LlmProviderInfo,
   LlmResolvedModelInfo, StreamChunk,
+  UserMessage,
 } from '@deepseek-ai/dsh-llm'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import UserInteractionService from '@deepseek-ai/dsh-user-interaction'
+import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import type { RpcRequest } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { createApiProxy } from '../src/api-proxy.ts'
@@ -83,8 +85,8 @@ async function harness(logged?: {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt, { persona: '' })
-  await ctx.plugin(LlmService)
-  await ctx.plugin(UserInteractionService)
+  await ctx.plugin(LlmRuntime)
+  await ctx.plugin(UserQuestionService)
   await ctx.plugin(AgentRegistry)
   ctx.llm.registerAdapter(['deepseek-official'], new CatalogAdapter('DeepSeek', [
     { provider: 'deepseek-official', id: 'deepseek-chat', name: 'DeepSeek Chat' },
@@ -108,7 +110,8 @@ async function harness(logged?: {
     session,
     status: 'running',
     ctx,
-  } as Agent
+    inbox: { nextTurn: [], nextStep: [] },
+  } as unknown as Agent
   ctx.agents.register(agent)
   return { ctx, agent, sessionId: session.id }
 }
@@ -118,14 +121,167 @@ function expectValue<T>(response: { result: { ok: true; value: T } | { ok: false
   return response.result.value
 }
 
+function registerTextOnly(ctx: Context): void {
+  ctx.llm.registerAdapter(['text-only'], new class extends CatalogAdapter {
+    override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
+      return Promise.resolve({ provider, id: model, name: model, inputModalities: ['text'] })
+    }
+  }('Text Only', []))
+}
+
 describe('Web session model selection', () => {
-  it('groups successful providers and leaves an unlisted current target out of the catalog', async () => {
+  it('validates an ordered image batch before persisting any member', async () => {
+    const { ctx, agent, sessionId } = await harness()
+    const validateImage = vi.fn((_input: { data: Uint8Array }) => Promise.resolve())
+    const saveImage = vi.fn((input: { data: Uint8Array; mediaType: 'image/png'; name?: string }) => Promise.resolve({
+      attachmentId: `att-${String(input.data[0])}`,
+      mediaType: input.mediaType,
+      bytes: input.data.byteLength,
+      width: 1,
+      height: 1,
+      ...input.name === undefined ? {} : { name: input.name },
+    }))
+    const attachments = {
+      imageLimits: {
+        maxImageBytes: 4,
+        maxImagesPerMessage: 2,
+        maxMessageImageBytes: 4,
+        maxImagePixels: 4,
+        mediaTypes: ['image/png'],
+      },
+      validateImage,
+      saveImage,
+    }
+    ctx.provide('attachments', {
+      ...attachments,
+      saveImages(inputs: readonly Parameters<typeof saveImage>[0][]) {
+        return AttachmentStore.prototype.saveImages.call(attachments, inputs)
+      },
+    } as never)
+    const followup = vi.fn()
+    Object.assign(agent, { followup })
+    const api = createApiProxy(ctx, {
+      defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+      cwd: '/tmp',
+    })
+
+    const result = await api.sessions.prompt(request({
+      sessionId,
+      mode: 'queue' as const,
+      content: [
+        { type: 'image' as const, mediaType: 'image/png' as const, data: 'AQ==', name: 'first.png' },
+        { type: 'text' as const, text: 'compare' },
+        { type: 'image' as const, mediaType: 'image/png' as const, data: 'Ag==' },
+      ],
+    }))
+    expect(result.result.ok).toBe(true)
+    expect(validateImage.mock.calls.map(([input]) => [...input.data])).toEqual([[1], [2]])
+    expect(saveImage.mock.calls.map(([input]) => [...input.data])).toEqual([[1], [2]])
+    expect((followup.mock.calls[0]?.[0] as UserMessage).content).toEqual([
+      {
+        type: 'image',
+        attachment: {
+          attachmentId: 'att-1', mediaType: 'image/png', bytes: 1, width: 1, height: 1, name: 'first.png',
+        },
+      },
+      { type: 'text', text: 'compare' },
+      { type: 'image', attachment: { attachmentId: 'att-2', mediaType: 'image/png', bytes: 1, width: 1, height: 1 } },
+    ])
+
+    const denied = await api.sessions.prompt(request({
+      sessionId,
+      mode: 'queue' as const,
+      content: Array.from({ length: 3 }, () => ({
+        type: 'image' as const, mediaType: 'image/png' as const, data: 'AQ==',
+      })),
+    }))
+    expect(denied.result).toMatchObject({
+      ok: false,
+      error: { code: 'attachment-error', details: { reason: 'TOO_MANY_IMAGES' } },
+    })
+    expect(saveImage).toHaveBeenCalledTimes(2)
+    await ctx.fiber.dispose()
+  })
+
+  it('refuses a text-only selection while durable or pending image content remains visible', async () => {
+    const { ctx, agent, sessionId } = await harness()
+    registerTextOnly(ctx)
+    const api = createApiProxy(ctx, {
+      defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+      cwd: '/tmp',
+    })
+    const image = {
+      type: 'image' as const,
+      attachment: { attachmentId: 'att-history', mediaType: 'image/png' as const, bytes: 1, width: 1, height: 1 },
+    }
+    agent.session.append('user/message', {
+      id: 'image-message', role: 'user', source: { kind: 'user' }, content: [image],
+    } as never, { surfaceOp: 'append' })
+    expect((await api.sessions.selectModel(request({
+      sessionId, provider: 'text-only', model: 'plain',
+    }))).result).toMatchObject({ ok: false, error: { code: 'model-unavailable' } })
+
+    agent.session.append('user/message', {
+      id: 'summary', role: 'user', source: { kind: 'plugin', plugin: 'compact' },
+      content: [{ type: 'text', text: 'image summarized' }],
+    } as never, {
+      surfaceOp: { op: 'replace', start: 0, end: agent.session.events.length - 1 },
+      sourceEventSeqs: agent.session.events.map(event => event.seq),
+    })
+    ;(agent.inbox.nextTurn as UserMessage[]).push({
+      id: 'pending-image', role: 'user', source: { kind: 'user' }, content: [image],
+    } as never)
+    expect((await api.sessions.selectModel(request({
+      sessionId, provider: 'text-only', model: 'plain',
+    }))).result.ok).toBe(false)
+    ;(agent.inbox.nextTurn as UserMessage[]).length = 0
+    expect(expectValue(await api.sessions.selectModel(request({
+      sessionId, provider: 'text-only', model: 'plain',
+    }))).selected).toEqual({ provider: 'text-only', model: 'plain' })
+    await ctx.fiber.dispose()
+  })
+
+  it('authorizes attachment bytes only when the session event stream references the id', async () => {
+    const { ctx, agent, sessionId } = await harness()
+    const ref = {
+      attachmentId: 'att-authorized', mediaType: 'image/png' as const, bytes: 2, width: 1, height: 1,
+    }
+    const readImage = vi.fn(() => Promise.resolve({ ref, data: Uint8Array.of(1, 2) }))
+    ctx.provide('attachments', { readImage } as never)
+    const api = createApiProxy(ctx, {
+      defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+      cwd: '/tmp',
+    })
+    agent.session.append('agent/inbox/spliced', {
+      target: 'next-turn',
+      start: 0,
+      inserted: [{
+        id: 'queued-image', role: 'user', source: { kind: 'user' },
+        content: [{ type: 'image', attachment: ref }],
+      }],
+    } as never)
+
+    const allowed = await api.sessions.attachment(request({
+      sessionId, attachmentId: 'att-authorized' as never,
+    }))
+    expect(allowed.result).toMatchObject({ ok: true, value: { attachment: ref, data: 'AQI=' } })
+    const denied = await api.sessions.attachment(request({
+      sessionId, attachmentId: 'att-other' as never,
+    }))
+    expect(denied.result).toMatchObject({
+      ok: false,
+      error: { code: 'attachment-error', details: { reason: 'ATTACHMENT_NOT_REFERENCED' } },
+    })
+    expect(readImage).toHaveBeenCalledOnce()
+    await ctx.fiber.dispose()
+  })
+  it('groups successful providers and leaves an unlisted current selection out of the catalog', async () => {
     const { ctx, sessionId } = await harness({
       provider: 'deepseek-official',
       model: 'private-preview',
       reasoningEffort: ReasoningEffortId('max'),
     })
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }), cwd: '/tmp' })
 
     const catalog = expectValue(await api.sessions.models(request({ sessionId })))
     expect(catalog.current).toEqual({
@@ -160,7 +316,7 @@ describe('Web session model selection', () => {
 
   it('accepts an advisory-unlisted model, rejects an unavailable provider, and switches only after the next assembly', async () => {
     const { ctx, agent, sessionId } = await harness()
-    const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+    const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }), cwd: '/tmp' })
     const seed: LlmCallConfig = { provider: 'seed', model: 'seed', temperature: 0.2 }
     const signal = new AbortController().signal
 
@@ -226,13 +382,12 @@ describe('Web session model selection', () => {
     await ctx.fiber.dispose()
   })
 
-  it('reads the host default live for a session whose log names no route', async () => {
+  it('reads the Agent default live for a session whose log names no selection', async () => {
     const { ctx, sessionId } = await harness()
     let stored = { provider: 'deepseek-official', model: 'deepseek-chat' }
     const api = createApiProxy(ctx, {
-      defaultTarget: () => stored,
+      defaultModelSelection: () => stored,
       cwd: '/tmp',
-      workspaceRoot: '/tmp',
     })
 
     expect(expectValue(await api.sessions.models(request({ sessionId }))).current)
@@ -248,16 +403,15 @@ describe('Web session model selection', () => {
     await ctx.fiber.dispose()
   })
 
-  it('keeps a session that logged a route on it when the host default moves', async () => {
+  it('keeps a session on its logged selection when the Agent default differs', async () => {
     const { ctx, sessionId } = await harness({
       provider: 'deepseek-official',
       model: 'deepseek-chat',
     })
     let stored = { provider: 'deepseek-official', model: 'deepseek-chat' }
     const api = createApiProxy(ctx, {
-      defaultTarget: () => stored,
+      defaultModelSelection: () => stored,
       cwd: '/tmp',
-      workspaceRoot: '/tmp',
     })
 
     stored = { provider: 'duplicate', model: 'same' }
@@ -271,13 +425,12 @@ describe('Web session model selection', () => {
     const saved: unknown[] = []
     let reject = false
     const api = createApiProxy(ctx, {
-      defaultTarget: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
-      persistDefaultTarget: (target) => {
-        saved.push(target)
+      defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+      saveDefaultModelSelection: (selection) => {
+        saved.push(selection)
         return reject ? Promise.reject(new Error('read-only document')) : Promise.resolve()
       },
       cwd: '/tmp',
-      workspaceRoot: '/tmp',
     })
 
     expectValue(await api.sessions.selectModel(request({
@@ -306,9 +459,8 @@ describe('Web session model selection', () => {
   it('refuses a prompt no adapter can route, and reports it on the directory', async () => {
     const { ctx, sessionId } = await harness()
     const api = createApiProxy(ctx, {
-      defaultTarget: () => ({ provider: 'deleted-gateway', model: 'deleted-model' }),
+      defaultModelSelection: () => ({ provider: 'deleted-gateway', model: 'deleted-model' }),
       cwd: '/tmp',
-      workspaceRoot: '/tmp',
     })
 
     // The client disabling its input is an affordance; this method stays
@@ -339,9 +491,8 @@ describe('Web session model selection', () => {
     const api = createApiProxy(ctx, {
       // What a Models-page removal leaves behind: the settings document still
       // names the route the user last picked, and nothing serves it.
-      defaultTarget: () => ({ provider: 'deleted-gateway', model: 'deleted-model' }),
+      defaultModelSelection: () => ({ provider: 'deleted-gateway', model: 'deleted-model' }),
       cwd: '/tmp',
-      workspaceRoot: '/tmp',
     })
 
     const catalog = expectValue(await api.sessions.models(request({ sessionId })))

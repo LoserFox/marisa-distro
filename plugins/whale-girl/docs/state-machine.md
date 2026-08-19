@@ -1,6 +1,6 @@
 # 状态机（唯一权威）
 
-本文是 whale-girl **动画状态机**的权威现状文档：状态清单、触发条件、优先级、转换语义、扩展指引。实现见 [.dsh-plugin/client/logic.mjs](../.dsh-plugin/client/logic.mjs)（`STATE_TABLE`，文法单源）与 [.dsh-plugin/index.mjs](../.dsh-plugin/index.mjs)（Node half 事件→窗口）。角色素材规格见 [sprites-spec.md](sprites-spec.md)，成长系统见 [growth-system.md](growth-system.md)。
+本文是 whale-girl **动画状态机**的权威现状文档：状态清单、触发条件、优先级、转换语义、扩展指引。实现见 [lib/client/logic.mjs](../lib/client/logic.mjs)（`STATE_TABLE`，文法单源）与 [lib/index.mjs](../lib/index.mjs)（Node half 事件→窗口）。角色素材规格见 [sprites-spec.md](sprites-spec.md)，成长系统见 [growth-system.md](growth-system.md)。
 
 ## 设计原则
 
@@ -47,7 +47,7 @@
 
 ## 优先级（STATE_TABLE 行序，文法单源）
 
-逐行列表即行序（`N.` 后的状态 token 与 `.dsh-plugin/client/logic.mjs` 的 `STATE_TABLE` 行序一致，由 verify-spec-states 门禁机械校验——改行序必须同时改本列表与 STATE_TABLE）：
+逐行列表即行序（`N.` 后的状态 token 与 `lib/client/logic.mjs` 的 `STATE_TABLE` 行序一致，由 verify-spec-states 门禁机械校验——改行序必须同时改本列表与 STATE_TABLE）：
 
 1. `drag`
 2. `idle`（拖拽放下缓冲）
@@ -74,7 +74,7 @@
 ## 扩展指引（给新角色/新状态）
 
 ### 加一个新状态（行为级，平台变更）
-1. `.dsh-plugin/client/logic.mjs` `STATE_NAMES` 加状态名 + `STATE_TABLE` 加行（`{ state, when, resolve? }`），位置决定优先级
+1. `lib/client/logic.mjs` `STATE_NAMES` 加状态名 + `STATE_TABLE` 加行（`{ state, when, resolve? }`），位置决定优先级
 2. `assets/manifest.json` 每个角色 `states` 加条目（**必填 sheet**——素材全量契约）
 3. `docs/sprites-spec.md` 状态总表同步（verify-spec-states 门禁强制 spec ↔ STATE_NAMES ↔ STATE_TABLE）
 4. 决策记录（行为文法变更）
@@ -96,6 +96,6 @@
 | `tasks.onTaskDone` | 记账 + celebrate/failure 窗口 | `activity` |
 | `agent/session-start` | 会话 XP + welcome 窗口 | `activity` |
 | `agent/request-error` | error/disappointed 窗口 | `activity` |
-| sessions.list 快照 | — | `sessionThink` / `sessionWait` / 回合完成翻转→`celebrateUntil` |
+| sessions.list 快照 | — | `sessionThink` / `sessionWait` / 非消费式回合完成截止时间→`celebrateUntil` |
 | 节奏器（client 本地） | — | `workingActive`（随机插曲）/ `celebrateUntil`（回合完成窗口） |
 | 用户 pointer/点击 | — | `dragging` / `transient` / `joyUntil` / `wakeFromInteraction`（交互醒觉：拖拽/喂食/玩耍/开菜单重置空闲 + 睡着则 wake） |

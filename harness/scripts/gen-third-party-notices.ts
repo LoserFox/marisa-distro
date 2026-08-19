@@ -27,13 +27,13 @@ const ALL_KINDS = ['dependencies', 'devDependencies', 'optionalDependencies', 'p
  * root manifest), test infrastructure, the documentation site, the runnable
  * demo leaves, and the native launcher's build workspace. A runtime
  * declaration by anything outside these areas is a disclosure-relevant
- * runtime dependency, because `scripts/install.sh` installs the repository
- * itself and any plugin package can be mounted from a user's `cordis.yml`.
+ * runtime dependency because any plugin package can be mounted from a user's
+ * `cordis.yml`.
  */
 const DEV_ONLY_AREAS = [
   'package.json',
-  'packages/support/',
-  'packages/client/test-runtime/',
+  'packages/test-support/',
+  'packages/test-support/client-runtime/',
   'website/',
   'examples/',
   'native/',
@@ -83,7 +83,7 @@ const OVERRIDES: Record<string, { license?: string; repo?: string }> = {
  * the generator fails when a manifest names a package this map misses.
  */
 const PYTHON_METADATA: Record<string, { license: string; repo: string; role: string }> = {
-  pydantic: { license: 'MIT', repo: 'https://github.com/pydantic/pydantic', role: 'runtime dependency of `deepseek-harness`' },
+  pydantic: { license: 'MIT', repo: 'https://github.com/pydantic/pydantic', role: 'runtime dependency of `deepseek-harness-sdk`' },
   hatchling: { license: 'MIT', repo: 'https://github.com/pypa/hatch', role: 'build backend' },
   pytest: { license: 'MIT', repo: 'https://github.com/pytest-dev/pytest', role: 'test-only' },
 }
@@ -369,7 +369,7 @@ function collectNpmDeps(): ExternalDep[] {
  */
 export function tierExternalDeps(manifests: Map<string, Manifest>, names: Set<string>): Map<string, boolean> {
   const tiers = new Map<string, boolean>()
-  // `tsx` is runtime by fiat: `bin/dsh` execs the CLI through its ESM hook.
+  // `tsx` is runtime by fiat: the root source-run scripts execute through its ESM hook.
   tiers.set('tsx', true)
   for (const [path, manifest] of manifests) {
     const devOnly = DEV_ONLY_AREAS.some(area => (area.endsWith('/') ? path.startsWith(area) : path === area))
@@ -387,6 +387,8 @@ export function tierExternalDeps(manifests: Map<string, Manifest>, names: Set<st
 /** A vendored package row parsed out of the `vendor/README.md` manifest table. */
 export interface VendoredRow {
   npmName: string
+  /** The name this package carries upstream; MIT attribution names the fork's origin, not our scope. */
+  upstreamName: string
   upstream: string
 }
 
@@ -396,13 +398,14 @@ export interface VendoredRow {
  * @returns one row per manifest-table entry, in table order.
  */
 export function parseVendoredRows(text: string): VendoredRow[] {
-  const rows: Array<VendoredRow> = []
+  const rows: VendoredRow[] = []
   for (const line of text.split('\n')) {
-    const match = /^\| \x60\S+\/\x60 \| \x60([^\x60]+)\x60 \| \S+ \| (https:\/\/\S+?)(?: \([^)]*\))? \| \x60[0-9a-f]+\x60 \|$/.exec(line)
+    const match = new RegExp(String.raw`^\| \x60\S+\/\x60 \| \x60([^\x60]+)\x60 \| \x60([^\x60]+)\x60 \| \S+ \| `
+      + String.raw`(https:\/\/\S+?)(?: \([^)]*\))? \| \x60[0-9a-f]+\x60 \|$`).exec(line)
     if (match === null) continue
-    const [, npmName, upstream] = match
-    if (npmName === undefined || upstream === undefined) continue
-    rows.push({ npmName, upstream })
+    const [, npmName, upstreamName, upstream] = match
+    if (npmName === undefined || upstreamName === undefined || upstream === undefined) continue
+    rows.push({ npmName, upstreamName, upstream })
   }
   return rows
 }
@@ -475,7 +478,7 @@ function collectPythonRequirementArray(
   }
 }
 
-/** Read an optional TOML table and reject a present value of another shape. */
+/** Read an optional TOML table and reject a present non-table value. */
 function optionalTomlTable(value: TomlValueWithoutBigInt | undefined, location: string): TomlTableWithoutBigInt | undefined {
   if (value === undefined || isTomlTable(value)) return value
   throw new Error(`gen-third-party-notices: ${location} must be a table.`)
@@ -487,7 +490,7 @@ function optionalTomlTable(value: TomlValueWithoutBigInt | undefined, location: 
  * `[build-system]`, `dependencies` under `[project]`, and every key under
  * `[project.optional-dependencies]` and `[dependency-groups]`. A TOML parser
  * owns comments, quoted keys, escapes, and array boundaries; unsupported
- * requirement shapes fail instead of disappearing from the notices.
+ * requirement forms fail instead of disappearing from the notices.
  * @param text - the complete `pyproject.toml` contents.
  * @returns the local project name and declared requirement names.
  */
@@ -688,7 +691,7 @@ export function render(): string {
 
 # Third-Party Notices
 
-DeepSeek Harness is licensed under [BSD 3-Clause](LICENSE). It depends on the third-party software listed below. Each project remains under its own license; nothing in this file changes those terms.
+DeepSeek Harness is licensed under [MIT](LICENSE). It depends on the third-party software listed below. Each project remains under its own license; nothing in this file changes those terms.
 
 This file lists **direct** dependencies declared by the workspace and the explicitly disclosed official Claude platform payload closure. It is generated from the workspace manifests by \`scripts/gen-third-party-notices.ts\`: a pre-commit hook regenerates it whenever a staged file changes one of its inputs, and \`scripts/gen-third-party-notices.spec.ts\` asserts in the test lane that the committed bytes match. Deleting a manifest runs no hook, so that case is caught by the assertion instead. Run \`pnpm run verify-third-party-notices\` for the standalone check.
 
@@ -696,15 +699,15 @@ The complete npm transitive closure, including the Landlock launcher workspace, 
 
 ## Vendored source (\`vendor/\`)
 
-The Cordis framework and its foundation libraries are source-vendored into this repository rather than consumed from npm. All are MIT-licensed; each directory preserves its upstream \`LICENSE\` file. Exact upstream commits and local modifications are recorded in [\`vendor/README.md\`](vendor/README.md).
+The Cordis framework and its foundation libraries are source-vendored into this repository rather than consumed from npm, and republished under the \`@deepseek-ai\` scope. All are MIT-licensed; each directory preserves its upstream \`LICENSE\` file. Exact upstream commits and local modifications are recorded in [\`vendor/README.md\`](vendor/README.md).
 
-| Package | Upstream | License |
-| --- | --- | --- |
-${vendored.map(row => `| \`${row.npmName}\` | [${row.upstream.replace('https://', '')}](${row.upstream}) | MIT |`).join('\n')}
+| Package | Upstream name | Upstream | License |
+| --- | --- | --- | --- |
+${vendored.map(row => `| \`${row.npmName}\` | \`${row.upstreamName}\` | [${row.upstream.replace('https://', '')}](${row.upstream}) | MIT |`).join('\n')}
 
 ## Runtime npm dependencies
 
-External packages that a workspace package resolves at runtime. \`scripts/install.sh\` installs this repository itself, so the tier covers every plugin a user can mount from \`cordis.yml\` — not only what the \`dsh\` CLI, Web UI, and Python SDK runtime load by default.
+External packages that a workspace package resolves at runtime. The tier covers every plugin a user can mount from \`cordis.yml\` — not only what the \`dsh\` CLI, Web UI, and Python SDK runtime load by default.
 
 ${renderNpmTable(runtimeDeps)}
 

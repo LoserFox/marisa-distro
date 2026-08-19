@@ -8,7 +8,7 @@ English | [中文](2026-07-07-mcp-client-plugin.zh.md)
 
 The harness had no way to consume tools from the MCP (Model Context Protocol) ecosystem. MCP is the emerging standard for tool servers — GitHub, filesystem, databases, code search, and hundreds of community servers expose tools via MCP. Users want to point the harness at one or more MCP servers and have their tools appear as native model-facing tools, without writing per-server glue code.
 
-The `ToolRegistry` already accepts raw JSON Schema tool definitions (documented in `dsh-tools` README: "Raw JSON-Schema tool definitions (from MCP servers) are still accepted by `ToolRegistry.register()` directly"), and the extension cookbook sketches the intended pattern ("MCP | one plugin per server: discover tools → `ctx.tools.register()`"). The infrastructure was ready; the bridge plugin was missing.
+The `ToolRuntime` already accepts raw JSON Schema tool definitions (documented in `dsh-tools` README: "Raw JSON-Schema tool definitions (from MCP servers) are still accepted by `ToolRuntime.register()` directly"), and the extension cookbook sketches the intended pattern ("MCP | one plugin per server: discover tools → `ctx.tools.register()`"). The infrastructure was ready; the bridge plugin was missing.
 
 ## Decision
 
@@ -90,7 +90,7 @@ Boot-time from `cordis.yml`. HMR (`@cordisjs/plugin-hmr`) provides hot-swap: edi
 Every MCP tool has two names:
 
 - `rawName` — the exact MCP `Tool.name`, used only on the wire (`tools/call`).
-- `publicName` — the globally unique model-facing name registered in the `ToolRegistry`:
+- `publicName` — the globally unique model-facing name registered in the `ToolRuntime`:
 
       mcp__<serverName>__<rawName>
 
@@ -141,11 +141,11 @@ Tools are never silently skipped; which tools are available never depends on plu
 A unified `execute` handler for all tools from one MCP server:
 
 1. Resolve `rawName` (the executor closes over it) and call `client.callTool({ name: rawName, arguments }, { signal: exec.signal })` with the configured timeout — the public name is never sent to the server.
-2. Map the result:
-   - Multiple `text` content blocks → join with `'\n'` into a single `TextBlock` (required: `flattenText` uses `join('')` without separator, so multiple blocks would lose inter-block boundaries).
-   - `image` content blocks → discard with a `ctx.logger.warn` (the harness has no image content block type; [drop-image Agent Note](../simplification/2026-07-04-drop-image-content-block.md)).
-   - `isError: true` → map to the harness `isError` result path (`{ content: [...], isError: true }`).
-3. Cancellation: `exec.signal` (from the agent loop's cancel) is passed through to the MCP SDK's `callTool`, which sends `$/cancelRequest` to the server.
+2. Preserve canonical success as `{ content: JsonValue[], structuredContent? }`; complete MCP JSON blocks remain the programmatic/Code Mode value. `isError: true` throws before any image persistence so the registry owns the failure path.
+3. Prepare a separate ordered Native projection. Text runs join with `'\n'`; resource links preserve name and URI as text; audio, embedded resources, malformed blocks, and unknown types become explicit diagnostics. If any image exists, the bridge strictly decodes the complete batch, resolves the calling agent's latest exact route, requires an attachment store plus explicit model image input, and delegates all-member validation and ordered persistence to `AttachmentStore.saveImages()`. Any decode, capability, or storage refusal renders every image as diagnostic text and returns no partial references.
+4. Keep `output.render` synchronous and pure. The executor stages its richer projection in a generation-local `WeakMap` keyed by the exact execution; `finalizeContent` installs it only when the registry's post-execute result still has the original canonical value and fallback content. A policy block, value replacement, or content replacement remains authoritative, and a re-sync cannot let an older generation consume new execution state.
+5. Code Mode receives the untouched canonical value. Its generic dispatch bridge defers a successful final content sequence containing an image through the outer `run_code` result, so MCP requires no private parent-token special case.
+6. Cancellation: `exec.signal` (from the agent loop's cancel) is passed through to the MCP SDK's `callTool`, exact-model lookup, and the pre-storage gate.
 
 ### Subprocess environment (stdio transport)
 
@@ -153,13 +153,7 @@ Build the child environment from the subprocess seam's shared `scrubbedParentEnv
 
 ### Disconnection / crash
 
-No auto-reconnect. If the MCP server process exits or the transport closes:
-
-1. The effect disposes → all registered tools are unregistered (fiber-scoped disposers).
-2. Subsequent model calls to those tools → `ToolNotFoundError` → `isError: true`.
-3. Recovery: user edits `cordis.yml` (triggers HMR reload) or restarts the harness.
-
-This matches the ACP subagent pattern: "crash = terminal, report error, clean up, don't retry."
+A per-instance connection supervisor reconnects automatically after a lost connection with bounded exponential backoff and a per-outage attempt budget, re-running discovery on success; exhaustion unregisters the server's tools and stops until reload. The [auto-reconnect Agent Note](2026-08-06-mcp-client-auto-reconnect.md) owns that decision, including the `reconnect` config block and the `reconnect.enabled: false` opt-out that restores manual HMR/restart recovery.
 
 ## Alternatives considered
 
@@ -173,7 +167,7 @@ Rejected. There is no foreseeable alternative MCP client implementation — MCP 
 
 ### Auto-reconnect with exponential backoff
 
-Rejected for v1. Adds complexity (partial-availability state where tools are registered but temporarily non-functional), and stdio process crashes usually indicate a configuration problem that retrying won't fix. HMR already provides the manual recovery path. Can be added as a future `reconnect: boolean` config if needed.
+Rejected for v1: it added a partial-availability state (tools registered but temporarily non-functional), and stdio crashes often indicate configuration problems retrying cannot fix; HMR was the recovery path. Operational feedback reversed the deferral — the [auto-reconnect Agent Note](2026-08-06-mcp-client-auto-reconnect.md) implements it with a bounded per-outage budget and an opt-out.
 
 ### Bridge Resources and Prompts
 
@@ -185,7 +179,7 @@ Rejected — this was the original proposal, built on the premise that "most MCP
 
 ### Server-only namespace (`github__create_issue`, no `mcp__` marker)
 
-Rejected for v1. It prevents cross-server collisions but does not separate MCP registrations from native harness tools, and it forfeits MCP-wide policy shapes (`mcp__*`). The marker costs 5 characters; the `mcp__<server>__<tool>` spelling matches Claude Code and Codex, maximizing model familiarity. If the ToolRegistry later grows source-aware namespaces, dropping the literal marker can be revisited as a naming-policy change.
+Rejected for v1. It prevents cross-server collisions but does not separate MCP registrations from native harness tools, and it forfeits MCP-wide policy shapes (`mcp__*`). The marker costs 5 characters; the `mcp__<server>__<tool>` spelling matches Claude Code and Codex, maximizing model familiarity. If the ToolRuntime later grows source-aware namespaces, dropping the literal marker can be revisited as a naming-policy change.
 
 ### Deriving the namespace from the server-announced `serverInfo.name`
 
@@ -195,20 +189,33 @@ Rejected. The remote name is untrusted, non-unique across deployments, and chang
 
 Rejected. `flattenText()` in the DeepSeek serializer uses `join('')` (no separator) when flattening `ContentBlock[]` to wire format. Multiple text blocks would silently lose inter-block boundaries — a correctness bug. All existing tools return a single TextBlock; the MCP bridge follows suit.
 
+### Replace the canonical MCP result with core `ContentBlock[]`
+
+Rejected. Programmatic callers need protocol-complete MCP blocks and `structuredContent`, while Native consumers need durable core images rather than base64. One canonical protocol value plus a separate projection preserves both contracts.
+
+### Add a generic RichContent service or perform I/O in `output.render`
+
+Rejected. Core already owns the role-neutral content vocabulary, and a second service would duplicate its logging and ordering contracts. `output.render` is pure, synchronous, and replayable, so attachment I/O belongs in async execution with an exact finalization handoff.
+
+### Let each image-returning tool special-case Code Mode parents
+
+Rejected. That couples leaf tools to composite-tool internals and misses future rich tools. The generic Code Mode bridge observes the final post-policy content and forwards image-bearing results uniformly.
+
 ## Testing
 
 Coverage is named per tier; each behavior lives at the cheapest tier that can express it.
 
-- **Unit** (`tests/mcp-client.spec.ts`, `tests/apply.spec.ts`, mocked MCP SDK): the `publicToolName` algorithm (clean, normalize, truncate-and-hash, determinism, distinct-identity separation), raw-vs-public wire discipline, cross-server and native-tool coexistence, duplicate-`serverName` load failure and reservation release, invalid-tool-list rejection, generation swap/rollback, failed-re-sync retention, result mapping, cancellation, config schema validation. 100% per-file coverage gates the package.
-- **E2E** (`tests/mcp-client.e2e.ts`, keyless): the real MCP protocol against the in-repo fixture server, `@modelcontextprotocol/server-everything`, and `@modelcontextprotocol/server-filesystem` over stdio, and against an in-process `StreamableHTTPServerTransport` server over Streamable HTTP — discovery under the namespace, dotted-name normalization end to end, execution round-trips, duplicate-`serverName` rejection, disposal.
-- **Snapshot**: deliberately none. MCP tools introduce no new presentation shape — they register as raw `ToolDefinition`s and UI consumers use the generic-card fallback already pinned by their presentation suites. Adding an MCP server to a runnable snapshot composition would mutate its pinned system-prompt fixture and make every replay depend on spawning an external MCP server process for no new behavior. If a later change gives MCP tools their own render intent, that change names its snapshot coverage then.
+- **Unit** (`tests/mcp-client.spec.ts`, `tests/apply.spec.ts`, mocked MCP SDK): the `publicToolName` algorithm (clean, normalize, truncate-and-hash, determinism, distinct-identity separation), raw-vs-public wire discipline, cross-server and native-tool coexistence, duplicate-`serverName` load failure and reservation release, invalid-tool-list rejection, generation swap/rollback, failed-re-sync retention, lossless canonical results, mixed rich ordering, atomic malformed batches, exact capability/store refusal, explicit non-image diagnostics, post-execute policy precedence, cancellation, and config schema validation. 100% per-file coverage gates the package.
+- **E2E** (`tests/mcp-client.e2e.ts`, keyless): the real MCP protocol against the in-repo fixture server, `@modelcontextprotocol/server-everything`, and `@modelcontextprotocol/server-filesystem` over stdio, and against an in-process `StreamableHTTPServerTransport` server over Streamable HTTP — discovery under the namespace, dotted-name normalization end to end, execution round-trips, durable image save/read with base64 retained only in the canonical value, explicit refusal without an image route, duplicate-`serverName` rejection, and disposal.
+- **Snapshot**: the assembled ACP example owns the transport-visible inline-image transcript and the Code Mode image-forwarding transcript; package E2E owns the real MCP wire because the runnable snapshot must stay keyless and deterministic rather than spawning third-party server packages. MCP tool cards still use the generic-card fallback and require no package-specific UI snapshot.
 
 ## Consequences
 
 - A `cordis.yml` entry per MCP server is the entire integration cost: `serverName: filesystem` + a stdio command (or a Streamable HTTP URL) puts `mcp__filesystem__read_file` in the model's tool list, callable, with the raw `read_file` on the wire.
-- Public names are part of session history and permission/config surfaces; the naming algorithm is a v1 contract pinned by tests, and changing it after release is a breaking change.
+- Public names are part of session history and permission/configuration APIs; the naming algorithm is a v1 contract pinned by tests, and changing it after release is a breaking change.
 - The `mcp__<serverName>__` qualifier costs tokens on every name. Accepted: descriptions and JSON schemas dominate tool-definition tokens, and the qualifier buys stable identity, collision isolation, and MCP-wide policy shapes (`mcp__*`, `mcp__github__*`).
 - **MCP SDK stability**: the `@modelcontextprotocol/sdk` is still evolving; breaking changes require updating the bridge. The version is pinned, and the SDK is widely adopted (Claude Desktop, Cursor, VS Code) so breaking changes are unlikely to be silent.
 - **Tool schema quality**: MCP servers may expose poorly-described tools (vague descriptions, incomplete JSON schemas). The harness passes them through as-is — garbage-in-garbage-out; that is the server author's responsibility, not the bridge's.
 - **Stdio process management**: a misbehaving MCP server that ignores signals could wedge dispose. The Cordis fiber disposal has bounded quiescence; a stuck transport eventually times out at the framework level.
-- Crash recovery is manual (HMR edit or restart) — accepted for v1; a `reconnect` config remains open as future work.
+- Crash recovery is automatic within the [reconnect budget](2026-08-06-mcp-client-auto-reconnect.md); manual reload remains the path after exhaustion or with `reconnect.enabled: false`.
+- Image payloads can enter model context only through the shared durable attachment store and an exact positive route capability. Audio and embedded-resource payloads remain execution-local with explicit diagnostics.

@@ -1,5 +1,5 @@
 /**
- * The `ctx.directoryPicker` seam: how the web-GUI host lets an operator
+ * Service Definition for the `ctx.directoryPicker` capability seam: how the web-GUI host lets an operator
  * select a workspace directory. Backends differ in interaction shape, not
  * just mechanism, so the service exposes a discriminated capability instead
  * of one method set: a `native` backend opens one OS chooser on the
@@ -11,7 +11,7 @@
  * @module @deepseek-ai/dsh-host-directory-picker
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 
 /** The native interaction: one OS directory chooser on the host display. */
 export interface DirectoryPickerNativeCapability {
@@ -115,7 +115,7 @@ export class DirectoryPickerError extends Error {
   }
 }
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     directoryPicker: DirectoryPicker
   }

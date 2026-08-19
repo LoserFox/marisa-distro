@@ -1,5 +1,5 @@
 /**
- * @deepseek-ai/dsh-frontend-static — SPA dist server over the webserver
+ * @deepseek-ai/dsh-host-frontend-static — SPA dist server over the webserver
  * fallback seat: serves the built frontend directory with the semantics the
  * Web shell locked at step1 — traversal outside the dist root is 403, any
  * miss falls back to index.html with HTTP 200 (SPA routing), unknown
@@ -8,21 +8,21 @@
  * injection). The dist location is workspace knowledge of the composing
  * application, so `distIndex` is typically supplied through a `!!js`
  * expression, never hardcoded by a deployment.
- * @module @deepseek-ai/dsh-frontend-static
+ * @module @deepseek-ai/dsh-host-frontend-static
  */
 
 import type { ServerResponse } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path'
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-host-webserver'
 
 /** Stable Cordis plugin name. */
 export const name = 'frontend-static'
 
 /** Service required before the fallback seat can be claimed. */
-export const inject = ['httpServer']
+export const inject = ['webServer']
 
 /** Plugin config: the dist anchor. */
 export interface Config {
@@ -87,15 +87,15 @@ export async function serveStatic(
 
 /**
  * Claim the webserver fallback seat and serve the dist.
- * @param ctx - plugin context carrying the httpServer service.
+ * @param ctx - plugin context carrying the webServer service.
  * @param config - validated {@link Config}.
  */
 export function apply(ctx: Context, config: Config): void {
   const distIndex = config.distIndex
   const distRoot = dirname(distIndex)
   const renderIndex = async (): Promise<string> =>
-    ctx.httpServer.applyIndexTaps(await readFile(distIndex, 'utf8'))
-  ctx.effect(() => ctx.httpServer.registerFallback(async (req, res) => {
+    ctx.webServer.applyIndexTaps(await readFile(distIndex, 'utf8'))
+  ctx.effect(() => ctx.webServer.registerFallback(async (req, res) => {
     // Non-GET/HEAD without a matching named route is 405 (fallback-only
     // semantics: named routes own their method handling).
     if (req.method !== 'GET' && req.method !== 'HEAD') {

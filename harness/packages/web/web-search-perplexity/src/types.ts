@@ -11,7 +11,7 @@ export interface PerplexityRequest {
   messages: { role: 'user'; content: string }[]
 }
 
-/** One structured search result (the preferred citation surface). */
+/** One structured search result (the preferred citation shape). */
 export interface PerplexitySearchResult {
   url: string
   title?: string | null
@@ -22,7 +22,7 @@ export interface PerplexitySearchResult {
 /** Perplexity's response envelope. */
 export interface PerplexityResponse {
   choices?: { message?: { content?: string | null } }[]
-  /** Structured citation surface (preferred). */
+  /** Structured citation data (preferred). */
   search_results?: PerplexitySearchResult[]
   /** URL-only citation fallback. */
   citations?: string[]

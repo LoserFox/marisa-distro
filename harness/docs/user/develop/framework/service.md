@@ -9,7 +9,7 @@ A service is a capability one plugin exposes to other plugins. `inject` declares
 In Harness, `tools`, `llm`, and `agents` are services. Each is a named capability mounted on `ctx`:
 
 ```ts ignore-check
-ctx.tools    // ToolRegistry service
+ctx.tools    // ToolRuntime service
 ctx.llm      // LLM service
 ctx.agents   // Agent service
 ```
@@ -36,7 +36,7 @@ When `apply` runs, every service declared by `inject` is ready. If a service is 
 ### Extend Service
 
 ```ts
-import { Service, type Context } from 'cordis'
+import { Service, type Context } from '@deepseek-ai/cordis'
 
 export default class MetricsService extends Service {
   static inject = ['llm']  // A service may depend on other services.
@@ -67,9 +67,9 @@ export function apply(ctx: Context) {
 Use TypeScript declaration merging to type `ctx.metrics`:
 
 ```ts
-import { Service, type Context } from 'cordis'
+import { Service, type Context } from '@deepseek-ai/cordis'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
     metrics: MetricsService
   }
@@ -114,10 +114,10 @@ This prevents a plugin from calling a service that no longer exists.
 
 ```yaml
 - id: group-a
-  name: '@cordisjs/plugin-group'
+  name: '@deepseek-ai/cordis-plugin-group'
   group: true
   isolate:
-    bash: true
+    shell: true
   config:
     - name: '@deepseek-ai/dsh-bash-local'
       config:
@@ -125,10 +125,10 @@ This prevents a plugin from calling a service that no longer exists.
     - name: './src/plugin-a.ts'
 
 - id: group-b
-  name: '@cordisjs/plugin-group'
+  name: '@deepseek-ai/cordis-plugin-group'
   group: true
   isolate:
-    bash: true
+    shell: true
   config:
     - name: '@deepseek-ai/dsh-bash-local'
       config:
@@ -140,7 +140,7 @@ This prevents a plugin from calling a service that no longer exists.
 
 ## Built-in Harness services
 
-The repository generates the service names, public methods, and source locations in the [service catalog](../../../cordis-catalog/services.md). Use that catalog and the service's TypeScript interface while developing a plugin; do not maintain a second static list.
+The repository generates the service names, public methods, and source locations into each service's [subsystem page](../../../subsystems/core.md). Use those generated regions and the service's TypeScript interface while developing a plugin; do not maintain a second static list.
 
 ## Next steps
 

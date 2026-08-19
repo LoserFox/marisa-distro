@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Concrete `ctx.sessionQuery` backend. `SessionQuerySqlite` inherits exact reads, traces, and provider-independent filters from the interface package and implements its two full-text methods with SQLite FTS5. Search uses the live-preferred logical session corpus and groups cross-session results by their strongest event.
+Concrete `ctx.sessionQuery` provider. `SqliteSessionQueryEngine` inherits exact reads, traces, and provider-independent filters from the Service Definition package and implements its two full-text methods with SQLite FTS5. Search uses the live-preferred logical session corpus and groups cross-session results by their strongest event.
 
 ## Search contract
 
@@ -16,7 +16,7 @@ All three surfaces (`current`, `shadowed`, and `log-only`) are searchable by def
 
 The service requires `ctx.sessions` and observes optional `ctx.sessionPersistence` dynamically. One serialized state machine compares source-qualified lightweight durable snapshot revisions, non-mutatingly inspects only new or changed logs, extracts shared semantic documents, reconciles changes transactionally, and runs the query. Session queries never invoke the persistence backend's crash-repairing `load()`; an owner attaching during inspection cannot mutate its log, and the stable-observation retry makes the result live-preferred. The TEMP live row still records persisted availability, and the durable base refreshes after that live owner detaches. Repeated queries and an unchanged same-store reopen perform no full durable-log inspection; switching stores, or observing new, changed, deleted, or externally load-repaired sources, reconciles on the next stable observation. Source or transaction failure commits nothing, and the next search retries.
 
-`openAt: startup` is the default: service activation imports `node:sqlite`, opens the handle, and fails before publication when the index is invalid. `openAt: first-search` publishes the service as ACTIVE without importing the SQLite module or opening a handle; the first concurrent searches share one readiness promise, and disposal before any search opens nothing. This mode supports compositions that need clean Node 22 startup output by deferring SQLite's experimental warning until the first actual search; it does not suppress a warning at that point. An invalid database likewise fails the first search instead of service activation.
+`openAt: startup` is the default: service activation imports `node:sqlite`, opens the handle, and fails before publication when the index is invalid. `openAt: first-search` publishes the service as ACTIVE without importing the SQLite module or opening a handle; the first concurrent searches share one readiness promise, and disposal before any search opens nothing. This mode supports compositions that need clean Node 22 startup output by deferring SQLite's experimental warning until the first actual search; it does not suppress a warning at that point. An invalid database likewise fails the first search instead of service activation. `openAt: never` turns full-text search off for the deployment: `searchSessions` and `searchEvents` fail with `SESSION_QUERY_SEARCH_DISABLED` before any request normalization, node:sqlite is never imported or opened, and no source observation or reconciliation runs, while every inherited exact read, filter, and trace on `ctx.sessionQuery` keeps working.
 
 Persisted FTS rows live in a dedicated derived database. Connection-local TEMP tables hold live rows, which shadow the durable base for the same session and reveal it when the live owner disappears. Unmounting persistence hides durable rows without discarding the cache; remounting reconciles it. Closing or reopening the database drops every live overlay while retaining persisted rows.
 
@@ -27,7 +27,7 @@ The database is disposable but reset is guarded: every recognized schema version
 | Key | Default | Contract |
 |---|---:|---|
 | `path` | required | Dedicated derived-index SQLite path; `:memory:` is supported. Missing filesystem paths are created owner-only on POSIX filesystems. |
-| `openAt` | `startup` | `startup` opens before service activation completes; `first-search` defers the SQLite module and handle until search. |
+| `openAt` | `startup` | `startup` opens before service activation completes; `first-search` defers the SQLite module and handle until search; `never` disables full-text search (typed `SESSION_QUERY_SEARCH_DISABLED` failures) while inherited reads stay available. |
 | `journalMode` | `wal` | `wal`, `delete`, `truncate`, or `persist`. |
 | `defaultLimit` | `20` | Page size when a request omits `limit`; at most `Number.MAX_SAFE_INTEGER - 1`. |
 | `maxLimit` | `100` | Largest accepted request page size; at most `Number.MAX_SAFE_INTEGER - 1`. |
@@ -37,7 +37,7 @@ The database is disposable but reset is guarded: every recognized schema version
 
 ## Tokenizer and limits
 
-The index uses FTS5 `unicode61`. In the implementation experiment it supported the two-character query `AI` and produced an index about 2.1× smaller than the trigram alternative. The trade-off is token/phrase recall rather than arbitrary substring recall: `AI` does not match the token `BRAID`. Use `ctx.sessionQuery.filterEvents()` with a `text` clause when a literal whitespace-flexible substring scan is required. NUL is rejected in queries; reserved highlight markers and NUL in documents are normalized before indexing so presentation markers cannot collide with source text.
+The index uses FTS5 `unicode61`. The trade-off is token/phrase recall rather than arbitrary substring recall: `AI` does not match the token `BRAID`. Use `ctx.sessionQuery.filterEvents()` with a `text` clause when a literal whitespace-flexible substring scan is required. NUL is rejected in queries; reserved highlight markers and NUL in documents are normalized before indexing so presentation markers cannot collide with source text.
 
 Abort signals stop queued work and flow unchanged through snapshot listing and non-mutating inspection. Once source work starts, the serialized state machine awaits that backend promise itself—even when a backend ignores cancellation—then checks the signal before starting any further listing, inspection, reconciliation, or query work. The caller therefore observes cancellation only after started backend work is quiescent, and a later search cannot enter the serializer while that cleanup is pending. Node's synchronous `DatabaseSync` API cannot interrupt a metadata or MATCH statement already executing on the JavaScript thread; signals are checked immediately before and after those non-preemptible calls.
 

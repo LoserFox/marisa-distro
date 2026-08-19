@@ -202,18 +202,7 @@ export function createChatScrollFixture(options: ChatScrollFixtureOptions): Chat
 
     session.append('step/start', { turn, step: 1 })
     appendRequestHeader(session, turn, 1)
-    if (turn % TOOL_INTERVAL !== 0) {
-      appendAssistant(
-        session,
-        turn,
-        1,
-        `${markers.assistant(turn)} The conversation remains readable after several paragraphs.\n\n`
-        + `Turn ${String(turn)} deliberately carries enough prose to wrap at narrower viewport widths. `
-        + 'The semantic marker stays near the start so geometry probes can find the same rendered row.\n\n'
-        + `The closing paragraph makes this a realistic assistant response rather than a one-line list item.${codeBlock(turn)}`,
-      )
-      session.append('step/end', { turn, step: 1 })
-    } else {
+    if (turn % TOOL_INTERVAL === 0) {
       appendToolStep(session, markers, turn)
       session.append('step/end', { turn, step: 1 })
       session.append('step/start', { turn, step: 2 })
@@ -226,6 +215,17 @@ export function createChatScrollFixture(options: ChatScrollFixtureOptions): Chat
         + `This settled response keeps turn ${String(turn)} identifiable after paging.${codeBlock(turn)}`,
       )
       session.append('step/end', { turn, step: 2 })
+    } else {
+      appendAssistant(
+        session,
+        turn,
+        1,
+        `${markers.assistant(turn)} The conversation remains readable after several paragraphs.\n\n`
+        + `Turn ${String(turn)} deliberately carries enough prose to wrap at narrower viewport widths. `
+        + 'The semantic marker stays near the start so geometry probes can find the same rendered row.\n\n'
+        + `The closing paragraph makes this a realistic assistant response rather than a one-line list item.${codeBlock(turn)}`,
+      )
+      session.append('step/end', { turn, step: 1 })
     }
     session.append('turn/end', { turn, reason: { kind: 'completed' } })
   }

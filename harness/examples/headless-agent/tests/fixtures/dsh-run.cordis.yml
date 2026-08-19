@@ -1,8 +1,0 @@
-- id: api-gateway
-  config:
-    provider: cli-mock
-    model: cli-mock
-
-- insert:
-    - id: cli-mock-llm
-      name: './snapshot-fixtures/cli-mock-llm.ts'

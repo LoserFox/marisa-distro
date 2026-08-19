@@ -11,8 +11,8 @@ LLM 适配器是一个继承 `LlmAdapter` 并实现 `stream()` 方法的类，�
 ## 最小实现
 
 ```ts
-import type { Context } from 'cordis'
-import Schema from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import Schema from '@deepseek-ai/schemastery'
 import { LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
 
 class MyAdapter extends LlmAdapter {
@@ -32,12 +32,12 @@ class MyAdapter extends LlmAdapter {
 
 export interface Config {
   apiKey: string
-  models: string[]
+  providers: string[]
 }
 
 export const Config: Schema<Config> = Schema.object({
   apiKey: Schema.string().required(),
-  models: Schema.array(Schema.string()).required(),
+  providers: Schema.array(Schema.string()).required(),
 })
 
 export const name = 'my-llm-adapter'
@@ -45,7 +45,7 @@ export const inject = ['llm']
 
 export function apply(ctx: Context, config: Config) {
   const adapter = new MyAdapter(config.apiKey)
-  ctx.llm.registerAdapter(config.models, adapter)
+  ctx.llm.registerAdapter(config.providers, adapter)
 }
 ```
 
@@ -117,10 +117,10 @@ async function* exampleChunks(): AsyncIterable<StreamChunk> {
 ## 注册适配器
 
 ```ts ignore-check
-ctx.llm.registerAdapter(['model-name-1', 'model-name-2'], adapter)
+ctx.llm.registerAdapter(['my-provider'], adapter)
 ```
 
-第一个参数是该适配器支持的模型名列表。当用户在 `cordis.yml` 中配置 `model: model-name-1` 时，框架会将请求路由到该适配器。
+第一个参数是该适配器处理的提供方路由列表。`GenerateOptions.provider` 选择已注册的适配器，`GenerateOptions.model` 则传入由适配器拥有、无需在生命周期启动时注册的模型 id。适配器能够向选择器公布模型选项时，请覆写 `listModels()`。
 
 ## 在 cordis.yml 中使用
 
@@ -129,18 +129,16 @@ ctx.llm.registerAdapter(['model-name-1', 'model-name-2'], adapter)
   name: './src/my-llm-adapter.ts'
   config:
     apiKey: !!js process.env.MY_API_KEY
-    models:
-      - my-model-v1
-      - my-model-v2
+    providers:
+      - my-provider
 
 - id: agent-loop
   name: '@deepseek-ai/dsh-agent-loop'
   config:
     agents:
       - id: main
-        provider: my-llm
-    model: my-model-v1  # References the model registered above.
-    workspaceContext: false
+        provider: my-provider
+        model: my-model-v1
 ```
 
 ## 实战参考

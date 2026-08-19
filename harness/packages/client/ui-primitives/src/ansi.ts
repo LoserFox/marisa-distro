@@ -370,7 +370,7 @@ interface Cell {
  * @returns the text with each line painted as the terminal would.
  */
 function applyCursorMovements(text: string): string {
-  const replayed: Array<string> = []
+  const replayed: string[] = []
   let sgr = SGR_NONE
   for (const raw of text.split('\n')) {
     const line = raw.replace(/\r+$/, '')

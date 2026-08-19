@@ -1,6 +1,6 @@
-/** Package-owned hook provenance-stream invariants. @module @deepseek-ai/dsh-hook-protocol/invariant */
+/** Package-owned hook invocation/result stream invariants. @module @deepseek-ai/dsh-hook-protocol/invariant */
 
-import type { Context } from 'cordis'
+import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import type {} from './types.ts'
@@ -43,7 +43,7 @@ function validateHookEvent(
       fail('hook/invoked point and handlerId must be non-empty')
     }
     const dialect: string = event.data.dialect
-    if (dialect !== 'claude' && dialect !== 'codex') {
+    if (dialect !== 'claude-code' && dialect !== 'codex') {
       fail(`hook/invoked carries unknown dialect ${JSON.stringify(dialect)}`)
     }
     return { key: hookKey(event.data), delta: 1 }
@@ -82,7 +82,7 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     }
     return trace
   }
-  const traceFor = (session: Session): HookTrace => { return traces.get(session) ?? seed(session) }
+  const traceFor = (session: Session): HookTrace => traces.get(session) ?? seed(session)
 
   for (const session of ctx.sessions.list()) seed(session)
   ctx.on('session/created', (session) => { seed(session) }, { global: true })
@@ -96,9 +96,9 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
       trace.openTurn = null
       return
     }
-    if (event.type !== 'hook/invoked' && event.type !== 'hook/result') { return }
+    if (event.type !== 'hook/invoked' && event.type !== 'hook/result') return
     const candidate = staged.get(event)
-    /* v8 ignore next -- internal/dispatch stages every hook provenance event */
+    /* v8 ignore next -- internal/dispatch stages every hook invocation/result event */
     if (candidate === undefined || candidate.session !== session) return fail('hook event published without pre-commit validation')
     staged.delete(event)
     applyHookTransition(trace.pending, candidate.transition)

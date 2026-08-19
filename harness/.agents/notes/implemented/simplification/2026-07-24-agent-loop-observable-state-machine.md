@@ -31,7 +31,7 @@ The event taxonomy removes the legacy prompt preparation/submission and serial s
 
 ## Alternatives considered
 
-**Keep the fine-grained event sequence.** This preserves a dedicated interception point for every internal phase, including request-only prefixes, assistant-message rewriting, post-step work, in-turn request recovery, and terminal stop overrides. It also makes the loop's private sequencing a permanent public contract and lets overlapping seams express conflicting decisions. The decision accepts the lost interception points in exchange for one boundary per supported extension responsibility.
+**Keep the fine-grained event sequence.** This preserves a dedicated interception point for every internal phase, including request-only prefixes, assistant-message rewriting, post-step work, in-turn request recovery, and terminal stop overrides. It also makes the loop's private sequencing a permanent public contract and lets overlapping extension points express conflicting decisions. The decision accepts the lost interception points in exchange for one boundary per supported extension responsibility.
 
 **Represent disposal as a third `AgentStatus`.** This gives retained handles a terminal status value but duplicates the registry lifecycle already expressed by `agent/disposed`. The decision keeps `AgentStatus` about live activity and makes registration lifetime a separate dimension.
 

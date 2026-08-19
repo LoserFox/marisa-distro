@@ -4,22 +4,24 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { createUserMessage, CallId, StreamChunk  } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import LlmService from '@deepseek-ai/dsh-llm'
-import ToolRegistry, { defineContentToolFixture, TOOL_ABORTED_BEFORE_DISPATCH, TOOL_REGISTRY_SCHEDULER, type PostToolDecision, type PreToolDecision } from '@deepseek-ai/dsh-tools'
+import LlmRuntime from '@deepseek-ai/dsh-llm'
+import ToolRuntime, { defineContentToolFixture, TOOL_ABORTED_BEFORE_DISPATCH, TOOL_RUNTIME_SCHEDULER, type PostToolDecision, type PreToolDecision } from '@deepseek-ai/dsh-tools'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 import AgentLoop, { DEFAULT_MAX_PARALLEL_TOOL_CALLS } from '@deepseek-ai/dsh-agent-loop'
 import { MockAdapter, textResponse } from './mock-adapter.ts'
+import { CodeRuntime } from '@deepseek-ai/dsh-code-runtime'
+import type { CodeRunRequest, CodeRunResult } from '@deepseek-ai/dsh-code-runtime'
 
 async function harness(adapter: MockAdapter, maxParallelToolCalls?: number) {
   const ctx = new Context()
-  await ctx.plugin(LlmService)
+  await ctx.plugin(LlmRuntime)
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt, { persona: '' })
-  await ctx.plugin(ToolRegistry)
+  await ctx.plugin(ToolRuntime)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(AgentLoop, {
     agents: [],
@@ -106,7 +108,7 @@ describe('tool-call scheduler: grouping and barriers', () => {
     const agent = ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
 
     agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
-    await until(() => { return gated.started.length === 3 })
+    await until(() => gated.started.length === 3)
     expect(gated.started).toEqual(['1', '2', '3'])
     gated.release('1'); gated.release('2'); gated.release('3')
     await waitForIdle(ctx, agent)
@@ -274,10 +276,10 @@ describe('tool-call scheduler: rolling pool honors maxParallelToolCalls', () => 
 
   it('defaults the cap when direct construction bypasses the config schema', async () => {
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt, { persona: '' })
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
 
     const loop = new AgentLoop(ctx, { agents: [] })
@@ -300,7 +302,7 @@ describe('tool-call scheduler: rolling pool honors maxParallelToolCalls', () => 
     await new Promise(r => setTimeout(r, 5))
     expect(gated.started).toEqual(['1', '2'])
     gated.release('1')
-    await until(() => { return gated.started.length === 3 })
+    await until(() => gated.started.length === 3)
     expect(gated.started).toEqual(['1', '2', '3'])
     expect(events(agent)
       .filter(e => e.type === 'tool/call' || e.type === 'tool/result')
@@ -342,10 +344,10 @@ describe('tool-call scheduler: rolling pool honors maxParallelToolCalls', () => 
       textResponse('done'),
     ])
     const ctx = new Context()
-    await ctx.plugin(LlmService)
+    await ctx.plugin(LlmRuntime)
     await ctx.plugin(SessionStore)
     await ctx.plugin(SystemPrompt, { persona: '' })
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(AgentRegistry)
     await ctx.plugin(AgentLoop, { agents: [], maxParallelToolCalls: 1 })
     ctx.llm.registerAdapter(['mock'], adapter)
@@ -642,7 +644,7 @@ describe('tool-call scheduler: failure quiescence', () => {
     ctx.tools.register(gated.tool)
     // The registry contains expected failures as results; replace its internal
     // view only to inject the invariant violation this boundary must contain.
-    const scheduler = ctx.tools[TOOL_REGISTRY_SCHEDULER]
+    const scheduler = ctx.tools[TOOL_RUNTIME_SCHEDULER]
     const prepare = scheduler.prepare.bind(scheduler)
     const dispatch = scheduler.dispatch.bind(scheduler)
     const prepareGate = Promise.withResolvers<undefined>()
@@ -684,6 +686,77 @@ describe('tool-call scheduler: failure quiescence', () => {
     expect(gated.pending()).toEqual([])
     expect(events(agent).findLast(event => event.type === 'turn/end')).toMatchObject({
       data: { reason: { kind: 'error', error: { message: schedulerError.message, code: 'UNKNOWN' } } },
+    })
+  })
+})
+
+describe('code-mode native-tool denial through the agent loop', () => {
+  /** A minimal in-process code runtime for test purposes — never actually runs. */
+  class FakeCodeRuntime extends CodeRuntime {
+    readonly language = 'typescript'
+    readonly isolation = 'fake' as const
+    async run(_request: CodeRunRequest): Promise<CodeRunResult> {
+      return { logs: [] }
+    }
+  }
+
+  async function codeModeHarness(adapter: MockAdapter) {
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime)
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(SystemPrompt, { persona: '' })
+    await ctx.plugin(ToolRuntime, { mode: 'code' })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- FakeCodeRuntime is an internal test helper with an opaque type shape
+    await ctx.plugin(FakeCodeRuntime as any)
+    await ctx.plugin(AgentRegistry)
+    await ctx.plugin(AgentLoop, { agents: [] })
+    ctx.llm.registerAdapter(['mock'], adapter)
+    return ctx
+  }
+
+  it('denies a model-direct native-tool call under code mode: tool body never runs and session records UNKNOWN_TOOL', async () => {
+    let toolInvoked = false
+    const tool = defineContentToolFixture({
+      name: 'write',
+      description: 'Write a file.',
+      parameters: {
+        file_path: { type: 'string', required: true },
+        content: { type: 'string', required: true },
+      },
+      async execute(_args, _exec) {
+        toolInvoked = true
+        return [{ type: 'text', text: 'written' }]
+      },
+    })
+
+    // Scripted model emits a native tool call under code mode — the wire
+    // never advertised it, but a non-compliant provider may still emit one.
+    const adapter = new MockAdapter([
+      [
+        ...multiCall([{ id: 'call-1', name: 'write', args: { file_path: '/tmp/test', content: 'hello' } }]),
+        ...textResponse('ok'),
+      ],
+    ])
+
+    const ctx = await codeModeHarness(adapter)
+    ctx.tools.register(tool)
+
+    const agent = ctx.agentLoop.create(SessionId('code-native'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'write a file' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    // The tool body must NOT have executed — the collapse denied the call
+    // at createExecution, before the body could start.
+    expect(toolInvoked).toBe(false)
+
+    // The session must record a tool/result with UNKNOWN_TOOL error so the
+    // transcript faithfully captures that the call was denied.
+    const sessionEvents = events(agent)
+    const toolResult = sessionEvents.find(e => e.type === 'tool/result')
+    expect(toolResult).toBeDefined()
+    expect(toolResult!.data.error).toMatchObject({
+      name: 'ToolNotFoundError',
+      code: 'UNKNOWN_TOOL',
     })
   })
 })

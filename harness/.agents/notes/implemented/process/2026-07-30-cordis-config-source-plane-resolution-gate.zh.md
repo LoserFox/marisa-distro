@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-`apps/cli/config/tui.cordis.yml` 新增了 `@deepseek-ai/dsh-tui/prompt` 配置项，却没有对应的 tsconfig `paths` 映射。通用的 `@deepseek-ai/dsh-*` 通配符会把 `tui/prompt` 整体代入其 `<group>/*/src` 候选路径，而这些路径全都不存在，因此 [tsx 源码启动](../architecture/2026-07-29-dsh-source-launch-tsx-esm.md)会回退到包的 `exports`，解析出产物面文件 `lib/prompt.js`。任何带有已构建 `lib/` 的环境（开发者目录树运行 `pnpm build` 后）都能正常启动，而 e2e 工作流以 `lib` 模式（`DSH_EXAMPLE_MODE=lib`，构建产物 bin 在普通 Node 下运行）执行无密钥 TUI PTY 冒烟测试，因此 CI 根本不会经过源码启动向量——与此同时，所有干净检出环境中的 `pnpm dsh` 都会在启动时失败，并报错 `plugin(s) failed to load: @deepseek-ai/dsh-tui/prompt`。当时没有门禁检查源码面，因此该故障未被发现便进入发布版本，仅在新的 worktree 中暴露。
+`apps/cli/config/tui.cordis.yml` 新增了 `@deepseek-ai/dsh-tui/prompt` 配置项，却没有对应的 tsconfig `paths` 映射。通用的 `@deepseek-ai/dsh-*` 通配符会把 `tui/prompt` 整体代入其 `<group>/*/src` 候选路径，而这些路径全都不存在，因此 [tsx 源码启动](../architecture/2026-07-29-dsh-source-launch-tsx-esm.md) 会回退到包的 `exports`，解析出产物面文件 `lib/prompt.js`。任何带有已构建 `lib/` 的环境（开发者目录树运行 `pnpm build` 后）都能正常启动，而 e2e 工作流以 `lib` 模式（`DSH_EXAMPLE_MODE=lib`，构建产物 bin 在普通 Node 下运行）执行无密钥 TUI PTY 冒烟测试，因此 CI 根本不会经过源码启动向量——与此同时，所有干净检出环境中的 `pnpm dsh` 都会在启动时失败，并报错 `plugin(s) failed to load: @deepseek-ai/dsh-tui/prompt`。当时没有门禁检查源码面，因此该故障未被发现便进入发布版本，仅在新的 worktree 中暴露。
 
 ## 决策
 
@@ -14,7 +14,7 @@ Status: implemented
 
 ## 备选方案
 
-**依赖无密钥 TUI PTY 冒烟测试。** 在默认源码模式下，该测试通过源码向量启动真实目录树，确实能捕获这个故障，但仅限干净目录树。CI 的 e2e 工作流只以 `lib` 模式运行它（构建产物 bin 通过真实的包 `exports` 解析），因此没有任何 CI 环节执行源码向量，而带有过期 `lib/` 的开发者目录树在本地也仍被掩盖。为 CI 增加一个源码模式冒烟测试，每次也只能证明一种组合；静态门禁则覆盖所有随产品发布的配置与示例配置。
+**依赖无密钥 TUI PTY 冒烟测试。** 在默认源码模式下，该测试通过源码向量启动真实目录树，确实能捕获这个故障，但仅限干净目录树。CI 的 e2e 工作流只以 `lib` 模式运行它（构建产物 bin 通过真实的包 `exports` 解析），因此没有任何 CI 环节执行源码向量，而带有陈旧 `lib/` 的开发者目录树在本地也仍被掩盖。为 CI 增加一个源码模式冒烟测试，每次也只能证明一种组合；静态门禁则覆盖所有随产品发布的配置与示例配置。
 
 **将 `dsh-source-launch-smoke` 兼容性测试扩展为完整启动。** node-compat 冒烟测试只断言 TTY 拒绝，而该拒绝发生在插件加载之前。每条矩阵版本线都执行一次完整的无密钥启动，会以更高成本重复 PTY 冒烟测试，而且同样只能验证一种组合，无法覆盖所有随产品发布的配置与示例配置。
 

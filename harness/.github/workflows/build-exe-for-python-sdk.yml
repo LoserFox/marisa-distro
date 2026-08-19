@@ -4,10 +4,27 @@ name: Build single-exe
 # .agents/notes/implemented/architecture/2026-07-10-single-file-executable-sdk-runtime-distribution.md.
 # A full target run retains one SDK wheel and three runtime wheels; subset
 # dispatch retains the SDK wheel and selected runtime wheels. Bare executables
-# and source closures are test inputs. Run manually or label a PR
-# `build-exe` (remove and reapply to rerun). Checkout uses the triggering ref,
-# so dispatch needs no separate ref input.
+# and source closures are test inputs. Run manually, label a PR `build-exe`
+# (remove and reapply to rerun), or call it from the Python release workflow.
+# Checkout uses the triggering ref, so dispatch needs no separate ref input.
 on:
+  workflow_call:
+    inputs:
+      targets:
+        description: Comma-separated pkg targets to build; empty builds all three.
+        type: string
+        required: false
+        default: ''
+      release:
+        description: Run as the native builder for the Python release workflow.
+        type: boolean
+        required: false
+        default: false
+      ci:
+        description: Run as the required Linux x64 Python runtime pull-request check.
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
     inputs:
       targets:
@@ -22,7 +39,10 @@ on:
     types: [labeled]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Keep the called workflow distinct from its caller's concurrency group;
+  # github.workflow identifies the caller inside a reusable workflow and keeps
+  # an ordinary CI run from cancelling a full release validation on the same ref.
+  group: build-single-exe-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -38,12 +58,13 @@ jobs:
   # construct the matrix before the dependent jobs.
   plan:
     name: plan targets
-    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-exe'
+    if: inputs.ci || inputs.release || github.event_name == 'workflow_dispatch' || github.event.label.name == 'build-exe'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       version: ${{ steps.version.outputs.version }}
+      repository-version: ${{ steps.version.outputs.repository-version }}
     steps:
       - uses: actions/checkout@v6
 
@@ -51,12 +72,15 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          version="$(jq -r '.version // empty' package.json)"
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-            echo "::error::package.json version must be stable X.Y.Z, got '$version'"
-            exit 1
-          }
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import runpy
+
+          release = runpy.run_path("scripts/build-python-release.py")
+          repository_version = release["repository_version"]()
+          wheel_version = release["pep440_version"](repository_version)
+          print(f"repository-version={repository_version}")
+          print(f"version={wheel_version}")
+          PY
 
       - name: Compute matrix from targets input
         id: plan
@@ -92,7 +116,7 @@ jobs:
 
   sdk-wheel:
     needs: plan
-    name: deepseek_harness-${{ needs.plan.outputs.version }}-py3-none-any.whl
+    name: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -113,9 +137,10 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: deepseek_harness-${{ needs.plan.outputs.version }}-py3-none-any.whl
-          path: dist-python/deepseek_harness-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          name: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          path: dist-python/deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
           if-no-files-found: error
+          retention-days: 7
 
   build:
     needs: [plan, sdk-wheel]
@@ -157,6 +182,42 @@ jobs:
       - name: Install (immutable)
         run: pnpm install --frozen-lockfile
 
+      - name: Rebuild Linux node-pty against manylinux 2.28
+        if: runner.os == 'Linux'
+        env:
+          RUNNER_ARCH: ${{ runner.arch }}
+        run: |
+          set -euo pipefail
+          case "$RUNNER_ARCH" in
+            X64) image=quay.io/pypa/manylinux_2_28_x86_64 ;;
+            ARM64) image=quay.io/pypa/manylinux_2_28_aarch64 ;;
+            *) echo "::error::Unsupported Linux runner architecture $RUNNER_ARCH"; exit 1 ;;
+          esac
+          addon_dir="$(realpath packages/subprocess/subprocess-local/node_modules/node-pty)"
+          (cd "$addon_dir" && npm_config_build_from_source=true pnpm run install)
+          addon="$addon_dir/build/Release/pty.node"
+          [ -f "$addon_dir/build/Makefile" ] || {
+            echo "::error::node-pty install did not generate $addon_dir/build/Makefile"
+            exit 1
+          }
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD:$PWD" \
+            -v "$HOME/.cache/node-gyp:$HOME/.cache/node-gyp:ro" \
+            -v "$HOME/setup-pnpm:$HOME/setup-pnpm:ro" \
+            -w "$addon_dir" \
+            "$image" \
+            bash -euxo pipefail -c \
+              'rm -rf build/Release && make -C build -j2 BUILDTYPE=Release'
+          [ -f "$addon" ] || { echo "::error::$addon missing after manylinux rebuild"; exit 1; }
+          readelf --version-info "$addon" | tee node-pty-glibc-versions.txt
+          maximum="$(sed -n 's/.*Name: GLIBC_\([0-9.]*\).*/\1/p' node-pty-glibc-versions.txt | sort -V | tail -1)"
+          [ -n "$maximum" ] || { echo "::error::No GLIBC requirements found in $addon"; exit 1; }
+          dpkg --compare-versions "$maximum" le 2.28 || {
+            echo "::error::node-pty addon requires GLIBC_$maximum but wheel claims manylinux_2_28"
+            exit 1
+          }
+
       - name: Build single-exe
         run: pnpm exec tsx scripts/build-exe-for-python-sdk.ts --targets=${{ matrix.target }}
 
@@ -173,7 +234,7 @@ jobs:
           case "$platform" in
             linux-x64) wheel=deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_x86_64.whl ;;
             linux-arm64) wheel=deepseek_harness_runtime_bin-$VERSION-py3-none-manylinux_2_28_aarch64.whl ;;
-            macos-arm64) wheel=deepseek_harness_runtime_bin-$VERSION-py3-none-macosx_11_0_arm64.whl ;;
+            macos-arm64) wheel=deepseek_harness_runtime_bin-$VERSION-py3-none-macosx_14_0_arm64.whl ;;
             *) echo "::error::Unsupported runtime platform $platform"; exit 1 ;;
           esac
           echo "platform=$platform" >> "$GITHUB_OUTPUT"
@@ -197,7 +258,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: deepseek_harness-${{ needs.plan.outputs.version }}-py3-none-any.whl
+          name: deepseek_harness_sdk-${{ needs.plan.outputs.version }}-py3-none-any.whl
           path: dist-python
 
       - name: Install only the SDK into a clean venv and run zero-config
@@ -208,7 +269,7 @@ jobs:
           python -m venv "$RUNNER_TEMP/dsh-sdk-smoke"
           "$RUNNER_TEMP/dsh-sdk-smoke/bin/python" -m pip install \
             --find-links dist-python \
-            deepseek-harness=="$VERSION"
+            deepseek-harness-sdk=="$VERSION"
           "$RUNNER_TEMP/dsh-sdk-smoke/bin/python" scripts/smoke-python-runtime.py \
             --scenario sdk-default
 
@@ -224,6 +285,14 @@ jobs:
             exit 1
           }
 
+      - name: Check macOS deployment target
+        if: runner.os == 'macOS'
+        env:
+          EXE: ${{ steps.runtime.outputs.exe }}
+        run: >-
+          python3 scripts/check-macos-deployment-target.py
+          "$EXE" "$EXE-spawn-helper"
+
       - name: Run wheel in a manylinux 2.28 container
         if: runner.os == 'Linux'
         env:
@@ -236,9 +305,9 @@ jobs:
             ARM64) image=quay.io/pypa/manylinux_2_28_aarch64 ;;
             *) echo "::error::Unsupported Linux runner architecture $RUNNER_ARCH"; exit 1 ;;
           esac
-          docker run --rm -e VERSION -v "$PWD:/work" -w /work "$image" bash -euxo pipefail -c '
+          docker run --rm -e VERSION -e DSH_TELEMETRY_DISABLED -v "$PWD:/work" -w /work "$image" bash -euxo pipefail -c '
             /opt/python/cp310-cp310/bin/python -m venv /tmp/dsh-sdk
-            /tmp/dsh-sdk/bin/python -m pip install --find-links /work/dist-python deepseek-harness=="$VERSION"
+            /tmp/dsh-sdk/bin/python -m pip install --find-links /work/dist-python deepseek-harness-sdk=="$VERSION"
             /tmp/dsh-sdk/bin/python /work/scripts/smoke-python-runtime.py --scenario sdk-default
           '
 
@@ -247,3 +316,4 @@ jobs:
           name: ${{ steps.runtime.outputs.wheel }}
           path: dist-python/${{ steps.runtime.outputs.wheel }}
           if-no-files-found: error
+          retention-days: 7

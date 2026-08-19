@@ -1,30 +1,26 @@
 /** Host loader entry for the browser implementation exported from `./client`. */
 
-import type { Context } from 'cordis'
-import z from 'schemastery'
+import type { Context } from '@deepseek-ai/cordis'
+import z from '@deepseek-ai/schemastery'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
-import {
-  WELCOME_NOTICE_ACK_FIELD, WELCOME_NOTICE_SETTINGS_NAMESPACE,
-} from './onboarding-copy.ts'
 
-export {
-  WELCOME_NOTICE_ACK_FIELD, WELCOME_NOTICE_COPY, WELCOME_NOTICE_SETTINGS_NAMESPACE,
-  WELCOME_NOTICE_VERSION,
-} from './onboarding-copy.ts'
+/** Durable settings namespace for product-wide GUI onboarding facts. */
+const ONBOARDING_SETTINGS_NAMESPACE = 'ui-onboarding'
 
 interface OnboardingSettings {
+  /** Last version acknowledged by the current product welcome step. */
   welcomeNoticeVersion?: string
 }
 
 const OnboardingSettingsSchema: z<OnboardingSettings> = z.object({
-  [WELCOME_NOTICE_ACK_FIELD]: z.string(),
+  welcomeNoticeVersion: z.string(),
 })
 
 /** Register the durable GUI-onboarding section when a settings provider exists. */
 export function apply(ctx: Context): void {
   ctx.inject(['settings'], (settingsCtx) => {
     settingsCtx.settings.register(
-      settingsNamespace(WELCOME_NOTICE_SETTINGS_NAMESPACE),
+      settingsNamespace(ONBOARDING_SETTINGS_NAMESPACE),
       OnboardingSettingsSchema,
     )
   })

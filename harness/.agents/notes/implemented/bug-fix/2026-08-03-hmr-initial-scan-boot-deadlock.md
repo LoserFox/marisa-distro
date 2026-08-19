@@ -34,8 +34,8 @@ With both in place a failing boot follows the intended path: the single apply fa
 
 A config file edit landing inside the watcher's startup scan window is now picked up by the next `change` event rather than the scan itself; steady-state reload behavior is unchanged.
 
-One latent gap remains: a config edit made during a *failing* initial apply can still queue a refresh that the rollback's HMR teardown waits on — the same deadlock shape with a human-scale trigger window of one failing boot. If that ever bites, the fix is refresh-task cancellation at HMR teardown.
+One latent gap remains: a config edit made during a *failing* initial apply can still queue a refresh that the rollback's HMR teardown waits on — the same deadlock shape with a human-scale trigger window of one failing boot. If that ever bites, the fix is refresh-job cancellation at HMR teardown.
 
 ## Testing
 
-The `dsh` invalid-provider PTY case in `apps/cli/tests/tui-keyless-smoke.e2e.ts` pins the end-to-end contract: exit 1, the labelled `dsh: plugin tree failed to load:` diagnostic naming `$.providers`, and the bracketed-paste reset proving the tree was disposed. Before this fix the same case observed exit 13 with no diagnostic. Reload behavior stays covered by `packages/ui/app-boot/tests/config-reload.spec.ts` and `packages/ui/app-boot/tests/hmr-config.spec.ts`.
+The `dsh` invalid-provider PTY case in `apps/cli/tests/tui-keyless-smoke.e2e.ts` pins the end-to-end contract: exit 1, the labelled `dsh: plugin tree failed to load:` diagnostic naming `$.providers`, and the bracketed-paste reset proving the tree was disposed. Before this fix the same case observed exit 13 with no diagnostic. Reload behavior stays covered by `packages/boot/app-boot/tests/config-reload.spec.ts` and `packages/boot/app-boot/tests/hmr-config.spec.ts`.

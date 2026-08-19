@@ -1,5 +1,5 @@
-// 生成器：.dsh-plugin/client/index.mjs → .dsh-plugin/client.js（bundle 产物，随插件分发）。
-// 契约：--check 模式在内存生成后与已提交 .dsh-plugin/client.js 逐字节比对，不一致非零退出——
+// 生成器：lib/client/index.mjs → lib/client.js（bundle 产物，随插件分发）。
+// 契约：--check 模式在内存生成后与已提交 lib/client.js 逐字节比对，不一致非零退出——
 // 手改生成物禁止（改 client/index.mjs，勿改 client.js）。
 // esbuild 经 .bin CLI 调用（pnpm 布局下 require.resolve 不可靠）；解析顺序：
 // 本地 node_modules/.bin → $DSH_CHECKOUT/node_modules/.bin → /tmp/dsh-0808/node_modules/.bin；
@@ -11,8 +11,8 @@ import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const ROOT = resolve(import.meta.dirname, '..')
-const ENTRY = '.dsh-plugin/client/index.mjs'
-const OUTPUT = join(ROOT, '.dsh-plugin', 'client.js')
+const ENTRY = 'lib/client/index.mjs'
+const OUTPUT = join(ROOT, 'lib', 'client.js')
 
 function resolveEsbuildBin() {
   const candidates = [
@@ -78,7 +78,7 @@ export function generate({ check = false, root = ROOT } = {}) {
     + `\t}\n`
     + `});\n`,
   )
-  const outputPath = join(root, '.dsh-plugin', 'client.js')
+  const outputPath = join(root, 'lib', 'client.js')
   if (!check) {
     writeFileSync(outputPath, code)
     return { ok: true }

@@ -12,7 +12,7 @@ import type { LspProviderId } from './brand.ts'
 /**
  * The four semantic queries the seam and model expose. A closed union: adding an operation is a
  * compile-enforced change across the seam, providers, and the tool. Symbols and call hierarchy are
- * deliberately deferred (they need different schemas).
+ * not operations here; they need different schemas.
  */
 export type LspOperation = 'goToDefinition' | 'findReferences' | 'goToImplementation' | 'hover'
 
@@ -77,13 +77,13 @@ export interface LspHover {
  * `goToImplementation`) normalize to `locations`; `hover` normalizes to content or `null`.
  * Consumers `switch` on `kind` to exhaustiveness so a new arm breaks compilation until handled.
  *
- * The `locations` variant carries `resolvedWorkspaceRoot`: the provider's canonical form of the
- * request's `workspaceRoot`, and the root its `file:` location URIs are relative to. A caller that
- * relativizes display paths MUST use this, not the request's (possibly symlinked) `workspaceRoot`;
- * otherwise a symlinked workspace misclassifies in-workspace results as external.
+ * The `locations` variant carries `resolvedWorkspaceUri`: the provider's canonical `file:` URI for
+ * the request's workspace root. A caller that relativizes location URIs MUST use this, not parse the
+ * request's possibly symlinked process path with host-platform rules; the execution platform may
+ * differ from the caller's.
  */
 export type LspQueryResult =
-  | { readonly kind: 'locations'; readonly locations: readonly LspLocation[]; readonly resolvedWorkspaceRoot: string }
+  | { readonly kind: 'locations'; readonly locations: readonly LspLocation[]; readonly resolvedWorkspaceUri: string }
   | { readonly kind: 'hover'; readonly hover: LspHover | null }
 
 /**

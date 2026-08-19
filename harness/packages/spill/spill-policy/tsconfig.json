@@ -16,7 +16,7 @@
       "path": "../../../vendor/schemastery"
     },
     {
-      "path": "../../util/retention"
+      "path": "../../util/output-retention"
     },
     {
       "path": "../../llm/llm"
@@ -31,7 +31,7 @@
       "path": "../../core/tools"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -6,14 +6,15 @@
  * signal is a local stream-control parameter, independent of the request (never on the wire).
  */
 
-import type { AskUserQuestionItem } from '@deepseek-ai/dsh-user-interaction/types'
+import type { AskUserQuestionItem } from '@deepseek-ai/dsh-user-questions/types'
 import type { ApprovalOutcome, ApprovalRequestId } from '@deepseek-ai/dsh-user-approval/types'
 import type { Message } from '@deepseek-ai/dsh-llm/types'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { CallId } from '@deepseek-ai/dsh-llm/brand'
-import type { SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
+import type { JsonValue, SessionEvent, SessionId } from '@deepseek-ai/dsh-session/types'
 import type { ToolCallView, ToolResultView } from '@deepseek-ai/dsh-tools/presentation'
 import type { RpcError, RpcId, RpcRequest } from './rpc.ts'
+import type { JobView } from './jobs.ts'
 import type { WorkspaceView } from './workspace.ts'
 
 // Client-side consumers take the render-intent vocabulary from the contract;
@@ -49,7 +50,7 @@ export interface EventsApi {
    * attached session, then replays each session's still-pending approval/question requested
    * frames (rpcId reused verbatim — the refresh-recovery baseline). Session titles ride the
    * generic projection pair (history-tail projections block + session/projection frames).
-   * since: resume seam, unimplemented in v1 (ignored if passed); reconnection = reopen the
+   * since: resume hook, unimplemented in v1 (ignored if passed); reconnection = reopen the
    * stream + refetch history.
    */
   mux(request: RpcRequest<{ since?: Record<SessionId, number> }>, signal: AbortSignal): AsyncIterable<RpcRequest<MuxFrame>>
@@ -82,6 +83,20 @@ export type MuxFrame =
    */
   | { type: 'session/queue'; sessionId: SessionId; items: QueuedInboxItem[] }
   /**
+   * Complete set of background jobs this session can see, after every registry
+   * commit that changes it: registration, the stopping transition, settlement,
+   * and owner-disposal removal. The registry is process-local and holds no
+   * durable event, so — exactly like `session/queue` — the whole snapshot is
+   * what makes a start, a kill, a reconnect, and a second tab converge on one
+   * authoritative value.
+   *
+   * Sent as a subscription baseline only for a session that currently has
+   * tasks; an absent key means an empty set. A change that empties the set
+   * still sends `[]`, since that transition is the only one absence cannot
+   * express.
+   */
+  | { type: 'session/jobs'; sessionId: SessionId; jobs: JobView[] }
+  /**
    * One projection unit's finished value changed (session-projection RFC).
    * Live push state, never logged — replay recomputes on the host (the
    * tool-view posture). `value` is the unit's schema-validated view output;
@@ -104,7 +119,8 @@ export type MuxFrame =
  * workspace mutation (create/attach/order change — the client upserts, while
  * `workspace.list` provides the reconnect baseline); workspace-removed is the
  * committed registration-deletion increment and never implies directory or
- * session-log deletion; archived-sessions-changed pushes the full registry
+ * session-log deletion; workspace-order-changed pushes the complete durable
+ * registry order after a reorder; archived-sessions-changed pushes the full registry
  * archive set after every durable change (same full-snapshot posture as
  * workspace-changed — `workspace.list` re-baselines it on reconnect).
  */
@@ -116,36 +132,24 @@ export type HostFrame =
     parentSessionId?: SessionId
     origin?: 'subagent'
     cwd?: string
+    agentPreset?: string
   }
   | { type: 'host/session-removed'; sessionId: SessionId }
   | { type: 'host/session-status'; sessionId: SessionId; running: boolean }
   | { type: 'host/agent-error'; sessionId: SessionId; message: string }
   | { type: 'host/workspace-changed'; workspace: WorkspaceView }
   | { type: 'host/workspace-removed'; workspaceId: WorkspaceView['workspaceId'] }
+  | { type: 'host/workspace-order-changed'; workspaceIds: WorkspaceView['workspaceId'][] }
   | { type: 'host/archived-sessions-changed'; archivedSessionIds: SessionId[] }
   /**
-   * The command registry changed (`commands/change` passthrough). Pure
-   * invalidation signal, no payload: clients refetch `command.list` in the
-   * background rather than diffing.
+   * One allowlisted host cordis event forwarded verbatim. The allowlist is
+   * owned by `@deepseek-ai/dsh-api-remotes` (`API_REMOTE_FORWARDED_EVENTS`),
+   * which is also the only control point over what a consumer can receive.
+   * `event` is the host's own event name and `args` its argument list: this
+   * path applies no projection, no redaction, and no renaming, so the payload
+   * contract is the owner package's cordis `Events` declaration rather than
+   * anything stated here. Delivery lands on `ctx.remote.$on`, not on a
+   * per-event frame variant.
    */
-  | { type: 'host/commands-changed' }
-  /**
-   * One settings namespace's resolved value changed (`settings/updated`
-   * passthrough) — an RPC write, an external `settings.yaml` edit, or a
-   * provider reload all converge here. Clients refetch `settings.describe`;
-   * values never ride the frame (they would need redaction and can go stale).
-   */
-  | { type: 'host/settings-changed'; ns: string }
-  /**
-   * One credential reference's state changed (`credentials/updated`
-   * passthrough): a set/unset over this wire or an external `.env` edit.
-   * The ref is an environment-variable NAME — never a value.
-   */
-  | { type: 'host/credentials-changed'; ref: string }
-  /**
-   * The provider topology changed (`llm/adapters-updated` passthrough):
-   * routes registered or dropped, or the configurable directory moved. Pure
-   * invalidation: clients refetch `llm.providers`/`llm.models`/`session.models`.
-   */
-  | { type: 'host/models-changed' }
+  | { type: 'host/remote-event'; event: string; args: JsonValue[] }
   | { type: 'stream/error'; error: RpcError }

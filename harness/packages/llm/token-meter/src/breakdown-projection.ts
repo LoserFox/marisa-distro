@@ -43,7 +43,7 @@ export const contextBreakdownProjectionDefinition:
 ProjectionDefinition<'contextBreakdown', ContextBreakdownState> = {
   key: 'contextBreakdown',
   schema: breakdownSchema,
-  init: () => { return ({ systemTokens: 0, toolsTokens: 0, messageTokens: 0 }) },
+  init: () => ({ systemTokens: 0, toolsTokens: 0, messageTokens: 0 }),
   apply: (state, event) => {
     const fold = foldSurfaceProjection(state.claim, event)
     let systemTokens = state.systemTokens

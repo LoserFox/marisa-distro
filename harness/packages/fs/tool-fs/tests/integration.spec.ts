@@ -9,12 +9,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import { CallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
+import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
 import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
-import * as FsPolicy from '@deepseek-ai/dsh-fs-policy'
+import * as FsPolicy from '@deepseek-ai/dsh-fs-observation-policy'
 import * as ToolFs from '@deepseek-ai/dsh-tool-fs'
 
 const testToolSignal = new AbortController().signal
@@ -48,12 +48,12 @@ afterEach(async () => {
 // --------------------------------------------------------------------------
 // DEFAULT deployment: the policy gate plugin is loaded.
 // --------------------------------------------------------------------------
-describe('default deployment (with dsh-fs-policy)', () => {
+describe('default deployment (with dsh-fs-observation-policy)', () => {
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'dsh-tool-fs-'))
     ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(LocalFileSystem, { cwd: dir })
     await ctx.plugin(FsPolicy)
     fiber = await ctx.plugin(ToolFs)
@@ -234,37 +234,33 @@ describe('default deployment (with dsh-fs-policy)', () => {
     })
   })
 
-  describe('deleted observed target (fail-closed corner)', () => {
-    it('a deleted observed file stays un-writable and un-editable in-session: the remedy cannot unblock it', async () => {
+  describe('deleted observed target', () => {
+    it('a failed reread records absence so write can safely recreate the file', async () => {
       await writeFile(join(dir, 'a.txt'), 'original')
       await call('read', { file_path: 'a.txt' })
       await rm(join(dir, 'a.txt')) // out-of-band deletion
 
-      // Edit of the missing target: stale (the missing-target path shares the
-      // stale code and the re-read remedy).
+      // The original positive observation still protects the first mutation.
       const edit = await call('edit', { file_path: 'a.txt', old_string: 'original', new_string: 'x' })
       expect(edit.isError).toBe(true)
       expect(edit.error).toMatchObject({ info: { code: 'FS_STALE_VERSION' } })
-
-      // Re-reading the missing file FAILS with FS_NOT_FOUND and records no
-      // observation, so the retried edit fails identically: the observed entry
-      // is never cleared for a deleted target.
-      const reread = await call('read', { file_path: 'a.txt' })
-      expect(reread.isError).toBe(true)
-      expect(reread.error).toMatchObject({ info: { code: 'FS_NOT_FOUND' } })
-      const retriedEdit = await call('edit', { file_path: 'a.txt', old_string: 'original', new_string: 'x' })
-      expect(retriedEdit.isError).toBe(true)
-      expect(retriedEdit.error).toMatchObject({ info: { code: 'FS_STALE_VERSION' } })
-
-      // Write cannot recreate it either: the stale observation still forces
-      // replaceIfVersion, which rejects a missing target ("file no longer exists").
-      const write = await call('write', { file_path: 'a.txt', content: 'fresh' })
+      const write = await call('write', { file_path: 'a.txt', content: 'premature' })
       expect(write.isError).toBe(true)
       expect(write.error).toMatchObject({ info: { code: 'FS_STALE_VERSION' } })
 
-      // The dead end lifts once the file exists again and is freshly observed.
-      await writeFile(join(dir, 'a.txt'), 'restored')
-      expect((await call('read', { file_path: 'a.txt' })).isError).toBe(false)
+      // A read-not-found is an authoritative negative observation for this
+      // owner. It still fails as a read, but changes the next write guard.
+      const reread = await call('read', { file_path: 'a.txt' })
+      expect(reread.isError).toBe(true)
+      expect(reread.error).toMatchObject({ info: { code: 'FS_NOT_FOUND' } })
+
+      // Absence never authorizes edit: there is no content/version to edit.
+      const retriedEdit = await call('edit', { file_path: 'a.txt', old_string: 'original', new_string: 'x' })
+      expect(retriedEdit.isError).toBe(true)
+      expect(retriedEdit.error).toMatchObject({ info: { code: 'FS_NOT_FOUND' } })
+
+      // The retried write uses createIfAbsent; the provider remains responsible
+      // for rejecting a concurrent creator at publication time.
       const recovered = await call('write', { file_path: 'a.txt', content: 'fresh' })
       expect(recovered.isError).toBe(false)
       expect(await readFile(join(dir, 'a.txt'), 'utf8')).toBe('fresh')
@@ -294,18 +290,32 @@ describe('default deployment (with dsh-fs-policy)', () => {
       expect(statSpy).not.toHaveBeenCalled()
       statSpy.mockRestore()
     })
+
+    it('a missing read still stats once and its recovery write stats zero times', async () => {
+      const statSpy = vi.spyOn(ctx.fs, 'stat')
+      const missing = await call('read', { file_path: 'missing.txt' })
+      expect(missing.isError).toBe(true)
+      expect(missing.error).toMatchObject({ info: { code: 'FS_NOT_FOUND' } })
+      expect(statSpy).toHaveBeenCalledTimes(1)
+
+      statSpy.mockClear()
+      const created = await call('write', { file_path: 'missing.txt', content: 'fresh' })
+      expect(created.isError).toBe(false)
+      expect(statSpy).not.toHaveBeenCalled()
+      statSpy.mockRestore()
+    })
   })
 })
 
 // --------------------------------------------------------------------------
 // BARE deployment: the tool suite WITHOUT the policy gate.
 // --------------------------------------------------------------------------
-describe('bare provider (no dsh-fs-policy)', () => {
+describe('bare provider (no dsh-fs-observation-policy)', () => {
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), 'dsh-tool-fs-bare-'))
     ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(LocalFileSystem, { cwd: dir })
     fiber = await ctx.plugin(ToolFs)
   })
@@ -373,7 +383,7 @@ describe('per-session cwd', () => {
     sessionDir = await mkdtemp(join(tmpdir(), 'dsh-tool-fs-session-'))
     ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(LocalFileSystem, { cwd: dir }) // config.cwd = dir, NOT sessionDir
     await ctx.plugin(FsPolicy)
     fiber = await ctx.plugin(ToolFs)
@@ -418,7 +428,7 @@ describe('signal, concurrency, and the fs/observed contract', () => {
     dir = await mkdtemp(join(tmpdir(), 'dsh-tool-fs-'))
     ctx = new Context()
     await ctx.plugin(SystemPrompt)
-    await ctx.plugin(ToolRegistry)
+    await ctx.plugin(ToolRuntime)
     await ctx.plugin(LocalFileSystem, { cwd: dir })
     await ctx.plugin(FsPolicy)
     fiber = await ctx.plugin(ToolFs)
@@ -471,7 +481,7 @@ describe('signal, concurrency, and the fs/observed contract', () => {
     await writeFile(join(dir, 'a.txt'), 'older content\n')
     const target = await ctx.fs.resolve('a.txt')
     const firstInfo = await ctx.fs.stat(target)
-    if (!firstInfo) { throw new Error('expected first stat') }
+    if (!firstInfo) throw new Error('expected first stat')
 
     expect((await callOwned('read', { file_path: 'a.txt' })).isError).toBe(false)
 
@@ -482,7 +492,7 @@ describe('signal, concurrency, and the fs/observed contract', () => {
     expect((await callOwned('read', { file_path: 'a.txt' })).isError).toBe(false)
 
     // Reproduce an older concurrent read winning the observation race.
-    ctx.emit('fs/observed', target, firstInfo.version, { agent: { session } })
+    ctx.emit('fs/observed', target, { kind: 'present', version: firstInfo.version }, { agent: { session } })
 
     const edit = await callOwned('edit', {
       file_path: 'a.txt',

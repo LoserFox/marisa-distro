@@ -1,10 +1,10 @@
 /**
- * Combined session-history reads, traces, filters, and full-text search seam.
+ * Service Definition for combined session-history reads, traces, filters, and full-text search.
  *
  * @module @deepseek-ai/dsh-session-query
  */
 
-import { Context, Service } from 'cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import { Session, snapshotSessionEvent, type SessionId } from '@deepseek-ai/dsh-session'
 import { foldSessionTitle } from '@deepseek-ai/dsh-session-title'
 import type { SessionTitleSnapshot } from '@deepseek-ai/dsh-session-title'
@@ -65,9 +65,9 @@ export {
 } from './filters.ts'
 export { assertSessionHeadersCompatible } from './sources.ts'
 
-declare module 'cordis' {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    sessionQuery: SessionQueryService
+    sessionQuery: SessionQueryEngine
   }
 }
 
@@ -78,7 +78,7 @@ declare module 'cordis' {
  * A backend implements full-text observation, reconciliation, ranking, cursor
  * generations, and query execution on the same `ctx.sessionQuery` service.
  */
-export abstract class SessionQueryService extends Service {
+export abstract class SessionQueryEngine extends Service {
   static inject = ['sessions']
 
   private readonly _readWindowMax: number
@@ -257,7 +257,7 @@ export abstract class SessionQueryService extends Service {
   /**
    * Read one session's complete current model surface from one corpus observation.
    * @param sessionId - live-preferred session id to read.
-   * @returns cloned header, current surface, and raw-log capture boundary.
+   * @returns cloned header, current surface, and the last sequence number included in the raw-log capture.
    * @throws when source resolution fails or the session surface is invalid.
    */
   async readSurface(sessionId: SessionId): Promise<SessionSurfaceSnapshot> {
@@ -273,7 +273,7 @@ export abstract class SessionQueryService extends Service {
    * Trace known ancestry and descendants from one corpus observation.
    * @param sessionId - logical session id to trace.
    * @param signal - optional cancellation for persistence listing.
-   * @returns a complete lineage or an explicit unresolved parent boundary.
+   * @returns a complete lineage or the first parent that could not be resolved.
    * @throws when corpus resolution fails, the target is absent, or its known ancestry cycles.
    */
   async traceSession(sessionId: SessionId, signal?: AbortSignal): Promise<SessionLineageTrace> {
@@ -283,11 +283,11 @@ export abstract class SessionQueryService extends Service {
   }
 
   /**
-   * Trace one event's direct positional and provenance relationships.
+   * Trace one event's direct positional replacements and cited source events.
    * @param request - target session id and event seq.
    * @param signal - optional cancellation for persisted source resolution.
    * @returns source header, direct links, and the target's positional replacement chain.
-   * @throws when source resolution fails, the target is absent, or surface/provenance validation fails.
+   * @throws when source resolution fails, the target is absent, or surface/source-event validation fails.
    */
   async traceEvent(request: SessionEventTraceRequest, signal?: AbortSignal): Promise<SessionEventTraceObservation> {
     const loaded = await this._corpus.load(request.sessionId, signal)
@@ -356,4 +356,4 @@ export abstract class SessionQueryService extends Service {
   }
 }
 
-export default SessionQueryService
+export default SessionQueryEngine

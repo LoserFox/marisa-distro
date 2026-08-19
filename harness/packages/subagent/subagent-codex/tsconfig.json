@@ -24,7 +24,7 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../../sdk/sdk-protocol"
+      "path": "../../sdk/protocol"
     },
     {
       "path": "../../core/session"
@@ -39,7 +39,7 @@
       "path": "../../util/timeout"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

@@ -33,7 +33,7 @@
       "path": "../lsp"
     },
     {
-      "path": "../../support/invariants"
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

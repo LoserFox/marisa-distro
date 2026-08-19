@@ -6,7 +6,7 @@ English | [中文](2026-07-28-sdk-max-output-tokens.zh.md)
 
 ## Problem
 
-The Python and TypeScript SDKs could select a provider and model but could not bound conversation-model output. The runtime therefore omitted `GenerateOptions.maxTokens`, leaving provider defaults in control even when an evaluation host required a fixed output budget. `compact-basic.maxTokens` could not fill this role because it limits only compaction-summary calls.
+The Python and TypeScript SDKs could select a provider and model but could not bound conversation-model output. The runtime therefore omitted `GenerateOptions.maxTokens`, leaving provider defaults in control even when an evaluation host required a fixed output budget. `compaction-basic.maxTokens` could not fill this role because it limits only compaction-summary calls.
 
 ## Decision
 
@@ -24,7 +24,7 @@ Compaction, session-title generation, web search, and other auxiliary calls keep
 
 **Add `maxTokens` to every `session/prompt`.** Per-turn mutation would enlarge the wire and introduce request-config transitions that callers do not need for the current evaluation use case. A runtime initialization option gives every session in one SDK process the same reproducible budget.
 
-**Reuse `compact-basic.maxTokens`.** The compaction value controls summary generation, not ordinary conversation requests. Sharing it would couple two different token budgets and make tuning one silently change the other.
+**Reuse `compaction-basic.maxTokens`.** The compaction value controls summary generation, not ordinary conversation requests. Sharing it would couple two different token budgets and make tuning one silently change the other.
 
 ## Consequences
 

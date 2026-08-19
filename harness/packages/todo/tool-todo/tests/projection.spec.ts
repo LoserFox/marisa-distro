@@ -8,16 +8,16 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { Context } from 'cordis'
+import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import SessionStore from '@deepseek-ai/dsh-session'
 import type { Session, TodoItem } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
+import ToolRuntime from '@deepseek-ai/dsh-tools'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import UserInteractionService from '@deepseek-ai/dsh-user-interaction'
+import UserQuestionService from '@deepseek-ai/dsh-user-questions'
 import type { RpcRequest } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { createApiProxy } from '@deepseek-ai/dsh-host-apiproxy'
@@ -38,20 +38,20 @@ async function harness(withTodoTool: boolean): Promise<Bench> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt, { persona: '' })
-  await ctx.plugin(ToolRegistry)
-  await ctx.plugin(UserInteractionService)
+  await ctx.plugin(ToolRuntime)
+  await ctx.plugin(UserQuestionService)
   await ctx.plugin(AgentRegistry)
   await ctx.plugin(SessionProjectionRegistry)
   if (withTodoTool) await ctx.plugin(ToolTodo, { allowParallelInProgress: true })
   const session = ctx.sessions.create()
   ctx.agents.register({ id: session.id, session, status: 'idle', ctx } as Agent)
-  const api = createApiProxy(ctx, { defaultTarget: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp', workspaceRoot: '/tmp' })
+  const api = createApiProxy(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
   return {
     ctx,
     session,
     async tailProjections() {
       const response = await api.sessions.history(request({ sessionId: session.id }))
-      if (!response.result.ok) { throw new Error('history failed') }
+      if (!response.result.ok) throw new Error('history failed')
       return response.result.value.projections
     },
   }
@@ -70,7 +70,7 @@ describe('todos projection provider', () => {
     const bench = await harness(true)
     seedMessage(bench.session)
     const projections = await bench.tailProjections()
-    expect(projections?.values).toEqual({ todos: null })
+    expect(projections?.values.todos).toBeNull()
     expect(projections?.asOfSeq).toBe(bench.session.seq - 1)
   })
 
@@ -78,7 +78,7 @@ describe('todos projection provider', () => {
     const bench = await harness(true)
     const session = bench.session
     seedMessage(session)
-    const first: Array<TodoItem> = [{ content: 'a', status: 'pending' }]
+    const first: TodoItem[] = [{ content: 'a', status: 'pending' }]
     const second: TodoItem[] = [
       { content: 'a', status: 'completed' },
       { content: 'b', status: 'in_progress' },
@@ -117,7 +117,7 @@ describe('todos projection provider', () => {
     const bench = await harness(false)
     seedMessage(bench.session)
     const fiber = await bench.ctx.plugin(ToolTodo, { allowParallelInProgress: true })
-    expect((await bench.tailProjections())?.values).toEqual({ todos: null })
+    expect((await bench.tailProjections())?.values.todos).toBeNull()
     await fiber.dispose()
     expect('todos' in ((await bench.tailProjections())?.values ?? {})).toBe(false)
   })

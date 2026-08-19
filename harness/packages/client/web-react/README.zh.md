@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-slot 终端设计的外壳侧 React 胶水：createSlotRenderer（外壳安装到运行时 SlotsService 的 SlotRenderer 实现）、SessionProvider（由框架接入的 render prop，也作为标准 seat 注入到声明会话 scope 子 slot 的配置项）、bindSnapshotSelector（唯一的钩子构造器：主机与引擎只传递裸 observable source；每个钩子在此绑定，并按 source 缓存）、useInvoke。链式 slot outlet 在渲染时按链顺序运行已注册 selector，只挂载被选中的配置项，其 select 返回值以 `matched` 加入 props；`renderSlotChain` 绑定与 `renderSlot` 一样按配置项缓存。快照 store 引擎与 defineStore 位于运行时（store 已迁移）；业务插件只依赖 ui-slots 类型，绝不依赖该包。
+slot 终端设计的外壳侧 React 胶水：createSlotRenderer（外壳安装到运行时 SlotRegistry 的 SlotRenderer 实现）、SessionProvider（由框架接入的 render prop，也作为标准 seat 注入到声明会话 scope 子 slot 的配置项）、bindSnapshotSelector（唯一的钩子构造器：主机与引擎只传递裸 observable source；每个钩子在此绑定，并按 source 缓存）、useInvoke。链式 slot outlet 在渲染时按链顺序运行已注册 selector，只挂载被选中的配置项，其 select 返回值以 `matched` 加入 props；`renderSlotChain` 绑定与 `renderSlot` 一样按配置项缓存。快照 store 引擎与 defineStore 位于运行时；业务插件只依赖 ui-slots 类型，绝不依赖该包。
 
 ## 模型体验
 
