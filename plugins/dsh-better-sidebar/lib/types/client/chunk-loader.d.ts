@@ -1,9 +1,11 @@
 /**
  * Lazy chunk loader for the client bundle. The heavy preview/terminal
- * libraries (Univer, docx-preview, pptx-renderer, CodeMirror, xterm — the
- * office/terminal/editor stacks, tens of MB) live in separate build-time
- * bundles (`lib/client-<name>.js`) fetched only on first use of the feature
- * that needs them, so startup downloads/parses only the ~1MB core bundle.
+ * libraries (CodeMirror, xterm — the editor/terminal stacks, several MB)
+ * live in separate build-time bundles (`lib/client-<name>.js`) fetched only
+ * on first use of the feature that needs them, so startup downloads/parses
+ * only the ~1MB core bundle. (The office stack — Univer / docx-preview /
+ * pptx-renderer — is no longer bundled here: Office previews moved to the
+ * recommended office plugin, see plugins-viewers.ts.)
  *
  * How a chunk script works (see tsdown.config.ts chunkBundle):
  *
@@ -27,7 +29,10 @@
  * Caching contract (three layers, each with a failure path):
  * - In-memory: one in-flight promise per chunk, memoized until
  *   {@link resetChunks}; a failed load removes its entry so the next call
- *   retries from scratch.
+ *   retries from scratch. HMR re-activation keeps the resolved exports of
+ *   unchanged chunks (ETag revalidation via
+ *   {@link revalidateChunksOnReactivate}) — the next lazy open skips the
+ *   re-inject / re-execute.
  * - Script execution: each re-execution overwrites the global registry slot
  *   (assignment, never registration) — no "duplicate factory registration"
  *   class of errors; a failed materialization clears the cache so the retry
@@ -36,22 +41,46 @@
  *   no-cache` + ETag, 304 when unchanged), so page refreshes and HMR
  *   re-activations never re-download a multi-MB chunk that did not change.
  *
- * HMR: each plugin activation calls {@link resetChunks}, which drops the
- * in-memory cache (and any test registry), so a hot-reloaded core bundle
- * re-fetches and re-executes the current chunk scripts on the next lazy
- * open. Chunk-only source edits still need a manual page refresh (the HMR
- * poll watches only client.js).
+ * HMR: each plugin activation calls {@link revalidateChunksOnReactivate},
+ * which HEADs every loaded chunk against the bundle route and keeps the
+ * in-memory cache for the ones whose ETag is unchanged (a hot-reloaded core
+ * bundle therefore does not re-execute multi-MB chunk scripts). Chunk-only
+ * source edits still need a manual page refresh (the HMR poll watches only
+ * client.js); an edit that does land while a core HMR happens is caught by
+ * the ETag comparison on the next activation.
  */
-export type ChunkName = 'docx' | 'xlsx' | 'pptx' | 'terminal' | 'editor';
+export type ChunkName = 'terminal' | 'editor' | 'mermaid';
 /** The module exports a chunk factory provides (namespace-ish record). */
 export type ChunkExports = Record<string, unknown>;
 /**
  * The platform externals a chunk bundle may require (mirror of
  * CLIENT_EXTERNALS in tsdown.config.ts — the chunk builds keep these
  * external and the loader resolves them here). A superset is safe: the
- * require only answers what the chunk actually asks for.
+ * require only answers what the chunk actually asks for. The shell's static
+ * module table seeds React, Cordis, and the UI libraries (primitives/slots);
+ * `dsh-client-runtime/client` normalizes onto the runtime package row
+ * (stripClientSuffix). dsh-client-web-react / dsh-client-schema-form were
+ * dropped in DSH 0.1.0-rc.8 (no rc.8 publish, nothing requires them) — the
+ * chunks never asked for them, so they no longer belong here.
  */
 export declare const CHUNK_EXTERNALS: readonly string[];
+/**
+ * The client module system surface this loader needs to resolve externals.
+ * DSH 0.1.0-rc.8 provides it as the `ctx.modules` service (no page global
+ * anymore); the plugin injects it at activation via
+ * {@link setChunkModuleSystem}. The rc.7-era `window.__DSH_MODULES__` global
+ * remains as a fallback so older hosts and the test harness keep working.
+ */
+export interface ChunkModuleSystem {
+    import(specifier: string): Promise<unknown>;
+}
+/**
+ * Inject the client module system the chunk externals resolve through.
+ * Called by the client half's apply() with `ctx.modules` (rc.8+); pass
+ * undefined to clear (tests). Survives {@link resetChunks} — the module
+ * system is shell state, not chunk state, and stays live across HMR.
+ */
+export declare function setChunkModuleSystem(system: ChunkModuleSystem | undefined): void;
 /** Script-load hook; tests replace it with a stub (the default needs a real DOM + network). */
 export type ChunkScriptLoader = (src: string) => Promise<void>;
 /** Test hook: replace the chunk-script loader (pass null to restore the default). */
@@ -69,6 +98,27 @@ export declare function loadChunk(name: ChunkName): Promise<ChunkExports>;
  * Drop all chunk state for a fresh plugin activation (HMR-safe): clear the
  * in-memory cache and any test-registry entries, so the next lazy open
  * re-fetches and re-executes the current chunk scripts (the registry slots
- * are overwritten by the re-execution — no cleanup needed).
+ * are overwritten by the re-execution — no cleanup needed). A pending
+ * revalidation barrier is cleared too: it was only guarding the cache reads
+ * of the state being dropped, so the next load must not wait on it (the
+ * orphaned task still settles and its identity-guarded `finally` no-ops).
  */
 export declare function resetChunks(): void;
+/**
+ * HMR-safe re-activation hook (index.tsx calls this instead of a full
+ * reset): keep the resolved exports of every loaded chunk and drop only the
+ * ones whose script changed on disk — the bundle route revalidates every
+ * request (cache-control: no-cache + ETag), so an unchanged chunk keeps its
+ * memory cache and the next lazy open skips the re-inject / re-execute.
+ * Fail-open: an unreachable, ETag-less, or timed-out chunk is dropped
+ * (re-fetch on next open). Test-registry entries are always cleared
+ * (per-test fixtures).
+ * A page refresh remains the authoritative reset (the HMR poll watches only
+ * client.js; chunk-only edits surface here on the next core re-activation).
+ *
+ * The returned promise is also a BARRIER for {@link loadChunk}: while a
+ * revalidation is pending, every chunk load awaits it before serving cache,
+ * so a lazy tab opening mid-revalidation can never render stale exports
+ * that the sweep is about to invalidate (CR #232 P1).
+ */
+export declare function revalidateChunksOnReactivate(): Promise<void>;

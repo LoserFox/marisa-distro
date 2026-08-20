@@ -2,7 +2,7 @@
 /**
  * generate-profile.mjs — materialize the marisa v2 distribution.
  *
- * Reads profiles/marisa/plugins.json (28 vendored plugins) and writes:
+ * Reads profiles/marisa/plugins.json (29 vendored plugins) and writes:
  *   1. bundles/marisa-bundle/package.json — the fork's aggregation bundle:
  *      the 21 vendored git plugins + pwsh lane + tool-cordis + skill-manager
  *      as file: deps, with the composition patch (cordis.patch.yml, checked
@@ -67,7 +67,7 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
 if (gitPlugins.length !== 21) throw new Error(`expected 21 git plugins, got ${gitPlugins.length}`);
-if (npmPlugins.length !== 7) throw new Error(`expected 7 npm plugins, got ${npmPlugins.length}`);
+if (npmPlugins.length !== 8) throw new Error(`expected 8 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
 const bundleDeps = {};

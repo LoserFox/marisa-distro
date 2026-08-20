@@ -9,7 +9,7 @@
     "dshVersion": "0.1.0-rc.7",
     "channel": "next",
     "diffDocument": "docs/upstream-diff.md",
-    "note": "rc7 sync 2026-08-18: replaced the private 4e7fb95f snapshot (which lacked host.describe.canOpenPath) with public rc7; client+host now share one rc7 tree"
+    "note": "rc7 sync 2026-08-18: replaced the private 4e7fb95f snapshot (which lacked host.describe.canOpenPath) with public rc7; client+host now share one rc7 tree. 2026-08-20: added apps/cli/config/agent-presets/anchored-standard (experimental preset; tool-bootstrap.mjs vendored from xiaobright/dsh-anchored-standard@95b98af, MIT; see docs/upstream-diff.md + docs/agent-preset-anchored-standard.md)"
   },
   "plugins": [
     {
@@ -36,9 +36,9 @@
       "source": "npm",
       "mode": "fork",
       "repository": "https://github.com/omdsh-dev/DSH-better-sidebar.git",
-      "version": "0.10.3",
+      "version": "0.14.0",
       "diffDocument": "docs/plugins/dsh-better-sidebar.md",
-      "note": "npm snapshot; install-time lifecycle scripts removed"
+      "note": "npm snapshot 2026-08-20 sync: 0.10.3 -> 0.14.0 (rc8 peers, web-react/schema-form deps removed upstream); install-time lifecycle scripts absent in 0.14.0"
     },
     {
       "id": "dsh-code-map",
@@ -50,8 +50,9 @@
       "id": "dsh-diff-viewer",
       "mode": "fork",
       "repository": "https://github.com/dsh-external/dsh-diff-viewer.git",
-      "baseline": "75ded1bc49d0d63e6541b95f37e6e3acc184344d",
-      "diffDocument": "docs/plugins/dsh-diff-viewer.md"
+      "baseline": "d576c00cc7db52695d69f86142d4454380fed236",
+      "diffDocument": "docs/plugins/dsh-diff-viewer.md",
+      "note": "2026-08-20 sync 0.1.0 -> 0.1.1 (d576c00c): shiki self-contained highlight, PTC/Code nesting, edit default-expand; replayed checkout-path fixes (package.json devDeps, vitest.config.ts); still not mounted"
     },
     {
       "id": "dsh-drag-and-drop",
@@ -85,9 +86,9 @@
       "source": "npm",
       "mode": "fork",
       "repository": "https://github.com/omdsh-dev/dsh-llm-fallbacks.git",
-      "version": "0.1.0-alpha.1",
+      "version": "0.3.2",
       "diffDocument": "docs/plugins/dsh-llm-fallbacks.md",
-      "note": "npm snapshot; install-time lifecycle scripts removed, mounted only after rc7 client-event compatibility is verified"
+      "note": "npm snapshot 2026-08-20 sync: 0.1.0-alpha.1 -> 0.3.2 (peers ^0.1.0-rc.8, rc8-ready); prepare script removed per vendoring rule; mount decision pending rc8 event-contract retest"
     },
     {
       "id": "dsh-multimedia-webui-input",
@@ -99,7 +100,7 @@
       "id": "dsh-paste-input",
       "mode": "mirror",
       "repository": "https://github.com/lhh010/dsh-paste-input.git",
-      "baseline": "7cf0698af7bf7b5e20a3af040047664b92412f92"
+      "baseline": "2fa32218af5032970cc82cb649b62a304c07f57f"
     },
     {
       "id": "dsh-sidechain",
@@ -131,9 +132,9 @@
       "id": "dsh-track",
       "mode": "fork",
       "repository": "https://github.com/dsh-external/dsh-track.git",
-      "baseline": "0efb17966fa77e0f3417a6b6ec317a7d518b36d0",
+      "baseline": "49991c6ee0be954daf38c5429f8148e3cf4c6137",
       "diffDocument": "docs/plugins/dsh-track.md",
-      "note": "2026-08-19 sync from 4e6112b: replayed checkout-path fixes portably (../../harness); vitest.config.ts -> vitest.config.mjs upstream; still not mounted (rc7 contracts)"
+      "note": "2026-08-20 sync: replayed portable path fixes (dsh-env.mjs/vitest.config.mjs/tsconfig.json); still not mounted (session-query contract recheck vs official dsh-session-query packages pending)"
     },
     {
       "id": "dsh-ui-progress",
@@ -151,19 +152,29 @@
       "note": "本地第一方插件（2026-08-19）：Marisa 发行版自研的检查更新插件，非上游 mirror；repository 指向发行版仓库自身，baseline 为引入时的仓库基线 commit（67a7668）"
     },
     {
+      "id": "dsh-bash-terminal",
+      "source": "npm",
+      "mode": "fork",
+      "repository": "https://github.com/MAXeaglet/dsh-bash-terminal.git",
+      "version": "0.3.14",
+      "diffDocument": "docs/plugins/dsh-bash-terminal.md",
+      "note": "npm 快照 fork 2026-08-21：vendored 自 npm dsh-bash-terminal@0.3.14（host 为编译 lib JS，src 仅 client）；fork 版本 0.4.0，增量 = ① msys2 后端（msys2Root/msys2Msystem 配置、MSYSTEM 注入、candidateMsys2Paths 探测）② shell/terminal 工具按调用 shell 参数临时切换后端（设置页 defaultShell 仍为用户默认）③ wslDistro 默认发行版配置。验证：11 项 node:test 单测 + rc7 部署实例 marisa-test profile boot 冒烟 + 真实 msys2 argv 执行；上游反馈待 GitHub 可达后提交"
+    },
+    {
       "id": "dsh-vision-toolkit",
       "mode": "fork",
       "repository": "https://github.com/Anionex/dsh-vision-toolkit.git",
       "baseline": "a4344e441b3786ce45868608a17383317ce63c9e",
       "diffDocument": "docs/plugins/dsh-vision-toolkit.md",
-      "note": "2026-08-19 sync 8d35621 -> v0.1.32 (Python bootstrap, Windows CI, MAX_PATH fix, paste-images, image-input variants); package scope renamed @anionex -> @dsh-external; replay: authMode none + Zen/GLM presets"
+      "note": "2026-08-20 评估 0.1.36（a79d5405）后推迟：0.1.36 上游类型面引用 rc8 事件词汇（skill-invocation / tool/code-dispatch），rc7 harness 下 tsc 不通过；保持 0.1.32（a4344e44 + authMode 匿名/Zen-GLM 预设 fork 补丁），随 rc8 harness 换树时再同步 0.1.36+"
     },
     {
       "id": "dsh-web-review",
       "source": "npm",
       "mode": "mirror",
       "repository": "https://github.com/CanglongCl/dsh-web-review.git",
-      "version": "0.1.0"
+      "version": "0.3.0",
+      "note": "npm snapshot 2026-08-20 sync: 0.1.0 -> 0.3.0 (client script syntax fix); re-evaluate mount after build verification"
     },
     {
       "id": "dsh-web-ui-approval-notify",
@@ -177,30 +188,31 @@
       "source": "npm",
       "mode": "mirror",
       "repository": null,
-      "version": "0.1.0",
-      "note": "npm snapshot; upstream repository not published"
+      "version": "0.2.1",
+      "note": "npm snapshot 2026-08-20 sync: 0.1.0 -> 0.2.1 (peers ^0.1.0-rc.8; fixes workspace web-react dep)"
     },
     {
       "id": "mnemon",
       "source": "npm",
       "mode": "mirror",
       "repository": "https://github.com/omdsh-dev/dsh-mnemon.git",
-      "version": "0.2.9",
-      "note": "npm snapshot (2026-08-19 eval: conditional recommendation, integrated with hardened bundle defaults); the mnemon Go engine binary v0.2.3 ships at desktop/bundle/mnemon.exe and resolves via the launcher PATH"
+      "version": "0.2.13",
+      "note": "npm snapshot 2026-08-20 sync: 0.2.9 -> 0.2.13; prepublishOnly removed per vendoring rule; Go engine binary desktop/bundle/mnemon.exe unchanged (verify against 0.2.13 runtime resolution)"
     },
     {
       "id": "whale-girl",
       "mode": "mirror",
       "repository": "https://github.com/dsh-external/whale-girl.git",
-      "baseline": "90c1a02746600f2ff84068ea6016df08988200c4"
+      "baseline": "e22e1fd918746e610f7bfb1713cef1e57a56f37c"
     },
     {
       "id": "ya-workspace-sidebar",
       "source": "npm",
-      "mode": "mirror",
+      "mode": "fork",
       "repository": null,
-      "version": "0.1.0",
-      "note": "npm snapshot; upstream repository not published"
+      "version": "0.3.1",
+      "note": "npm snapshot 2026-08-20 sync: 0.1.0 -> 0.3.1; fork diff = devDependencies 的 @deepseek-ai/dsh-* 从 ^0.0.1-rc.1 改写为 workspace:^（避免拉取 rc.1 远古依赖链 dsh-compact 404）；peer 仍 ^0.0.1-rc.1 旧风格，rc8 组合行为待 boot 验证",
+      "diffDocument": "docs/plugins/ya-workspace-sidebar.md"
     },
     {
       "id": "yet-another-subagent",

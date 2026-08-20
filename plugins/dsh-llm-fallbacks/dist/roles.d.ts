@@ -2,9 +2,20 @@
  * Role resolution for fallback chains (spec §7.1; plan fallbacks-role-runtime
  * Task 1).
  *
+ * This module is the RULES stage. Dispatch-time role resolution
+ * (plan fallbacks-role-automatch) is the three-stage resolver in
+ * `role-resolution.ts` — explicit (`session.header.agentPreset`) → this
+ * rules stage → an optional auto-match hook; `AgentLike` carries the additive
+ * `session.header.agentPreset?` carrier for that explicit stage.
+ *
  * Precedence (first hit wins):
- * 1. the first `rules` entry whose specified origin/provider/model patterns
- *    all match the agent;
+ * 1. the first `rules` entry whose specified provider/model patterns match
+ *    the agent — rules are SUBAGENT-ONLY (PR #62 feedback): a root-origin
+ *    agent never matches rules and resolves straight to the built-in
+ *    `'inherit'` (→ `rootChain`). The legacy per-rule `origin` field (a
+ *    pre-feedback config may still carry `origin: root|subagent`) is
+ *    IGNORED at match time — every rule applies to subagents regardless
+ *    of the stored origin value;
  * 2. the built-in `'inherit'` role (no-rule-match default, spec §7.1 / D4).
  *
  * A matched rule must target a declared role id (`roleIds`, derived from
@@ -21,8 +32,9 @@
  * (`' coder '`) with a trimmed rule reference (`'coder'`) resolves to the
  * same role instead of silently degrading to `'inherit'`.
  *
- * A missing agent origin is treated as `'root'`. Origin is read from
- * `session.header.origin` — a native `SessionHeader` field the store folds
+ * A missing agent origin is treated as `'root'` — and root agents never
+ * match rules (rules are subagent-only, PR #62 feedback). Origin is read
+ * from `session.header.origin` — a native `SessionHeader` field the store folds
  * from `CreateSessionOptions.meta.origin` (`packages/core/session/src/
  * index.ts:884`); subagent children set it via `childSessionMeta`
  * (`packages/subagent/subagent/src/child-agent.ts:115`), root agents carry
@@ -36,7 +48,8 @@
  */
 import { type FallbacksRoleRule } from './config.ts';
 export type { FallbacksRoleRule } from './config.ts';
-/** Agent origins understood by role rules (spec §3). */
+/** Agent origins (spec §3) — an agent property, not a rule constraint:
+ * rules are subagent-only (PR #62 feedback). */
 export type Origin = 'root' | 'subagent';
 /** Loose agent shape sufficient for role resolution (spec §3 / brief). */
 export interface AgentLike {
@@ -47,6 +60,8 @@ export interface AgentLike {
     session?: {
         header?: {
             origin?: Origin;
+            /** Dispatch-time explicit role carrier (plan fallbacks-role-automatch Task 2). */
+            agentPreset?: string;
         };
     };
 }

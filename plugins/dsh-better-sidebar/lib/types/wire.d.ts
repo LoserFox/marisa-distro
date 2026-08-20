@@ -4,9 +4,9 @@
  * `{ok: true, value}` on success and `{ok: false, error: {code, message}}`
  * (HTTP 4xx/5xx matching the code) on failure.
  */
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { SidebarHttpRequest, SidebarHttpResponse } from './context-types.ts';
 /** Machine-readable error codes of the sidebar API. */
-export type SidebarErrorCode = 'bad-request' | 'not-found' | 'forbidden' | 'method-error' | 'fs-error' | 'git-error' | 'pty-error' | 'job-error' | 'settings-rejected' | 'settings-conflict' | 'internal';
+export type SidebarErrorCode = 'bad-request' | 'not-found' | 'forbidden' | 'method-error' | 'fs-error' | 'git-error' | 'pty-error' | 'pty-deps-missing' | 'job-error' | 'settings-rejected' | 'settings-conflict' | 'internal';
 /** One API failure with its wire code and HTTP status. */
 export declare class SidebarError extends Error {
     readonly code: SidebarErrorCode;
@@ -27,12 +27,12 @@ export interface SidebarErr {
     };
 }
 /** Read and parse the JSON request body (bounded; malformed → bad-request). */
-export declare function readJsonBody(req: IncomingMessage): Promise<unknown>;
+export declare function readJsonBody(req: SidebarHttpRequest): Promise<unknown>;
 /** Write a JSON response with the given status. */
-export declare function writeJson(res: ServerResponse, status: number, body: unknown): void;
+export declare function writeJson(res: SidebarHttpResponse, status: number, body: unknown): void;
 /** Write the success envelope. */
-export declare function writeOk(res: ServerResponse, value: unknown): void;
+export declare function writeOk(res: SidebarHttpResponse, value: unknown): void;
 /** Write the failure envelope for any thrown value (unknown → internal 500). */
-export declare function writeError(res: ServerResponse, error: unknown): void;
+export declare function writeError(res: SidebarHttpResponse, error: unknown): void;
 /** Narrow an unknown payload value to a string, else throw bad-request. */
 export declare function requireString(payload: unknown, key: string): string;

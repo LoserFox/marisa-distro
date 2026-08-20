@@ -33,12 +33,6 @@ export declare const IconStopOutline16: ({ size, className }: IconProps) => impo
 export declare const IconImageOutline16: ({ size, className }: IconProps) => import("react").JSX.Element;
 /** PDF viewer glyph: a document frame with the "PDF" label. */
 export declare const IconPdfOutline16: ({ size, className }: IconProps) => import("react").JSX.Element;
-/** Word viewer glyph: a document frame with a "W". */
-export declare const IconDocxOutline16: ({ size, className }: IconProps) => import("react").JSX.Element;
-/** Excel viewer glyph: a spreadsheet grid. */
-export declare const IconXlsxOutline16: ({ size, className }: IconProps) => import("react").JSX.Element;
-/** PowerPoint viewer glyph: a chart with rising bars. */
-export declare const IconPptxOutline16: ({ size, className }: IconProps) => import("react").JSX.Element;
 /** Markdown viewer glyph: the classic "M with a down arrow" badge. */
 export declare const IconMarkdownOutline16: ({ size, className }: IconProps) => import("react").JSX.Element;
 /** HTML viewer glyph: a document frame with a "‹/›" tag pair. */

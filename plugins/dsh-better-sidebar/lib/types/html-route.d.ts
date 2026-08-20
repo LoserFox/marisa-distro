@@ -13,6 +13,17 @@
  *   /sidebar/html/S/Users/me/proj/index.html
  *     + ./style.css → /sidebar/html/S/Users/me/proj/style.css
  *   Windows: C:\Users\me\a.html → /sidebar/html/S/C%3A/Users/me/a.html
+ *   UNC (\\server\share\... or //server/share/...):
+ *     → /sidebar/html/S//server/share/proj/a.html  ('//' right after the
+ *       sessionId marks the UNC prefix; the WHATWG URL keeps '//' intact so
+ *       relative assets still resolve inside the same route)
+ *
+ * The decoder rebuilds the marker as a forward-slash `//server/share/...`
+ * path. That form is intentionally platform-neutral: `node:path` resolves it
+ * to `\\server\share\...` on win32 and `/server/share/...` on POSIX, so the
+ * host's existing requireAbsolute + isWithin fence needs no platform signal
+ * (a leading `//` is a legal POSIX absolute path, so no data is lost on
+ * either platform).
  *
  * This module is intentionally dependency-free (no node imports, no wire
  * helpers) so the client bundle can import `encodeHtmlUrl` without tripping
@@ -40,9 +51,9 @@ export declare const HTML_ROUTE_PREFIX = "/sidebar/html/";
 export declare function encodeHtmlUrl(sessionId: string, path: string): string;
 /**
  * Decode a route pathname into the session + absolute file path. Rejects
- * a wrong prefix (404), an empty or double-slash path, malformed percent
- * encoding, and a missing sessionId or file path (400). The caller still
- * must bound the decoded path with requireAbsolute + isWithin(cwd) — a
- * decoded `..` segment resolves outside the cwd and is refused there.
+ * a wrong prefix (404), an empty path, malformed percent encoding, and a
+ * missing sessionId or file path (400). The caller still must bound the
+ * decoded path with requireAbsolute + isWithin(cwd) — a decoded `..`
+ * segment resolves outside the cwd and is refused there.
  */
 export declare function decodeHtmlUrl(pathname: string): HtmlDecodeResult;

@@ -1,7 +1,8 @@
 /**
- * T1 (plan llm-fallbacks-settings-gateway) — host-side `fallbacks` config
- * gateway: the `/api/fallbacks/get` + `/api/fallbacks/set` +
- * `/api/fallbacks/reset` endpoints.
+ * T1 (plan llm-fallbacks-settings-gateway) + T3 (plan fallbacks-role-seeds) —
+ * host-side `fallbacks` config gateway: the `/api/fallbacks/get` +
+ * `/api/fallbacks/set` + `/api/fallbacks/reset` + `/api/fallbacks/revert-seed`
+ * endpoints.
  *
  * Transport: the typertGateway `/api` interceptor is the single host-wide RPC
  * slot (a plugin must NOT `connection.rpc.intercept('/api')` again — it would
@@ -37,7 +38,11 @@
  * method — advisor has only get/set) clears the user layer via
  * `ctx.settings.replace(ns, {})`: `set` is merge-only and cannot express
  * "reset to composition defaults" (sending default VALUES as a patch would
- * pin stale defaults into the user layer).
+ * pin stale defaults into the user layer). Every read response (get/set/reset)
+ * carries the additive `seeds: SeedsWireStatus[]` badge state (spec §9.4) and
+ * `revert-seed` exposes revert-to-current-seed-default for one id — both
+ * delegate to the per-apply `FallbacksSeedManager` passed into the
+ * constructor (single point of truth, no copied manager logic).
  *
  * The settings service is OPTIONAL (no settings service → the bridge source
  * stays the entry, `get` still works; `set`/`reset` fail with a clear
@@ -57,6 +62,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { TypertContribution } from '@deepseek-ai/dsh-typert-registry';
 import type { FallbacksConfig } from './config';
+import type { FallbacksSeedManager, SeedRevertOutcome, SeedsWireStatus } from './seeds';
 /** The `fallbacks` settings namespace (registered when a settings service exists). */
 export declare const FALLBACKS_SETTINGS_NAMESPACE: import("@deepseek-ai/dsh-settings").SettingsNamespace;
 /**
@@ -73,6 +79,20 @@ export interface FallbacksSettingsBridge {
 /** Patch shape accepted by `fallbacks.set` — any subset of the config keys. */
 export type FallbacksConfigPatch = Partial<FallbacksConfig>;
 /**
+ * The wire response of every read (get/set/reset — W-1/F-1): the normalized
+ * config plus `legacyKeys` plus the additive `seeds` badge state (spec §9.4,
+ * legacyKeys precedent — old clients ignore it).
+ */
+export interface FallbacksReadResult {
+    config: FallbacksConfig;
+    legacyKeys: string[];
+    seeds: SeedsWireStatus[];
+}
+/** The `fallbacks/revert-seed` response — a read result plus the revert outcome. */
+export interface FallbacksRevertResult extends FallbacksReadResult {
+    outcome: SeedRevertOutcome;
+}
+/**
  * The host-side `fallbacks` config gateway (`/api/fallbacks/get` +
  * `/api/fallbacks/set` + `/api/fallbacks/reset`). Registered as the cordis
  * service key `'fallbacks'` (namespace defaults to the service key). The
@@ -86,14 +106,19 @@ export type FallbacksConfigPatch = Partial<FallbacksConfig>;
  */
 export declare class FallbacksConfigGateway extends TypertRemoteService {
     private readonly bridge;
+    /** The per-apply seed manager — single point of truth for seed state (spec §9.4). */
+    private readonly seeds;
     /** The live settings service once the optional inject child activates. */
     private settings;
     /**
      * @param ctx - owning context (the plugin fiber's ctx inside `apply`).
      * @param bridge - the same `FallbacksSettingsBridge` the runtime reads, so
      *   get/set/reset always operate on the live composed config.
+     * @param seeds - the per-apply `FallbacksSeedManager` constructed in
+     *   `apply()` — the gateway delegates badge state and revert to it (no
+     *   copied manager logic), through the io seam built over this bridge.
      */
-    constructor(ctx: Context, bridge: FallbacksSettingsBridge);
+    constructor(ctx: Context, bridge: FallbacksSettingsBridge, seeds: FallbacksSeedManager);
     /**
      * Read the current composed config (schema defaults → entry base → settings
      * user layer). No hard-gate resolver (ADR-2): the raw composed config is
@@ -102,12 +127,11 @@ export declare class FallbacksConfigGateway extends TypertRemoteService {
      *   two-block-era fields (`chains` / `roles.default` / undeclared rule
      *   role refs) detected on the composed source (schemastery retains them,
      *   plan Task 1 Step 1), so the client can show a migration banner (spec
-     *   §9, incremental field — old clients ignore it).
+     *   §9, incremental field — old clients ignore it) — plus the additive
+     *   `seeds` badge state (spec §9.4, legacyKeys precedent — old clients
+     *   ignore it).
      */
-    get(): {
-        config: FallbacksConfig;
-        legacyKeys: string[];
-    };
+    get(): FallbacksReadResult;
     /**
      * Validate a config patch and write it to the settings USER layer (live —
      * the runtime re-reads the same bridge source; no restart needed).
@@ -117,28 +141,42 @@ export declare class FallbacksConfigGateway extends TypertRemoteService {
      *   POST-WRITE composed source (W-1/F-1): `set` is a settings MERGE, so a
      *   legacy user layer (`chains` / `roles.default`) survives a new-shape
      *   save — the response must keep reporting it, or the client banner
-     *   would clear against server truth. Same shape as `get`.
+     *   would clear against server truth — plus the post-write `seeds` badge
+     *   state (same W-1/F-1 rule as `legacyKeys`). Same shape as `get`.
      * @throws when the patch fails `Config` validation, or when no settings
      *   service is composed (KD-G5: the write channel is unavailable).
      */
-    set(patch: FallbacksConfigPatch): Promise<{
-        config: FallbacksConfig;
-        legacyKeys: string[];
-    }>;
+    set(patch: FallbacksConfigPatch): Promise<FallbacksReadResult>;
     /**
      * Clear the fallbacks settings USER layer so the composition defaults
      * reapply (`settings.replace(ns, {})` — the in-process removal path a
      * merge-only `set` cannot express).
      * @returns the new composed config plus `legacyKeys` on the post-write
      *   source — `replace` drops the user layer, but legacy keys carried by
-     *   the entry base survive and are correctly re-reported (W-1/F-1).
+     *   the entry base survive and are correctly re-reported (W-1/F-1) — plus
+     *   the post-write `seeds` badge state (clearing the user layer also
+     *   clears the materialized seed rows, so the honest response reports the
+     *   emptied state; the registry survives and the next declare re-materializes).
      * @throws when no settings service is composed (KD-G5: the write channel
      *   is unavailable).
      */
-    reset(): Promise<{
-        config: FallbacksConfig;
-        legacyKeys: string[];
-    }>;
+    reset(): Promise<FallbacksReadResult>;
+    /**
+     * Revert one seeded role to its CURRENT declared seed default (AC-3, spec
+     * §9.4) — the gateway half of surface (c), delegating to the same manager
+     * the service method uses (single point of truth). Business failures are
+     * values, never throws: a non-seeded id or a deleted row returns
+     * `{ reverted: false, reason }` without writing. The only throw is the
+     * KD-G5 settings-unavailable path, and only when a write is actually
+     * needed (an idempotent revert at the default needs no channel).
+     * @param id - the seeded role id; matched by trimmed id against the
+     *   registry (row matching, spec §9.3).
+     * @returns the post-write read result (config / legacyKeys / seeds — the
+     *   write happened before this read, W-1/F-1) plus the revert `outcome`.
+     * @throws TypeError when `id` is not a string; Error when the settings
+     *   write channel is unavailable (KD-G5).
+     */
+    revertSeed(id: string): Promise<FallbacksRevertResult>;
     /**
      * Read the live composed config and normalize it to the typertGateway JSON
      * wire boundary. Containment (guide §10): a malformed stored user layer
@@ -156,12 +194,43 @@ export declare class FallbacksConfigGateway extends TypertRemoteService {
     /**
      * The wire response of every read (get/set/reset — W-1/F-1): the
      * normalized config plus `legacyKeys` detected on the live composed
-     * source. set/reset must report the POST-WRITE source: the settings
-     * merge retains legacy user-layer keys, so a save cannot clear them —
-     * the honest response keeps the migration banner until a get agrees.
+     * source plus the additive `seeds` badge state. set/reset must report the
+     * POST-WRITE source: the settings merge retains legacy user-layer keys,
+     * so a save cannot clear them — the honest response keeps the migration
+     * banner until a get agrees; `seeds` follows the same rule (post-write
+     * badge state, W-1/F-1).
      */
     private readResult;
+    /**
+     * The io seam the seed manager writes through (spec §9.1): `read` walks
+     * the same live bridge source the gateway reads; `writeRoles` persists a
+     * full `{ list, rules }` to the settings user layer — both arrays always
+     * computed from a fresh composed read, so the write stays correct under
+     * dsh-settings `mergeLayers` array-replace semantics and never touches
+     * operator rules. The write channel fails with the same KD-G5 message as
+     * set/reset when no settings service is composed. Built fresh per call so
+     * the mutable settings capture is read at call time (the inject child
+     * swaps it when the settings service appears/disappears).
+     */
+    private seedsIo;
 }
+/**
+ * Reject a patch the `Config` schema cannot express: non-object input, unknown
+ * top-level keys (schemastery merges them silently — the settings service
+ * would accept them), and schema type violations — plus the Task 3 semantic
+ * guards the permissive schema deliberately does not carry: nested `roles`
+ * keys, `timeSlots` row shapes (unknown preset ids, duplicate presets, preset
+ * rows carrying windows, non-`HH:mm` custom bounds, out-of-range days, empty
+ * chains), and the all-day `rootChain` head conformance.
+ *
+ * Exported (plan fallbacks-tui-settings Task 1): the TUI settings section's
+ * JSON-field `parse` mirrors the gateway save rules through this single
+ * validator (it internally routes `timeSlots` → {@link validateTimeSlotsPatch}),
+ * so an invalid draft blocks the TUI save exactly like a rejected gateway
+ * patch. No shared-module extraction — the two-keyword diff is the minimal
+ * change.
+ */
+export declare function validateConfigPatch(patch: unknown): void;
 /**
  * The explicit typert contribution for the `fallbacks` gateway endpoints —
  * registered via `ctx.typert.register(...)` (see `apply` in `src/index.ts`).

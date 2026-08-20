@@ -39,8 +39,8 @@ export default defineConfig({
       { find: '@deepseek-ai/dsh-client-ui-conversation/client', replacement: `${fork}/ui-conversation/src/client/index.ts` },
       { find: '@deepseek-ai/dsh-client-ui-layout/client', replacement: `${fork}/ui-layout/src/client/index.ts` },
       { find: '@deepseek-ai/dsh-client-locale/client', replacement: `${fork}/locale/src/client/index.ts` },
-      { find: '@deepseek-ai/dsh-client-test-runtime', replacement: `${fork}/test-runtime/src/index.ts` },
-      { find: '@deepseek-ai/dsh-client-test-runtime/client', replacement: `${fork}/test-runtime/src/index.ts` },
+      { find: '@deepseek-ai/dsh-client-test-runtime', replacement: `${fork}/../test-support/client-runtime/src/index.ts` },
+      { find: '@deepseek-ai/dsh-client-test-runtime/client', replacement: `${fork}/../test-support/client-runtime/src/client/index.ts` },
     ],
   },
 })

@@ -1,11 +1,20 @@
 window.__ModuleLoader__.load({ id: "@huanlin/dsh-plugin-interpreters", factory: (require) => {
 var module = { exports: {} }; var exports = module.exports;
 "use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __commonJS = (cb, mod) => function __require() {
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -18,8 +27,85 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+// C:/Users/Administrator/.dsh/source/current/node_modules/.pnpm/use-sync-external-store@1.2.0_react@18.3.1/node_modules/use-sync-external-store/cjs/use-sync-external-store-with-selector.production.min.js
+var require_use_sync_external_store_with_selector_production_min = __commonJS({
+  "C:/Users/Administrator/.dsh/source/current/node_modules/.pnpm/use-sync-external-store@1.2.0_react@18.3.1/node_modules/use-sync-external-store/cjs/use-sync-external-store-with-selector.production.min.js"(exports) {
+    "use strict";
+    var g = require("react");
+    function n(a, b) {
+      return a === b && (0 !== a || 1 / a === 1 / b) || a !== a && b !== b;
+    }
+    var p = "function" === typeof Object.is ? Object.is : n;
+    var q = g.useSyncExternalStore;
+    var r = g.useRef;
+    var t = g.useEffect;
+    var u = g.useMemo;
+    var v = g.useDebugValue;
+    exports.useSyncExternalStoreWithSelector = function(a, b, e, l, h) {
+      var c = r(null);
+      if (null === c.current) {
+        var f = { hasValue: false, value: null };
+        c.current = f;
+      } else f = c.current;
+      c = u(function() {
+        function a2(a3) {
+          if (!c2) {
+            c2 = true;
+            d2 = a3;
+            a3 = l(a3);
+            if (void 0 !== h && f.hasValue) {
+              var b2 = f.value;
+              if (h(b2, a3)) return k = b2;
+            }
+            return k = a3;
+          }
+          b2 = k;
+          if (p(d2, a3)) return b2;
+          var e2 = l(a3);
+          if (void 0 !== h && h(b2, e2)) return b2;
+          d2 = a3;
+          return k = e2;
+        }
+        var c2 = false, d2, k, m = void 0 === e ? null : e;
+        return [function() {
+          return a2(b());
+        }, null === m ? void 0 : function() {
+          return a2(m());
+        }];
+      }, [b, e, l, h]);
+      var d = q(a, c[0], c[1]);
+      t(function() {
+        f.hasValue = true;
+        f.value = d;
+      }, [d]);
+      v(d);
+      return d;
+    };
+  }
+});
+
+// C:/Users/Administrator/.dsh/source/current/node_modules/.pnpm/use-sync-external-store@1.2.0_react@18.3.1/node_modules/use-sync-external-store/with-selector.js
+var require_with_selector = __commonJS({
+  "C:/Users/Administrator/.dsh/source/current/node_modules/.pnpm/use-sync-external-store@1.2.0_react@18.3.1/node_modules/use-sync-external-store/with-selector.js"(exports, module2) {
+    "use strict";
+    if (true) {
+      module2.exports = require_use_sync_external_store_with_selector_production_min();
+    } else {
+      module2.exports = null;
+    }
+  }
+});
 
 // src/client/index.ts
 var index_exports = {};
@@ -28,7 +114,16 @@ __export(index_exports, {
   inject: () => inject
 });
 module.exports = __toCommonJS(index_exports);
-var import_dsh_client_web_react = require("@deepseek-ai/dsh-client-web-react");
+
+// src/client/bindSnapshotSelector.ts
+var import_with_selector = __toESM(require_with_selector(), 1);
+function bindSnapshotSelector(w) {
+  const subscribe = (fn) => w.subscribe(fn);
+  const getSnapshot = () => w.getSnapshot();
+  return function useSelector(sel, eq) {
+    return (0, import_with_selector.useSyncExternalStoreWithSelector)(subscribe, getSnapshot, void 0, sel, eq);
+  };
+}
 
 // src/client/InterpretersCard.tsx
 var import_react = require("react");
@@ -427,7 +522,7 @@ var inject = ["slots", "locale", "connection"];
 function apply(ctx) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), "dsh-interpreters: dictionaries");
   const controller = new InterpretersCardController();
-  const useSnapshot = (0, import_dsh_client_web_react.bindSnapshotSelector)(controller.store);
+  const useSnapshot = bindSnapshotSelector(controller.store);
   ctx.effect(() => {
     let pending = false;
     const refresh = () => {
@@ -446,11 +541,23 @@ function apply(ctx) {
   ctx.slots.inject("settings.plugin.item", function* () {
     yield ctx.slots.register({
       name: "settings.plugin.item",
-      key: "interpreters",
-      // rc7 sync (2026-08-18): plugin-item slot is keyed by settings namespace
-            locale: NS,
+      key: NS,
+      locale: NS,
       inject: () => ({ controller, useSnapshot })
     }, InterpretersCard);
   });
 }
+/*! Bundled license information:
+
+use-sync-external-store/cjs/use-sync-external-store-with-selector.production.min.js:
+  (**
+   * @license React
+   * use-sync-external-store-with-selector.production.min.js
+   *
+   * Copyright (c) Facebook, Inc. and its affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+*/
 return module.exports; } });

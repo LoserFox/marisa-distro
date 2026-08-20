@@ -26,4 +26,5 @@ export declare function Workbench(props: {
     onNewTab: (optionId: string) => void;
     renderTab: (tab: SidebarTab, active: boolean, paneId: string) => ReactNode;
     getTabIcon?: (tab: SidebarTab) => ReactNode;
+    getTabBadge?: (tab: SidebarTab) => ReactNode;
 }): import("react").JSX.Element;

@@ -9,6 +9,16 @@
 > 捕获零摩擦，决策留痕迹，任务有生命周期。数据全部在 harness 内部（session 事件 + storage KV），零外部依赖。
 
 **状态** Active · **测试** 240 passing · **构建** `pnpm run build` · **版本** 0.5.0
+> **v0.6.0 · 会话执行图 + 日历纱线 + 证据纪律（main · 未发布，2026-08-18）**：**会话执行图（M1）**——
+> 任意会话一键建成确定性的 turn→step→tool 树（每条边带 (sessionId, seq) 引用回原始日志），可按工作区
+> 批量建图，渲染为会话标签栏的「会话结构图」tab（遵循 host conversation.view 规范）；**日历纱线**——
+> 跨项目 session 生命周期 / 漂移 / 切换一图可见（泳道按事件量降序、零活动仓库折叠、跨会话/跨项目连线金色菱形），
+> 可导出**自包含可视化**（数据 JSON + HTML 视图 + README，离线可交互）；**Genealogy 语义层**——
+> `track_genealogy`（fork 谱系 / issue↔session / capture→issue / decision→session / 项目归纳，默认 dry-run 预览）、
+> `track_git_artifacts`（git commit 对齐到 session 与 issue，「这个需求落到哪个 commit」）、
+> `track_evolution_brief`（零 LLM 项目简报 + 缺口建议）；**证据纪律（P4/P6/P5a）**——证据抽屉 + 分层 guard
+> （确定性图与语义层两条管线分离，语义方法最多只能写 `candidate`）+ Output-first 交付度量（软删除 +
+> 证据分级 + commit trailer 显式通道）；项目归属改为「实际触碰的 repo」（project = repo the session actually touched）。
 > **v0.5.0 · 面板任务操作 + 翻页器（2026-08-14）**：任务卡新增「完成/取消」直接操作（两步入确认）
 > 与「批量」模式（复选框 + 批量完成/取消）；翻页器补齐「第一页 / 页码输入跳页 / 最后一页」，
 > 翻页滚动锚定（切换页面时分页器保持在视口原位置，不再跳动）。
@@ -30,6 +40,8 @@
 | 面板总览（右侧捕获墙 + 任务墙） | 跳回来源对话（高亮定位到原始 prompt） |
 |---|---|
 | ![dsh-track 面板总览](assets/panel.png) | ![跳回来源对话](assets/jump-back.png) |
+| 日历纱线（跨项目 session 生命周期 / 漂移 / 切换） | 自包含可视化导出（数据 JSON + HTML 视图，离线可交互） |
+| ![日历纱线](assets/calendar-yarn.png) | 见 [`export/track-calendar-view.html`](export/track-calendar-view.html)（示例导出） |
 
 ## ✨ 特性
 
@@ -39,6 +51,10 @@
 - 🔄 **历史同步（History Sync）** —— 一键把工作区过往会话折叠成 epic/issue 候选，默认 dry-run，确认后才落库。
 - 💰 **LLM 用量账本（Usage Ledger）** —— track 引擎自己调用的 LLM 费用（token / 成本）单独计量，"track 花了多少 token" 一句话可查。
 - 🖥️ **Web 面板** —— 右侧栏汇集墙 + 任务墙；每条记录都可 **「↩ 对话」跳回来源会话的那条原始 prompt**，高亮定位。
+- 🕸️ **会话执行图（Session Graphs）** —— `track_session_graph` 把任意会话建成确定性的 turn→step→tool 执行树，每条边带 (sessionId, seq) 引用回原始日志；支持按工作区批量建图（幂等，可强制重建）；会话标签栏的「会话结构图」tab 实时渲染当前会话。
+- 🧵 **日历纱线（Calendar Yarn）** —— 跨项目 session 生命周期 / 漂移 / 切换一图看清：泳道按事件量降序、零活动仓库折叠、「只看缠绕线」线级过滤；可导出**自包含可视化**（数据 JSON + HTML 视图 + README，浏览器直接打开即交互）。
+- 🧬 **Genealogy 语义层** —— `track_genealogy` 把需求串成图（fork 谱系 / issue↔session / capture→issue / decision→session / 项目归纳，默认 dry-run 预览）；`track_git_artifacts` 把 commit 对齐到 session 与 issue；`track_evolution_brief` 零 LLM 生成项目状态简报与缺口建议。
+- 🛡️ **证据纪律（Evidence Discipline）** —— 证据抽屉 + 分层 guard：确定性图（git 事实 / 哈希链接）与语义层（LLM 聚类）两条管线分离，语义方法最多只能写 `candidate`，证据等级永不静默升级；Output-first 交付度量（软删除 + 证据分级 + commit trailer 显式通道）。
 
 ## 🚀 快速开始
 
@@ -47,7 +63,7 @@
 #    npm 包（已发布，推荐）：
 npx -p @deepseek-ai/dsh dsh plugin --profile web add @fakechris/dsh-track
 #    git 源（npm 不可达时的备选）：
-#    npx -p @deepseek-ai/dsh dsh plugin --profile web add github:dsh-external/dsh-track
+#    npx -p @deepseek-ai/dsh dsh plugin --profile web add github:fakechris/dsh-track
 #    （或本地路径：`... add /absolute/path/to/dsh-track`）
 
 # 2. 安装协议 skill（决策点 / 任务推进的调用纪律，装到默认扫描目录）
@@ -84,6 +100,10 @@ dsh web
 | `track_sync_history(workspace?, since?, dry_run?, max_sessions?, engine?)` | 把工作区 session 历史折叠成 epic/issue 候选（默认 dry-run） |
 | `track_usage(since?)` | 报告 track 引擎发起的 LLM 调用开销：请求数、各类 token、耗时、估算成本 |
 | `track_backfill_captures()` | 存量捕获动机上下文回填（幂等，安全可重跑） |
+| `track_session_graph(session_id?, workspace?, max_sessions?, rebuild?)` | 建 / 读会话执行图（turn→step→tool 树，带 seq 引用；支持工作区批量建图） |
+| `track_genealogy(workspace?, dry_run?)` | 构建语义层（fork 谱系 / issue↔session / capture→issue / decision→session / 项目归纳；默认 dry-run） |
+| `track_git_artifacts(workspace?, project_level?, dry_run?, limit?)` | 扫描 git commit 并对齐到 session（landed-in）与 issue |
+| `track_evolution_brief(project_id?)` | 零 LLM 生成项目简报：状态统计、近期活动、缺口建议 |
 
 ## 🖥️ Web 面板与 HTTP API
 
@@ -92,7 +112,8 @@ dsh web
 - **捕获墙**：输入捕获、分页、两步确认删除、一键转任务；
 - **任务墙**：按状态分组（进行中优先）、可展开详情、删除；
 - **↩ 对话**：每条捕获/任务都可一键跳回来源会话的那条原始用户 prompt——自动切换左侧会话、翻页到深历史、滚动定位并高亮闪烁；旧数据无消息 id 时回退到该会话首条用户消息；
-- 20s 轻量自动刷新、面板宽度可拖拽、收起后有 ◆ 悬浮按钮。
+- 20s 轻量自动刷新、面板宽度可拖拽、收起后有 ◆ 悬浮按钮；
+- **会话结构图 tab**：会话标签栏的「会话结构图」视图实时渲染当前 session 的 turn→step→tool 执行树（遵循 host conversation.view tab 规范，下划线高亮跟随当前步骤）。
 
 HTTP API（面板的数据面，`/api/track/*`）：
 
@@ -119,6 +140,7 @@ src/capture/         自动捕获 + 动机上下文（observer / context / backf
 src/lifecycle/       证据观察器 + 状态机（evidence-driven lifecycle）
 src/sync/            历史同步引擎（extract → segment → intent → synthesize → align）
 src/usage.ts          LLM 用量账本（recorder + 汇总 + 成本估算）
+src/graph/            会话执行图 / 日历纱线 / genealogy（build / calendar / links / commits / service）
 src/client/           Web 面板（right-panel / composer strip）
 skills/dsh-track      fat skill：决策点判据 / 格式 / 纪律
 cordis.patch.yml      bundle patch（dsh plugin add 自动应用）
@@ -139,7 +161,7 @@ pnpm test           # vitest（188 tests）
 
 ## 📚 相关链接
 
-- 仓库：[github.com/dsh-external/dsh-track](https://github.com/dsh-external/dsh-track)
+- 仓库：[github.com/fakechris/dsh-track](https://github.com/fakechris/dsh-track)（旧名 `dsh-external/dsh-track` 会重定向）
 - 协议 skill：[`skills/dsh-track/SKILL.md`](skills/dsh-track/SKILL.md)（决策点判据、任务推进纪律）
 - 仓库约定：[`AGENTS.md`](AGENTS.md)（提交 / worktree / 文档双语规范）
 

@@ -33,6 +33,13 @@ window.__ModuleLoader__.load({
 			deleteDescription: "将把“{name}”从工作区列表中移除。文件夹与会话记录会保留。",
 			fork: "分叉会话",
 			archive: "归档会话",
+			archiveMode: "归档模式",
+			deleteMode: "删除模式",
+			deleteSession: "删除会话",
+			deleteSessionTitle: "删除会话",
+			deleteSessionConfirm: "确定要删除此会话吗？删除后将从列表中移除，此操作不可撤销。",
+			toggleActionMode: "切换归档/删除模式",
+			actionModeLabel: "会话操作",
 			cancel: "取消",
 			confirm: "确认",
 			retry: "重新选择",
@@ -50,7 +57,11 @@ window.__ModuleLoader__.load({
 			waiting: "等待交互",
 			completed: "已完成",
 			collapse: "折叠",
-			expand: "展开"
+			expand: "展开",
+			today: "今天",
+			yesterday: "昨天",
+			date: "{m}月{d}日",
+			dateYear: "{y}年{m}月{d}日"
 		};
 		const en = {
 			workspaces: "Workspaces",
@@ -76,6 +87,13 @@ window.__ModuleLoader__.load({
 			deleteDescription: "This removes “{name}” from the workspace list. The folder and session logs remain.",
 			fork: "Fork session",
 			archive: "Archive session",
+			archiveMode: "Archive mode",
+			deleteMode: "Delete mode",
+			deleteSession: "Delete session",
+			deleteSessionTitle: "Delete session",
+			deleteSessionConfirm: "Are you sure you want to delete this session? It will be removed from the list. This cannot be undone.",
+			toggleActionMode: "Toggle archive/delete mode",
+			actionModeLabel: "Session action",
 			cancel: "Cancel",
 			confirm: "Confirm",
 			retry: "Choose again",
@@ -93,7 +111,11 @@ window.__ModuleLoader__.load({
 			waiting: "Waiting for interaction",
 			completed: "Completed",
 			collapse: "Collapse",
-			expand: "Expand"
+			expand: "Expand",
+			today: "Today",
+			yesterday: "Yesterday",
+			date: "{m}/{d}",
+			dateYear: "{m}/{d}/{y}"
 		};
 		const NS = "ya-workspace-sidebar";
 		//#endregion
@@ -121,6 +143,7 @@ body[data-ds-dark-theme] .ya-search { background:var(--dsw-static-neutral-bluish
 .ya-block-label-toggle { flex:none; width:20px; height:20px; margin-left:auto; border:0; border-radius:6px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:transparent; color:var(--dsw-alias-label-tertiary); cursor:pointer; transition:transform 180ms ease-out; }
 .ya-block-label-toggle:hover { background:var(--dsw-alias-interactive-bg-hover); color:var(--dsw-alias-label-secondary); }
 .ya-block-label-toggle.ya-collapsed { transform:rotate(-90deg); }
+.ya-date-group-label { height:26px; display:flex; align-items:center; padding:0 8px; color:var(--dsw-alias-label-tertiary); font-size:12px; font-weight:600; letter-spacing:.02em; }
 .ya-breadcrumb { flex:none; height:34px; display:flex; align-items:center; gap:2px; padding:0 6px; color:var(--dsw-alias-label-tertiary); font-size:13px; }
 .ya-crumb { border:0; padding:4px 3px; border-radius:6px; background:transparent; color:inherit; font:inherit; cursor:default; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:var(--dsw-alias-label-primary); cursor:pointer; }
@@ -143,13 +166,13 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 .ya-warning { color:var(--dsw-alias-status-warning); }
 .ya-rename-input { width:100%; height:38px; box-sizing:border-box; border:1px solid var(--dsw-alias-border-l2); border-radius:9px; padding:0 11px; background:transparent; color:var(--dsw-alias-label-primary); outline:none; }
 .ya-error { margin-top:8px; color:var(--dsw-alias-status-error); font-size:12px; }
-.ya-drop-before::before, .ya-drop-after::after { content:''; position:absolute; left:8px; right:8px; height:2px; border-radius:2px; background:var(--dsw-alias-label-link); }
-.ya-drop-before::before { top:-2px; } .ya-drop-after::after { bottom:-2px; }
 .ya-rail .ya-section-header { padding-left:0; margin-bottom:12px; }
 .ya-rail .ya-icon-button, .ya-rail .ya-search { width:36px; height:36px; padding:0; margin:0 0 12px; border-color:transparent; background:transparent; }
 .ya-rail .ya-search { justify-content:center; }
 .ya-rail .ya-search-icon { cursor:pointer; color:var(--dsw-alias-label-primary); }
 .ya-picker-error { color:var(--dsw-alias-status-error); white-space:pre-wrap; }
+.ya-action-mode-toggle.ya-action-mode-delete { color:var(--dsw-alias-state-error-primary); }
+.ya-action-mode-toggle.ya-action-mode-delete:hover { background:var(--dsw-alias-interactive-bg-hover-danger); }
 @keyframes ya-slide-in-forward { from { opacity:0; transform:translateX(10px); } to { opacity:1; transform:translateX(0); } }
 @keyframes ya-slide-in-backward { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
 .ya-level-enter-forward { animation:ya-slide-in-forward 180ms ease-out; }
@@ -377,11 +400,112 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 			if (workspace === void 0) return [];
 			return workspace.sessionIds.map((id) => list.byId[id]).filter((summary) => summary !== void 0 && visible(summary, list.current, archived)).map((summary) => rowOf(summary, workspace.workspaceId, workspace.title));
 		}
+		/** Format a local calendar date as `YYYY-MM-DD` (locale-agnostic, no padding surprises). */
+		function localDateKey(year, month, day) {
+			return `${year}-${month < 9 ? `0${month + 1}` : `${month + 1}`}-${day < 10 ? `0${day}` : `${day}`}`;
+		}
+		/** Whole-day difference between two local calendar dates (a - b) using UTC midnight. */
+		function dayDiff(a, b) {
+			const msA = Date.UTC(a.year, a.month, a.day);
+			const msB = Date.UTC(b.year, b.month, b.day);
+			return Math.round((msA - msB) / 864e5);
+		}
+		/**
+		* Derive the selected real workspace's sessions grouped by local calendar date.
+		*
+		* - Only real workspaces: `Ungrouped` falls back to {@link deriveWorkspaceSessions}.
+		* - Groups are ordered by date descending; rows within a group by `updatedAt` descending.
+		* - {@link visible} filter is reused (archived / subagent / blank visibility).
+		* - Future timestamps clamp to today's bucket (`dayOffset` 0).
+		* - `now` is the reference timestamp for "today"; pass `Date.now()` in production.
+		*/
+		function deriveWorkspaceSessionGroups(key, list, workspaces, archivedSessionIds, now) {
+			if (key === "__ya_ungrouped__") return [];
+			const workspace = workspaces.find((item) => item.workspaceId === key);
+			if (workspace === void 0) return [];
+			const archived = new Set(archivedSessionIds);
+			const rows = workspace.sessionIds.map((id) => list.byId[id]).filter((summary) => summary !== void 0 && visible(summary, list.current, archived)).map((summary) => rowOf(summary, workspace.workspaceId, workspace.title));
+			if (rows.length === 0) return [];
+			const nowDate = new Date(now);
+			const today = {
+				year: nowDate.getFullYear(),
+				month: nowDate.getMonth(),
+				day: nowDate.getDate()
+			};
+			const buckets = /* @__PURE__ */ new Map();
+			for (const row of rows) {
+				const ts = Math.min(row.updatedAt, now);
+				const d = new Date(ts);
+				const date = {
+					year: d.getFullYear(),
+					month: d.getMonth(),
+					day: d.getDate()
+				};
+				const dateKey = localDateKey(date.year, date.month, date.day);
+				let bucket = buckets.get(dateKey);
+				if (bucket === void 0) {
+					bucket = {
+						dayOffset: Math.max(0, dayDiff(today, date)),
+						rows: []
+					};
+					buckets.set(dateKey, bucket);
+				}
+				bucket.rows.push(row);
+			}
+			const groups = [];
+			for (const [dateKey, bucket] of buckets) {
+				bucket.rows.sort((a, b) => b.updatedAt - a.updatedAt || String(a.id).localeCompare(String(b.id)));
+				groups.push({
+					dateKey,
+					dayOffset: bucket.dayOffset,
+					rows: bucket.rows
+				});
+			}
+			groups.sort((a, b) => a.dayOffset - b.dayOffset || a.dateKey.localeCompare(b.dateKey));
+			return groups;
+		}
 		/** Case-insensitive local title/workspace matching used beside Host content search. */
 		function localMatches(rows, query) {
 			const normalized = query.trim().toLocaleLowerCase();
 			if (normalized === "") return [];
 			return rows.filter((row) => `${row.title}\n${row.workspaceTitle}`.toLocaleLowerCase().includes(normalized));
+		}
+		//#endregion
+		//#region src/client/settings.ts
+		const STORAGE_KEY = "ya-workspace-sidebar:action-mode";
+		const listeners = /* @__PURE__ */ new Set();
+		let currentMode = loadMode();
+		/** Read the stored preference, falling back to `archive` on any failure. */
+		function loadMode() {
+			try {
+				return window.localStorage.getItem(STORAGE_KEY) === "delete" ? "delete" : "archive";
+			} catch {
+				return "archive";
+			}
+		}
+		/** Persist the preference; silently ignores quota or privacy-mode failures. */
+		function persistMode(mode) {
+			try {
+				window.localStorage.setItem(STORAGE_KEY, mode);
+			} catch {}
+		}
+		/** Current action mode snapshot. */
+		function getActionMode() {
+			return currentMode;
+		}
+		/** Switch the action mode and notify subscribers. */
+		function setActionMode(mode) {
+			if (mode === currentMode) return;
+			currentMode = mode;
+			persistMode(mode);
+			for (const listener of [...listeners]) listener();
+		}
+		/** Subscribe to action mode changes; returns an unsubscribe disposer. */
+		function subscribeActionMode(listener) {
+			listeners.add(listener);
+			return () => {
+				listeners.delete(listener);
+			};
 		}
 		//#endregion
 		//#region src/client/WorkspaceSidebar.tsx
@@ -401,42 +525,42 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 			if (diff < 525600 * minute) return t("months", { n: Math.floor(diff / (43200 * minute)) });
 			return t("years", { n: Math.floor(diff / (525600 * minute)) });
 		}
+		/** Format a date group's localized title from its dayOffset and `YYYY-MM-DD` key. */
+		function dateGroupLabel(group, now, t) {
+			if (group.dayOffset === 0) return t("today");
+			if (group.dayOffset === 1) return t("yesterday");
+			const parts = group.dateKey.split("-");
+			const year = Number(parts[0]);
+			const month = Number(parts[1]);
+			const day = Number(parts[2]);
+			if (year === new Date(now).getFullYear()) return t("date", {
+				m: month,
+				d: day
+			});
+			return t("dateYear", {
+				y: year,
+				m: month,
+				d: day
+			});
+		}
 		function SessionStatus({ row }) {
 			if (row.pendingInteraction !== void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, { state: "warning" });
 			if (row.running) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, { state: "ongoing" });
 			if (row.completed) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.StateDot, { state: "done" });
 			return null;
 		}
-		function rowHalf(event) {
-			const rect = event.currentTarget.getBoundingClientRect();
-			return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
-		}
-		function SessionItem({ row, current, now, open, rename, fork, archive, t, context, drag }) {
+		function SessionItem({ row, current, now, open, rename, fork, archive, t, context, actionMode }) {
 			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
 			const title = row.blank ? t("newSession") : row.title;
+			const isDelete = actionMode === "delete";
+			const actionLabel = isDelete ? t("deleteSession") : t("archive");
+			const actionIcon = isDelete ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconArchiveOutline20, { size: 16 });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: `ya-row${row.id === current ? " ya-selected" : ""}${menuOpen ? " ya-menu-open" : ""}${drag?.marker === "before" ? " ya-drop-before" : ""}${drag?.marker === "after" ? " ya-drop-after" : ""}`,
+				className: `ya-row${row.id === current ? " ya-selected" : ""}${menuOpen ? " ya-menu-open" : ""}`,
 				role: "treeitem",
 				"aria-selected": row.id === current,
-				draggable: drag !== void 0,
 				onClick: () => {
 					open(row.id);
-				},
-				onDragStart: drag === void 0 ? void 0 : (event) => {
-					event.dataTransfer.effectAllowed = "move";
-					drag.start();
-				},
-				onDragEnd: drag?.end,
-				onDragOver: drag === void 0 ? void 0 : (event) => {
-					if (!drag.active) return;
-					event.preventDefault();
-					event.dataTransfer.dropEffect = "move";
-					drag.hover(rowHalf(event));
-				},
-				onDrop: drag === void 0 ? void 0 : (event) => {
-					if (!drag.active) return;
-					event.preventDefault();
-					drag.drop(rowHalf(event));
 				},
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -479,8 +603,9 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 								},
 								{
 									id: "archive",
-									label: t("archive"),
-									icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconArchiveOutline20, { size: 16 })
+									label: actionLabel,
+									icon: actionIcon,
+									danger: isDelete
 								}
 							],
 							onSelect: (id) => {
@@ -583,7 +708,7 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 		}
 		/** Fill `sidebar.workspaces` with the replacement browser. */
 		function WorkspaceSidebar(props) {
-			const { wide, expandSidebar, useSessions, useWorkspaces, startSession, open, searchSessions, searchResultLimit, renameSession, forkSession, renameWorkspace, deleteWorkspace, archiveSession, insertSessionBefore, createWorkspace, useDirectoryFlow, renderSlot, t } = props;
+			const { wide, expandSidebar, useSessions, useWorkspaces, startSession, open, searchSessions, searchResultLimit, renameSession, forkSession, renameWorkspace, deleteWorkspace, archiveSession, createWorkspace, useDirectoryFlow, renderSlot, t } = props;
 			const sessions = useSessions((state) => state);
 			const workspaceState = useWorkspaces((state) => state);
 			const workspaces = workspaceState.items;
@@ -621,8 +746,16 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 				if (selectedKey !== null && selectedKey !== "__ya_ungrouped__" && !workspaces.some((workspace) => workspace.workspaceId === selectedKey)) setSelectedKey(UNGROUPED);
 			}, [selectedKey, workspaces]);
 			const selectedWorkspace = selectedKey === null || selectedKey === "__ya_ungrouped__" ? void 0 : workspaces.find((workspace) => workspace.workspaceId === selectedKey);
-			const levelRows = selectedKey === null ? [] : deriveWorkspaceSessions(selectedKey, sessions, workspaces, archived);
 			const now = Date.now();
+			const levelGroups = (0, react.useMemo)(() => selectedKey !== null && selectedKey !== "__ya_ungrouped__" ? deriveWorkspaceSessionGroups(selectedKey, sessions, workspaces, archived, now) : [], [
+				archived,
+				sessions,
+				workspaces,
+				selectedKey,
+				now
+			]);
+			const levelRows = selectedKey === "__ya_ungrouped__" ? deriveWorkspaceSessions(UNGROUPED, sessions, workspaces, archived) : [];
+			const levelEmpty = selectedKey === "__ya_ungrouped__" ? levelRows.length === 0 : levelGroups.every((g) => g.rows.length === 0);
 			const [query, setQuery] = (0, react.useState)("");
 			const normalizedQuery = sanitized(query).trim();
 			const [remote, setRemote] = (0, react.useState)({
@@ -693,7 +826,9 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 			const [renameError, setRenameError] = (0, react.useState)(null);
 			const [busy, setBusy] = (0, react.useState)(false);
 			const [deleteTarget, setDeleteTarget] = (0, react.useState)(null);
-			const [drag, setDrag] = (0, react.useState)(null);
+			const [actionMode, setActionModeState] = (0, react.useState)(() => getActionMode());
+			const [sessionDeleteTarget, setSessionDeleteTarget] = (0, react.useState)(null);
+			(0, react.useEffect)(() => subscribeActionMode(() => setActionModeState(getActionMode())), []);
 			const beginWorkspaceRename = (row) => {
 				setWorkspaceRename(row);
 				setRenameDraft(row.title);
@@ -736,61 +871,54 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 				});
 			};
 			const archive = (id) => {
+				if (actionMode === "delete") {
+					const row = allRows.find((candidate) => candidate.id === id) ?? levelRows.find((candidate) => candidate.id === id) ?? levelGroups.flatMap((g) => g.rows).find((candidate) => candidate.id === id) ?? recent.find((candidate) => candidate.id === id);
+					setSessionDeleteTarget(row ?? {
+						id,
+						title: "",
+						blank: false,
+						running: false,
+						completed: false,
+						updatedAt: 0,
+						workspaceKey: "__ya_ungrouped__",
+						workspaceTitle: ""
+					});
+					setRenameError(null);
+					return;
+				}
 				archiveSession(id).catch((reason) => {
 					console.warn("session archive rejected:", reason);
 				});
 			};
+			const confirmSessionDelete = () => {
+				if (sessionDeleteTarget === null || busy) return;
+				setBusy(true);
+				archiveSession(sessionDeleteTarget.id).then(() => {
+					setSessionDeleteTarget(null);
+				}).catch((reason) => {
+					setRenameError(reason instanceof Error ? reason.message : String(reason));
+				}).finally(() => {
+					setBusy(false);
+				});
+			};
+			const toggleActionMode = () => {
+				setActionMode(actionMode === "archive" ? "delete" : "archive");
+			};
 			const fork = (id) => {
 				forkSession(id);
 			};
-			const sessionItem = (row, context = false, index) => {
-				const draggable = selectedKey !== null && selectedKey !== "__ya_ungrouped__" && index !== void 0;
-				const marker = drag?.over?.id === row.id ? drag.over.half : null;
-				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionItem, {
-					row,
-					current: sessions.current,
-					now,
-					open,
-					rename: beginSessionRename,
-					fork,
-					archive,
-					t,
-					context,
-					...draggable && selectedKey !== null && selectedKey !== "__ya_ungrouped__" ? { drag: {
-						active: drag !== null,
-						marker,
-						start: () => {
-							setDrag({
-								id: row.id,
-								over: null
-							});
-						},
-						hover: (half) => {
-							setDrag((value) => value === null ? value : {
-								...value,
-								over: {
-									id: row.id,
-									half
-								}
-							});
-						},
-						drop: (half) => {
-							if (drag === null) return;
-							const anchor = half === "before" ? row.id : levelRows[(index ?? 0) + 1]?.id;
-							const sourceIndex = levelRows.findIndex((item) => item.id === drag.id);
-							const anchorIndex = anchor === void 0 ? levelRows.length : levelRows.findIndex((item) => item.id === anchor);
-							setDrag(null);
-							if (anchor === drag.id || sourceIndex === anchorIndex || sourceIndex + 1 === anchorIndex) return;
-							insertSessionBefore(selectedKey, drag.id, anchor).catch((reason) => {
-								console.warn("session reorder rejected:", reason);
-							});
-						},
-						end: () => {
-							setDrag(null);
-						}
-					} } : {}
-				}, row.id);
-			};
+			const sessionItem = (row, context = false) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SessionItem, {
+				row,
+				current: sessions.current,
+				now,
+				open,
+				rename: beginSessionRename,
+				fork,
+				archive,
+				t,
+				context,
+				actionMode
+			}, row.id);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				"data-ya-workspace-sidebar": true,
 				className: wide ? "" : "ya-rail",
@@ -801,6 +929,18 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 							wide && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: "ya-section-title",
 								children: t("workspaces")
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: `ya-icon-button ya-action-mode-toggle${actionMode === "delete" ? " ya-action-mode-delete" : ""}`,
+								"aria-label": t("toggleActionMode"),
+								"aria-pressed": actionMode === "delete",
+								title: actionMode === "delete" ? t("deleteMode") : t("archiveMode"),
+								onClick: (event) => {
+									event.stopPropagation();
+									toggleActionMode();
+								},
+								children: actionMode === "delete" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, { size: wide ? 16 : 18 }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconArchiveOutline20, { size: wide ? 16 : 18 })
 							}),
 							directoryFlowAvailable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								ref: pickerAnchor,
@@ -967,12 +1107,16 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 												setRenameError(null);
 											},
 											t
-										}, row.key)) : levelRows.map((row, index) => sessionItem(row, false, index)),
+										}, row.key)) : selectedKey === "__ya_ungrouped__" ? levelRows.map((row) => sessionItem(row, false)) : levelGroups.flatMap((group) => [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+											className: "ya-date-group-label",
+											role: "separator",
+											children: dateGroupLabel(group, now, t)
+										}, `group-${group.dateKey}`), ...group.rows.map((row) => sessionItem(row, false))]),
 										selectedKey === null && workspaceRows.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: "ya-empty",
 											children: t("noWorkspaces")
 										}),
-										selectedKey !== null && levelRows.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+										selectedKey !== null && levelEmpty && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 											className: "ya-empty",
 											children: t("noSessions")
 										})
@@ -1033,6 +1177,33 @@ button.ya-crumb:hover { background:var(--dsw-alias-interactive-bg-hover); color:
 							disabled: busy,
 							onClick: confirmDelete,
 							children: t("deleteWorkspace")
+						})] }),
+						children: renameError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: "ya-error",
+							role: "alert",
+							children: renameError
+						})
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+						open: sessionDeleteTarget !== null,
+						onClose: () => {
+							if (!busy) setSessionDeleteTarget(null);
+						},
+						closeLabel: t("cancel"),
+						title: t("deleteSessionTitle"),
+						description: t("deleteSessionConfirm"),
+						footer: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+							variant: "outline",
+							disabled: busy,
+							onClick: () => {
+								setSessionDeleteTarget(null);
+							},
+							children: t("cancel")
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+							variant: "outline",
+							disabled: busy,
+							onClick: confirmSessionDelete,
+							children: t("deleteSession")
 						})] }),
 						children: renameError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: "ya-error",

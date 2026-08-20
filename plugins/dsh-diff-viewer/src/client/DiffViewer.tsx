@@ -19,12 +19,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type UIEvent } from 'react'
 import clsx from 'clsx'
 import { diffLines, diffWordsWithSpace } from 'diff'
-// The per-line shiki token path, shared with the stock ReadBlock: ui-primitives
-// is a platform module, so this import stays external and the shiki machinery
-// lives in the shell bundle, never in this plugin's.
+// Syntax coloring is self-contained: the dsh shell keeps its shiki machinery
+// private (the pinned build harness never exported the per-line highlight API,
+// and rc.6 retracted it), so this plugin ships its own highlighter and its own
+// clipboard helper — no ui-primitives value import survives in the bundle.
 import {
-  grammarLoadCount, highlightLines, subscribeGrammarLoaded, useCopyFeedback, type HighlightSpan,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+  grammarLoadCount, highlightLines, subscribeGrammarLoaded, type HighlightSpan,
+} from './highlight.ts'
+import { writeClipboard } from './clipboard.ts'
 import css from './DiffViewer.module.css'
 
 /** Fixed row height (px): the windowing arithmetic and the CSS line-height share this value. */
@@ -39,6 +41,27 @@ const CONTEXT_LINES = 3
 /** A collapsed context separator expands in chunks of this many lines. */
 const EXPANSION_LINE_COUNT = 100
 
+/** How long the `copied` flag stays true after a successful write, in ms. */
+const COPIED_FEEDBACK_MS = 1000
+
+/**
+ * Copy text with one-second success feedback, reimplemented on `writeClipboard`
+ * — the only clipboard export ui-primitives keeps across rc.5 and rc.6 (the
+ * rc.5 `useCopyFeedback` hook was retracted alongside the shiki path).
+ */
+function useCopyFeedback(text: string): { copied: boolean; onCopy: () => void } {
+  const [copied, setCopied] = useState(false)
+  const onCopy = useCallback(() => {
+    if (copied) return
+    void writeClipboard(text).then((ok) => {
+      if (!ok) return
+      setCopied(true)
+      window.setTimeout(() => { setCopied(false) }, COPIED_FEEDBACK_MS)
+    })
+  }, [copied, text])
+  return { copied, onCopy }
+}
+
 /** One file's change, in the shape the wire's `card:'diff'` view carries. Redeclared
  *  here so this primitive stays free of the tool contract, like the block it replaces. */
 export interface DiffHunk {
@@ -52,6 +75,18 @@ export interface DiffHunk {
 
 /** Which row layout a diff renders with. */
 export type DiffViewMode = 'split' | 'unified'
+
+/**
+ * Resolve the row layout from the container width (PiUI's responsive rule,
+ * adapted to dsh's column widths): the stock 748px message column stays
+ * unified, a wide-mode 1080px column flips to split. Pure so it can be
+ * tested directly and shared by the observer and initial render.
+ * @param width - the diff container's client width in px.
+ * @returns the layout for that width.
+ */
+export function resolveDiffViewMode(width: number): DiffViewMode {
+  return width < 800 ? 'unified' : 'split'
+}
 
 /** Localized copy for the diff surface; every field defaults to the built-in
  *  Chinese value, so existing consumers render unchanged. */
@@ -1227,7 +1262,14 @@ export function diffStats(diffs: DiffHunk[]): { added: number; removed: number; 
 }
 
 /**
- * Render a file mutation as the visual diff surface.
+ * Render a file mutation as the visual diff surface. The row layout is
+ * chosen by CONTAINER WIDTH, not by a caller flag: PiUI's responsive rule —
+ * split side-by-side when the diff has room (>= 720px), unified otherwise —
+ * is recreated here with a ResizeObserver on this component's own box, so a
+ * widened feed (e.g. home-ui wide mode) automatically shows split diffs and
+ * a narrow panel falls back to unified, with no special-casing of any
+ * host mode. The `viewMode` prop seeds the first render (default unified);
+ * the observer then owns the decision.
  * @param props - see {@link DiffViewerProps}.
  * @returns the diff viewer element.
  */
@@ -1235,9 +1277,29 @@ export function DiffViewer({ diffs, viewMode = 'unified', lang, maxLines, classN
   const resolvedLabels = { ...DEFAULT_LABELS, ...labels }
   const stats = useMemo(() => diffStats(diffs), [diffs])
   const { copied, onCopy } = useCopyFeedback(useMemo(() => copyText(diffs), [diffs]))
+  // Responsive split/unified rule (PiUI's DiffViewer observes its container
+  // and flips by width): the stock 748px message column stays unified, a
+  // wide-mode 1080px column flips to split — see resolveDiffViewMode. The
+  // observer owns the decision once mounted; in environments without layout
+  // (jsdom) the container reports 0 width and there may be no ResizeObserver
+  // at all — both keep the caller's viewMode seed.
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [responsiveMode, setResponsiveMode] = useState<DiffViewMode>(viewMode)
+  useEffect(() => {
+    const container = containerRef.current
+    if (container === null || typeof ResizeObserver === 'undefined') return
+    const update = (): void => {
+      if (container.clientWidth === 0) return
+      setResponsiveMode(resolveDiffViewMode(container.clientWidth))
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
   if (diffs.length === 0) return null
   return (
-    <div className={clsx(css.block, className)} data-diff="" data-diff-viewer="">
+    <div ref={containerRef} className={clsx(css.block, className)} data-diff="" data-diff-viewer="">
       <button type="button" className={css.copyButton} onClick={onCopy}>
         {copied ? '复制成功' : '复制'}
       </button>
@@ -1248,7 +1310,7 @@ export function DiffViewer({ diffs, viewMode = 'unified', lang, maxLines, classN
             before={hunk.oldText ?? ''}
             after={hunk.newText}
             lang={lang ?? langFromPath(hunk.path)}
-            viewMode={viewMode}
+            viewMode={responsiveMode}
             maxLines={maxLines}
             labels={resolvedLabels}
           />

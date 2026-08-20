@@ -14,8 +14,7 @@
  * @module dsh-interpreters/client/InterpretersCard
  */
 import { type ReactNode } from 'react';
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-web-react';
+import type { InjectFace, PropsLocale, PropsRuntime, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots';
 import { InterpretersCardController, type InterpretersCardState } from './store.ts';
 import type { InterpretersKey } from './locales.ts';
 /** Injected dependencies of {@link InterpretersCard} (slot `inject`). */

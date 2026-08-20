@@ -1,8 +1,10 @@
 /**
  * Selector parsing for `fallbacks` chains (spec §4, plan Task 2).
  *
- * Grammar: `provider/model` (exact) and `provider/*` (wildcard — the parsed
- * `model` is `undefined`). Illegal selectors throw {@link SelectorError} —
+ * Grammar: `provider/model` (exact — the model segment may itself contain
+ * `/`, e.g. NVIDIA NIM `nvidia/minimaxai/minimax-m3`) and `provider/*`
+ * (wildcard — the parsed `model` is `undefined`; `*` is only valid as the
+ * entire model segment). Illegal selectors throw {@link SelectorError} —
  * the catchable "config warning" path; warn-and-continue lives in Task 3.
  * These modules never crash on their own.
  *
@@ -25,7 +27,8 @@ export declare function selectorKey(provider: string, model?: string): string;
  * Parse a chain key or entry selector.
  *
  * Accepts `provider/model` and `provider/*`; throws {@link SelectorError}
- * on anything else (missing separator, empty parts, extra separators).
+ * on anything else (missing separator, empty parts, wildcard inside the
+ * model segment).
  */
 export declare function parseSelector(input: string): Selector;
 /**

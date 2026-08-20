@@ -13,7 +13,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         mnemon: MnemonKey;
     }
 }
-/** DSH 0.1.0-rc.6 client context plus the two injected feature services. */
+/** DSH 0.1.0-rc.8 client context plus the two injected feature services. */
 export type MnemonClientContext = ClientContext & {
     connection: ConnectionHandle;
     locale: LocaleRuntime;

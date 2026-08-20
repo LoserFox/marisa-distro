@@ -11,6 +11,21 @@ English | [中文](README.md)
 > external dependencies.
 
 **Status** Active · **Tests** 240 passing · **Build** `pnpm run build` · **Version** 0.5.0
+> **v0.6.0 · session graphs + calendar yarn + evidence discipline (main, unreleased, 2026-08-18)**:
+> **Session execution graphs (M1)** — build any session into a deterministic turn→step→tool tree
+> (every edge cites (sessionId, seq) back into the raw log), batch-build per workspace, rendered as
+> a "Session graph" conversation.view tab (host-spec compliant); **Calendar yarn** — session
+> lifecycle / drift / switching across projects in one view (swimlanes sorted by event volume, idle
+> repos folded, cross-session/cross-project golden-diamond edges), exportable as a
+> **self-contained visualization** (data JSON + HTML view + README, interactive offline);
+> **Genealogy semantic layer** — `track_genealogy` (fork lineage / issue↔session / capture→issue /
+> decision→session / project induction, dry-run by default), `track_git_artifacts` (align git
+> commits to sessions & issues — "which commit landed this requirement"), `track_evolution_brief`
+> (zero-LLM project brief + gap proposals); **Evidence discipline (P4/P6/P5a)** — evidence drawer +
+> layered guard (the deterministic graph and the semantic layer are separate pipelines; semantic
+> methods may only write `candidate`) + output-first delivery metrics (soft delete + evidence
+> grading + explicit commit-trailer channel); project attribution now means "the repo the session
+> actually touched".
 > **v0.5.0 · panel task actions + pager (2026-08-14)**: issue cards gain direct
 > 完成/取消 (done/canceled) actions with two-step confirm, plus a batch mode
 > (checkboxes + batch done/cancel); pagers gain first-page / page-number jump /
@@ -39,6 +54,8 @@ English | [中文](README.md)
 | Panel overview (capture wall + issue wall on the right) | Jump back to the source prompt (highlighted) |
 |---|---|
 | ![dsh-track panel overview](assets/panel.png) | ![jump back to the source prompt](assets/jump-back.png) |
+| Calendar yarn (session lifecycle / drift / switching across projects) | Self-contained visualization export (data JSON + HTML view, interactive offline) |
+| ![Calendar yarn](assets/calendar-yarn.png) | See [`export/track-calendar-view.html`](export/track-calendar-view.html) (sample export) |
 
 ## ✨ Features
 
@@ -56,6 +73,22 @@ English | [中文](README.md)
   separately; "how many tokens did track spend" is one question away.
 - 🖥️ **Web Panel** — a right-hand capture wall + issue wall; every entry has a **「↩ 对话」** link
   that jumps back to the source conversation and the exact original prompt, highlighted.
+- 🕸️ **Session Graphs** — `track_session_graph` builds any session into a deterministic
+  turn→step→tool tree; every edge cites (sessionId, seq) back into the raw log; batch-build per
+  workspace (idempotent, force-rebuildable); a "Session graph" conversation.view tab renders the
+  current session live.
+- 🧵 **Calendar Yarn** — session lifecycle / drift / switching across projects in one view:
+  swimlanes sorted by event volume, idle repos folded, line-level "only entanglement" filter;
+  exportable as a **self-contained visualization** (data JSON + HTML view + README — open the HTML
+  in a browser and interact offline).
+- 🧬 **Genealogy Semantic Layer** — `track_genealogy` strings requirements into a graph (fork
+  lineage / issue↔session / capture→issue / decision→session / project induction, dry-run by
+  default); `track_git_artifacts` aligns commits to sessions and issues; `track_evolution_brief`
+  produces a zero-LLM project brief with gap proposals.
+- 🛡️ **Evidence Discipline** — an evidence drawer plus a layered guard: the deterministic graph
+  (git facts / hash links) and the semantic layer (LLM clustering) are separate pipelines, and
+  semantic methods may only ever write `candidate` — evidence is never silently upgraded;
+  output-first delivery metrics (soft delete + evidence grading + explicit commit-trailer channel).
 
 ## 🚀 Quick Start
 
@@ -64,7 +97,7 @@ English | [中文](README.md)
 # npm package (published — recommended):
 npx -p @deepseek-ai/dsh dsh plugin --profile web add @fakechris/dsh-track
 # git source (fallback):
-# npx -p @deepseek-ai/dsh dsh plugin --profile web add github:dsh-external/dsh-track
+# npx -p @deepseek-ai/dsh dsh plugin --profile web add github:fakechris/dsh-track
 #    (or a local path: `... add /absolute/path/to/dsh-track`)
 
 # 2. Install the protocol skill (decision-point / task-advance discipline)
@@ -102,6 +135,10 @@ strip) — you should see the **Captures** and **Issues** sections.
 | `track_sync_history(workspace?, since?, dry_run?, max_sessions?, engine?)` | fold workspace session history into epic/issue candidates (dry-run by default) |
 | `track_usage(since?)` | report LLM cost incurred by the track engine: request counts, token buckets, wall time, estimated cost |
 | `track_backfill_captures()` | backfill motivation context on legacy open captures (idempotent, safe to re-run) |
+| `track_session_graph(session_id?, workspace?, max_sessions?, rebuild?)` | build / read a session execution graph (turn→step→tool tree with seq citations; batch-build per workspace) |
+| `track_genealogy(workspace?, dry_run?)` | build the semantic layer (fork lineage / issue↔session / capture→issue / decision→session / project induction; dry-run by default) |
+| `track_git_artifacts(workspace?, project_level?, dry_run?, limit?)` | scan git commits and align them to sessions (landed-in) and issues |
+| `track_evolution_brief(project_id?)` | zero-LLM project brief: issue stats, recent activity, proposed gaps |
 
 ## 🖥️ Web Panel & HTTP API
 
@@ -113,7 +150,9 @@ DOM injection, no framework:
 - **↩ 对话 (jump back)**: every capture/issue jumps to the source session and the exact original
   user prompt — switches the left conversation, pages into deep history, scrolls to the row with a
   highlight flash; legacy entries without a message id fall back to the session's first user message;
-- 20s lightweight auto-refresh, draggable panel width, ◆ floating toggle when collapsed.
+- 20s lightweight auto-refresh, draggable panel width, ◆ floating toggle when collapsed;
+- **Session graph tab**: the "Session graph" conversation.view tab renders the current session's
+  turn→step→tool tree live (host tab-spec compliant; the active step is underlined and followed).
 
 HTTP API (the panel's data face, under `/api/track/*`):
 
@@ -144,6 +183,7 @@ src/capture/          auto-capture + motivation context (observer / context / ba
 src/lifecycle/        evidence observer + state machine (evidence-driven lifecycle)
 src/sync/             history-sync engine (extract → segment → intent → synthesize → align)
 src/usage.ts          LLM usage ledger (recorder + aggregation + cost estimation)
+src/graph/            session graphs / calendar yarn / genealogy (build / calendar / links / commits / service)
 src/client/           web panel (right-panel / composer strip)
 skills/dsh-track      fat skill: decision-point criteria / format / discipline
 cordis.patch.yml      bundle patch (auto-applied by dsh plugin add)
@@ -169,7 +209,8 @@ pnpm test           # vitest (188 tests)
 
 ## 📚 Links
 
-- Repo: [github.com/dsh-external/dsh-track](https://github.com/dsh-external/dsh-track)
+- Repo: [github.com/fakechris/dsh-track](https://github.com/fakechris/dsh-track) (the old
+  `dsh-external/dsh-track` name redirects here)
 - Protocol skill: [`skills/dsh-track/SKILL.md`](skills/dsh-track/SKILL.md) (decision-point
   criteria, task-advance discipline)
 - Repo conventions: [`AGENTS.md`](AGENTS.md) (commit / worktree / bilingual-docs rules)

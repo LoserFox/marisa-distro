@@ -6,7 +6,7 @@ export type { Context } from './context-types.ts';
 export type { BetterSidebarService, TabDescriptor, TabComponentProps, FileViewerDescriptor, FileViewerProps, FileFetchStrategy, } from './client/service.ts';
 /** Plugin identity for cordis.yml rows. */
 export declare const name = "dsh-better-sidebar";
-/** Services required before mounting: the webserver routes, the session store, the loader's connection row, and the tool registry. */
+/** Services required before mounting: the webserver routes, the session store, the web runtime's trusted hosts, and the tool registry. */
 export declare const inject: string[];
 /** Content type served by /sidebar/file (binary-safe fallback for unknowns). */
 export declare function mediaTypeForPath(path: string): string;
@@ -23,6 +23,14 @@ export interface SidebarSettingsFace {
         value?: unknown;
         revision?: number;
     };
+    /**
+     * Whether the dsh-web-ui family's aionui-panel has been selected as the
+     * right-panel provider (the `aionui-panel` settings namespace resolves
+     * `rightPanel: 'aionui-panel'`). While true the sidebar must not mount —
+     * the two right panels are mutually exclusive. False when the namespace is
+     * absent (no aionui installed) or the provider is anything else.
+     */
+    externalDisable(): boolean;
     /** Merge a patch (revision-guarded) and return the fresh resolved view. */
     update(patch: Record<string, unknown>, expectedRevision?: number): Promise<{
         value?: unknown;
@@ -31,7 +39,7 @@ export interface SidebarSettingsFace {
 }
 /**
  * Plugin body: mount the fenced routes and the pty lifecycle.
- * @param ctx - host plugin context (webServer, sessions, loader).
+ * @param ctx - host plugin context (webServer, sessions, webRuntime).
  * @param config - deployment-provided limits; the Loader validates against
  * {@link Config} and fills defaults, direct callers get them from
  * {@link resolveSidebarConfig}.

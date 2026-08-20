@@ -3,7 +3,7 @@
 <p align="center"><a href="./README.md">English</a> · <strong>简体中文</strong></p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/release-v0.2.9-5b5bd6" alt="发布版本 v0.2.9">
+  <img src="https://img.shields.io/badge/release-v0.2.13-5b5bd6" alt="发布版本 v0.2.13">
   <img src="https://img.shields.io/badge/%E8%AE%B0%E5%BF%86-3%20%E5%B1%82-087c5b" alt="三层记忆">
   <img src="https://img.shields.io/badge/Provider-9-c66a09" alt="九种 Provider">
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A520-43853d" alt="Node.js 20 或更新版本">
@@ -22,7 +22,7 @@
 <p align="center">
   <a href="./docs/zh-CN/capabilities.md"><strong>先看能力地图</strong></a> ·
   <a href="./docs/zh-CN/getting-started.md">5 分钟开始</a> ·
-  <a href="./docs/zh-CN/releases/v0.2.9.md">v0.2.9 升级说明</a> ·
+  <a href="./docs/zh-CN/releases/v0.2.13.md">v0.2.13 升级说明</a> ·
   <a href="https://github.com/omdsh-dev/dsh-mnemon/blob/e6ca446e45bdd17991f3c7c98560456de465282b/docs/assets/media/dsh-mnemon-memory-system-demo.mp4">观看宽屏实机演示</a>
 </p>
 
@@ -190,7 +190,7 @@ dsh plugin --profile headless add "link:/absolute/path/to/dsh-mnemon"
 | 配置范围、路由与模型 | [配置参考](./docs/zh-CN/configuration.md) |
 | 备份、更新或排障 | [运维指南](./docs/zh-CN/operations.md) |
 | 接入工具、命令或 RPC | [接口参考](./docs/zh-CN/interfaces.md) |
-| 查看本次升级 | [v0.2.9 发布说明](./docs/zh-CN/releases/v0.2.9.md) |
+| 查看本次升级 | [v0.2.13 发布说明](./docs/zh-CN/releases/v0.2.13.md) |
 
 完整目录见[文档中心](./docs/zh-CN/README.md)。
 
@@ -202,6 +202,8 @@ pnpm run verify
 ```
 
 `verify` 会执行 TypeScript 检查、Vitest、可复现双构建、隔离的真实 Headless profile 激活检查与发布包验证。`lib/` 是生成产物，故意不进入版本库。
+
+提交 Issue 或 Pull Request 前请阅读[贡献规范](./CONTRIBUTING.zh-CN.md)（[English](./CONTRIBUTING.md)）并使用双语仓库模板；缺少必填信息的报告和 PR 描述会被双语自动化规则拒绝。
 
 ## 许可证
 

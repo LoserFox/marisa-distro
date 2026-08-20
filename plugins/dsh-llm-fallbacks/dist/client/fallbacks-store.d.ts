@@ -27,7 +27,9 @@
 import type { ClientConnectionRpc, ConfigurableProviderView, HistoryEntry, IApiClient, ModelProviderGroup, SessionId, SettingsNamespaceView } from '@deepseek-ai/dsh-client-connection/client';
 import { type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client';
 import { type FallbackStrategy, type FallbacksConfig, type FallbacksRole, type FallbacksRoleRule, type FallbacksRoles } from '../config.ts';
+import type { SlotRowConfig } from '../time-slots.ts';
 import type { FallbacksSwitchEventData } from '../events.ts';
+import type { SeedsWireStatus } from '../seeds.ts';
 /** The plugin's settings namespace on the host wire (settings/document-updated ns filter). */
 export declare const FALLBACKS_SETTINGS_NS = "fallbacks";
 /** Single-page history read for the status block (spec §2.5 D-5: `HISTORY_PAGE_MESSAGES`-sized). */
@@ -92,6 +94,13 @@ export interface FallbacksSettingsState {
      * over the user layer, so it cannot delete legacy keys).
      */
     legacyKeys: string[];
+    /**
+     * Seeded-role badge state (spec §9.4): one entry per live seed, with the
+     * gateway's override verdict. The wire field is authoritative — absent on
+     * an old response it keeps the last accepted value (the `legacyKeys`
+     * honest rule: only a `get` may settle seed truth).
+     */
+    seeds: SeedsWireStatus[];
     /** Provider/model directory snapshot (spec §2.5 D-4). */
     catalogStatus: 'idle' | 'loading' | 'ready' | 'error';
     /** Catalog read diagnostic: whole-load failure or per-provider lookups. */
@@ -172,12 +181,18 @@ export declare function classifyModel(provider: string, raw: string, catalog: Ca
  */
 export declare function extractRecentSwitches(entries: readonly HistoryEntry[], limit?: number): FallbacksSwitchSnapshot[];
 /**
- * Derive the status block's "current effective model" (spec §2.5 D-6): ①
- * disabled / empty rootChain → unavailable; ② a recent switch exists → the
- * latest one's `to`; ③ otherwise → the config's primary target. A **display
- * value** — never a live route probe (the section appends the non-probing
- * note inline right after the derived value, available case only; the
- * unavailable 空态 renders its own copy without the note).
+ * Derive the "current effective model" (spec §2.5 D-6): ① disabled / empty
+ * rootChain → unavailable; ② a recent switch exists → the latest one's `to`;
+ * ③ otherwise → the config's primary target. A **display value** — never a
+ * live route probe.
+ *
+ * INTENTIONAL D-6 CONTRACT RETENTION: after the AC-2 trim (plan
+ * fallbacks-settings-visibility Task 2) the settings card's status block no
+ * longer consumes this derivation, and no other production code imports it —
+ * it is retained (NOT dead code to delete) as the spec §2.5 D-6 derived-value
+ * surface, pinned by `tests/fallbacks-store.spec.ts` (D-6 display-value
+ * contract). Keep both exports until the spec derivation is removed or gains
+ * a real consumer.
  */
 export declare function deriveEffectiveModel(config: FallbacksConfig, switches: readonly FallbacksSwitchSnapshot[]): EffectiveModelView;
 /** One chain selector row: provider + model (or wildcard). */
@@ -203,6 +218,40 @@ export declare function rootChainToRows(rootChain: readonly string[], catalog?: 
 /** Rebuild the rootChain from edited rows; rows with no usable selector drop out. */
 export declare function rowsToRootChain(rows: readonly RootChainRow[]): string[];
 /**
+ * One extra time-slot row in the editor (plan fallbacks-timeslots Task 3):
+ * preset rows freeze their windows (read-only summary, models-only edits);
+ * custom rows edit start/end/days + chain. `kind` rides the wire VERBATIM —
+ * a hand-written YAML row with an unknown kind reads back as a custom-shaped
+ * row and serializes back unchanged, so the dirty check stays quiet (save
+ * validation rejects it).
+ */
+export interface SlotEditorRow {
+    kind: string;
+    /** Frozen preset id — preset rows only (windows are code constants). */
+    preset?: string;
+    /** Custom rows: window start `HH:mm` text. */
+    start: string;
+    /** Custom rows: window end `HH:mm` text. */
+    end: string;
+    /** Custom rows: day mask 0=Sunday…6=Saturday; [] = every day. */
+    days: number[];
+    /** Custom rows: display name (PR #62 feedback round — collapsed rows). */
+    name: string;
+    /** UI-only collapse state — never serialized (dropped by rowsToTimeSlots). */
+    collapsed: boolean;
+    selectors: ChainSelectorRow[];
+}
+/** Project the time-slot rows into editable rows (chain selectors classified). */
+export declare function timeSlotsToRows(timeSlots: readonly SlotRowConfig[], catalog?: CatalogLookup): SlotEditorRow[];
+/** Rebuild the time-slot rows from edited rows; blank selectors drop out.
+ * `kind` rides verbatim (a hand-written unknown kind reads back unchanged;
+ * save validation rejects it) — the cast asserts the trusted editor shape.
+ * `days` is ALWAYS serialized ([] included): schemastery composes absent
+ * array fields as `[]`, so the composed config every card load accepts
+ * carries `days` on every row — the draft must too, or a clean card would
+ * read back dirty. */
+export declare function rowsToTimeSlots(rows: readonly SlotEditorRow[]): SlotRowConfig[];
+/**
  * One declared-role row in the editor (block 2 `roles.list`): identity
  * fields + the role's own chain selector list + its append strategy.
  * `prompt`/`permissions` are schema-reserved for the next iteration
@@ -210,10 +259,11 @@ export declare function rowsToRootChain(rows: readonly RootChainRow[]): string[]
  */
 export interface RoleRow {
     id: string;
-    label: string;
-    description: string;
+    persona: string;
     selectors: ChainSelectorRow[];
     fallback: FallbackStrategy;
+    /** UI-only collapse state — never serialized (dropped by rowsToRoles). */
+    collapsed: boolean;
 }
 /** Project the declared roles into editable rows (chain selectors classified). */
 export declare function rolesToRows(roles: readonly FallbacksRole[], catalog?: CatalogLookup): RoleRow[];
@@ -246,16 +296,18 @@ export declare function ruleRoleOptions(roles: Pick<FallbacksRoles, 'list'>): st
  * `chains`/`roles.default` keys never ride it).
  */
 export declare function detectLegacyClientKeys(config: FallbacksConfig): string[];
-/** One role-rule row in the editor; empty origin means "any". */
+/**
+ * One role-rule row in the editor (PR #62 feedback: no origin control —
+ * rules are subagent-only; a persisted wire `origin` is ignored).
+ */
 export interface RoleRuleRow {
-    origin: string;
     provider: CatalogSelection;
     model: CatalogSelection;
     role: string;
 }
 /** Project the role rules into editable rows (provider/model classified). */
 export declare function rulesToRows(rules: readonly FallbacksRoleRule[], catalog?: CatalogLookup): RoleRuleRow[];
-/** Rebuild the role rules from edited rows; empty origin/provider/model drop out. */
+/** Rebuild the role rules from edited rows; empty provider/model drop out. */
 export declare function rowsToRules(rows: readonly RoleRuleRow[]): FallbacksRoleRule[];
 /** Controller joining Settings reads, writes, and pushed invalidations. */
 export declare class FallbacksSettingsController {
@@ -263,7 +315,14 @@ export declare class FallbacksSettingsController {
     private readonly rpc;
     /** Snapshot consumed by the section through `useSyncExternalStore`. */
     readonly store: SnapshotStore<FallbacksSettingsState>;
-    private generation;
+    /** Read guard: a newer load() supersedes an older one's publish. */
+    private readGeneration;
+    /**
+     * Write guard: save()/resetToDefaults() completions ALWAYS publish unless
+     * dispose() invalidated them — an overlapping read must never discard a
+     * successful write's accept() (audit F1).
+     */
+    private writeGeneration;
     private catalogGeneration;
     private switchesGeneration;
     /** Every settings namespace from the last describe, keyed by ns — the configured-provider join's other input. */
@@ -339,6 +398,25 @@ export declare class FallbacksSettingsController {
      * merge cannot express). Same error handling as {@link save} (KD-G3).
      */
     resetToDefaults(): Promise<void>;
+    /**
+     * Revert one seeded role to its CURRENT declared seed default (spec §9.4,
+     * AC-3) through the gateway channel (`/api/fallbacks/revert-seed`). Same
+     * write guards as {@link save} — writable / saving / write-generation —
+     * and the same KD-G3 error handling: any business rejection or transport
+     * failure surfaces its message in `state.error` for the error banner and
+     * the form stays editable for retry. A business `{ reverted: false,
+     * reason }` outcome is still a successful RPC — the post-write read
+     * result (config / legacyKeys / seeds) lands either way, and the revert
+     * button stays disabled while the write is in flight.
+     *
+     * Returns the seed-default persona when the outcome is `{ reverted:
+     * true, persona }` — including the persist no-op (persisted already
+     * equals the seed). The card applies that string to the row's **draft**
+     * so an unsaved persona edit still snaps back (issue #59).
+     * @param id - the seeded role id; the host matches it by trimmed id
+     *   against the seed registry (spec §9.3).
+     */
+    revertSeed(id: string): Promise<string | undefined>;
     /** Stop in-flight responses from publishing after plugin disposal. */
     dispose(): void;
     /**
@@ -352,7 +430,10 @@ export declare class FallbacksSettingsController {
      * same publish: the wire field drives the migration banner. save/reset
      * pass the POST-WRITE value (W-1/F-1) — or the previous value when the
      * response omits the field, so a write can never clear the banner
-     * against server truth; only a real `get` may.
+     * against server truth; only a real `get` may. `seeds` (spec §9.4)
+     * follows the same honest rule: the wire badge field is authoritative
+     * only when a real config resolved — a transient channel-down keeps the
+     * last accepted badge state.
      */
     private accept;
     private fail;

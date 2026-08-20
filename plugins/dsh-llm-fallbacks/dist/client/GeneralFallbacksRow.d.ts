@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-web-react';
+import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots';
 import type { FallbacksSettingsController, FallbacksSettingsState } from './fallbacks-store.ts';
 /** Injected dependencies of {@link GeneralFallbacksRow} (slot `inject`). */
 export interface GeneralFallbacksRowInjected {

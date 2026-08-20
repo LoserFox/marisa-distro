@@ -1,4 +1,10 @@
+<p align="center">
+  <a href="https://dshfind.com/zh/plugins/huanlinoto/dsh-plugin-interpreters"><img src="https://dshfind.com/api/card/huanlinoto/dsh-plugin-interpreters?lang=zh" alt="dsh-plugin-interpreters card"></a>
+</p>
+
 # dsh-interpreters
+
+[![npm version](https://img.shields.io/npm/v/@huanlin/dsh-plugin-interpreters)](https://www.npmjs.com/package/@huanlin/dsh-plugin-interpreters)
 
 DSH 插件：暴露 `run_python` 和 `run_node` 两个模型可调用工具，通过 stdin 执行代码并返回 stdout/stderr/exit code。在设置页「插件配置」分区提供配置卡片，让用户设置 Python 和 Node.js 解释器的可执行文件路径，工具描述中会告知模型解释器位置。
 
@@ -41,6 +47,10 @@ src/
 ### 本地安装
 
 ```sh
+# 从 npm 安装（推荐）：
+dsh plugin --profile web add @huanlin/dsh-plugin-interpreters
+
+# 本地开发（热更新）：
 dsh plugin --profile web add "link:D:/Projects/deepseek-harness/dsh-interpreters"
 ```
 

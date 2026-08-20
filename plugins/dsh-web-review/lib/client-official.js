@@ -1,4 +1,4 @@
-﻿window.__ModuleLoader__.load({
+window.__ModuleLoader__.load({
 	id: "@canglongcl/dsh-web-review",
 	factory: (require) => {
 		var module = { exports: {} };
@@ -169,20 +169,20 @@
 		const PREVIEW_CLIENT_HEADER = "x-dsh-web-review-client";
 		const PREVIEW_BRIDGE_PROTOCOL = "dsh-web-review/bridge";
 		const PREVIEW_ENTRY_PREFIX = `/.dsh-web-review/entry/`;
-		function recordOf$1(value) {
+		function recordOf$2(value) {
 			return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
 		}
 		function exactKeys$1(record, keys) {
 			return Object.keys(record).length === keys.length && keys.every((key) => Object.hasOwn(record, key));
 		}
-		function boundedString(value, cap, allowEmpty = true) {
+		function boundedString$1(value, cap, allowEmpty = true) {
 			return typeof value === "string" && value.length <= cap && (allowEmpty || value.length > 0) ? value : void 0;
 		}
 		function finiteDimension(value, cap = 1e5) {
 			return typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= cap ? value : void 0;
 		}
 		function viewportOf$1(value) {
-			const record = recordOf$1(value);
+			const record = recordOf$2(value);
 			if (record === void 0 || !exactKeys$1(record, ["width", "height"])) return void 0;
 			const width = finiteDimension(record.width);
 			const height = finiteDimension(record.height);
@@ -192,7 +192,7 @@
 			};
 		}
 		function rectOf$1(value) {
-			const record = recordOf$1(value);
+			const record = recordOf$2(value);
 			if (record === void 0 || !exactKeys$1(record, [
 				"x",
 				"y",
@@ -221,7 +221,7 @@
 		}
 		/** Strictly decode the main-host or handoff session descriptor. */
 		function previewSessionDescriptorOf(value) {
-			const record = recordOf$1(value);
+			const record = recordOf$2(value);
 			if (record === void 0 || !exactKeys$1(record, [
 				"sessionId",
 				"frameUrl",
@@ -231,9 +231,9 @@
 			])) return void 0;
 			const sessionId = sessionIdOf(record.sessionId);
 			const channel = channelOf(record.channel);
-			const frameUrl = boundedString(record.frameUrl, 32768, false);
-			const frameOrigin = boundedString(record.frameOrigin, 2048, false);
-			const targetOrigin = boundedString(record.targetOrigin, 2048, false);
+			const frameUrl = boundedString$1(record.frameUrl, 32768, false);
+			const frameOrigin = boundedString$1(record.frameOrigin, 2048, false);
+			const targetOrigin = boundedString$1(record.targetOrigin, 2048, false);
 			if (sessionId === void 0 || channel === void 0 || frameUrl === void 0 || frameOrigin === void 0 || targetOrigin === void 0) return void 0;
 			try {
 				const url = new URL(frameUrl);
@@ -251,21 +251,21 @@
 			};
 		}
 		function treeDetailOf(value) {
-			const record = recordOf$1(value);
+			const record = recordOf$2(value);
 			if (record === void 0 || typeof record.kind !== "string") return void 0;
 			if (record.kind === "empty" && exactKeys$1(record, ["kind"])) return { kind: "empty" };
 			if (record.kind === "children" && exactKeys$1(record, ["kind", "count"]) && Number.isSafeInteger(record.count) && record.count >= 0 && record.count <= 1e5) return {
 				kind: "children",
 				count: record.count
 			};
-			const text = boundedString(record.text, 48);
+			const text = boundedString$1(record.text, 48);
 			return record.kind === "text" && exactKeys$1(record, ["kind", "text"]) && text !== void 0 ? {
 				kind: "text",
 				text
 			} : void 0;
 		}
 		function snapshotOf(value) {
-			const record = recordOf$1(value);
+			const record = recordOf$2(value);
 			if (record === void 0 || !exactKeys$1(record, [
 				"tagName",
 				"id",
@@ -294,10 +294,10 @@
 				outerHTML: PREVIEW_ELEMENT_LIMITS.outerHTML,
 				textContent: PREVIEW_ELEMENT_LIMITS.textContent
 			};
-			for (const [key, cap] of Object.entries(stringCaps)) if (boundedString(record[key], cap) === void 0) return void 0;
-			if (!Array.isArray(record.stableClasses) || record.stableClasses.length > PREVIEW_ELEMENT_LIMITS.stableClasses || record.stableClasses.some((value) => boundedString(value, PREVIEW_ELEMENT_LIMITS.stableClass, false) === void 0)) return void 0;
+			for (const [key, cap] of Object.entries(stringCaps)) if (boundedString$1(record[key], cap) === void 0) return void 0;
+			if (!Array.isArray(record.stableClasses) || record.stableClasses.length > PREVIEW_ELEMENT_LIMITS.stableClasses || record.stableClasses.some((value) => boundedString$1(value, PREVIEW_ELEMENT_LIMITS.stableClass, false) === void 0)) return void 0;
 			const rect = rectOf$1(record.rect);
-			const computed = recordOf$1(record.computed);
+			const computed = recordOf$2(record.computed);
 			if (rect === void 0 || computed === void 0 || !exactKeys$1(computed, [
 				"display",
 				"position",
@@ -308,16 +308,16 @@
 				"padding",
 				"width",
 				"height"
-			]) || Object.values(computed).some((item) => boundedString(item, PREVIEW_ELEMENT_LIMITS.computedValue) === void 0)) return void 0;
+			]) || Object.values(computed).some((item) => boundedString$1(item, PREVIEW_ELEMENT_LIMITS.computedValue) === void 0)) return void 0;
 			const anchor = record.anchor;
 			if (anchor !== null) {
-				const anchorRecord = recordOf$1(anchor);
+				const anchorRecord = recordOf$2(anchor);
 				const anchorKeys = anchorRecord === void 0 ? [] : Object.keys(anchorRecord);
 				if (anchorRecord === void 0 || ![
 					"react",
 					"vue",
 					"svelte"
-				].includes(String(anchorRecord.framework)) || boundedString(anchorRecord.component, PREVIEW_ELEMENT_LIMITS.anchorComponent) === void 0 || boundedString(anchorRecord.file, PREVIEW_ELEMENT_LIMITS.anchorFile, false) === void 0 || ![
+				].includes(String(anchorRecord.framework)) || boundedString$1(anchorRecord.component, PREVIEW_ELEMENT_LIMITS.anchorComponent) === void 0 || boundedString$1(anchorRecord.file, PREVIEW_ELEMENT_LIMITS.anchorFile, false) === void 0 || ![
 					"framework",
 					"component",
 					"file"
@@ -335,7 +335,7 @@
 		}
 		/** Strictly decode one serializable element target from an untrusted frame. */
 		function previewElementTargetOf(value) {
-			const record = recordOf$1(value);
+			const record = recordOf$2(value);
 			if (record === void 0 || !exactKeys$1(record, [
 				"handle",
 				"snapshot",
@@ -352,10 +352,10 @@
 			const rect = rectOf$1(record.rect);
 			const viewport = viewportOf$1(record.viewport);
 			const detail = treeDetailOf(record.detail);
-			const baselines = recordOf$1(record.baselines);
-			const inlineStyles = recordOf$1(record.inlineStyles);
-			const navigation = recordOf$1(record.navigation);
-			if (handle === void 0 || snapshot === void 0 || rect === void 0 || viewport === void 0 || detail === void 0 || baselines === void 0 || inlineStyles === void 0 || navigation === void 0 || !exactKeys$1(baselines, EDITABLE_STYLE_PROPERTIES) || EDITABLE_STYLE_PROPERTIES.some((property) => boundedString(baselines[property], PREVIEW_ELEMENT_LIMITS.styleValue) === void 0) || Object.keys(inlineStyles).some((property) => !isEditableStyleProperty(property)) || !exactKeys$1(navigation, [
+			const baselines = recordOf$2(record.baselines);
+			const inlineStyles = recordOf$2(record.inlineStyles);
+			const navigation = recordOf$2(record.navigation);
+			if (handle === void 0 || snapshot === void 0 || rect === void 0 || viewport === void 0 || detail === void 0 || baselines === void 0 || inlineStyles === void 0 || navigation === void 0 || !exactKeys$1(baselines, EDITABLE_STYLE_PROPERTIES) || EDITABLE_STYLE_PROPERTIES.some((property) => boundedString$1(baselines[property], PREVIEW_ELEMENT_LIMITS.styleValue) === void 0) || Object.keys(inlineStyles).some((property) => !isEditableStyleProperty(property)) || !exactKeys$1(navigation, [
 				"child",
 				"parent",
 				"previous-sibling",
@@ -365,10 +365,10 @@
 			for (const property of EDITABLE_STYLE_PROPERTIES) {
 				const raw = inlineStyles[property];
 				if (raw === void 0) continue;
-				const declaration = recordOf$1(raw);
+				const declaration = recordOf$2(raw);
 				if (declaration === void 0 || !exactKeys$1(declaration, ["value", "priority"])) return void 0;
-				const inlineValue = boundedString(declaration.value, PREVIEW_ELEMENT_LIMITS.styleValue);
-				const priority = boundedString(declaration.priority, PREVIEW_ELEMENT_LIMITS.stylePriority);
+				const inlineValue = boundedString$1(declaration.value, PREVIEW_ELEMENT_LIMITS.styleValue);
+				const priority = boundedString$1(declaration.priority, PREVIEW_ELEMENT_LIMITS.stylePriority);
 				if (inlineValue === void 0 || priority === void 0) return void 0;
 				parsedInline[property] = {
 					value: inlineValue,
@@ -376,7 +376,7 @@
 				};
 			}
 			const originalText = record.originalText;
-			if (originalText !== null && boundedString(originalText, PREVIEW_ELEMENT_LIMITS.textValue) === void 0) return void 0;
+			if (originalText !== null && boundedString$1(originalText, PREVIEW_ELEMENT_LIMITS.textValue) === void 0) return void 0;
 			return {
 				handle,
 				snapshot,
@@ -391,7 +391,7 @@
 		}
 		/** Decode only the bridge envelope; event payloads are decoded by the consumer. */
 		function previewFrameMessageOf(value) {
-			const record = recordOf$1(value);
+			const record = recordOf$2(value);
 			if (record === void 0 || record.protocol !== "dsh-web-review/bridge" || record.version !== 1 || record.direction !== "frame-to-host") return void 0;
 			const channel = channelOf(record.channel);
 			if (channel === void 0) return void 0;
@@ -403,7 +403,7 @@
 					"direction",
 					"event"
 				])) return void 0;
-				const event = recordOf$1(record.event);
+				const event = recordOf$2(record.event);
 				if (event === void 0 || typeof event.name !== "string" || !exactKeys$1(event, ["name", "payload"])) return void 0;
 				return {
 					protocol: PREVIEW_BRIDGE_PROTOCOL,
@@ -421,8 +421,8 @@
 				"requestId",
 				"response"
 			])) return void 0;
-			const requestId = boundedString(record.requestId, 64, false);
-			const response = recordOf$1(record.response);
+			const requestId = boundedString$1(record.requestId, 64, false);
+			const response = recordOf$2(record.response);
 			if (requestId === void 0 || response === void 0 || typeof response.ok !== "boolean") return void 0;
 			if (response.ok && exactKeys$1(response, ["ok", "value"])) return {
 				protocol: PREVIEW_BRIDGE_PROTOCOL,
@@ -435,7 +435,7 @@
 					value: response.value
 				}
 			};
-			const error = boundedString(response.error, 500, false);
+			const error = boundedString$1(response.error, 500, false);
 			return !response.ok && exactKeys$1(response, ["ok", "error"]) && error !== void 0 ? {
 				protocol: PREVIEW_BRIDGE_PROTOCOL,
 				version: 1,
@@ -454,7 +454,7 @@
 			const visit = (raw, depth) => {
 				if (remaining <= 0 || depth > PREVIEW_TREE_LIMITS.depth) return void 0;
 				remaining -= 1;
-				const record = recordOf$1(raw);
+				const record = recordOf$2(raw);
 				if (record === void 0 || !exactKeys$1(record, [
 					"handle",
 					"key",
@@ -464,8 +464,8 @@
 					"children"
 				])) return void 0;
 				const handle = elementHandleOf(record.handle);
-				const key = boundedString(record.key, PREVIEW_TREE_LIMITS.key, false);
-				const tagName = boundedString(record.tagName, 64, false);
+				const key = boundedString$1(record.key, PREVIEW_TREE_LIMITS.key, false);
+				const tagName = boundedString$1(record.tagName, 64, false);
 				const detail = treeDetailOf(record.detail);
 				if (handle === void 0 || key === void 0 || tagName === void 0 || detail === void 0 || typeof record.current !== "boolean" || !Array.isArray(record.children) || record.children.length > PREVIEW_TREE_LIMITS.nodes) return void 0;
 				const children = [];
@@ -493,169 +493,178 @@
 		*/
 		/** Simplified Chinese dictionary (the key-set source of truth). */
 		const zh = {
-			"view.tab": "缃戦〉棰勮",
-			"command.skills.description": "閫夋嫨涓€涓?UI 浼樺寲 Skill",
-			"dock.count": "{count} 鏉℃敞閲?,
-			"dock.details": "娉ㄩ噴涓婁笅鏂?,
-			"dock.focus": "瀹氫綅绗?{index} 鏉℃敞閲婏細{target}",
-			"dock.clear": "娓呴櫎鎵€鏈夋敞閲?,
-			"dock.noComment": "鏈～鍐欐敞閲?,
-			"dock.syncing": "姝ｅ湪鍑嗗",
-			"dock.synced": "鍙戦€佹椂娉ㄥ叆",
-			"dock.sync.failed": "鍚屾澶辫触",
-			"dock.sync.error": "娉ㄩ噴涓婁笅鏂囧悓姝ュけ璐ワ紝璇烽噸璇?,
-			"dock.sync.retry": "鍚屾澶辫触锛岀偣鍑婚噸璇?,
-			"dock.clearing": "姝ｅ湪娓呴櫎娉ㄩ噴",
-			"panel.urlPlaceholder": "杈撳叆缃戝潃锛屽洖杞︽墦寮€锛堝 https://example.com锛?,
-			"panel.urlInvalid": "璇疯緭鍏ユ湁鏁堢殑 HTTP(S) 缃戝潃",
-			"panel.previewUnavailable": "椤甸潰鏃犳硶閫氳繃闅旂棰勮鍔犺浇锛岃妫€鏌ョ綉鍧€鎴栫洰鏍囩珯鐐?,
-			"panel.back": "鍚庨€€",
-			"panel.forward": "鍓嶈繘",
-			"panel.refresh": "鍒锋柊",
-			"panel.external": "鍦ㄦ柊鏍囩椤垫墦寮€",
-			"panel.pick": "娣诲姞椤甸潰娉ㄩ噴",
-			"panel.pick.off": "閫€鍑烘敞閲婃ā寮?,
-			"panel.pick.clear": "娓呯┖娉ㄩ噴",
-			"panel.pick.active": "姝ｅ湪鎵规敞 路 {url}",
-			"panel.pick.send": "鍙戦€?,
-			"panel.pick.sending": "鍙戦€佷腑",
-			"panel.pick.sendError": "鍙戦€侀〉闈㈡敞閲婂け璐ワ紝璇烽噸璇?,
-			"panel.pick.slashDraft": "椤甸潰鎵规敞涓嶈兘闅忔枩鏉犲懡浠ゅ彂閫侊紝璇锋敼鐢ㄦ櫘閫氭秷鎭?,
-			"panel.pick.defaultPrompt": "璇锋牴鎹〉闈㈡壒娉ㄤ慨鏀瑰墠绔疄鐜般€?,
-			"panel.pick.hint": "鍦ㄩ〉闈腑鐐瑰嚮瑕佷慨鏀圭殑鍏冪礌锛岃緭鍏ユ敞閲婂悗鍥炶溅鍔犲叆鍒楄〃锛汦sc 閫€鍑恒€?,
-			"panel.pick.remove": "绉婚櫎璇ュ厓绱?,
-			"panel.pick.limit": "姣忎釜椤甸潰鏈€澶氫繚鐣?{count} 鏉℃敞閲?,
-			"panel.comment.float": "娉ㄩ噴锛屽洖杞︾‘璁も€?,
-			"panel.noUrl": "璇疯緭鍏ョ綉鍧€",
-			"panel.loading": "姝ｅ湪寤虹珛闅旂棰勮鈥?,
-			"panel.frame": "缃戦〉棰勮",
-			"editor.adjust": "璋冩暣",
-			"editor.skills.title": "鍐呯疆 Skill",
-			"editor.skills.count": "{count} 涓?,
-			"editor.skills.command": "涔熷彲鍦ㄨ緭鍏ユ杈撳叆 /{Skill 鍚嶇О}锛岀洿鎺ヨ皟鐢ㄥ崟涓?Skill銆?,
-			"editor.skills.field": "閫夋嫨鏈浣跨敤鐨?Skill",
-			"editor.skills.betterUi": "浜や簰銆佸姩鏁堜笌鐣岄潰缁嗚妭",
-			"editor.skills.betterTypography": "瀛椾綋銆佸眰绾т笌鏂囨湰鎺掔増",
-			"editor.skills.betterLayout": "缁撴瀯銆佸榻愪笌鍝嶅簲寮忓竷灞€",
-			"editor.skills.betterWriting": "鐣岄潰鏂囨涓庢彁绀?,
-			"editor.skills.betterAccessibility": "閿洏銆佺劍鐐逛笌杈呭姪鎶€鏈綋楠?,
-			"editor.skills.betterColors": "閰嶈壊銆佸姣斿害涓庝富棰?,
-			"editor.skills.betterInterface": "缁熺鐣岄潰璁捐涓庡疄鐜?,
-			"editor.skills.interfaceReview": "妫€鏌ユ湰娆℃敼鍔ㄥ奖鍝嶇殑鐣岄潰",
-			"editor.select": "閫夋嫨",
-			"editor.select.child": "杩涘叆涓嬩竴绾?,
-			"editor.select.child.short": "瀛愮骇",
-			"editor.select.parent": "鍥炲埌鐖跺厓绱?,
-			"editor.select.parent.short": "鐖剁骇",
-			"editor.select.previousSibling": "涓婁竴鍏勫紵",
-			"editor.select.previousSibling.short": "涓婁竴涓?,
-			"editor.select.sibling": "涓嬩竴鍏勫紵",
-			"editor.select.sibling.short": "涓嬩竴涓?,
-			"editor.select.current": "宸查€夋嫨 {target}",
-			"editor.select.tree": "鍏冪礌鏍?,
-			"editor.select.children": "{count} 涓瓙鍏冪礌",
-			"editor.select.empty": "绌哄厓绱?,
-			"editor.select.expand": "灞曞紑 {tag}",
-			"editor.select.collapse": "鏀惰捣 {tag}",
-			"editor.comment": "鎻忚堪杩欎簺鏇存敼鈥?,
-			"editor.cancel": "鍙栨秷",
-			"editor.confirm": "纭娉ㄩ噴",
-			"editor.hide": "鏆傛椂闅愯棌缂栬緫鍣?,
-			"editor.show": "鏄剧ず缂栬緫鍣?,
-			"editor.move": "绉诲姩缂栬緫鍣?,
-			"editor.reset": "鎭㈠鍘熷€?,
-			"editor.invalid": "璇疯緭鍏ユ湁鏁堢殑 CSS 鍊?,
-			"editor.text": "鏂囨湰鍐呭",
-			"editor.group.fill": "濉厖涓庨€忔槑搴?,
-			"editor.group.typography": "瀛椾綋",
-			"editor.group.size": "灏哄",
-			"editor.group.layout": "甯冨眬涓庡榻?,
-			"editor.group.spacing": "杈硅窛涓庡唴杈硅窛",
-			"editor.group.margin": "澶栬竟璺濓紙Margin锛?,
-			"editor.group.padding": "鍐呰竟璺濓紙Padding锛?,
-			"editor.group.border": "杈规",
-			"editor.group.effects": "鏁堟灉",
-			"editor.property.color": "鏂囨湰棰滆壊",
-			"editor.property.background": "鑳屾櫙",
-			"editor.property.opacity": "閫忔槑搴?,
-			"editor.property.fontFamily": "瀛椾綋",
-			"editor.property.fontSize": "瀛楀彿",
-			"editor.property.fontWeight": "瀛楅噸",
-			"editor.property.fontStyle": "瀛楀舰",
-			"editor.property.lineHeight": "琛岄珮",
-			"editor.property.letterSpacing": "瀛楅棿璺?,
-			"editor.property.textAlign": "瀵归綈鏂瑰紡",
-			"editor.property.textDecoration": "鏂囨湰瑁呴グ",
-			"editor.property.textTransform": "澶у皬鍐?,
-			"editor.property.width": "瀹藉害",
-			"editor.property.height": "楂樺害",
-			"editor.property.minWidth": "鏈€灏忓搴?,
-			"editor.property.maxWidth": "鏈€澶у搴?,
-			"editor.property.minHeight": "鏈€灏忛珮搴?,
-			"editor.property.maxHeight": "鏈€澶ч珮搴?,
-			"editor.property.display": "鏄剧ず鏂瑰紡",
-			"editor.property.position": "瀹氫綅鏂瑰紡",
-			"editor.property.top": "涓婂亸绉?,
-			"editor.property.right": "鍙冲亸绉?,
-			"editor.property.bottom": "涓嬪亸绉?,
-			"editor.property.left": "宸﹀亸绉?,
-			"editor.property.zIndex": "灞傜骇",
-			"editor.property.flexDirection": "鎺掑垪鏂瑰悜",
-			"editor.property.flexWrap": "鎹㈣",
-			"editor.property.justifyContent": "涓昏酱瀵归綈",
-			"editor.property.alignItems": "浜ゅ弶杞村榻?,
-			"editor.property.alignContent": "澶氳瀵归綈",
-			"editor.property.gap": "闂磋窛",
-			"editor.property.rowGap": "琛岄棿璺?,
-			"editor.property.columnGap": "鍒楅棿璺?,
-			"editor.property.overflow": "婧㈠嚭",
-			"editor.property.marginTop": "涓婂杈硅窛",
-			"editor.property.marginRight": "鍙冲杈硅窛",
-			"editor.property.marginBottom": "涓嬪杈硅窛",
-			"editor.property.marginLeft": "宸﹀杈硅窛",
-			"editor.property.paddingTop": "涓婂唴杈硅窛",
-			"editor.property.paddingRight": "鍙冲唴杈硅窛",
-			"editor.property.paddingBottom": "涓嬪唴杈硅窛",
-			"editor.property.paddingLeft": "宸﹀唴杈硅窛",
-			"editor.property.borderRadius": "鍦嗚",
-			"editor.property.borderWidth": "杈规瀹藉害",
-			"editor.property.borderStyle": "杈规鏍峰紡",
-			"editor.property.borderColor": "杈规棰滆壊",
-			"editor.property.boxShadow": "闃村奖",
-			"editor.property.transform": "鍙樻崲",
-			"editor.action.bold": "鍔犵矖",
-			"editor.action.italic": "鏂滀綋",
-			"editor.action.underline": "涓嬪垝绾?,
-			"editor.action.alignLeft": "宸﹀榻?,
-			"editor.action.alignCenter": "灞呬腑瀵归綈",
-			"editor.action.alignRight": "鍙冲榻?,
-			"editor.action.justify": "涓ょ瀵归綈",
-			"editor.action.linkValues": "鑱斿姩鏁板€?,
-			"editor.action.unlinkValues": "鍙栨秷鑱斿姩",
-			"editor.action.linkAllValues": "鑱斿姩鍥涜竟",
-			"editor.action.unlinkAllValues": "鍙栨秷鍥涜竟鑱斿姩",
-			"editor.action.choosePreset": "閫夋嫨棰勮鍊?,
-			"editor.property.cornerTopLeft": "宸︿笂鍦嗚",
-			"editor.property.cornerTopRight": "鍙充笂鍦嗚",
-			"editor.property.cornerBottomRight": "鍙充笅鍦嗚",
-			"editor.property.cornerBottomLeft": "宸︿笅鍦嗚",
-			"editor.property.shadowX": "闃村奖姘村钩鍋忕Щ",
-			"editor.property.shadowY": "闃村奖鍨傜洿鍋忕Щ",
-			"editor.property.shadowBlur": "闃村奖妯＄硦",
-			"editor.property.shadowSpread": "闃村奖鎵╂暎",
-			"editor.property.shadowColor": "闃村奖棰滆壊",
-			"editor.property.shadowInset": "鍐呴槾褰?,
-			"editor.property.translateX": "姘村钩浣嶇Щ",
-			"editor.property.translateY": "鍨傜洿浣嶇Щ",
-			"editor.property.scaleX": "姘村钩缂╂斁",
-			"editor.property.scaleY": "鍨傜洿缂╂斁",
-			"editor.property.rotate": "鏃嬭浆",
-			"editor.rawHint": "楂樼骇 CSS 鍊?,
-			"editor.group.constraints": "绾︽潫涓庡畾浣?
+			"view.tab": "网页预览",
+			"view.chat": "对话",
+			"command.skills.description": "选择一个 UI 优化 Skill",
+			"dock.count": "{count} 条注释",
+			"dock.details": "注释上下文",
+			"dock.focus": "定位第 {index} 条注释：{target}",
+			"dock.clear": "清除所有注释",
+			"dock.noComment": "未填写注释",
+			"dock.syncing": "正在准备",
+			"dock.synced": "发送时注入",
+			"dock.sync.failed": "同步失败",
+			"dock.sync.error": "注释上下文同步失败，请重试",
+			"dock.sync.retry": "同步失败，点击重试",
+			"dock.clearing": "正在清除注释",
+			"context.title": "页面批注",
+			"context.commentCount": "{count} 处批注",
+			"context.changeSummary": "批注变更摘要",
+			"context.styleCount": "{count} 项样式",
+			"context.textCount": "{count} 项文本",
+			"context.text": "文本",
+			"context.userInput": "用户输入",
+			"panel.urlPlaceholder": "输入网址，回车打开（如 https://example.com）",
+			"panel.urlInvalid": "请输入有效的 HTTP(S) 网址",
+			"panel.previewUnavailable": "页面无法通过隔离预览加载，请检查网址或目标站点",
+			"panel.back": "后退",
+			"panel.forward": "前进",
+			"panel.refresh": "刷新",
+			"panel.external": "在新标签页打开",
+			"panel.pick": "添加页面注释",
+			"panel.pick.off": "退出注释模式",
+			"panel.pick.clear": "清空注释",
+			"panel.pick.active": "正在批注 · {url}",
+			"panel.pick.send": "发送",
+			"panel.pick.sending": "发送中",
+			"panel.pick.sendError": "发送页面注释失败，请重试",
+			"panel.pick.slashDraft": "页面批注不能随斜杠命令发送，请改用普通消息",
+			"panel.pick.defaultPrompt": "请根据页面批注修改前端实现。",
+			"panel.pick.hint": "在页面中点击要修改的元素，输入注释后回车加入列表；Esc 退出。",
+			"panel.pick.remove": "移除该元素",
+			"panel.pick.limit": "每个页面最多保留 {count} 条注释",
+			"panel.comment.float": "注释，回车确认…",
+			"panel.noUrl": "请输入网址",
+			"panel.loading": "正在建立隔离预览…",
+			"panel.frame": "网页预览",
+			"editor.adjust": "调整",
+			"editor.skills.title": "内置 Skill",
+			"editor.skills.count": "{count} 个",
+			"editor.skills.command": "也可在输入框输入 /{Skill 名称}，直接调用单个 Skill。",
+			"editor.skills.field": "选择本次使用的 Skill",
+			"editor.skills.betterUi": "交互、动效与界面细节",
+			"editor.skills.betterTypography": "字体、层级与文本排版",
+			"editor.skills.betterLayout": "结构、对齐与响应式布局",
+			"editor.skills.betterWriting": "界面文案与提示",
+			"editor.skills.betterAccessibility": "键盘、焦点与辅助技术体验",
+			"editor.skills.betterColors": "配色、对比度与主题",
+			"editor.skills.betterInterface": "统筹界面设计与实现",
+			"editor.skills.interfaceReview": "检查本次改动影响的界面",
+			"editor.select": "选择",
+			"editor.select.child": "进入下一级",
+			"editor.select.child.short": "子级",
+			"editor.select.parent": "回到父元素",
+			"editor.select.parent.short": "父级",
+			"editor.select.previousSibling": "上一兄弟",
+			"editor.select.previousSibling.short": "上一个",
+			"editor.select.sibling": "下一兄弟",
+			"editor.select.sibling.short": "下一个",
+			"editor.select.current": "已选择 {target}",
+			"editor.select.tree": "元素树",
+			"editor.select.children": "{count} 个子元素",
+			"editor.select.empty": "空元素",
+			"editor.select.expand": "展开 {tag}",
+			"editor.select.collapse": "收起 {tag}",
+			"editor.comment": "描述这些更改…",
+			"editor.cancel": "取消",
+			"editor.confirm": "确认注释",
+			"editor.hide": "暂时隐藏编辑器",
+			"editor.show": "显示编辑器",
+			"editor.move": "移动编辑器",
+			"editor.reset": "恢复原值",
+			"editor.invalid": "请输入有效的 CSS 值",
+			"editor.text": "文本内容",
+			"editor.group.fill": "填充与透明度",
+			"editor.group.typography": "字体",
+			"editor.group.size": "尺寸",
+			"editor.group.layout": "布局与对齐",
+			"editor.group.spacing": "边距与内边距",
+			"editor.group.margin": "外边距（Margin）",
+			"editor.group.padding": "内边距（Padding）",
+			"editor.group.border": "边框",
+			"editor.group.effects": "效果",
+			"editor.property.color": "文本颜色",
+			"editor.property.background": "背景",
+			"editor.property.opacity": "透明度",
+			"editor.property.fontFamily": "字体",
+			"editor.property.fontSize": "字号",
+			"editor.property.fontWeight": "字重",
+			"editor.property.fontStyle": "字形",
+			"editor.property.lineHeight": "行高",
+			"editor.property.letterSpacing": "字间距",
+			"editor.property.textAlign": "对齐方式",
+			"editor.property.textDecoration": "文本装饰",
+			"editor.property.textTransform": "大小写",
+			"editor.property.width": "宽度",
+			"editor.property.height": "高度",
+			"editor.property.minWidth": "最小宽度",
+			"editor.property.maxWidth": "最大宽度",
+			"editor.property.minHeight": "最小高度",
+			"editor.property.maxHeight": "最大高度",
+			"editor.property.display": "显示方式",
+			"editor.property.position": "定位方式",
+			"editor.property.top": "上偏移",
+			"editor.property.right": "右偏移",
+			"editor.property.bottom": "下偏移",
+			"editor.property.left": "左偏移",
+			"editor.property.zIndex": "层级",
+			"editor.property.flexDirection": "排列方向",
+			"editor.property.flexWrap": "换行",
+			"editor.property.justifyContent": "主轴对齐",
+			"editor.property.alignItems": "交叉轴对齐",
+			"editor.property.alignContent": "多行对齐",
+			"editor.property.gap": "间距",
+			"editor.property.rowGap": "行间距",
+			"editor.property.columnGap": "列间距",
+			"editor.property.overflow": "溢出",
+			"editor.property.marginTop": "上外边距",
+			"editor.property.marginRight": "右外边距",
+			"editor.property.marginBottom": "下外边距",
+			"editor.property.marginLeft": "左外边距",
+			"editor.property.paddingTop": "上内边距",
+			"editor.property.paddingRight": "右内边距",
+			"editor.property.paddingBottom": "下内边距",
+			"editor.property.paddingLeft": "左内边距",
+			"editor.property.borderRadius": "圆角",
+			"editor.property.borderWidth": "边框宽度",
+			"editor.property.borderStyle": "边框样式",
+			"editor.property.borderColor": "边框颜色",
+			"editor.property.boxShadow": "阴影",
+			"editor.property.transform": "变换",
+			"editor.action.bold": "加粗",
+			"editor.action.italic": "斜体",
+			"editor.action.underline": "下划线",
+			"editor.action.alignLeft": "左对齐",
+			"editor.action.alignCenter": "居中对齐",
+			"editor.action.alignRight": "右对齐",
+			"editor.action.justify": "两端对齐",
+			"editor.action.linkValues": "联动数值",
+			"editor.action.unlinkValues": "取消联动",
+			"editor.action.linkAllValues": "联动四边",
+			"editor.action.unlinkAllValues": "取消四边联动",
+			"editor.action.choosePreset": "选择预设值",
+			"editor.property.cornerTopLeft": "左上圆角",
+			"editor.property.cornerTopRight": "右上圆角",
+			"editor.property.cornerBottomRight": "右下圆角",
+			"editor.property.cornerBottomLeft": "左下圆角",
+			"editor.property.shadowX": "阴影水平偏移",
+			"editor.property.shadowY": "阴影垂直偏移",
+			"editor.property.shadowBlur": "阴影模糊",
+			"editor.property.shadowSpread": "阴影扩散",
+			"editor.property.shadowColor": "阴影颜色",
+			"editor.property.shadowInset": "内阴影",
+			"editor.property.translateX": "水平位移",
+			"editor.property.translateY": "垂直位移",
+			"editor.property.scaleX": "水平缩放",
+			"editor.property.scaleY": "垂直缩放",
+			"editor.property.rotate": "旋转",
+			"editor.rawHint": "高级 CSS 值",
+			"editor.group.constraints": "约束与定位"
 		};
 		/** English dictionary (same keys as {@link zh}). */
 		const en = {
 			"view.tab": "Web Preview",
+			"view.chat": "Chat",
 			"command.skills.description": "Choose one UI optimization Skill",
 			"dock.count": "{count} comments",
 			"dock.details": "Comment context",
@@ -668,6 +677,13 @@
 			"dock.sync.error": "Could not sync browser comments. Try again.",
 			"dock.sync.retry": "Sync failed; click to retry",
 			"dock.clearing": "Clearing comments",
+			"context.title": "Page comments",
+			"context.commentCount": "{count} comments",
+			"context.changeSummary": "Comment change summary",
+			"context.styleCount": "{count} style changes",
+			"context.textCount": "{count} text changes",
+			"context.text": "Text",
+			"context.userInput": "User input",
 			"panel.urlPlaceholder": "Enter a URL and press Enter (e.g. https://example.com)",
 			"panel.urlInvalid": "Enter a valid HTTP(S) URL",
 			"panel.previewUnavailable": "The page could not load through isolated Preview. Check the URL or target site.",
@@ -678,7 +694,7 @@
 			"panel.pick": "Add page comments",
 			"panel.pick.off": "Exit annotation mode",
 			"panel.pick.clear": "Clear comments",
-			"panel.pick.active": "Annotating 路 {url}",
+			"panel.pick.active": "Annotating · {url}",
 			"panel.pick.send": "Send",
 			"panel.pick.sending": "Sending",
 			"panel.pick.sendError": "Could not send page comments. Try again.",
@@ -687,9 +703,9 @@
 			"panel.pick.hint": "Click an element in the page, type a comment and press Enter; Esc exits.",
 			"panel.pick.remove": "Remove element",
 			"panel.pick.limit": "Keep at most {count} comments per page",
-			"panel.comment.float": "Comment, Enter to confirm鈥?,
+			"panel.comment.float": "Comment, Enter to confirm…",
 			"panel.noUrl": "Enter a URL first",
-			"panel.loading": "Starting isolated preview鈥?,
+			"panel.loading": "Starting isolated preview…",
 			"panel.frame": "Web preview",
 			"editor.adjust": "Adjust",
 			"editor.skills.title": "Built-in Skills",
@@ -719,7 +735,7 @@
 			"editor.select.empty": "Empty element",
 			"editor.select.expand": "Expand {tag}",
 			"editor.select.collapse": "Collapse {tag}",
-			"editor.comment": "Describe these changes鈥?,
+			"editor.comment": "Describe these changes…",
 			"editor.cancel": "Cancel",
 			"editor.confirm": "Confirm annotation",
 			"editor.hide": "Temporarily hide editor",
@@ -822,7 +838,7 @@
 		* the annotation dock. Business data (sessions, the conversation) lives in the
 		* object layer; this store carries the navigation draft, pick mode, the
 		* annotation picks shared by both registrations, and the focus signal the dock
-		* sends to the preview tab (detail-row click 鈫?locate the element in the iframe).
+		* sends to the preview tab (detail-row click → locate the element in the iframe).
 		*/
 		/**
 		* Store factory: state + the complete write set. Components write only
@@ -966,62 +982,62 @@
 		}
 		//#endregion
 		//#region \0dsh-web-review-css:src/client/InspectorControls.module.css.mjs
-		const css$6 = ".TMoB-q_section{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014)}.TMoB-q_sectionHeader{width:100%;min-height:36px;color:var(--dsw-alias-label-primary,#17191c);cursor:pointer;text-align:left;background:0 0;border:0;justify-content:space-between;align-items:center;padding:8px 12px;font:600 12px/18px system-ui,sans-serif;display:flex}.TMoB-q_sectionHeader:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.TMoB-q_sectionChevron{color:var(--dsw-alias-label-tertiary,#747a82);transition:transform .12s}.TMoB-q_sectionChevronOpen{transform:rotate(180deg)}.TMoB-q_sectionBody{gap:4px;padding:2px 12px 10px;display:grid}.TMoB-q_row{grid-template-columns:minmax(72px,1fr) minmax(154px,auto);align-items:center;gap:8px;min-height:34px;display:grid}.TMoB-q_rowWide{grid-template-columns:1fr;gap:4px;padding:3px 0}.TMoB-q_rowWide .TMoB-q_rowControl{grid-template-columns:minmax(0,1fr) 24px;justify-self:stretch;width:100%;min-width:0}.TMoB-q_rowLabel{color:var(--dsw-alias-label-secondary,#555a62);cursor:ew-resize;text-overflow:ellipsis;white-space:nowrap;font:12px/18px system-ui,sans-serif;overflow:hidden}.TMoB-q_rowLabelStatic{cursor:default}.TMoB-q_rowControl{grid-template-columns:minmax(126px,auto) 24px;justify-self:end;align-items:center;gap:4px;min-width:154px;display:grid}.TMoB-q_rowControl>:first-child{justify-self:end}.TMoB-q_resetPlaceholder{width:24px;height:24px;display:block}.TMoB-q_reset{width:24px;height:24px;color:var(--dsw-alias-label-tertiary,#747a82);cursor:pointer;background:0 0;border:0;border-radius:6px;flex:none;place-items:center;padding:0;display:grid}.TMoB-q_reset:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.TMoB-q_field,.TMoB-q_menuTrigger,.TMoB-q_colorTrigger{background:var(--dsw-alias-bg-module-platform,#f5f6f7);height:28px;color:var(--dsw-alias-label-primary,#17191c);font:12px/18px var(--ds-font-family-code,ui-monospace, monospace);border:1px solid #0000;border-radius:7px;outline:0}.TMoB-q_field{text-align:right;flex:0 0 126px;width:126px;min-width:0;padding:0 8px}.TMoB-q_textArea{resize:vertical;background:var(--dsw-alias-bg-module-platform,#f5f6f7);width:100%;min-width:0;min-height:36px;max-height:132px;color:var(--dsw-alias-label-primary,#17191c);font:12px/18px var(--ds-font-family-code,ui-monospace, monospace);border:1px solid #0000;border-radius:7px;outline:0;padding:8px}.TMoB-q_textArea:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.TMoB-q_textArea:focus{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.TMoB-q_field:hover,.TMoB-q_menuTrigger:hover,.TMoB-q_colorTrigger:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.TMoB-q_field:focus,.TMoB-q_menuTrigger:focus-visible,.TMoB-q_colorTrigger:focus-visible,.TMoB-q_toggle:focus-visible,.TMoB-q_sectionHeader:focus-visible,.TMoB-q_reset:focus-visible{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.TMoB-q_invalid{border-color:var(--dsw-alias-state-error-primary,#ec1313)}.TMoB-q_numberWrap{flex:0 0 126px;align-items:center;width:126px;min-width:0;display:inline-flex;position:relative}.TMoB-q_numberHandle{z-index:2;width:30px;height:28px;color:var(--dsw-alias-label-tertiary,#747a82);cursor:ew-resize;user-select:none;touch-action:none;background:0 0;border:0;place-items:center;font:500 10px/1 system-ui,sans-serif;display:grid;position:absolute;inset:0 auto 0 0}.TMoB-q_numberHandle:disabled{opacity:.45;cursor:default}.TMoB-q_numberWrap .TMoB-q_field{box-sizing:border-box;flex-basis:100%;width:100%;min-width:0;padding-left:32px}.TMoB-q_numberWrapWithOptions .TMoB-q_field{padding-right:26px}.TMoB-q_numberPreset{z-index:3;width:24px;height:28px;display:inline-flex;position:absolute;top:0;right:0}.TMoB-q_numberPresetTrigger{border:0;border-left:1px solid var(--dsw-alias-border-l1,#00000014);width:24px;height:28px;color:var(--dsw-alias-label-tertiary,#747a82);cursor:pointer;background:0 0;border-radius:0 7px 7px 0;place-items:center;padding:0;display:grid}.TMoB-q_numberPresetTrigger:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.TMoB-q_numberPresetTrigger:focus-visible{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary,#4176e6);outline:0}.TMoB-q_numberPresetChevron{transition:transform .12s}.TMoB-q_numberPresetChevronOpen{transform:rotate(180deg)}.TMoB-q_menuRoot{display:inline-flex}.TMoB-q_menuTrigger{cursor:pointer;flex:0 0 126px;justify-content:flex-end;align-items:center;gap:4px;width:126px;padding:0 6px 0 8px;display:inline-flex}.TMoB-q_menuValue{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.TMoB-q_menuChevron{color:var(--dsw-alias-label-tertiary,#747a82);flex:none}.TMoB-q_segments{background:var(--dsw-alias-bg-module-platform,#f5f6f7);border-radius:8px;padding:2px;display:inline-flex;overflow:hidden}.TMoB-q_toggleGroup{align-items:center;gap:2px;display:inline-flex}.TMoB-q_toggle{min-width:28px;height:24px;color:var(--dsw-alias-label-secondary,#555a62);cursor:pointer;background:0 0;border:0;border-radius:6px;place-items:center;padding:0 6px;font:600 12px/1 system-ui,sans-serif;display:grid}.TMoB-q_toggle:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.TMoB-q_toggleActive{background:var(--dsw-alias-interactive-bg-active,#2631481f);color:var(--dsw-alias-label-primary,#17191c)}.TMoB-q_italicGlyph{font-family:Georgia,serif;font-style:italic}.TMoB-q_underlineGlyph{text-decoration:underline}.TMoB-q_colorTrigger{cursor:pointer;flex:0 0 126px;justify-content:flex-end;align-items:center;gap:7px;width:126px;padding:0 7px;display:inline-flex}.TMoB-q_swatch{background-image:linear-gradient(45deg,#ddd 25%,#0000 25%),linear-gradient(-45deg,#ddd 25%,#0000 25%),linear-gradient(45deg,#0000 75%,#ddd 75%),linear-gradient(-45deg,#0000 75%,#ddd 75%);background-position:0 0,0 4px,4px -4px,-4px 0;background-size:8px 8px;border:1px solid #00000029;border-radius:5px;flex:none;width:18px;height:18px}.TMoB-q_swatchFill{border-radius:4px;width:100%;height:100%;display:block}.TMoB-q_colorValue{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.TMoB-q_popover{z-index:1200;box-sizing:border-box;border:1px solid var(--dsw-alias-border-inverted,#00000014);background:var(--dsw-specific-menu,#fff);width:min(236px,100vw - 16px);box-shadow:var(--dsw-shadow-lv3,0 12px 32px #0000002e);border-radius:12px;padding:10px;position:fixed}.TMoB-q_spectrum{cursor:pointer;background:0 0;border:0;border-radius:8px;width:100%;height:42px;padding:0}.TMoB-q_popoverRow{grid-template-columns:minmax(0,1fr) minmax(0,72px);gap:7px;margin-top:8px;display:grid}.TMoB-q_popoverRow label{min-width:0;display:block}.TMoB-q_popoverLabel{color:var(--dsw-alias-label-tertiary,#747a82);margin-bottom:3px;font:11px/16px system-ui,sans-serif;display:block}.TMoB-q_popover .TMoB-q_numberWrap,.TMoB-q_popover .TMoB-q_field{box-sizing:border-box;flex-basis:100%;width:100%;min-width:0}.TMoB-q_boxModelWrap{gap:4px;width:100%;min-width:0;display:grid;position:relative}.TMoB-q_boxModelMergeReady{gap:20px}.TMoB-q_boxModelAllLinked{gap:8px}.TMoB-q_rowControl>.TMoB-q_boxModelWrap{justify-self:stretch}.TMoB-q_boxAxis{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);align-items:center;gap:5px;min-width:0;display:grid}.TMoB-q_boxAxis .TMoB-q_numberWrap,.TMoB-q_boxAxis .TMoB-q_field{flex-basis:auto;width:100%;min-width:0}.TMoB-q_boxAxis .TMoB-q_numberHandle{width:26px}.TMoB-q_boxAxis .TMoB-q_numberWrap .TMoB-q_field{padding-left:27px;padding-right:7px}.TMoB-q_boxAxis .TMoB-q_numberWrapWithOptions .TMoB-q_field{padding-right:25px}.TMoB-q_boxAxis>.TMoB-q_toggle{width:32px;min-width:32px;height:28px;padding:0}.TMoB-q_boxAllLink{z-index:3;background:var(--dsw-specific-menu,#fff);place-items:center;padding:2px 0;display:grid;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}.TMoB-q_boxAllLink .TMoB-q_toggle{width:32px;min-width:32px;height:28px;padding:0}.TMoB-q_rawHint{color:var(--dsw-alias-label-tertiary,#747a82);font:10px/14px system-ui,sans-serif}@container (width<=350px){.TMoB-q_row{grid-template-columns:1fr;gap:3px;padding:3px 0}.TMoB-q_rowControl{grid-template-columns:minmax(0,1fr) 24px;justify-self:stretch;width:100%;min-width:0}.TMoB-q_rowControl>.TMoB-q_field,.TMoB-q_rowControl>.TMoB-q_numberWrap,.TMoB-q_rowControl>.TMoB-q_menuTrigger,.TMoB-q_rowControl>.TMoB-q_colorTrigger{flex-basis:min(100%,180px);width:min(100%,180px)}.TMoB-q_boxModelWrap{width:100%}}@media (prefers-reduced-motion:reduce){.TMoB-q_numberPresetChevron{transition:none}}";
-		const tagId$6 = "@canglongcl/dsh-web-review/InspectorControls.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
+		const css$7 = ".TMoB-q_section{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014)}.TMoB-q_sectionHeader{width:100%;min-height:36px;color:var(--dsw-alias-label-primary,#17191c);cursor:pointer;text-align:left;background:0 0;border:0;justify-content:space-between;align-items:center;padding:8px 12px;font:600 12px/18px system-ui,sans-serif;display:flex}.TMoB-q_sectionHeader:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.TMoB-q_sectionChevron{color:var(--dsw-alias-label-tertiary,#747a82);transition:transform .12s}.TMoB-q_sectionChevronOpen{transform:rotate(180deg)}.TMoB-q_sectionBody{gap:4px;padding:2px 12px 10px;display:grid}.TMoB-q_row{grid-template-columns:minmax(72px,1fr) minmax(154px,auto);align-items:center;gap:8px;min-height:34px;display:grid}.TMoB-q_rowWide{grid-template-columns:1fr;gap:4px;padding:3px 0}.TMoB-q_rowWide .TMoB-q_rowControl{grid-template-columns:minmax(0,1fr) 24px;justify-self:stretch;width:100%;min-width:0}.TMoB-q_rowLabel{color:var(--dsw-alias-label-secondary,#555a62);cursor:ew-resize;text-overflow:ellipsis;white-space:nowrap;font:12px/18px system-ui,sans-serif;overflow:hidden}.TMoB-q_rowLabelStatic{cursor:default}.TMoB-q_rowControl{grid-template-columns:minmax(126px,auto) 24px;justify-self:end;align-items:center;gap:4px;min-width:154px;display:grid}.TMoB-q_rowControl>:first-child{justify-self:end}.TMoB-q_resetPlaceholder{width:24px;height:24px;display:block}.TMoB-q_reset{width:24px;height:24px;color:var(--dsw-alias-label-tertiary,#747a82);cursor:pointer;background:0 0;border:0;border-radius:6px;flex:none;place-items:center;padding:0;display:grid}.TMoB-q_reset:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.TMoB-q_field,.TMoB-q_menuTrigger,.TMoB-q_colorTrigger{background:var(--dsw-alias-bg-module-platform,#f5f6f7);height:28px;color:var(--dsw-alias-label-primary,#17191c);font:12px/18px var(--ds-font-family-code,ui-monospace, monospace);border:1px solid #0000;border-radius:7px;outline:0}.TMoB-q_field{text-align:right;flex:0 0 126px;width:126px;min-width:0;padding:0 8px}.TMoB-q_textArea{resize:vertical;background:var(--dsw-alias-bg-module-platform,#f5f6f7);width:100%;min-width:0;min-height:36px;max-height:132px;color:var(--dsw-alias-label-primary,#17191c);font:12px/18px var(--ds-font-family-code,ui-monospace, monospace);border:1px solid #0000;border-radius:7px;outline:0;padding:8px}.TMoB-q_textArea:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.TMoB-q_textArea:focus{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.TMoB-q_field:hover,.TMoB-q_menuTrigger:hover,.TMoB-q_colorTrigger:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.TMoB-q_field:focus,.TMoB-q_menuTrigger:focus-visible,.TMoB-q_colorTrigger:focus-visible,.TMoB-q_toggle:focus-visible,.TMoB-q_sectionHeader:focus-visible,.TMoB-q_reset:focus-visible{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.TMoB-q_invalid{border-color:var(--dsw-alias-state-error-primary,#ec1313)}.TMoB-q_numberWrap{flex:0 0 126px;align-items:center;width:126px;min-width:0;display:inline-flex;position:relative}.TMoB-q_numberHandle{z-index:2;width:30px;height:28px;color:var(--dsw-alias-label-tertiary,#747a82);cursor:ew-resize;user-select:none;touch-action:none;background:0 0;border:0;place-items:center;font:500 10px/1 system-ui,sans-serif;display:grid;position:absolute;inset:0 auto 0 0}.TMoB-q_numberHandle:disabled{opacity:.45;cursor:default}.TMoB-q_numberWrap .TMoB-q_field{box-sizing:border-box;flex-basis:100%;width:100%;min-width:0;padding-left:32px}.TMoB-q_numberWrapWithOptions .TMoB-q_field{padding-right:26px}.TMoB-q_numberPreset{z-index:3;width:24px;height:28px;display:inline-flex;position:absolute;top:0;right:0}.TMoB-q_numberPresetTrigger{border:0;border-left:1px solid var(--dsw-alias-border-l1,#00000014);width:24px;height:28px;color:var(--dsw-alias-label-tertiary,#747a82);cursor:pointer;background:0 0;border-radius:0 7px 7px 0;place-items:center;padding:0;display:grid}.TMoB-q_numberPresetTrigger:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.TMoB-q_numberPresetTrigger:focus-visible{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:inset 0 0 0 1px var(--dsw-alias-brand-primary,#4176e6);outline:0}.TMoB-q_numberPresetChevron{transition:transform .12s}.TMoB-q_numberPresetChevronOpen{transform:rotate(180deg)}.TMoB-q_menuRoot{display:inline-flex}.TMoB-q_menuTrigger{cursor:pointer;flex:0 0 126px;justify-content:flex-end;align-items:center;gap:4px;width:126px;padding:0 6px 0 8px;display:inline-flex}.TMoB-q_menuValue{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.TMoB-q_menuChevron{color:var(--dsw-alias-label-tertiary,#747a82);flex:none}.TMoB-q_segments{background:var(--dsw-alias-bg-module-platform,#f5f6f7);border-radius:8px;padding:2px;display:inline-flex;overflow:hidden}.TMoB-q_toggleGroup{align-items:center;gap:2px;display:inline-flex}.TMoB-q_toggle{min-width:28px;height:24px;color:var(--dsw-alias-label-secondary,#555a62);cursor:pointer;background:0 0;border:0;border-radius:6px;place-items:center;padding:0 6px;font:600 12px/1 system-ui,sans-serif;display:grid}.TMoB-q_toggle:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.TMoB-q_toggleActive{background:var(--dsw-alias-interactive-bg-active,#2631481f);color:var(--dsw-alias-label-primary,#17191c)}.TMoB-q_italicGlyph{font-family:Georgia,serif;font-style:italic}.TMoB-q_underlineGlyph{text-decoration:underline}.TMoB-q_colorTrigger{cursor:pointer;flex:0 0 126px;justify-content:flex-end;align-items:center;gap:7px;width:126px;padding:0 7px;display:inline-flex}.TMoB-q_swatch{background-image:linear-gradient(45deg,#ddd 25%,#0000 25%),linear-gradient(-45deg,#ddd 25%,#0000 25%),linear-gradient(45deg,#0000 75%,#ddd 75%),linear-gradient(-45deg,#0000 75%,#ddd 75%);background-position:0 0,0 4px,4px -4px,-4px 0;background-size:8px 8px;border:1px solid #00000029;border-radius:5px;flex:none;width:18px;height:18px}.TMoB-q_swatchFill{border-radius:4px;width:100%;height:100%;display:block}.TMoB-q_colorValue{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.TMoB-q_popover{z-index:1200;box-sizing:border-box;border:1px solid var(--dsw-alias-border-inverted,#00000014);background:var(--dsw-specific-menu,#fff);width:min(236px,100vw - 16px);box-shadow:var(--dsw-shadow-lv3,0 12px 32px #0000002e);border-radius:12px;padding:10px;position:fixed}.TMoB-q_spectrum{cursor:pointer;background:0 0;border:0;border-radius:8px;width:100%;height:42px;padding:0}.TMoB-q_popoverRow{grid-template-columns:minmax(0,1fr) minmax(0,72px);gap:7px;margin-top:8px;display:grid}.TMoB-q_popoverRow label{min-width:0;display:block}.TMoB-q_popoverLabel{color:var(--dsw-alias-label-tertiary,#747a82);margin-bottom:3px;font:11px/16px system-ui,sans-serif;display:block}.TMoB-q_popover .TMoB-q_numberWrap,.TMoB-q_popover .TMoB-q_field{box-sizing:border-box;flex-basis:100%;width:100%;min-width:0}.TMoB-q_boxModelWrap{gap:4px;width:100%;min-width:0;display:grid;position:relative}.TMoB-q_boxModelMergeReady{gap:20px}.TMoB-q_boxModelAllLinked{gap:8px}.TMoB-q_rowControl>.TMoB-q_boxModelWrap{justify-self:stretch}.TMoB-q_boxAxis{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);align-items:center;gap:5px;min-width:0;display:grid}.TMoB-q_boxAxis .TMoB-q_numberWrap,.TMoB-q_boxAxis .TMoB-q_field{flex-basis:auto;width:100%;min-width:0}.TMoB-q_boxAxis .TMoB-q_numberHandle{width:26px}.TMoB-q_boxAxis .TMoB-q_numberWrap .TMoB-q_field{padding-left:27px;padding-right:7px}.TMoB-q_boxAxis .TMoB-q_numberWrapWithOptions .TMoB-q_field{padding-right:25px}.TMoB-q_boxAxis>.TMoB-q_toggle{width:32px;min-width:32px;height:28px;padding:0}.TMoB-q_boxAllLink{z-index:3;background:var(--dsw-specific-menu,#fff);place-items:center;padding:2px 0;display:grid;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}.TMoB-q_boxAllLink .TMoB-q_toggle{width:32px;min-width:32px;height:28px;padding:0}.TMoB-q_rawHint{color:var(--dsw-alias-label-tertiary,#747a82);font:10px/14px system-ui,sans-serif}@container (width<=350px){.TMoB-q_row{grid-template-columns:1fr;gap:3px;padding:3px 0}.TMoB-q_rowControl{grid-template-columns:minmax(0,1fr) 24px;justify-self:stretch;width:100%;min-width:0}.TMoB-q_rowControl>.TMoB-q_field,.TMoB-q_rowControl>.TMoB-q_numberWrap,.TMoB-q_rowControl>.TMoB-q_menuTrigger,.TMoB-q_rowControl>.TMoB-q_colorTrigger{flex-basis:min(100%,180px);width:min(100%,180px)}.TMoB-q_boxModelWrap{width:100%}}@media (prefers-reduced-motion:reduce){.TMoB-q_numberPresetChevron{transition:none}}";
+		const tagId$7 = "@canglongcl/dsh-web-review/InspectorControls.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$7) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@canglongcl/dsh-web-review";
-			tag.dataset.pluginCss = tagId$6;
-			tag.textContent = css$6;
+			tag.dataset.pluginCss = tagId$7;
+			tag.textContent = css$7;
 			document.head.appendChild(tag);
 		}
 		var InspectorControls_module_css_default = {
-			"rowWide": "TMoB-q_rowWide",
-			"swatch": "TMoB-q_swatch",
-			"spectrum": "TMoB-q_spectrum",
-			"section": "TMoB-q_section",
-			"sectionChevron": "TMoB-q_sectionChevron",
-			"rowControl": "TMoB-q_rowControl",
-			"numberWrap": "TMoB-q_numberWrap",
-			"menuChevron": "TMoB-q_menuChevron",
-			"rawHint": "TMoB-q_rawHint",
-			"sectionHeader": "TMoB-q_sectionHeader",
-			"sectionBody": "TMoB-q_sectionBody",
-			"underlineGlyph": "TMoB-q_underlineGlyph",
-			"invalid": "TMoB-q_invalid",
-			"toggleActive": "TMoB-q_toggleActive",
-			"menuValue": "TMoB-q_menuValue",
-			"reset": "TMoB-q_reset",
-			"boxModelAllLinked": "TMoB-q_boxModelAllLinked",
 			"swatchFill": "TMoB-q_swatchFill",
-			"menuTrigger": "TMoB-q_menuTrigger",
-			"popoverLabel": "TMoB-q_popoverLabel",
-			"numberHandle": "TMoB-q_numberHandle",
-			"sectionChevronOpen": "TMoB-q_sectionChevronOpen",
-			"rowLabelStatic": "TMoB-q_rowLabelStatic",
-			"field": "TMoB-q_field",
-			"numberPresetTrigger": "TMoB-q_numberPresetTrigger",
-			"numberPresetChevron": "TMoB-q_numberPresetChevron",
-			"segments": "TMoB-q_segments",
+			"invalid": "TMoB-q_invalid",
 			"boxAxis": "TMoB-q_boxAxis",
-			"boxModelMergeReady": "TMoB-q_boxModelMergeReady",
-			"rowLabel": "TMoB-q_rowLabel",
-			"italicGlyph": "TMoB-q_italicGlyph",
-			"popover": "TMoB-q_popover",
-			"boxAllLink": "TMoB-q_boxAllLink",
-			"menuRoot": "TMoB-q_menuRoot",
-			"popoverRow": "TMoB-q_popoverRow",
-			"row": "TMoB-q_row",
-			"resetPlaceholder": "TMoB-q_resetPlaceholder",
-			"toggle": "TMoB-q_toggle",
-			"textArea": "TMoB-q_textArea",
 			"colorValue": "TMoB-q_colorValue",
-			"toggleGroup": "TMoB-q_toggleGroup",
-			"colorTrigger": "TMoB-q_colorTrigger",
+			"segments": "TMoB-q_segments",
+			"rowLabel": "TMoB-q_rowLabel",
+			"boxAllLink": "TMoB-q_boxAllLink",
+			"rawHint": "TMoB-q_rawHint",
+			"numberPresetTrigger": "TMoB-q_numberPresetTrigger",
+			"field": "TMoB-q_field",
+			"numberWrap": "TMoB-q_numberWrap",
+			"menuTrigger": "TMoB-q_menuTrigger",
+			"textArea": "TMoB-q_textArea",
+			"toggleActive": "TMoB-q_toggleActive",
 			"boxModelWrap": "TMoB-q_boxModelWrap",
-			"numberPresetChevronOpen": "TMoB-q_numberPresetChevronOpen",
+			"boxModelAllLinked": "TMoB-q_boxModelAllLinked",
+			"popoverLabel": "TMoB-q_popoverLabel",
+			"rowWide": "TMoB-q_rowWide",
+			"toggleGroup": "TMoB-q_toggleGroup",
+			"row": "TMoB-q_row",
 			"numberWrapWithOptions": "TMoB-q_numberWrapWithOptions",
-			"numberPreset": "TMoB-q_numberPreset"
+			"sectionChevron": "TMoB-q_sectionChevron",
+			"section": "TMoB-q_section",
+			"sectionChevronOpen": "TMoB-q_sectionChevronOpen",
+			"toggle": "TMoB-q_toggle",
+			"menuRoot": "TMoB-q_menuRoot",
+			"swatch": "TMoB-q_swatch",
+			"popover": "TMoB-q_popover",
+			"numberHandle": "TMoB-q_numberHandle",
+			"menuChevron": "TMoB-q_menuChevron",
+			"popoverRow": "TMoB-q_popoverRow",
+			"rowControl": "TMoB-q_rowControl",
+			"rowLabelStatic": "TMoB-q_rowLabelStatic",
+			"spectrum": "TMoB-q_spectrum",
+			"sectionBody": "TMoB-q_sectionBody",
+			"reset": "TMoB-q_reset",
+			"boxModelMergeReady": "TMoB-q_boxModelMergeReady",
+			"numberPresetChevronOpen": "TMoB-q_numberPresetChevronOpen",
+			"italicGlyph": "TMoB-q_italicGlyph",
+			"colorTrigger": "TMoB-q_colorTrigger",
+			"numberPresetChevron": "TMoB-q_numberPresetChevron",
+			"numberPreset": "TMoB-q_numberPreset",
+			"sectionHeader": "TMoB-q_sectionHeader",
+			"underlineGlyph": "TMoB-q_underlineGlyph",
+			"resetPlaceholder": "TMoB-q_resetPlaceholder",
+			"menuValue": "TMoB-q_menuValue"
 		};
 		//#endregion
 		//#region src/client/InspectorControls.tsx
@@ -1214,7 +1230,7 @@
 				children: kind === "bold" ? "B" : kind === "italic" ? "I" : "U"
 			});
 		}
-		function ScrubNumber({ label, value, onChange, onScrubChange, step = 1, min, max, glyph = "鈫?, fallbackValue, invalid = false, options = [], presetLabel }) {
+		function ScrubNumber({ label, value, onChange, onScrubChange, step = 1, min, max, glyph = "↔", fallbackValue, invalid = false, options = [], presetLabel }) {
 			const drag = (0, react.useRef)(null);
 			const scrubChangeRef = (0, react.useRef)(onScrubChange);
 			scrubChangeRef.current = onScrubChange;
@@ -1274,8 +1290,8 @@
 						type: "button",
 						className: InspectorControls_module_css_default.numberHandle,
 						"data-webview-scrub-handle": "",
-						"aria-label": `${label} 路 鎷栧姩璋冩暣`,
-						title: canScrub ? `${label} 路 鎷栧姩璋冩暣` : `${label} 路 褰撳墠鍊间粎鏀寔鏂囨湰缂栬緫`,
+						"aria-label": `${label} · 拖动调整`,
+						title: canScrub ? `${label} · 拖动调整` : `${label} · 当前值仅支持文本编辑`,
 						disabled: !canScrub,
 						onPointerDown: (event) => {
 							const parsed = numericValue();
@@ -1358,7 +1374,7 @@
 								ref: presetRef,
 								type: "button",
 								className: InspectorControls_module_css_default.numberPresetTrigger,
-								"aria-label": `${label} 路 ${presetLabel ?? ""}`.trim(),
+								"aria-label": `${label} · ${presetLabel ?? ""}`.trim(),
 								"aria-haspopup": "menu",
 								"aria-expanded": presetOpen,
 								onClick: () => {
@@ -1445,7 +1461,7 @@
 				style: position,
 				role: "dialog",
 				"aria-modal": "true",
-				"aria-label": `${label} 路 棰滆壊閫夋嫨鍣╜,
+				"aria-label": `${label} · 颜色选择器`,
 				onKeyDown: (event) => {
 					if (event.key === "Escape") {
 						event.preventDefault();
@@ -1467,7 +1483,7 @@
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 					className: InspectorControls_module_css_default.spectrum,
 					type: "color",
-					"aria-label": `${label} 路 鑹茶氨`,
+					"aria-label": `${label} · 色谱`,
 					value: hexOf(color),
 					onChange: (event) => {
 						const next = parseColor(event.target.value);
@@ -1483,7 +1499,7 @@
 						children: "Hex"
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 						className: InspectorControls_module_css_default.field,
-						"aria-label": `${label} 路 Hex`,
+						"aria-label": `${label} · Hex`,
 						value: parsed === null ? value : hexOf(color),
 						onChange: (event) => {
 							const next = parseColor(event.target.value);
@@ -1497,7 +1513,7 @@
 						className: InspectorControls_module_css_default.popoverLabel,
 						children: "Alpha"
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ScrubNumber, {
-						label: `${label} 路 閫忔槑搴,
+						label: `${label} · 透明度`,
 						value: `${String(Math.round(color.a * 100))}%`,
 						min: 0,
 						max: 100,
@@ -1531,10 +1547,10 @@
 		}
 		function BoxModelControl({ label, sideLabels, values, links, min, options = [], presetLabel, linkLabel, unlinkLabel, linkAllLabel, unlinkAllLabel, onLinkChange, onChange, onScrubChange }) {
 			const glyphs = [
-				"鈫?,
-				"鈫?,
-				"鈫?,
-				"鈫?
+				"↑",
+				"→",
+				"↓",
+				"←"
 			];
 			const update = (index, next) => {
 				onChange(index, next);
@@ -1552,7 +1568,7 @@
 			const field = (index) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ScrubNumber, {
 				label: sideLabels[index] ?? label,
 				value: values[index] ?? "",
-				glyph: glyphs[index] ?? "鈫?,
+				glyph: glyphs[index] ?? "↔",
 				...min === void 0 ? {} : { min },
 				options,
 				...presetLabel === void 0 ? {} : { presetLabel },
@@ -1564,7 +1580,7 @@
 			const axis = (first, second, key) => {
 				const linked = links[key];
 				const sides = `${sideLabels[first] ?? label} / ${sideLabels[second] ?? label}`;
-				const buttonLabel = `${linked ? unlinkLabel : linkLabel} 路 ${sides}`;
+				const buttonLabel = `${linked ? unlinkLabel : linkLabel} · ${sides}`;
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 					className: InspectorControls_module_css_default.boxAxis,
 					children: [
@@ -1719,12 +1735,12 @@
 					number("line-height", "editor.property.lineHeight", {
 						step: 1,
 						min: 0,
-						glyph: "鈫?,
+						glyph: "↕",
 						options: ["normal"]
 					}),
 					number("letter-spacing", "editor.property.letterSpacing", {
 						step: .1,
-						glyph: "鈫?,
+						glyph: "↔",
 						options: ["normal"]
 					}),
 					menu("text-align", "editor.property.textAlign", [
@@ -1966,34 +1982,34 @@
 		}
 		//#endregion
 		//#region \0dsh-web-review-css:src/client/UiSkillSelector.module.css.mjs
-		const css$5 = ".WI9gSG_root{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014);position:relative}.WI9gSG_trigger{width:100%;min-height:36px;color:var(--dsw-alias-label-primary,#17191c);cursor:pointer;text-align:left;background:0 0;border:0;outline:0;align-items:center;gap:6px;padding:8px 12px;font:600 12px/18px system-ui,sans-serif;display:flex}.WI9gSG_trigger:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.WI9gSG_trigger:focus-visible{box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.WI9gSG_title{flex:1;min-width:0}.WI9gSG_count{color:var(--dsw-alias-label-tertiary,#747a82);flex:none;font-weight:500}.WI9gSG_chevron,.WI9gSG_chevronOpen{color:var(--dsw-alias-label-tertiary,#747a82);flex:none;transition:transform .12s}.WI9gSG_chevronOpen{transform:rotate(180deg)}.WI9gSG_sectionBody{gap:4px;padding:2px 12px 10px;display:grid}.WI9gSG_command{color:var(--dsw-alias-label-tertiary,#747a82);margin:0;padding:2px 0 0;font:11px/16px system-ui,sans-serif}.WI9gSG_field{background:var(--dsw-alias-bg-module-platform,#f5f6f7);width:100%;min-width:0;height:32px;color:var(--dsw-alias-label-primary,#17191c);cursor:pointer;text-align:left;border:1px solid #0000;border-radius:7px;outline:0;align-items:center;gap:6px;padding:0 8px;font:12px/18px system-ui,sans-serif;display:flex}.WI9gSG_field:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.WI9gSG_field:focus-visible{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.WI9gSG_fieldValue{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.WI9gSG_fieldChevron,.WI9gSG_fieldChevronOpen{color:var(--dsw-alias-label-tertiary,#747a82);flex:none;transition:transform .12s}.WI9gSG_fieldChevronOpen{transform:rotate(180deg)}.WI9gSG_panel{z-index:1100;box-sizing:border-box;border:1px solid var(--dsw-alias-border-inverted,#00000014);background:var(--dsw-specific-menu,#fff);box-shadow:var(--dsw-shadow-lv3,0 8px 24px #00000024);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:12px;padding:4px;position:fixed;overflow:hidden}.WI9gSG_list{flex-direction:column;max-height:330px;display:flex;overflow:auto}.WI9gSG_option{cursor:pointer;border:0;border-radius:10px;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:8px;min-height:40px;padding:6px 10px;display:grid}.WI9gSG_option:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.WI9gSG_option:focus-within{box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.WI9gSG_option input{width:16px;height:16px;accent-color:var(--dsw-alias-brand-primary,#4176e6);margin:0}.WI9gSG_optionText{min-width:0;display:block}.WI9gSG_optionName{color:var(--dsw-alias-label-primary,#17191c);font:600 12px/17px var(--ds-font-family-code,ui-monospace, monospace);text-overflow:ellipsis;white-space:nowrap;display:block;overflow:hidden}.WI9gSG_optionDescription{color:var(--dsw-alias-label-secondary,#555a62);text-overflow:ellipsis;white-space:nowrap;font:11px/16px system-ui,sans-serif;display:block;overflow:hidden}@media (prefers-reduced-motion:reduce){.WI9gSG_chevron,.WI9gSG_chevronOpen,.WI9gSG_fieldChevron,.WI9gSG_fieldChevronOpen{transition:none}}";
-		const tagId$5 = "@canglongcl/dsh-web-review/UiSkillSelector.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
+		const css$6 = ".WI9gSG_root{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014);position:relative}.WI9gSG_trigger{width:100%;min-height:36px;color:var(--dsw-alias-label-primary,#17191c);cursor:pointer;text-align:left;background:0 0;border:0;outline:0;align-items:center;gap:6px;padding:8px 12px;font:600 12px/18px system-ui,sans-serif;display:flex}.WI9gSG_trigger:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.WI9gSG_trigger:focus-visible{box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.WI9gSG_title{flex:1;min-width:0}.WI9gSG_count{color:var(--dsw-alias-label-tertiary,#747a82);flex:none;font-weight:500}.WI9gSG_chevron,.WI9gSG_chevronOpen{color:var(--dsw-alias-label-tertiary,#747a82);flex:none;transition:transform .12s}.WI9gSG_chevronOpen{transform:rotate(180deg)}.WI9gSG_sectionBody{gap:4px;padding:2px 12px 10px;display:grid}.WI9gSG_command{color:var(--dsw-alias-label-tertiary,#747a82);margin:0;padding:2px 0 0;font:11px/16px system-ui,sans-serif}.WI9gSG_field{background:var(--dsw-alias-bg-module-platform,#f5f6f7);width:100%;min-width:0;height:32px;color:var(--dsw-alias-label-primary,#17191c);cursor:pointer;text-align:left;border:1px solid #0000;border-radius:7px;outline:0;align-items:center;gap:6px;padding:0 8px;font:12px/18px system-ui,sans-serif;display:flex}.WI9gSG_field:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814)}.WI9gSG_field:focus-visible{border-color:var(--dsw-alias-brand-primary,#4176e6);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.WI9gSG_fieldValue{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.WI9gSG_fieldChevron,.WI9gSG_fieldChevronOpen{color:var(--dsw-alias-label-tertiary,#747a82);flex:none;transition:transform .12s}.WI9gSG_fieldChevronOpen{transform:rotate(180deg)}.WI9gSG_panel{z-index:1100;box-sizing:border-box;border:1px solid var(--dsw-alias-border-inverted,#00000014);background:var(--dsw-specific-menu,#fff);box-shadow:var(--dsw-shadow-lv3,0 8px 24px #00000024);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2);border-radius:12px;padding:4px;position:fixed;overflow:hidden}.WI9gSG_list{flex-direction:column;max-height:330px;display:flex;overflow:auto}.WI9gSG_option{cursor:pointer;border:0;border-radius:10px;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:8px;min-height:40px;padding:6px 10px;display:grid}.WI9gSG_option:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.WI9gSG_option:focus-within{box-shadow:0 0 0 1px var(--dsw-alias-brand-primary,#4176e6)}.WI9gSG_option input{width:16px;height:16px;accent-color:var(--dsw-alias-brand-primary,#4176e6);margin:0}.WI9gSG_optionText{min-width:0;display:block}.WI9gSG_optionName{color:var(--dsw-alias-label-primary,#17191c);font:600 12px/17px var(--ds-font-family-code,ui-monospace, monospace);text-overflow:ellipsis;white-space:nowrap;display:block;overflow:hidden}.WI9gSG_optionDescription{color:var(--dsw-alias-label-secondary,#555a62);text-overflow:ellipsis;white-space:nowrap;font:11px/16px system-ui,sans-serif;display:block;overflow:hidden}@media (prefers-reduced-motion:reduce){.WI9gSG_chevron,.WI9gSG_chevronOpen,.WI9gSG_fieldChevron,.WI9gSG_fieldChevronOpen{transition:none}}";
+		const tagId$6 = "@canglongcl/dsh-web-review/UiSkillSelector.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$6) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@canglongcl/dsh-web-review";
-			tag.dataset.pluginCss = tagId$5;
-			tag.textContent = css$5;
+			tag.dataset.pluginCss = tagId$6;
+			tag.textContent = css$6;
 			document.head.appendChild(tag);
 		}
 		var UiSkillSelector_module_css_default = {
-			"panel": "WI9gSG_panel",
-			"field": "WI9gSG_field",
-			"chevronOpen": "WI9gSG_chevronOpen",
-			"fieldChevron": "WI9gSG_fieldChevron",
-			"count": "WI9gSG_count",
-			"trigger": "WI9gSG_trigger",
-			"command": "WI9gSG_command",
-			"optionText": "WI9gSG_optionText",
-			"fieldChevronOpen": "WI9gSG_fieldChevronOpen",
-			"sectionBody": "WI9gSG_sectionBody",
-			"fieldValue": "WI9gSG_fieldValue",
-			"title": "WI9gSG_title",
-			"optionName": "WI9gSG_optionName",
-			"optionDescription": "WI9gSG_optionDescription",
 			"root": "WI9gSG_root",
-			"chevron": "WI9gSG_chevron",
+			"optionText": "WI9gSG_optionText",
+			"trigger": "WI9gSG_trigger",
+			"fieldChevron": "WI9gSG_fieldChevron",
+			"fieldChevronOpen": "WI9gSG_fieldChevronOpen",
 			"option": "WI9gSG_option",
-			"list": "WI9gSG_list"
+			"command": "WI9gSG_command",
+			"list": "WI9gSG_list",
+			"chevron": "WI9gSG_chevron",
+			"sectionBody": "WI9gSG_sectionBody",
+			"optionDescription": "WI9gSG_optionDescription",
+			"count": "WI9gSG_count",
+			"panel": "WI9gSG_panel",
+			"title": "WI9gSG_title",
+			"chevronOpen": "WI9gSG_chevronOpen",
+			"fieldValue": "WI9gSG_fieldValue",
+			"field": "WI9gSG_field",
+			"optionName": "WI9gSG_optionName"
 		};
 		//#endregion
 		//#region src/client/UiSkillSelector.tsx
@@ -2157,7 +2173,7 @@
 		}
 		//#endregion
 		//#region src/client/composite-properties.ts
-		/** Expand the CSS 1鈥? value shorthand in top/right/bottom/left order. */
+		/** Expand the CSS 1–4 value shorthand in top/right/bottom/left order. */
 		function expandQuad(value) {
 			if (value.includes("/")) return null;
 			const parts = value.trim().split(/\s+/u).filter(Boolean);
@@ -2287,25 +2303,25 @@
 		}
 		//#endregion
 		//#region \0dsh-web-review-css:src/client/CompositeControls.module.css.mjs
-		const css$4 = ".pEL6Qq_pair,.pEL6Qq_quad,.pEL6Qq_effectGrid{gap:4px;width:100%;display:grid}.pEL6Qq_pair,.pEL6Qq_quad{grid-template-columns:repeat(2,minmax(0,1fr)) 28px}.pEL6Qq_effectGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.pEL6Qq_fieldCell{min-width:0}.pEL6Qq_fieldCell>span{width:100%}.pEL6Qq_fieldCell input{flex-basis:100%;width:100%}.pEL6Qq_linkCell{grid-area:1/3/span 2;place-items:center;display:grid}.pEL6Qq_effectRow{justify-content:space-between;align-items:center;gap:8px;margin-top:6px;display:flex}.pEL6Qq_effectLabel{color:var(--dsw-alias-label-secondary,#555a62);font:11px/16px system-ui,sans-serif}.pEL6Qq_raw{gap:4px;display:grid}.pEL6Qq_rawHint{color:var(--dsw-alias-label-tertiary,#747a82);font:10px/14px system-ui,sans-serif}";
-		const tagId$4 = "@canglongcl/dsh-web-review/CompositeControls.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
+		const css$5 = ".pEL6Qq_pair,.pEL6Qq_quad,.pEL6Qq_effectGrid{gap:4px;width:100%;display:grid}.pEL6Qq_pair,.pEL6Qq_quad{grid-template-columns:repeat(2,minmax(0,1fr)) 28px}.pEL6Qq_effectGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.pEL6Qq_fieldCell{min-width:0}.pEL6Qq_fieldCell>span{width:100%}.pEL6Qq_fieldCell input{flex-basis:100%;width:100%}.pEL6Qq_linkCell{grid-area:1/3/span 2;place-items:center;display:grid}.pEL6Qq_effectRow{justify-content:space-between;align-items:center;gap:8px;margin-top:6px;display:flex}.pEL6Qq_effectLabel{color:var(--dsw-alias-label-secondary,#555a62);font:11px/16px system-ui,sans-serif}.pEL6Qq_raw{gap:4px;display:grid}.pEL6Qq_rawHint{color:var(--dsw-alias-label-tertiary,#747a82);font:10px/14px system-ui,sans-serif}";
+		const tagId$5 = "@canglongcl/dsh-web-review/CompositeControls.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$5) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@canglongcl/dsh-web-review";
-			tag.dataset.pluginCss = tagId$4;
-			tag.textContent = css$4;
+			tag.dataset.pluginCss = tagId$5;
+			tag.textContent = css$5;
 			document.head.appendChild(tag);
 		}
 		var CompositeControls_module_css_default = {
-			"quad": "pEL6Qq_quad",
-			"fieldCell": "pEL6Qq_fieldCell",
-			"rawHint": "pEL6Qq_rawHint",
-			"linkCell": "pEL6Qq_linkCell",
-			"effectRow": "pEL6Qq_effectRow",
 			"effectLabel": "pEL6Qq_effectLabel",
-			"pair": "pEL6Qq_pair",
+			"fieldCell": "pEL6Qq_fieldCell",
+			"linkCell": "pEL6Qq_linkCell",
 			"raw": "pEL6Qq_raw",
-			"effectGrid": "pEL6Qq_effectGrid"
+			"effectGrid": "pEL6Qq_effectGrid",
+			"rawHint": "pEL6Qq_rawHint",
+			"pair": "pEL6Qq_pair",
+			"effectRow": "pEL6Qq_effectRow",
+			"quad": "pEL6Qq_quad"
 		};
 		//#endregion
 		//#region src/client/CompositeControls.tsx
@@ -2590,7 +2606,7 @@
 				translateY: "Y",
 				scaleX: "SX",
 				scaleY: "SY",
-				rotate: "掳"
+				rotate: "°"
 			};
 			const kinds = Object.keys(badges);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -2609,33 +2625,33 @@
 		}
 		//#endregion
 		//#region \0dsh-web-review-css:src/client/ElementSelector.module.css.mjs
-		const css$3 = ".h4MIqG_selector,.h4MIqG_selector *{box-sizing:border-box}.h4MIqG_selector{border-top:1px solid var(--dsw-alias-border-l1,#00000014);background:#fff;flex-direction:column;flex:auto;min-height:0;display:flex}.h4MIqG_actions{flex:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px 12px;display:grid}.h4MIqG_actions button{border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-module-platform,#f4f5f6);min-width:0;height:32px;color:var(--dsw-alias-label-secondary,#4b4f57);cursor:pointer;text-align:left;border-radius:8px;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:0 10px;font:600 11px/16px system-ui,sans-serif;display:grid;position:relative}.h4MIqG_actions button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#26314814)}.h4MIqG_actions button:disabled{cursor:default;opacity:.42}.h4MIqG_shortcut{border:1px solid var(--dsw-alias-border-l2,#0000001f);min-width:17px;height:16px;color:var(--dsw-alias-label-tertiary,#727780);text-align:center;background:#ffffffb8;border-radius:4px;padding:0 3px;font:500 9px/14px ui-monospace,SFMono-Regular,Menlo,monospace}.h4MIqG_treeHeader{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014);color:var(--dsw-alias-label-tertiary,#727780);flex:none;justify-content:space-between;padding:0 14px 8px;font:600 11px/16px system-ui,sans-serif;display:flex}.h4MIqG_treeViewportShell{flex:auto;min-height:180px;max-height:min(360px,100vh - 290px);display:flex;position:relative;overflow:hidden}.h4MIqG_treeViewport{flex:auto;min-height:0;padding:6px 8px;overflow:auto}.h4MIqG_treeFade{z-index:1;opacity:0;pointer-events:none;background:linear-gradient(#fff0,#fff 82%);height:44px;transition:opacity .18s ease-out;position:absolute;bottom:0;left:0;right:0}.h4MIqG_treeViewportShell[data-can-scroll-down] .h4MIqG_treeFade{opacity:1}.h4MIqG_tree,.h4MIqG_tree ul{margin:0;padding:0;list-style:none}.h4MIqG_treeRow{border:1px solid #0000;border-radius:9px;align-items:center;min-width:max-content;height:34px;display:flex}.h4MIqG_treeRow:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.h4MIqG_treeRowCurrent{background:#e8eefc;border-color:#b9ccf7;box-shadow:inset 3px 0 #4176e6}.h4MIqG_treeRowCurrent:hover{background:#e8eefc}.h4MIqG_disclosure,.h4MIqG_elementButton{color:inherit;cursor:pointer;background:0 0;border:0}.h4MIqG_disclosure{width:20px;height:20px;color:var(--dsw-alias-label-tertiary,#727780);border-radius:6px;flex:none;place-items:center;margin:4px 1px;padding:0;transition:color .12s,background .12s;display:grid}.h4MIqG_disclosure:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.h4MIqG_disclosureExpanded{color:var(--dsw-alias-label-secondary,#4b4f57);background:0 0}.h4MIqG_disclosureExpanded:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.h4MIqG_treeRowCurrent .h4MIqG_disclosureExpanded{color:#315fca}.h4MIqG_disclosure svg{width:12px;height:12px}.h4MIqG_disclosureSpacer{flex:none;width:22px}.h4MIqG_elementButton{align-items:center;min-width:0;height:32px;padding:0 8px 0 0;font:13px/18px system-ui,sans-serif;display:flex}.h4MIqG_glyph{width:20px;height:20px;color:var(--dsw-alias-label-tertiary,#727780);background:#f0f1f3;border-radius:5px;flex:none;place-items:center;margin-right:7px;font:10px/20px ui-monospace,SFMono-Regular,Menlo,monospace;display:inline-grid}.h4MIqG_treeRowCurrent .h4MIqG_glyph{color:#315fca;background:#d9e5ff}.h4MIqG_tag{color:var(--dsw-alias-label-primary,#17191c);flex:none;font:600 13px/18px ui-monospace,SFMono-Regular,Menlo,monospace}.h4MIqG_detail{max-width:180px;color:var(--dsw-alias-label-tertiary,#727780);text-overflow:ellipsis;white-space:nowrap;margin-left:5px;overflow:hidden}@media (prefers-reduced-motion:reduce){.h4MIqG_treeFade{transition-duration:0s}}";
-		const tagId$3 = "@canglongcl/dsh-web-review/ElementSelector.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
+		const css$4 = ".h4MIqG_selector,.h4MIqG_selector *{box-sizing:border-box}.h4MIqG_selector{border-top:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);flex-direction:column;flex:auto;min-height:0;display:flex}.h4MIqG_actions{flex:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px 12px;display:grid}.h4MIqG_actions button{border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-module-platform,#f5f6f7);min-width:0;height:32px;color:var(--dsw-alias-label-secondary,#4b4f57);cursor:pointer;text-align:left;border-radius:8px;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:0 10px;font:600 11px/16px system-ui,sans-serif;display:grid;position:relative}.h4MIqG_actions button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#26314814)}.h4MIqG_actions button:disabled{cursor:default;opacity:.42}.h4MIqG_shortcut{border:1px solid var(--dsw-alias-border-l2,#0000001f);background:var(--dsw-alias-bg-module-platform,#f5f6f7);min-width:17px;height:16px;color:var(--dsw-alias-label-tertiary,#727780);text-align:center;border-radius:4px;padding:0 3px;font:500 9px/14px ui-monospace,SFMono-Regular,Menlo,monospace}.h4MIqG_treeHeader{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014);color:var(--dsw-alias-label-tertiary,#727780);flex:none;justify-content:space-between;padding:0 14px 8px;font:600 11px/16px system-ui,sans-serif;display:flex}.h4MIqG_treeViewportShell{flex:auto;min-height:180px;max-height:min(360px,100vh - 290px);display:flex;position:relative;overflow:hidden}.h4MIqG_treeViewport{flex:auto;min-height:0;padding:6px 8px;overflow:auto}.h4MIqG_treeFade{z-index:1;background:linear-gradient(to bottom, #fff0, var(--dsw-alias-bg-base,#fff) 82%);opacity:0;pointer-events:none;height:44px;transition:opacity .18s ease-out;position:absolute;bottom:0;left:0;right:0}.h4MIqG_treeViewportShell[data-can-scroll-down] .h4MIqG_treeFade{opacity:1}.h4MIqG_tree,.h4MIqG_tree ul{margin:0;padding:0;list-style:none}.h4MIqG_treeRow{border:1px solid #0000;border-radius:9px;align-items:center;min-width:max-content;height:34px;display:flex}.h4MIqG_treeRow:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.h4MIqG_treeRowCurrent{border-color:color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 28%, transparent);background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 10%, var(--dsw-alias-bg-base,#fff));box-shadow:inset 3px 0 var(--dsw-alias-state-business-primary,#4176e6)}.h4MIqG_treeRowCurrent:hover{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 10%, var(--dsw-alias-bg-base,#fff))}.h4MIqG_disclosure,.h4MIqG_elementButton{color:inherit;cursor:pointer;background:0 0;border:0}.h4MIqG_disclosure{width:20px;height:20px;color:var(--dsw-alias-label-tertiary,#727780);border-radius:6px;flex:none;place-items:center;margin:4px 1px;padding:0;transition:color .12s,background .12s;display:grid}.h4MIqG_disclosure:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.h4MIqG_disclosureExpanded{color:var(--dsw-alias-label-secondary,#4b4f57);background:0 0}.h4MIqG_disclosureExpanded:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.h4MIqG_treeRowCurrent .h4MIqG_disclosureExpanded{color:var(--dsw-alias-state-business-primary,#4176e6)}.h4MIqG_disclosure svg{width:12px;height:12px}.h4MIqG_disclosureSpacer{flex:none;width:22px}.h4MIqG_elementButton{align-items:center;min-width:0;height:32px;padding:0 8px 0 0;font:13px/18px system-ui,sans-serif;display:flex}.h4MIqG_glyph{background:var(--dsw-alias-bg-module-platform,#f5f6f7);width:20px;height:20px;color:var(--dsw-alias-label-tertiary,#727780);border-radius:5px;flex:none;place-items:center;margin-right:7px;font:10px/20px ui-monospace,SFMono-Regular,Menlo,monospace;display:inline-grid}.h4MIqG_treeRowCurrent .h4MIqG_glyph{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 15%, var(--dsw-alias-bg-base,#fff));color:var(--dsw-alias-state-business-primary,#4176e6)}.h4MIqG_tag{color:var(--dsw-alias-label-primary,#17191c);flex:none;font:600 13px/18px ui-monospace,SFMono-Regular,Menlo,monospace}.h4MIqG_detail{max-width:180px;color:var(--dsw-alias-label-tertiary,#727780);text-overflow:ellipsis;white-space:nowrap;margin-left:5px;overflow:hidden}@media (prefers-reduced-motion:reduce){.h4MIqG_treeFade{transition-duration:0s}}";
+		const tagId$4 = "@canglongcl/dsh-web-review/ElementSelector.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$4) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@canglongcl/dsh-web-review";
-			tag.dataset.pluginCss = tagId$3;
-			tag.textContent = css$3;
+			tag.dataset.pluginCss = tagId$4;
+			tag.textContent = css$4;
 			document.head.appendChild(tag);
 		}
 		var ElementSelector_module_css_default = {
+			"treeHeader": "h4MIqG_treeHeader",
+			"shortcut": "h4MIqG_shortcut",
+			"tree": "h4MIqG_tree",
+			"treeRowCurrent": "h4MIqG_treeRowCurrent",
 			"disclosureExpanded": "h4MIqG_disclosureExpanded",
 			"disclosureSpacer": "h4MIqG_disclosureSpacer",
-			"treeHeader": "h4MIqG_treeHeader",
-			"tree": "h4MIqG_tree",
+			"glyph": "h4MIqG_glyph",
 			"tag": "h4MIqG_tag",
 			"treeFade": "h4MIqG_treeFade",
-			"detail": "h4MIqG_detail",
+			"treeViewport": "h4MIqG_treeViewport",
+			"disclosure": "h4MIqG_disclosure",
+			"treeRow": "h4MIqG_treeRow",
 			"treeViewportShell": "h4MIqG_treeViewportShell",
 			"actions": "h4MIqG_actions",
-			"treeViewport": "h4MIqG_treeViewport",
-			"treeRow": "h4MIqG_treeRow",
 			"elementButton": "h4MIqG_elementButton",
-			"glyph": "h4MIqG_glyph",
-			"shortcut": "h4MIqG_shortcut",
-			"selector": "h4MIqG_selector",
-			"disclosure": "h4MIqG_disclosure",
-			"treeRowCurrent": "h4MIqG_treeRowCurrent"
+			"detail": "h4MIqG_detail",
+			"selector": "h4MIqG_selector"
 		};
 		//#endregion
 		//#region src/client/PreviewElementSelector.tsx
@@ -2656,7 +2672,7 @@
 		function detailText(node, t) {
 			if (node.detail.kind === "children") return t("editor.select.children", { count: String(node.detail.count) });
 			if (node.detail.kind === "empty") return t("editor.select.empty");
-			return `鈥?{node.detail.text}鈥漙;
+			return `“${node.detail.text}”`;
 		}
 		function currentPath(node) {
 			if (node.current) return [node.key];
@@ -2772,7 +2788,7 @@
 								onClick: () => {
 									action("child");
 								},
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("editor.select.child.short") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShortcutKey, { children: "鈫? })]
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("editor.select.child.short") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShortcutKey, { children: "↵" })]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 								type: "button",
@@ -2792,7 +2808,7 @@
 								onClick: () => {
 									action("previous-sibling");
 								},
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("editor.select.previousSibling.short") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShortcutKey, { children: "鈬р嚗" })]
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("editor.select.previousSibling.short") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShortcutKey, { children: "⇧⇥" })]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 								type: "button",
@@ -2802,7 +2818,7 @@
 								onClick: () => {
 									action("next-sibling");
 								},
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("editor.select.sibling.short") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShortcutKey, { children: "鈬? })]
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("editor.select.sibling.short") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ShortcutKey, { children: "⇥" })]
 							})
 						]
 					}),
@@ -2973,40 +2989,40 @@
 		}
 		//#endregion
 		//#region \0dsh-web-review-css:src/client/AnnotationEditor.module.css.mjs
-		const css$2 = ".nwQxDW_editor,.nwQxDW_editor *{box-sizing:border-box}.nwQxDW_editor{z-index:20;border:1px solid var(--dsw-alias-border-l1,#00000014);max-height:calc(100% - 16px);color:var(--dsw-alias-label-primary,#17191c);font-family:Inter, var(--dsw-font-family,system-ui, sans-serif);background:#fff;border-radius:18px;outline:none;flex-direction:column;display:flex;position:absolute;overflow:hidden;box-shadow:0 22px 56px #0f172a3d,0 8px 20px #0f172a29,0 2px 5px #0f172a1f;container-type:inline-size}.nwQxDW_editorHidden{visibility:hidden;opacity:0;pointer-events:none}.nwQxDW_editor[data-scrubbing]{box-shadow:none;background-color:#0000;border-color:#0000}.nwQxDW_editor[data-scrubbing] *{visibility:hidden;pointer-events:none;transition:none!important}.nwQxDW_editor[data-scrubbing] [data-scrub-active],.nwQxDW_editor[data-scrubbing] [data-scrub-active] *{visibility:visible;pointer-events:auto}.nwQxDW_composeRow{background:#fff;flex:none;grid-template-columns:34px 34px minmax(0,1fr) 34px 34px;align-items:center;gap:6px;min-height:52px;padding:6px 9px;display:grid}.nwQxDW_composeRowExpanded{grid-template-columns:34px 34px minmax(0,1fr) 34px 34px}.nwQxDW_adjust,.nwQxDW_dragHandle,.nwQxDW_visibilityToggle,.nwQxDW_quickConfirm,.nwQxDW_reset,.nwQxDW_confirm,.nwQxDW_cancel{cursor:pointer;border:0;place-items:center;display:inline-grid}.nwQxDW_adjust,.nwQxDW_dragHandle,.nwQxDW_visibilityToggle,.nwQxDW_quickConfirm{background:var(--dsw-alias-bg-module-platform,#f4f5f6);width:34px;height:34px;color:var(--dsw-alias-label-secondary,#4b4f57);border-radius:999px;padding:0}.nwQxDW_visibilityToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.nwQxDW_dragHandle{touch-action:none;cursor:grab;user-select:none}.nwQxDW_dragHandle:hover,.nwQxDW_editor[data-editor-dragging] .nwQxDW_dragHandle{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 13%, #fff);color:var(--dsw-alias-state-business-primary,#4176e6)}.nwQxDW_editor[data-editor-dragging] .nwQxDW_dragHandle{cursor:grabbing}.nwQxDW_resizeHandle{z-index:5;touch-action:none;user-select:none;position:absolute}.nwQxDW_resizeHandle[data-resize-edge=n],.nwQxDW_resizeHandle[data-resize-edge=s]{cursor:ns-resize;width:calc(100% - 48px);height:12px;left:24px}.nwQxDW_resizeHandle[data-resize-edge=n]{top:0}.nwQxDW_resizeHandle[data-resize-edge=s]{bottom:0}.nwQxDW_resizeHandle[data-resize-edge=e],.nwQxDW_resizeHandle[data-resize-edge=w]{cursor:ew-resize;width:12px;height:calc(100% - 48px);top:24px}.nwQxDW_resizeHandle[data-resize-edge=e]{right:0}.nwQxDW_resizeHandle[data-resize-edge=w]{left:0}.nwQxDW_resizeHandle[data-resize-edge=ne],.nwQxDW_resizeHandle[data-resize-edge=se],.nwQxDW_resizeHandle[data-resize-edge=sw],.nwQxDW_resizeHandle[data-resize-edge=nw]{width:24px;height:24px}.nwQxDW_resizeHandle[data-resize-edge=ne]{cursor:nesw-resize;top:0;right:0}.nwQxDW_resizeHandle[data-resize-edge=se]{cursor:nwse-resize;bottom:0;right:0}.nwQxDW_resizeHandle[data-resize-edge=sw]{cursor:nesw-resize;bottom:0;left:0}.nwQxDW_resizeHandle[data-resize-edge=nw]{cursor:nwse-resize;top:0;left:0}@media (pointer:coarse){.nwQxDW_resizeHandle[data-resize-edge=n],.nwQxDW_resizeHandle[data-resize-edge=s]{height:20px}.nwQxDW_resizeHandle[data-resize-edge=e],.nwQxDW_resizeHandle[data-resize-edge=w]{width:20px}}.nwQxDW_visibilityFab{z-index:21;border:1px solid var(--dsw-alias-border-l1,#00000014);width:36px;height:36px;color:var(--dsw-alias-label-secondary,#4b4f57);cursor:pointer;background:#fff;border-radius:999px;place-items:center;padding:0;display:inline-grid;position:absolute;box-shadow:0 6px 18px #00000029,0 1px 4px #00000014}.nwQxDW_visibilityFab:hover{background:var(--dsw-alias-interactive-bg-hover,#f4f5f6);color:var(--dsw-alias-label-primary,#17191c)}.nwQxDW_visibilityFabHidden{visibility:hidden;opacity:0;pointer-events:none}.nwQxDW_adjust:hover,.nwQxDW_adjustActive{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.nwQxDW_quickConfirm,.nwQxDW_confirm{background:var(--dsw-alias-state-business-primary,#4176e6);color:#fff}.nwQxDW_commentInput{width:100%;height:36px;color:var(--dsw-alias-label-primary,#17191c);font:var(--dsw-font-s-14,14px/22px system-ui, sans-serif);background:#fff;border:0;outline:0;padding:0 2px}.nwQxDW_commentInput::placeholder{color:var(--dsw-alias-label-dimmed,#a9adb4)}.nwQxDW_navigationFeedbackSlot{--navigation-x:0;--navigation-y:-4px;flex:none;height:28px;overflow:hidden}.nwQxDW_navigationFeedback{height:28px;color:var(--dsw-alias-label-secondary,#4b4f57);white-space:nowrap;background:#f2f6ff;border-top:1px solid #4176e61a;align-items:center;gap:7px;padding:0 12px;font:500 11px/16px system-ui,sans-serif;display:flex;overflow:hidden}[data-action=parent].nwQxDW_navigationFeedbackSlot{--navigation-y:4px}[data-action=previous-sibling].nwQxDW_navigationFeedbackSlot{--navigation-x:6px;--navigation-y:0}[data-action=next-sibling].nwQxDW_navigationFeedbackSlot{--navigation-x:-6px;--navigation-y:0}.nwQxDW_navigationTarget{text-overflow:ellipsis;overflow:hidden}[data-action] .nwQxDW_navigationTarget{animation:.22s cubic-bezier(.2,0,0,1) both nwQxDW_navigation-target-in}.nwQxDW_navigationGlyph{color:#4176e6;flex:none;font:600 10px/16px ui-monospace,SFMono-Regular,Menlo,monospace}@keyframes nwQxDW_navigation-target-in{0%{opacity:.25;transform:translate(var(--navigation-x), var(--navigation-y))}to{opacity:1;transform:translate(0)}}.nwQxDW_inspector{border-top:1px solid var(--dsw-alias-border-l1,#00000014);background:#fff;flex:auto;min-height:0;max-height:min(470px,100vh - 220px);padding-bottom:8px;overflow:auto}.nwQxDW_footer{z-index:2;border-top:1px solid var(--dsw-alias-border-l1,#00000014);background:#fff;flex:none;justify-content:space-between;align-items:center;padding:8px 12px;display:flex;position:relative;box-shadow:0 -6px 14px #0000000a}.nwQxDW_cancel{border:1px solid var(--dsw-alias-border-l2,#0000001f);min-width:58px;height:32px;color:var(--dsw-alias-label-primary,#17191c);background:#fff;border-radius:999px;padding:0 12px;font:500 13px/20px system-ui,sans-serif}.nwQxDW_confirm{border-radius:999px;width:34px;height:34px;padding:0}.nwQxDW_confirm:disabled,.nwQxDW_quickConfirm:disabled{opacity:.4;cursor:default}@media (prefers-reduced-motion:reduce){.nwQxDW_editor,.nwQxDW_editor *,.nwQxDW_visibilityFab{scroll-behavior:auto;transition-duration:0s}[data-action] .nwQxDW_navigationTarget{animation-name:nwQxDW_navigation-target-fade}}@keyframes nwQxDW_navigation-target-fade{0%{opacity:.4}to{opacity:1}}";
-		const tagId$2 = "@canglongcl/dsh-web-review/AnnotationEditor.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
+		const css$3 = ".nwQxDW_editor,.nwQxDW_editor *{box-sizing:border-box}.nwQxDW_editor{z-index:20;border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);max-height:calc(100% - 16px);color:var(--dsw-alias-label-primary,#17191c);font-family:Inter, var(--dsw-font-family,system-ui, sans-serif);border-radius:18px;outline:none;flex-direction:column;display:flex;position:absolute;overflow:hidden;box-shadow:0 22px 56px #0f172a3d,0 8px 20px #0f172a29,0 2px 5px #0f172a1f;container-type:inline-size}.nwQxDW_editorHidden{visibility:hidden;opacity:0;pointer-events:none}.nwQxDW_editor[data-scrubbing]{box-shadow:none;background-color:#0000;border-color:#0000}.nwQxDW_editor[data-scrubbing] *{visibility:hidden;pointer-events:none;transition:none!important}.nwQxDW_editor[data-scrubbing] [data-scrub-active],.nwQxDW_editor[data-scrubbing] [data-scrub-active] *{visibility:visible;pointer-events:auto}.nwQxDW_composeRow{background:var(--dsw-alias-bg-base,#fff);flex:none;grid-template-columns:34px 34px minmax(0,1fr) 34px 34px;align-items:center;gap:6px;min-height:52px;padding:6px 9px;display:grid}.nwQxDW_composeRowExpanded{grid-template-columns:34px 34px minmax(0,1fr) 34px 34px}.nwQxDW_adjust,.nwQxDW_dragHandle,.nwQxDW_visibilityToggle,.nwQxDW_quickConfirm,.nwQxDW_reset,.nwQxDW_confirm,.nwQxDW_cancel{cursor:pointer;border:0;place-items:center;display:inline-grid}.nwQxDW_adjust,.nwQxDW_dragHandle,.nwQxDW_visibilityToggle,.nwQxDW_quickConfirm{background:var(--dsw-alias-bg-module-platform,#f5f6f7);width:34px;height:34px;color:var(--dsw-alias-label-secondary,#4b4f57);border-radius:999px;padding:0}.nwQxDW_visibilityToggle:hover{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.nwQxDW_dragHandle{touch-action:none;cursor:grab;user-select:none}.nwQxDW_dragHandle:hover,.nwQxDW_editor[data-editor-dragging] .nwQxDW_dragHandle{background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 13%, var(--dsw-alias-bg-base,#fff));color:var(--dsw-alias-state-business-primary,#4176e6)}.nwQxDW_editor[data-editor-dragging] .nwQxDW_dragHandle{cursor:grabbing}.nwQxDW_resizeHandle{z-index:5;touch-action:none;user-select:none;position:absolute}.nwQxDW_resizeHandle[data-resize-edge=n],.nwQxDW_resizeHandle[data-resize-edge=s]{cursor:ns-resize;width:calc(100% - 48px);height:12px;left:24px}.nwQxDW_resizeHandle[data-resize-edge=n]{top:0}.nwQxDW_resizeHandle[data-resize-edge=s]{bottom:0}.nwQxDW_resizeHandle[data-resize-edge=e],.nwQxDW_resizeHandle[data-resize-edge=w]{cursor:ew-resize;width:12px;height:calc(100% - 48px);top:24px}.nwQxDW_resizeHandle[data-resize-edge=e]{right:0}.nwQxDW_resizeHandle[data-resize-edge=w]{left:0}.nwQxDW_resizeHandle[data-resize-edge=ne],.nwQxDW_resizeHandle[data-resize-edge=se],.nwQxDW_resizeHandle[data-resize-edge=sw],.nwQxDW_resizeHandle[data-resize-edge=nw]{width:24px;height:24px}.nwQxDW_resizeHandle[data-resize-edge=ne]{cursor:nesw-resize;top:0;right:0}.nwQxDW_resizeHandle[data-resize-edge=se]{cursor:nwse-resize;bottom:0;right:0}.nwQxDW_resizeHandle[data-resize-edge=sw]{cursor:nesw-resize;bottom:0;left:0}.nwQxDW_resizeHandle[data-resize-edge=nw]{cursor:nwse-resize;top:0;left:0}@media (pointer:coarse){.nwQxDW_resizeHandle[data-resize-edge=n],.nwQxDW_resizeHandle[data-resize-edge=s]{height:20px}.nwQxDW_resizeHandle[data-resize-edge=e],.nwQxDW_resizeHandle[data-resize-edge=w]{width:20px}}.nwQxDW_visibilityFab{z-index:21;border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);width:36px;height:36px;color:var(--dsw-alias-label-secondary,#4b4f57);cursor:pointer;border-radius:999px;place-items:center;padding:0;display:inline-grid;position:absolute;box-shadow:0 6px 18px #00000029,0 1px 4px #00000014}.nwQxDW_visibilityFab:hover{background:var(--dsw-alias-interactive-bg-hover,#f4f5f6);color:var(--dsw-alias-label-primary,#17191c)}.nwQxDW_visibilityFabHidden{visibility:hidden;opacity:0;pointer-events:none}.nwQxDW_adjust:hover,.nwQxDW_adjustActive{background:var(--dsw-alias-interactive-bg-hover,#26314814);color:var(--dsw-alias-label-primary,#17191c)}.nwQxDW_quickConfirm,.nwQxDW_confirm{background:var(--dsw-alias-state-business-primary,#4176e6);color:#fff}.nwQxDW_commentInput{background:var(--dsw-alias-bg-base,#fff);width:100%;height:36px;color:var(--dsw-alias-label-primary,#17191c);font:var(--dsw-font-s-14,14px/22px system-ui, sans-serif);border:0;outline:0;padding:0 2px}.nwQxDW_commentInput::placeholder{color:var(--dsw-alias-label-dimmed,#a9adb4)}.nwQxDW_navigationFeedbackSlot{--navigation-x:0;--navigation-y:-4px;flex:none;height:28px;overflow:hidden}.nwQxDW_navigationFeedback{border-top:1px solid color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 10%, transparent);background:var(--dsw-alias-bg-module-platform,#f5f6f7);height:28px;color:var(--dsw-alias-label-secondary,#4b4f57);white-space:nowrap;align-items:center;gap:7px;padding:0 12px;font:500 11px/16px system-ui,sans-serif;display:flex;overflow:hidden}[data-action=parent].nwQxDW_navigationFeedbackSlot{--navigation-y:4px}[data-action=previous-sibling].nwQxDW_navigationFeedbackSlot{--navigation-x:6px;--navigation-y:0}[data-action=next-sibling].nwQxDW_navigationFeedbackSlot{--navigation-x:-6px;--navigation-y:0}.nwQxDW_navigationTarget{text-overflow:ellipsis;overflow:hidden}[data-action] .nwQxDW_navigationTarget{animation:.22s cubic-bezier(.2,0,0,1) both nwQxDW_navigation-target-in}.nwQxDW_navigationGlyph{color:var(--dsw-alias-state-business-primary,#4176e6);flex:none;font:600 10px/16px ui-monospace,SFMono-Regular,Menlo,monospace}@keyframes nwQxDW_navigation-target-in{0%{opacity:.25;transform:translate(var(--navigation-x), var(--navigation-y))}to{opacity:1;transform:translate(0)}}.nwQxDW_inspector{border-top:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);flex:auto;min-height:0;max-height:min(470px,100vh - 220px);padding-bottom:8px;overflow:auto}.nwQxDW_footer{z-index:2;border-top:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);flex:none;justify-content:space-between;align-items:center;padding:8px 12px;display:flex;position:relative;box-shadow:0 -6px 14px #0000000a}.nwQxDW_cancel{border:1px solid var(--dsw-alias-border-l2,#0000001f);background:var(--dsw-alias-bg-base,#fff);min-width:58px;height:32px;color:var(--dsw-alias-label-primary,#17191c);border-radius:999px;padding:0 12px;font:500 13px/20px system-ui,sans-serif}.nwQxDW_confirm{border-radius:999px;width:34px;height:34px;padding:0}.nwQxDW_confirm:disabled,.nwQxDW_quickConfirm:disabled{opacity:.4;cursor:default}@media (prefers-reduced-motion:reduce){.nwQxDW_editor,.nwQxDW_editor *,.nwQxDW_visibilityFab{scroll-behavior:auto;transition-duration:0s}[data-action] .nwQxDW_navigationTarget{animation-name:nwQxDW_navigation-target-fade}}@keyframes nwQxDW_navigation-target-fade{0%{opacity:.4}to{opacity:1}}";
+		const tagId$3 = "@canglongcl/dsh-web-review/AnnotationEditor.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@canglongcl/dsh-web-review";
-			tag.dataset.pluginCss = tagId$2;
-			tag.textContent = css$2;
+			tag.dataset.pluginCss = tagId$3;
+			tag.textContent = css$3;
 			document.head.appendChild(tag);
 		}
 		var AnnotationEditor_module_css_default = {
-			"dragHandle": "nwQxDW_dragHandle",
-			"editor": "nwQxDW_editor",
-			"navigation-target-fade": "nwQxDW_navigation-target-fade",
-			"commentInput": "nwQxDW_commentInput",
-			"footer": "nwQxDW_footer",
-			"adjust": "nwQxDW_adjust",
-			"navigation-target-in": "nwQxDW_navigation-target-in",
-			"visibilityToggle": "nwQxDW_visibilityToggle",
 			"visibilityFabHidden": "nwQxDW_visibilityFabHidden",
+			"editor": "nwQxDW_editor",
+			"composeRow": "nwQxDW_composeRow",
+			"confirm": "nwQxDW_confirm",
+			"visibilityToggle": "nwQxDW_visibilityToggle",
+			"navigationFeedbackSlot": "nwQxDW_navigationFeedbackSlot",
+			"navigationFeedback": "nwQxDW_navigationFeedback",
+			"navigationTarget": "nwQxDW_navigationTarget",
+			"resizeHandle": "nwQxDW_resizeHandle",
+			"commentInput": "nwQxDW_commentInput",
+			"navigationGlyph": "nwQxDW_navigationGlyph",
+			"adjust": "nwQxDW_adjust",
+			"composeRowExpanded": "nwQxDW_composeRowExpanded",
+			"inspector": "nwQxDW_inspector",
+			"reset": "nwQxDW_reset",
+			"cancel": "nwQxDW_cancel",
+			"navigation-target-fade": "nwQxDW_navigation-target-fade",
+			"dragHandle": "nwQxDW_dragHandle",
+			"navigation-target-in": "nwQxDW_navigation-target-in",
 			"adjustActive": "nwQxDW_adjustActive",
 			"visibilityFab": "nwQxDW_visibilityFab",
-			"navigationFeedback": "nwQxDW_navigationFeedback",
-			"composeRow": "nwQxDW_composeRow",
-			"composeRowExpanded": "nwQxDW_composeRowExpanded",
-			"confirm": "nwQxDW_confirm",
-			"cancel": "nwQxDW_cancel",
-			"navigationFeedbackSlot": "nwQxDW_navigationFeedbackSlot",
-			"editorHidden": "nwQxDW_editorHidden",
-			"navigationTarget": "nwQxDW_navigationTarget",
-			"inspector": "nwQxDW_inspector",
-			"navigationGlyph": "nwQxDW_navigationGlyph",
+			"footer": "nwQxDW_footer",
 			"quickConfirm": "nwQxDW_quickConfirm",
-			"resizeHandle": "nwQxDW_resizeHandle",
-			"reset": "nwQxDW_reset"
+			"editorHidden": "nwQxDW_editorHidden"
 		};
 		//#endregion
 		//#region src/client/AnnotationEditor.tsx
@@ -3025,9 +3041,9 @@
 		];
 		function previewNavigationTargetLabel(target, t) {
 			const tag = target.snapshot.tagName;
-			if (target.detail.kind === "children") return `${tag} 路 ${t("editor.select.children", { count: String(target.detail.count) })}`;
+			if (target.detail.kind === "children") return `${tag} · ${t("editor.select.children", { count: String(target.detail.count) })}`;
 			if (target.detail.kind === "empty") return tag;
-			return `${tag} 路 鈥?{target.detail.text}鈥漙;
+			return `${tag} · “${target.detail.text}”`;
 		}
 		function validCssValue(property, value) {
 			if (!isSafeAnnotationStyleValue(value)) return false;
@@ -3053,7 +3069,7 @@
 						cx: "7.5",
 						cy: "4",
 						r: "1.5",
-						fill: "white",
+						style: { fill: "var(--dsw-alias-bg-base, #fff)" },
 						stroke: "currentColor",
 						strokeWidth: "1.2"
 					}),
@@ -3061,7 +3077,7 @@
 						cx: "8.5",
 						cy: "12",
 						r: "1.5",
-						fill: "white",
+						style: { fill: "var(--dsw-alias-bg-base, #fff)" },
 						stroke: "currentColor",
 						strokeWidth: "1.2"
 					})
@@ -3161,7 +3177,7 @@
 		];
 		/** Host-owned, DSH-styled property inspector with reversible iframe preview. */
 		function AnnotationEditor(props) {
-			const { frame, comment: initialComment, changes: initialChanges, textChange: initialTextChange, initialMode = "collapsed", navigationFeedback = null, position = null, size = null, t, onCancel, onConfirm, selectedSkills = [], onToggleSkill = () => {}, onPositionChange = ignorePositionChange, onSizeChange = ignoreSizeChange, onSizeCommit = ignoreSizeCommit } = props;
+			const { frame, comment: initialComment, changes: initialChanges, textChange: initialTextChange, initialMode = "collapsed", initialFocus = "editor", navigationFeedback = null, position = null, size = null, t, onCancel, onConfirm, selectedSkills = [], onToggleSkill = () => {}, onPositionChange = ignorePositionChange, onSizeChange = ignoreSizeChange, onSizeCommit = ignoreSizeCommit } = props;
 			const { target } = props;
 			const initialMap = (0, react.useMemo)(() => new Map(initialChanges.map((change) => [change.property, change])), [initialChanges]);
 			const originals = (0, react.useMemo)(() => new Map(PROPERTY_GROUPS.flatMap((group) => group.controls).map(({ property }) => [property, initialMap.get(property)?.before ?? target.baselines[property]])), [initialMap, target]);
@@ -3198,6 +3214,8 @@
 			const normalStyleRef = (0, react.useRef)("normal");
 			const [, forcePosition] = (0, react.useState)(0);
 			const editorRef = (0, react.useRef)(null);
+			const commentInputRef = (0, react.useRef)(null);
+			const pendingInitialFocus = (0, react.useRef)(initialFocus);
 			const visibleToggleRef = (0, react.useRef)(null);
 			const hiddenToggleRef = (0, react.useRef)(null);
 			const dragRef = (0, react.useRef)(null);
@@ -3218,8 +3236,13 @@
 				forcePosition((value) => value + 1);
 			}, [mode]);
 			(0, react.useEffect)(() => {
+				if (pendingInitialFocus.current === "comment") {
+					pendingInitialFocus.current = "editor";
+					commentInputRef.current?.focus({ preventScroll: true });
+					return;
+				}
 				editorRef.current?.focus({ preventScroll: true });
-			}, [mode, target]);
+			}, [mode, target.handle]);
 			const cancel = () => {
 				onCancel();
 			};
@@ -3374,7 +3397,7 @@
 					label,
 					active: activeScrub === property,
 					changed: changed(property),
-					resetLabel: `${t("editor.reset")} 路 ${label}`,
+					resetLabel: `${t("editor.reset")} · ${label}`,
 					onReset: () => {
 						reset(property);
 					},
@@ -3424,7 +3447,7 @@
 					active: activeScrub === prefix,
 					staticLabel: true,
 					changed: properties.some(changed),
-					resetLabel: `${t("editor.reset")} 路 ${groupLabel}`,
+					resetLabel: `${t("editor.reset")} · ${groupLabel}`,
 					onReset: () => {
 						properties.forEach(reset);
 					},
@@ -3649,6 +3672,7 @@
 								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(AdjustIcon, {})
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+								ref: commentInputRef,
 								className: `${AnnotationEditor_module_css_default.commentInput} dsh-wv-comment-input`,
 								value: comment,
 								maxLength: ANNOTATION_LIMITS.comment,
@@ -3817,7 +3841,7 @@
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InspectorRow, {
 										label: t("editor.property.fontStyle"),
 										changed: changed("font-weight") || changed("font-style") || changed("text-decoration"),
-										resetLabel: `${t("editor.reset")} 路 ${t("editor.property.fontStyle")}`,
+										resetLabel: `${t("editor.reset")} · ${t("editor.property.fontStyle")}`,
 										onReset: () => {
 											reset("font-weight");
 											reset("font-style");
@@ -3866,7 +3890,7 @@
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InspectorRow, {
 										label: t("editor.property.textAlign"),
 										changed: changed("text-align"),
-										resetLabel: `${t("editor.reset")} 路 ${t("editor.property.textAlign")}`,
+										resetLabel: `${t("editor.reset")} · ${t("editor.property.textAlign")}`,
 										onReset: () => {
 											reset("text-align");
 										},
@@ -3914,10 +3938,10 @@
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InspectorRow, {
 										wide: true,
-										label: `${t("editor.property.width")} 脳 ${t("editor.property.height")}`,
+										label: `${t("editor.property.width")} × ${t("editor.property.height")}`,
 										active: activeScrub === "size",
 										changed: changed("width") || changed("height"),
-										resetLabel: `${t("editor.reset")} 路 ${t("editor.group.size")}`,
+										resetLabel: `${t("editor.reset")} · ${t("editor.group.size")}`,
 										onReset: () => {
 											reset("width");
 											reset("height");
@@ -3971,7 +3995,7 @@
 										label: t("editor.property.borderRadius"),
 										active: activeScrub === "border-radius",
 										changed: changed("border-radius"),
-										resetLabel: `${t("editor.reset")} 路 ${t("editor.property.borderRadius")}`,
+										resetLabel: `${t("editor.reset")} · ${t("editor.property.borderRadius")}`,
 										onReset: () => {
 											reset("border-radius");
 										},
@@ -4020,7 +4044,7 @@
 									label: t("editor.property.boxShadow"),
 									active: activeScrub === "box-shadow",
 									changed: changed("box-shadow"),
-									resetLabel: `${t("editor.reset")} 路 ${t("editor.property.boxShadow")}`,
+									resetLabel: `${t("editor.reset")} · ${t("editor.property.boxShadow")}`,
 									onReset: () => {
 										reset("box-shadow");
 									},
@@ -4046,7 +4070,7 @@
 									label: t("editor.property.transform"),
 									active: activeScrub === "transform",
 									changed: changed("transform"),
-									resetLabel: `${t("editor.reset")} 路 ${t("editor.property.transform")}`,
+									resetLabel: `${t("editor.reset")} · ${t("editor.property.transform")}`,
 									onReset: () => {
 										reset("transform");
 									},
@@ -4159,14 +4183,14 @@
 		//#endregion
 		//#region src/client/preview-bridge.ts
 		const MAX_BRIDGE_SESSIONS = 64;
-		function recordOf(value) {
+		function recordOf$1(value) {
 			return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
 		}
 		function exactKeys(record, keys) {
 			return Object.keys(record).length === keys.length && keys.every((key) => Object.hasOwn(record, key));
 		}
 		function viewportOf(value) {
-			const record = recordOf(value);
+			const record = recordOf$1(value);
 			if (record === void 0 || !exactKeys(record, ["width", "height"]) || typeof record.width !== "number" || typeof record.height !== "number" || !Number.isFinite(record.width) || !Number.isFinite(record.height) || record.width < 0 || record.height < 0 || record.width > 1e5 || record.height > 1e5) return void 0;
 			return {
 				width: Math.round(record.width),
@@ -4174,7 +4198,7 @@
 			};
 		}
 		function rectOf(value) {
-			const record = recordOf(value);
+			const record = recordOf$1(value);
 			if (record === void 0 || !exactKeys(record, [
 				"x",
 				"y",
@@ -4190,7 +4214,7 @@
 			return record;
 		}
 		function readyOf(value) {
-			const record = recordOf(value);
+			const record = recordOf$1(value);
 			if (record === void 0 || !exactKeys(record, [
 				"pageUrl",
 				"title",
@@ -4266,7 +4290,7 @@
 					return;
 				}
 				if (frameEvent.name === "pick") {
-					const record = recordOf(payload);
+					const record = recordOf$1(payload);
 					const target = record === void 0 || !exactKeys(record, ["target"]) ? void 0 : previewElementTargetOf(record.target);
 					if (target !== void 0) this.callbacks.onPick(target);
 					return;
@@ -4276,12 +4300,12 @@
 					return;
 				}
 				if (frameEvent.name === "mark-click") {
-					const record = recordOf(payload);
+					const record = recordOf$1(payload);
 					if (record !== void 0 && exactKeys(record, ["pickId"]) && typeof record.pickId === "string" && record.pickId.length <= 128) this.callbacks.onMarkClick(record.pickId);
 					return;
 				}
 				if (frameEvent.name === "target-geometry") {
-					const record = recordOf(payload);
+					const record = recordOf$1(payload);
 					if (record === void 0 || !exactKeys(record, [
 						"handle",
 						"rect",
@@ -4293,7 +4317,7 @@
 					return;
 				}
 				if (frameEvent.name === "shortcut") {
-					const record = recordOf(payload);
+					const record = recordOf$1(payload);
 					const action = navigationActionOf(record?.action);
 					if (record !== void 0 && exactKeys(record, ["action"]) && action !== void 0) this.callbacks.onShortcut(action);
 					return;
@@ -4514,41 +4538,41 @@
 		};
 		//#endregion
 		//#region \0dsh-web-review-css:src/client/WebviewView.module.css.mjs
-		const css$1 = ".uQwHMW_panel,.uQwHMW_panel *,.uQwHMW_panel :before,.uQwHMW_panel :after{box-sizing:border-box}.uQwHMW_panel{background:var(--dsw-alias-bg-base,#fff);height:100%;min-height:0;color:var(--dsw-alias-label-primary,#0f1115);font:var(--dsw-font-xs-13,13px/20px system-ui, sans-serif);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2,#0003);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2,#0000004d);flex-direction:column;display:flex;position:static}.uQwHMW_urlRow{border-bottom:1px solid var(--dsw-alias-border-l2,#0000001a);background:var(--dsw-alias-bg-base,#fff);flex:none;align-items:center;gap:4px;height:49px;padding:8px 10px;display:flex}.uQwHMW_urlField{flex:auto;min-width:0;position:relative}.uQwHMW_url{width:100%;min-width:0;transition:background-color .12s var(--ds-ease-in-out,ease);background:0 0;border-color:#0000}.uQwHMW_urlField:hover .uQwHMW_url,.uQwHMW_urlField:focus-within .uQwHMW_url{background:var(--dsw-alias-interactive-bg-hover,#2631480f);border-color:#0000}.uQwHMW_url input{padding-right:36px}.uQwHMW_inlineAction{width:28px;height:28px;color:var(--dsw-alias-label-tertiary,#61666b);opacity:0;pointer-events:none;transition:background-color .12s var(--ds-ease-in-out,ease), color .12s var(--ds-ease-in-out,ease), opacity .12s var(--ds-ease-in-out,ease);border-radius:6px;place-items:center;display:inline-grid;position:absolute;top:50%;right:4px;transform:translateY(-50%)}.uQwHMW_urlField:hover .uQwHMW_inlineAction,.uQwHMW_urlField:focus-within .uQwHMW_inlineAction{opacity:1;pointer-events:auto}.uQwHMW_inlineAction:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f);color:var(--dsw-alias-label-primary,#0f1115)}.uQwHMW_inlineAction:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4176e6);outline-offset:-2px}.uQwHMW_error{color:var(--dsw-alias-state-error-primary,#ec1313);font:var(--dsw-font-xxs-12,12px/18px system-ui, sans-serif);flex:none;align-items:center;gap:5px;padding:0 10px 6px;display:flex;overflow:hidden}.uQwHMW_errorIcon{color:inherit;flex:none}.uQwHMW_error span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.uQwHMW_icon{width:28px;height:28px;color:var(--dsw-alias-label-tertiary,#61666b);cursor:pointer;transition:background-color .12s var(--ds-ease-in-out,ease), color .12s var(--ds-ease-in-out,ease);background:0 0;border:0;border-radius:6px;flex:none;place-items:center;padding:0;display:inline-grid}.uQwHMW_icon:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#2631480f);color:var(--dsw-alias-label-primary,#0f1115)}.uQwHMW_icon:disabled{color:var(--dsw-alias-label-dimmed,#a9adb4);cursor:default}.uQwHMW_icon:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary,#61666b);outline-offset:-2px}.uQwHMW_iconAccent,.uQwHMW_iconAccent:hover:not(:disabled){background:var(--dsw-alias-state-business-tertiary,#e4edfd);color:var(--dsw-alias-state-business-primary,#4176e6)}.uQwHMW_commentIcon{color:var(--dsw-alias-label-secondary,#41464d)}.uQwHMW_annotationBar{background:var(--dsw-alias-state-business-tertiary,#dceeff);border-bottom:1px solid #4176e61f;flex:none;grid-template-columns:28px 28px minmax(0,1fr) auto;align-items:center;gap:4px;height:49px;padding:6px 10px;display:grid}.uQwHMW_annotationIcon{width:28px;height:28px;color:var(--dsw-alias-label-secondary,#41464d);cursor:pointer;background:0 0;border:0;border-radius:6px;place-items:center;padding:0;display:inline-grid}.uQwHMW_annotationIcon:hover:not(:disabled){color:var(--dsw-alias-label-primary,#0f1115);background:#4176e61a}.uQwHMW_annotationIcon:disabled{color:var(--dsw-alias-label-dimmed,#a9adb4);cursor:default}.uQwHMW_annotationIcon:focus-visible,.uQwHMW_annotationSend:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4176e6);outline-offset:2px}.uQwHMW_annotationTitle{min-width:0;color:var(--dsw-alias-label-primary,#0f1115);font:var(--dsw-font-s-14,500 14px/20px system-ui, sans-serif);text-align:center;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.uQwHMW_annotationSend{background:var(--dsw-alias-state-business-primary,#38f);color:#fff;min-width:72px;height:28px;font:var(--dsw-font-xs-13,600 13px/18px system-ui, sans-serif);cursor:pointer;border:0;border-radius:8px;align-items:center;gap:4px;padding:0 8px;display:inline-flex}.uQwHMW_annotationSend:hover:not(:disabled){background:var(--dsw-alias-state-business-hover,#2678e8)}.uQwHMW_annotationSend:disabled{background:var(--dsw-alias-state-business-disabled,#a9c9f7);cursor:default}.uQwHMW_annotationCount{color:#ffffffd1;font:var(--dsw-font-xxs-12,500 12px/16px system-ui, sans-serif);margin-left:-2px}.uQwHMW_hint{color:var(--dsw-alias-label-caption,#a0a4ab);font:var(--dsw-font-xxxs-11,11px/14px system-ui, sans-serif);flex:none;padding:0 10px 6px}.uQwHMW_body{flex-direction:column;flex:auto;min-height:0;padding-bottom:12px;display:flex}.uQwHMW_frameWrap{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);flex:auto;min-height:140px;position:relative;overflow:hidden}.uQwHMW_frame{border:0;width:100%;height:100%;display:block}.uQwHMW_frameOverlay{background:var(--dsw-alias-bg-base,#fff);color:var(--dsw-alias-label-caption,#a0a4ab);font:var(--dsw-font-xxs-12,12px/18px system-ui, sans-serif);text-align:center;justify-content:center;align-items:center;padding:16px;display:flex;position:absolute;inset:0}@media (prefers-reduced-motion:reduce){.uQwHMW_icon,.uQwHMW_inlineAction{transition:none}}";
-		const tagId$1 = "@canglongcl/dsh-web-review/WebviewView.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
+		const css$2 = ".uQwHMW_panel,.uQwHMW_panel *,.uQwHMW_panel :before,.uQwHMW_panel :after{box-sizing:border-box}.uQwHMW_panel{background:var(--dsw-alias-bg-base,#fff);height:100%;min-height:0;color:var(--dsw-alias-label-primary,#0f1115);font:var(--dsw-font-xs-13,13px/20px system-ui, sans-serif);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2,#0003);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2,#0000004d);flex-direction:column;display:flex;position:static}.uQwHMW_urlRow{border-bottom:1px solid var(--dsw-alias-border-l2,#0000001a);background:var(--dsw-alias-bg-base,#fff);flex:none;align-items:center;gap:4px;height:49px;padding:8px 10px;display:flex}.uQwHMW_urlField{flex:auto;min-width:0;position:relative}.uQwHMW_url{width:100%;min-width:0;transition:background-color .12s var(--ds-ease-in-out,ease);background:0 0;border-color:#0000}.uQwHMW_urlField:hover .uQwHMW_url,.uQwHMW_urlField:focus-within .uQwHMW_url{background:var(--dsw-alias-interactive-bg-hover,#2631480f);border-color:#0000}.uQwHMW_url input{padding-right:36px}.uQwHMW_inlineAction{width:28px;height:28px;color:var(--dsw-alias-label-tertiary,#61666b);opacity:0;pointer-events:none;transition:background-color .12s var(--ds-ease-in-out,ease), color .12s var(--ds-ease-in-out,ease), opacity .12s var(--ds-ease-in-out,ease);border-radius:6px;place-items:center;display:inline-grid;position:absolute;top:50%;right:4px;transform:translateY(-50%)}.uQwHMW_urlField:hover .uQwHMW_inlineAction,.uQwHMW_urlField:focus-within .uQwHMW_inlineAction{opacity:1;pointer-events:auto}.uQwHMW_inlineAction:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f);color:var(--dsw-alias-label-primary,#0f1115)}.uQwHMW_inlineAction:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4176e6);outline-offset:-2px}.uQwHMW_error{color:var(--dsw-alias-state-error-primary,#ec1313);font:var(--dsw-font-xxs-12,12px/18px system-ui, sans-serif);flex:none;align-items:center;gap:5px;padding:0 10px 6px;display:flex;overflow:hidden}.uQwHMW_errorIcon{color:inherit;flex:none}.uQwHMW_error span{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.uQwHMW_icon{width:28px;height:28px;color:var(--dsw-alias-label-tertiary,#61666b);cursor:pointer;transition:background-color .12s var(--ds-ease-in-out,ease), color .12s var(--ds-ease-in-out,ease);background:0 0;border:0;border-radius:6px;flex:none;place-items:center;padding:0;display:inline-grid}.uQwHMW_icon:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#2631480f);color:var(--dsw-alias-label-primary,#0f1115)}.uQwHMW_icon:disabled{color:var(--dsw-alias-label-dimmed,#a9adb4);cursor:default}.uQwHMW_icon:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary,#61666b);outline-offset:-2px}.uQwHMW_iconAccent,.uQwHMW_iconAccent:hover:not(:disabled){background:var(--dsw-alias-state-business-tertiary,#e4edfd);color:var(--dsw-alias-state-business-primary,#4176e6)}.uQwHMW_commentIcon{color:var(--dsw-alias-label-secondary,#41464d)}.uQwHMW_annotationBar{background:var(--dsw-alias-state-business-tertiary,#dceeff);border-bottom:1px solid color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 12%, transparent);flex:none;grid-template-columns:28px 28px minmax(0,1fr) auto;align-items:center;gap:4px;height:49px;padding:6px 10px;display:grid}.uQwHMW_annotationIcon{width:28px;height:28px;color:var(--dsw-alias-label-secondary,#41464d);cursor:pointer;background:0 0;border:0;border-radius:6px;place-items:center;padding:0;display:inline-grid}.uQwHMW_annotationIcon:hover:not(:disabled){background:color-mix(in srgb, var(--dsw-alias-state-business-primary,#4176e6) 10%, transparent);color:var(--dsw-alias-label-primary,#0f1115)}.uQwHMW_annotationIcon:disabled{color:var(--dsw-alias-label-dimmed,#a9adb4);cursor:default}.uQwHMW_annotationIcon:focus-visible,.uQwHMW_annotationSend:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4176e6);outline-offset:2px}.uQwHMW_annotationTitle{min-width:0;color:var(--dsw-alias-label-primary,#0f1115);font:var(--dsw-font-s-14,500 14px/20px system-ui, sans-serif);text-align:center;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.uQwHMW_annotationSend{background:var(--dsw-alias-state-business-primary,#38f);color:#fff;min-width:72px;height:28px;font:var(--dsw-font-xs-13,600 13px/18px system-ui, sans-serif);cursor:pointer;border:0;border-radius:8px;align-items:center;gap:4px;padding:0 8px;display:inline-flex}.uQwHMW_annotationSend:hover:not(:disabled){background:var(--dsw-alias-state-business-hover,#2678e8)}.uQwHMW_annotationSend:disabled{background:var(--dsw-alias-state-business-disabled,#a9c9f7);cursor:default}.uQwHMW_annotationCount{color:#ffffffd1;font:var(--dsw-font-xxs-12,500 12px/16px system-ui, sans-serif);margin-left:-2px}.uQwHMW_hint{color:var(--dsw-alias-label-caption,#a0a4ab);font:var(--dsw-font-xxxs-11,11px/14px system-ui, sans-serif);flex:none;padding:0 10px 6px}.uQwHMW_body{flex-direction:column;flex:auto;min-height:0;padding-bottom:12px;display:flex}.uQwHMW_frameWrap{border-bottom:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);flex:auto;min-height:140px;position:relative;overflow:hidden}.uQwHMW_frame{border:0;width:100%;height:100%;display:block}.uQwHMW_frameOverlay{background:var(--dsw-alias-bg-base,#fff);color:var(--dsw-alias-label-caption,#a0a4ab);font:var(--dsw-font-xxs-12,12px/18px system-ui, sans-serif);text-align:center;justify-content:center;align-items:center;padding:16px;display:flex;position:absolute;inset:0}@media (prefers-reduced-motion:reduce){.uQwHMW_icon,.uQwHMW_inlineAction{transition:none}}";
+		const tagId$2 = "@canglongcl/dsh-web-review/WebviewView.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@canglongcl/dsh-web-review";
-			tag.dataset.pluginCss = tagId$1;
-			tag.textContent = css$1;
+			tag.dataset.pluginCss = tagId$2;
+			tag.textContent = css$2;
 			document.head.appendChild(tag);
 		}
 		var WebviewView_module_css_default = {
-			"annotationSend": "uQwHMW_annotationSend",
-			"frameWrap": "uQwHMW_frameWrap",
-			"error": "uQwHMW_error",
 			"icon": "uQwHMW_icon",
-			"body": "uQwHMW_body",
-			"annotationBar": "uQwHMW_annotationBar",
 			"commentIcon": "uQwHMW_commentIcon",
 			"urlField": "uQwHMW_urlField",
+			"body": "uQwHMW_body",
+			"iconAccent": "uQwHMW_iconAccent",
+			"annotationTitle": "uQwHMW_annotationTitle",
+			"urlRow": "uQwHMW_urlRow",
+			"hint": "uQwHMW_hint",
+			"frame": "uQwHMW_frame",
+			"frameOverlay": "uQwHMW_frameOverlay",
+			"annotationIcon": "uQwHMW_annotationIcon",
+			"annotationCount": "uQwHMW_annotationCount",
+			"frameWrap": "uQwHMW_frameWrap",
 			"inlineAction": "uQwHMW_inlineAction",
 			"errorIcon": "uQwHMW_errorIcon",
-			"annotationCount": "uQwHMW_annotationCount",
-			"panel": "uQwHMW_panel",
-			"annotationTitle": "uQwHMW_annotationTitle",
-			"hint": "uQwHMW_hint",
-			"urlRow": "uQwHMW_urlRow",
-			"iconAccent": "uQwHMW_iconAccent",
-			"frame": "uQwHMW_frame",
-			"annotationIcon": "uQwHMW_annotationIcon",
-			"frameOverlay": "uQwHMW_frameOverlay",
-			"url": "uQwHMW_url"
+			"annotationSend": "uQwHMW_annotationSend",
+			"annotationBar": "uQwHMW_annotationBar",
+			"error": "uQwHMW_error",
+			"url": "uQwHMW_url",
+			"panel": "uQwHMW_panel"
 		};
 		//#endregion
 		//#region src/client/WebviewView.tsx
 		/**
-		* WebviewView: the "缃戦〉棰勮" conversation view tab. Renders browse chrome or
+		* WebviewView: the "网页预览" conversation view tab. Renders browse chrome or
 		* the annotation toolbar above a
 		* full-height isolated iframe with the bridge-owned picker and annotation
 		* echo layer (hover outline and numbered marker circles).
@@ -4557,7 +4581,7 @@
 		* arms pick mode; clicking an element opens the host-owned white comment and
 		* visual-property editor. Confirm commits its bounded diffs into the shared
 		* store; Cancel restores the exact transaction baseline. Each annotation echoes
-		* as a numbered circle 鈥?clicking it (or a dock detail row) re-opens the editor.
+		* as a numbered circle — clicking it (or a dock detail row) re-opens the editor.
 		*
 		* The shared dock observes picks/url/title and commits the separate annotation
 		* context; this view never touches the user's composer message. Assistant-link
@@ -4587,7 +4611,7 @@
 			return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 		}
 		/** The preview tab view (see module doc). */
-		function WebviewView({ useStore, useSession, useInput, inputActions, actions, sendAnnotationsWithoutDraft, createPreviewSession, releasePreviewSessions, t }) {
+		function WebviewView({ useStore, useSession, useInput, inputActions, actions, sendAnnotationsWithoutDraft, returnToChat, createPreviewSession, releasePreviewSessions, t }) {
 			const state = useStore((s) => s);
 			const input = useInput((s) => s);
 			const promptError = useSession((session) => session.promptError);
@@ -4640,13 +4664,14 @@
 					});
 				}).catch(() => void 0);
 			};
-			const openEditor = (id, target, existing) => {
+			const openEditor = (id, target, existing, initialFocus = "editor") => {
 				const current = editorRef.current;
 				if (current !== null && current.id !== id) bridgeRef.current?.cancelEdit();
 				setEditor({
 					id,
 					target,
 					existing,
+					initialFocus,
 					originalHandle: existing === null ? null : target.handle,
 					tree: null,
 					comment: existing?.comment ?? "",
@@ -4664,6 +4689,7 @@
 				setEditor({
 					...current,
 					target,
+					initialFocus: "editor",
 					tree: null,
 					comment,
 					mode,
@@ -4708,7 +4734,7 @@
 					bridgeRef.current?.cancelEdit();
 					return;
 				}
-				openEditor(pickId(), target, null);
+				openEditor(pickId(), target, null, "comment");
 			};
 			onMarkClickRef.current = onMarkClick;
 			onShortcutRef.current = (action) => {
@@ -4896,10 +4922,12 @@
 				if (input.draft.trim() !== "") {
 					promptErrorAtSend.current = promptError;
 					inputActions.submit();
+					returnToChat();
 					return;
 				}
 				try {
 					await sendAnnotationsWithoutDraft();
+					returnToChat();
 					if (stateRef.current.pickMode) actionsRef.current.togglePickMode();
 				} catch {
 					actions.setError(t("panel.pick.sendError"));
@@ -5094,6 +5122,7 @@
 								changes: editor.originalHandle === editor.target.handle ? editor.existing?.changes ?? [] : [],
 								textChange: editor.originalHandle === editor.target.handle ? editor.existing?.textChange ?? null : null,
 								initialMode: editor.mode,
+								initialFocus: editor.initialFocus,
 								navigationFeedback: editor.navigationFeedback,
 								selectedSkills: state.selectedSkills,
 								position: editor.position,
@@ -5151,7 +5180,7 @@
 		/** Map the rich picker store into the bounded browser-to-host wire shape. */
 		function bounded(value, cap) {
 			if (value.length <= cap) return value;
-			return `${value.slice(0, Math.max(0, cap - 1))}鈥;
+			return `${value.slice(0, Math.max(0, cap - 1))}…`;
 		}
 		/** User-authored intent must fail visibly instead of being silently rewritten. */
 		function exactIntent(value, cap, field) {
@@ -5231,8 +5260,8 @@
 				return;
 			}
 		}
-		/** Activate the plugin's registered conversation tab through its accessible UI. */
-		function activatePreviewTab(root, label) {
+		/** Activate one registered conversation tab through its accessible UI. */
+		function activateConversationTab(root, label) {
 			const tab = [...root.querySelectorAll("[role=\"tab\"]")].find((candidate) => candidate.textContent?.trim() === label);
 			if (tab === void 0) return false;
 			tab.click();
@@ -5240,38 +5269,38 @@
 		}
 		//#endregion
 		//#region \0dsh-web-review-css:src/client/DraftOverlayBar.module.css.mjs
-		const css = ".yeDpAG_dock,.yeDpAG_dock *,.yeDpAG_dock :before,.yeDpAG_dock :after{box-sizing:border-box}.yeDpAG_dock{z-index:4;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));max-width:calc(var(--dsh-composer-card-max-width) - 4 * var(--dsh-composer-dock-inset));font-family:Inter, var(--dsw-font-family,system-ui, sans-serif);flex:none;margin:0 auto;position:relative}.yeDpAG_anchor{width:fit-content;max-width:100%;position:relative}.yeDpAG_capsule{border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-specific-tip,#f7f8fa);max-width:100%;height:36px;color:var(--dsw-alias-label-primary,#17191c);border-radius:12px;align-items:center;display:inline-flex;overflow:hidden;box-shadow:0 1px 2px #00000008}.yeDpAG_summary{min-width:0;height:100%;color:inherit;cursor:pointer;background:0 0;border:0;align-items:center;gap:8px;padding:4px 8px 4px 12px;display:flex}.yeDpAG_summary:hover,.yeDpAG_clear:hover,.yeDpAG_remove:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.yeDpAG_summary:focus-visible,.yeDpAG_clear:focus-visible,.yeDpAG_rowMain:focus-visible,.yeDpAG_remove:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary,#61666b);outline-offset:-2px}.yeDpAG_lead{color:var(--dsw-alias-label-tertiary,#61666b);flex:none;place-items:center;display:grid}.yeDpAG_count{text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;line-height:24px;overflow:hidden}.yeDpAG_status{color:var(--dsw-alias-label-tertiary,#61666b);flex:none;align-items:center;gap:4px;font-size:11px;line-height:16px;display:inline-flex}.yeDpAG_capsule[data-sync-status=error] .yeDpAG_status{color:var(--dsw-alias-state-error-primary,#ec1313)}.yeDpAG_spinner{animation:.9s linear infinite yeDpAG_spin}.yeDpAG_clear,.yeDpAG_remove{color:var(--dsw-alias-label-tertiary,#61666b);cursor:pointer;background:0 0;border:0;flex:none;place-items:center;padding:0;display:grid}.yeDpAG_clear{border-left:1px solid var(--dsw-alias-border-l1,#00000014);width:32px;height:100%}.yeDpAG_details{z-index:20;border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2,#0003);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2,#0000004d);border-radius:14px;width:min(420px,100vw - 32px);max-height:min(360px,52vh);position:absolute;bottom:calc(100% + 8px);left:0;overflow:auto;box-shadow:0 12px 32px #0000001f,0 2px 8px #0000000f}.yeDpAG_list{margin:0;padding:6px;list-style:none}.yeDpAG_row{border-radius:10px;min-width:0;display:flex;position:relative}.yeDpAG_row+.yeDpAG_row{border-top:1px solid var(--dsw-alias-border-l1,#00000014);border-top-left-radius:0;border-top-right-radius:0}.yeDpAG_row:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.yeDpAG_rowMain{min-width:0;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;border-radius:10px;flex-direction:column;flex:auto;gap:7px;padding:10px 38px 10px 10px;display:flex}.yeDpAG_targetLine{align-items:center;gap:7px;min-width:0;display:flex}.yeDpAG_index{background:var(--dsw-alias-state-business-primary,#4176e6);width:18px;height:18px;color:var(--dsw-alias-label-primary-foreground,#fff);border-radius:999px;flex:none;place-items:center;font-size:11px;font-weight:600;line-height:18px;display:grid}.yeDpAG_badge{border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-module-platform,#f4f5f6);max-width:96px;color:var(--dsw-alias-label-tertiary,#61666b);font:12px/18px var(--ds-font-family-code,ui-monospace, monospace);text-overflow:ellipsis;white-space:nowrap;border-radius:999px;flex:none;padding:1px 7px;overflow:hidden}.yeDpAG_target{min-width:0;color:var(--dsw-alias-label-secondary,#4b4f57);text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:20px;overflow:hidden}.yeDpAG_comment,.yeDpAG_emptyComment{color:var(--dsw-alias-label-primary,#17191c);white-space:pre-wrap;-webkit-line-clamp:4;-webkit-box-orient:vertical;font-size:14px;font-weight:500;line-height:21px;display:-webkit-box;overflow:hidden}.yeDpAG_emptyComment{color:var(--dsw-alias-label-caption,#a0a4ab);font-weight:400}.yeDpAG_source{color:var(--dsw-alias-label-caption,#a0a4ab);font:11px/16px var(--ds-font-family-code,ui-monospace, monospace);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.yeDpAG_remove{opacity:0;border-radius:999px;width:28px;height:28px;position:absolute;top:7px;right:7px}.yeDpAG_row:hover .yeDpAG_remove,.yeDpAG_remove:focus-visible{opacity:1}@keyframes yeDpAG_spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.yeDpAG_spinner{animation:none}}";
-		const tagId = "@canglongcl/dsh-web-review/DraftOverlayBar.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
+		const css$1 = ".yeDpAG_dock,.yeDpAG_dock *,.yeDpAG_dock :before,.yeDpAG_dock :after{box-sizing:border-box}.yeDpAG_dock{z-index:4;width:calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));max-width:calc(var(--dsh-composer-card-max-width) - 4 * var(--dsh-composer-dock-inset));font-family:Inter, var(--dsw-font-family,system-ui, sans-serif);flex:none;margin:0 auto;position:relative}.yeDpAG_anchor{width:fit-content;max-width:100%;position:relative}.yeDpAG_capsule{border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-specific-tip,#f7f8fa);max-width:100%;height:36px;color:var(--dsw-alias-label-primary,#17191c);border-radius:12px;align-items:center;display:inline-flex;overflow:hidden;box-shadow:0 1px 2px #00000008}.yeDpAG_summary{min-width:0;height:100%;color:inherit;cursor:pointer;background:0 0;border:0;align-items:center;gap:8px;padding:4px 8px 4px 12px;display:flex}.yeDpAG_summary:hover,.yeDpAG_clear:hover,.yeDpAG_remove:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.yeDpAG_summary:focus-visible,.yeDpAG_clear:focus-visible,.yeDpAG_rowMain:focus-visible,.yeDpAG_remove:focus-visible{outline:2px solid var(--dsw-alias-label-tertiary,#61666b);outline-offset:-2px}.yeDpAG_lead{color:var(--dsw-alias-label-tertiary,#61666b);flex:none;place-items:center;display:grid}.yeDpAG_count{text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;line-height:24px;overflow:hidden}.yeDpAG_status{color:var(--dsw-alias-label-tertiary,#61666b);flex:none;align-items:center;gap:4px;font-size:11px;line-height:16px;display:inline-flex}.yeDpAG_capsule[data-sync-status=error] .yeDpAG_status{color:var(--dsw-alias-state-error-primary,#ec1313)}.yeDpAG_spinner{animation:.9s linear infinite yeDpAG_spin}.yeDpAG_clear,.yeDpAG_remove{color:var(--dsw-alias-label-tertiary,#61666b);cursor:pointer;background:0 0;border:0;flex:none;place-items:center;padding:0;display:grid}.yeDpAG_clear{border-left:1px solid var(--dsw-alias-border-l1,#00000014);width:32px;height:100%}.yeDpAG_details{z-index:20;border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-base,#fff);--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2,#0003);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2,#0000004d);border-radius:14px;width:min(420px,100vw - 32px);max-height:min(360px,52vh);position:absolute;bottom:calc(100% + 8px);left:0;overflow:auto;box-shadow:0 12px 32px #0000001f,0 2px 8px #0000000f}.yeDpAG_list{margin:0;padding:6px;list-style:none}.yeDpAG_row{border-radius:10px;min-width:0;display:flex;position:relative}.yeDpAG_row+.yeDpAG_row{border-top:1px solid var(--dsw-alias-border-l1,#00000014);border-top-left-radius:0;border-top-right-radius:0}.yeDpAG_row:hover{background:var(--dsw-alias-interactive-bg-hover,#2631480f)}.yeDpAG_rowMain{min-width:0;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;border-radius:10px;flex-direction:column;flex:auto;gap:7px;padding:10px 38px 10px 10px;display:flex}.yeDpAG_targetLine{align-items:center;gap:7px;min-width:0;display:flex}.yeDpAG_index{background:var(--dsw-alias-state-business-primary,#4176e6);width:18px;height:18px;color:var(--dsw-alias-label-primary-foreground,#fff);border-radius:999px;flex:none;place-items:center;font-size:11px;font-weight:600;line-height:18px;display:grid}.yeDpAG_badge{border:1px solid var(--dsw-alias-border-l1,#00000014);background:var(--dsw-alias-bg-module-platform,#f5f6f7);max-width:96px;color:var(--dsw-alias-label-tertiary,#61666b);font:12px/18px var(--ds-font-family-code,ui-monospace, monospace);text-overflow:ellipsis;white-space:nowrap;border-radius:999px;flex:none;padding:1px 7px;overflow:hidden}.yeDpAG_target{min-width:0;color:var(--dsw-alias-label-secondary,#4b4f57);text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:20px;overflow:hidden}.yeDpAG_comment,.yeDpAG_emptyComment{color:var(--dsw-alias-label-primary,#17191c);white-space:pre-wrap;-webkit-line-clamp:4;-webkit-box-orient:vertical;font-size:14px;font-weight:500;line-height:21px;display:-webkit-box;overflow:hidden}.yeDpAG_emptyComment{color:var(--dsw-alias-label-caption,#a0a4ab);font-weight:400}.yeDpAG_source{color:var(--dsw-alias-label-caption,#a0a4ab);font:11px/16px var(--ds-font-family-code,ui-monospace, monospace);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.yeDpAG_remove{opacity:0;border-radius:999px;width:28px;height:28px;position:absolute;top:7px;right:7px}.yeDpAG_row:hover .yeDpAG_remove,.yeDpAG_remove:focus-visible{opacity:1}@keyframes yeDpAG_spin{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.yeDpAG_spinner{animation:none}}";
+		const tagId$1 = "@canglongcl/dsh-web-review/DraftOverlayBar.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@canglongcl/dsh-web-review";
-			tag.dataset.pluginCss = tagId;
-			tag.textContent = css;
+			tag.dataset.pluginCss = tagId$1;
+			tag.textContent = css$1;
 			document.head.appendChild(tag);
 		}
 		var DraftOverlayBar_module_css_default = {
-			"anchor": "yeDpAG_anchor",
-			"index": "yeDpAG_index",
-			"count": "yeDpAG_count",
-			"target": "yeDpAG_target",
-			"emptyComment": "yeDpAG_emptyComment",
-			"spinner": "yeDpAG_spinner",
-			"badge": "yeDpAG_badge",
-			"remove": "yeDpAG_remove",
-			"row": "yeDpAG_row",
-			"list": "yeDpAG_list",
+			"capsule": "yeDpAG_capsule",
+			"dock": "yeDpAG_dock",
 			"clear": "yeDpAG_clear",
+			"remove": "yeDpAG_remove",
+			"count": "yeDpAG_count",
+			"list": "yeDpAG_list",
+			"targetLine": "yeDpAG_targetLine",
+			"target": "yeDpAG_target",
+			"details": "yeDpAG_details",
+			"row": "yeDpAG_row",
+			"emptyComment": "yeDpAG_emptyComment",
+			"anchor": "yeDpAG_anchor",
 			"status": "yeDpAG_status",
 			"source": "yeDpAG_source",
-			"summary": "yeDpAG_summary",
 			"lead": "yeDpAG_lead",
-			"comment": "yeDpAG_comment",
-			"rowMain": "yeDpAG_rowMain",
-			"capsule": "yeDpAG_capsule",
-			"targetLine": "yeDpAG_targetLine",
+			"summary": "yeDpAG_summary",
 			"spin": "yeDpAG_spin",
-			"dock": "yeDpAG_dock",
-			"details": "yeDpAG_details"
+			"rowMain": "yeDpAG_rowMain",
+			"comment": "yeDpAG_comment",
+			"index": "yeDpAG_index",
+			"badge": "yeDpAG_badge",
+			"spinner": "yeDpAG_spinner"
 		};
 		//#endregion
 		//#region src/client/DraftOverlayBar.tsx
@@ -5290,7 +5319,7 @@
 			const anchor = pick.snapshot.anchor;
 			if (anchor === null) return pick.snapshot.cssPath;
 			const source = anchor.line === void 0 ? anchor.file : `${anchor.file}:${anchor.line}`;
-			return anchor.component.trim() === "" ? source : `${source} 路 ${anchor.component}`;
+			return anchor.component.trim() === "" ? source : `${source} · ${anchor.component}`;
 		}
 		function annotationContextId(node) {
 			return node.kind === "context" ? annotationSnapshotIdOfSource(node.source) : void 0;
@@ -5474,7 +5503,7 @@
 							className: DraftOverlayBar_module_css_default.summary,
 							"aria-expanded": open,
 							"aria-controls": !clearing ? detailsId : void 0,
-							"aria-label": `${countLabel} 路 ${statusLabel}`,
+							"aria-label": `${countLabel} · ${statusLabel}`,
 							title: syncStatus === "error" ? statusLabel : void 0,
 							onClick: () => {
 								if (syncStatus === "error") setRetry((value) => value + 1);
@@ -5519,17 +5548,378 @@
 			});
 		}
 		//#endregion
+		//#region src/browser-comments-context.ts
+		function recordOf(value) {
+			return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
+		}
+		function exactRecord(value, required, optional = []) {
+			const record = recordOf(value);
+			if (record === void 0) return void 0;
+			const allowed = /* @__PURE__ */ new Set([...required, ...optional]);
+			return required.every((key) => Object.hasOwn(record, key)) && Object.keys(record).every((key) => allowed.has(key)) ? record : void 0;
+		}
+		function boundedString(value, cap, allowEmpty = true) {
+			if (typeof value !== "string" || value.length > cap || !allowEmpty && value.length === 0) return void 0;
+			return value;
+		}
+		function anchorOf(value) {
+			if (value === null) return null;
+			const record = exactRecord(value, [
+				"framework",
+				"component",
+				"file"
+			], ["line"]);
+			if (record === void 0) return void 0;
+			if (record.framework !== "react" && record.framework !== "vue" && record.framework !== "svelte") return void 0;
+			const component = boundedString(record.component, ANNOTATION_LIMITS.anchorComponent);
+			const file = boundedString(record.file, ANNOTATION_LIMITS.anchorFile, false);
+			if (component === void 0 || file === void 0) return void 0;
+			if (record.line !== void 0 && (!Number.isSafeInteger(record.line) || record.line < 1)) return void 0;
+			return {
+				framework: record.framework,
+				component,
+				file,
+				...record.line === void 0 ? {} : { line: record.line }
+			};
+		}
+		function changesOf(value) {
+			if (!Array.isArray(value) || value.length > 48) return void 0;
+			const changes = [];
+			const properties = /* @__PURE__ */ new Set();
+			for (const item of value) {
+				const record = exactRecord(item, [
+					"property",
+					"before",
+					"after"
+				]);
+				if (record === void 0) return void 0;
+				const property = boundedString(record.property, 64, false);
+				const before = boundedString(record.before, ANNOTATION_LIMITS.styleValue);
+				const after = boundedString(record.after, ANNOTATION_LIMITS.styleValue);
+				if (property === void 0 || !isEditableStyleProperty(property) || properties.has(property) || before === void 0 || after === void 0 || before === after || !isSafeAnnotationStyleValue(before) || !isSafeAnnotationStyleValue(after)) return void 0;
+				properties.add(property);
+				changes.push({
+					property,
+					before,
+					after
+				});
+			}
+			return changes;
+		}
+		function textChangeOf(value) {
+			if (value === null) return null;
+			const record = exactRecord(value, ["before", "after"]);
+			if (record === void 0) return void 0;
+			const before = boundedString(record.before, ANNOTATION_LIMITS.textValue);
+			const after = boundedString(record.after, ANNOTATION_LIMITS.textValue);
+			return before === void 0 || after === void 0 || before === after ? void 0 : {
+				before,
+				after
+			};
+		}
+		function presentationCommentOf(value) {
+			const record = exactRecord(value, [
+				"id",
+				"comment",
+				"tagName",
+				"role",
+				"label",
+				"textContent",
+				"anchor",
+				"changes",
+				"textChange"
+			]);
+			if (record === void 0) return void 0;
+			const id = boundedString(record.id, ANNOTATION_LIMITS.id, false);
+			const comment = boundedString(record.comment, ANNOTATION_LIMITS.comment);
+			const tagName = boundedString(record.tagName, ANNOTATION_LIMITS.tagName, false);
+			const role = boundedString(record.role, ANNOTATION_LIMITS.role);
+			const label = boundedString(record.label, ANNOTATION_LIMITS.label);
+			const textContent = boundedString(record.textContent, ANNOTATION_LIMITS.textContent);
+			const anchor = anchorOf(record.anchor);
+			const changes = changesOf(record.changes);
+			const textChange = textChangeOf(record.textChange);
+			if (id === void 0 || comment === void 0 || tagName === void 0 || role === void 0 || label === void 0 || textContent === void 0 || anchor === void 0 || changes === void 0 || textChange === void 0) return void 0;
+			if (comment.trim() === "" && changes.length === 0 && textChange === null) return void 0;
+			return {
+				id,
+				comment,
+				tagName,
+				role,
+				label,
+				textContent,
+				anchor,
+				changes,
+				textChange
+			};
+		}
+		/** Strict selector decoder; malformed or foreign Context sources decline to the generic renderer. */
+		function browserCommentsContextSourceOf(value) {
+			const source = exactRecord(value, [
+				"kind",
+				"plugin",
+				"form",
+				"snapshotId",
+				"presentation"
+			]);
+			if (source === void 0 || source.kind !== "plugin" || source.plugin !== "dsh-web-review" || source.form !== "browser-comments") return void 0;
+			const snapshotId = boundedString(source.snapshotId, ANNOTATION_LIMITS.snapshotId, false);
+			const presentation = exactRecord(source.presentation, ["page", "comments"]);
+			const page = exactRecord(presentation?.page, ["url", "title"]);
+			if (snapshotId === void 0 || presentation === void 0 || page === void 0 || !Array.isArray(presentation.comments)) return;
+			const url = boundedString(page.url, ANNOTATION_LIMITS.pageUrl, false);
+			const title = boundedString(page.title, ANNOTATION_LIMITS.pageTitle);
+			if (url === void 0 || title === void 0 || !isPreviewableUrl(url) || presentation.comments.length < 1 || presentation.comments.length > 20) return void 0;
+			const comments = [];
+			const ids = /* @__PURE__ */ new Set();
+			for (const value of presentation.comments) {
+				const comment = presentationCommentOf(value);
+				if (comment === void 0 || ids.has(comment.id)) return void 0;
+				ids.add(comment.id);
+				comments.push(comment);
+			}
+			return {
+				kind: "plugin",
+				plugin: "dsh-web-review",
+				form: "browser-comments",
+				snapshotId: AnnotationSnapshotId(snapshotId),
+				presentation: {
+					page: {
+						url,
+						title
+					},
+					comments
+				}
+			};
+		}
+		//#endregion
+		//#region \0dsh-web-review-css:src/client/BrowserCommentsContext.module.css.mjs
+		const css = "._5vrESW_root{min-width:0}._5vrESW_root[data-open]{padding-bottom:4px}._5vrESW_chevron{color:var(--dsw-alias-label-secondary)}._5vrESW_sep{background:var(--dsw-alias-label-caption);border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px}._5vrESW_pageName,._5vrESW_count{min-width:0;color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:24px;overflow:hidden}._5vrESW_pageName{flex:0 auto}._5vrESW_count{flex:none}._5vrESW_body{box-sizing:border-box;background:var(--dsw-alias-markdown-code-block);width:calc(100% - 22px);max-height:360px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);border:none;border-radius:8px;margin:4px 0 0 22px;padding:12px;overflow:auto}._5vrESW_pageHeader,._5vrESW_targetRow,._5vrESW_diff{align-items:center;min-width:0;display:flex}._5vrESW_pageHeader{border-bottom:1px solid var(--dsw-alias-separator-primary);justify-content:space-between;gap:16px;padding:0 2px 10px}._5vrESW_pageIdentity{flex-direction:column;min-width:0;display:flex}._5vrESW_pageTitle{color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._5vrESW_pageUrl,._5vrESW_source{color:var(--dsw-alias-label-caption);font:var(--dsw-font-xxxs-11);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._5vrESW_metrics{flex:none;gap:4px;display:flex}._5vrESW_metrics span,._5vrESW_property{background:var(--dsw-alias-fill-tsp-secondary);color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);border-radius:4px;padding:2px 6px}._5vrESW_comments{flex-direction:column;gap:0;margin:0;padding:0;list-style:none;display:flex}._5vrESW_comment{border-bottom:1px solid var(--dsw-alias-separator-primary);grid-template-columns:20px minmax(0,1fr);gap:8px;padding:11px 2px;display:grid}._5vrESW_comment:last-child{border-bottom:none;padding-bottom:1px}._5vrESW_index{border:1px solid var(--dsw-alias-border-l2);width:18px;height:18px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);border-radius:50%;justify-content:center;align-items:center;display:inline-flex}._5vrESW_commentBody{min-width:0}._5vrESW_targetRow{align-items:center;gap:8px}._5vrESW_targetTag{background:var(--dsw-alias-fill-tsp-secondary);color:var(--dsw-alias-label-secondary);border:none;border-radius:4px;flex:none;padding:1px 6px;font:600 11px/16px ui-monospace,SFMono-Regular,Menlo,monospace}._5vrESW_targetContent{min-width:0;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._5vrESW_source{text-align:right;flex:auto}._5vrESW_intent{grid-template-columns:auto minmax(0,1fr);align-items:start;gap:7px;margin-top:7px;display:grid}._5vrESW_intentSource{background:var(--dsw-alias-fill-tsp-secondary);color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);white-space:nowrap;border-radius:4px;padding:2px 5px}._5vrESW_intentText{color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);white-space:pre-wrap;margin:0;line-height:18px}._5vrESW_diffs{flex-direction:column;gap:4px;margin-top:7px;display:flex}._5vrESW_diff{gap:6px;min-height:20px}._5vrESW_property{text-overflow:ellipsis;white-space:nowrap;flex:none;max-width:130px;overflow:hidden}._5vrESW_before,._5vrESW_after{min-width:0;font:var(--dsw-font-xxxs-11);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._5vrESW_before{color:var(--dsw-alias-label-caption);text-decoration:line-through}._5vrESW_after{color:var(--dsw-alias-label-primary)}._5vrESW_arrow{color:var(--dsw-alias-label-caption);flex:none}";
+		const tagId = "@canglongcl/dsh-web-review/BrowserCommentsContext.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "@canglongcl/dsh-web-review";
+			tag.dataset.pluginCss = tagId;
+			tag.textContent = css;
+			document.head.appendChild(tag);
+		}
+		var BrowserCommentsContext_module_css_default = {
+			"body": "_5vrESW_body",
+			"targetRow": "_5vrESW_targetRow",
+			"diff": "_5vrESW_diff",
+			"source": "_5vrESW_source",
+			"property": "_5vrESW_property",
+			"index": "_5vrESW_index",
+			"root": "_5vrESW_root",
+			"intent": "_5vrESW_intent",
+			"chevron": "_5vrESW_chevron",
+			"intentSource": "_5vrESW_intentSource",
+			"intentText": "_5vrESW_intentText",
+			"commentBody": "_5vrESW_commentBody",
+			"diffs": "_5vrESW_diffs",
+			"before": "_5vrESW_before",
+			"after": "_5vrESW_after",
+			"targetContent": "_5vrESW_targetContent",
+			"count": "_5vrESW_count",
+			"arrow": "_5vrESW_arrow",
+			"pageUrl": "_5vrESW_pageUrl",
+			"pageHeader": "_5vrESW_pageHeader",
+			"comments": "_5vrESW_comments",
+			"pageTitle": "_5vrESW_pageTitle",
+			"sep": "_5vrESW_sep",
+			"pageIdentity": "_5vrESW_pageIdentity",
+			"pageName": "_5vrESW_pageName",
+			"comment": "_5vrESW_comment",
+			"metrics": "_5vrESW_metrics",
+			"targetTag": "_5vrESW_targetTag"
+		};
+		//#endregion
+		//#region src/client/BrowserCommentsContext.tsx
+		function pageLabel(source) {
+			const title = source.presentation.page.title.trim();
+			if (title !== "") return title;
+			const url = new URL(source.presentation.page.url);
+			return `${url.host}${url.pathname === "/" ? "" : url.pathname}`;
+		}
+		function targetContent(comment) {
+			return comment.label.trim() || comment.textContent.trim() || comment.role.trim();
+		}
+		function sourceLabel(comment) {
+			if (comment.anchor === null) return void 0;
+			const location = comment.anchor.line === void 0 ? comment.anchor.file : `${comment.anchor.file}:${comment.anchor.line}`;
+			return comment.anchor.component.trim() === "" ? location : `${comment.anchor.component} · ${location}`;
+		}
+		/** Native DSH disclosure for one durable Browser Comments snapshot. */
+		function BrowserCommentsContext({ matched, t }) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const { page, comments } = matched.presentation;
+			const styleCount = comments.reduce((total, comment) => total + comment.changes.length, 0);
+			const textCount = comments.reduce((total, comment) => total + (comment.textChange === null ? 0 : 1), 0);
+			const label = pageLabel(matched);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				className: BrowserCommentsContext_module_css_default.root,
+				icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutline16, { size: 14 }),
+				chevronClassName: BrowserCommentsContext_module_css_default.chevron,
+				title: t("context.title"),
+				collapsedContent: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: BrowserCommentsContext_module_css_default.sep,
+						"aria-hidden": true
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: BrowserCommentsContext_module_css_default.pageName,
+						children: label
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: BrowserCommentsContext_module_css_default.sep,
+						"aria-hidden": true
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: BrowserCommentsContext_module_css_default.count,
+						children: t("context.commentCount", { count: comments.length })
+					})
+				] }),
+				keepContentWhenOpen: true,
+				open,
+				expandable: true,
+				expandOnRowClick: true,
+				onToggle: () => {
+					setOpen((value) => !value);
+				},
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					className: BrowserCommentsContext_module_css_default.body,
+					"data-browser-comments-context": true,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
+						className: BrowserCommentsContext_module_css_default.pageHeader,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: BrowserCommentsContext_module_css_default.pageIdentity,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", {
+								className: BrowserCommentsContext_module_css_default.pageTitle,
+								children: label
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: BrowserCommentsContext_module_css_default.pageUrl,
+								children: page.url
+							})]
+						}), (styleCount > 0 || textCount > 0) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: BrowserCommentsContext_module_css_default.metrics,
+							"aria-label": t("context.changeSummary"),
+							children: [styleCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("context.styleCount", { count: styleCount }) }), textCount > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("context.textCount", { count: textCount }) })]
+						})]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ol", {
+						className: BrowserCommentsContext_module_css_default.comments,
+						children: comments.map((comment, index) => {
+							const source = sourceLabel(comment);
+							const content = targetContent(comment);
+							const tag = comment.tagName.toLowerCase();
+							return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+								className: BrowserCommentsContext_module_css_default.comment,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: BrowserCommentsContext_module_css_default.index,
+									"aria-hidden": true,
+									children: index + 1
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: BrowserCommentsContext_module_css_default.commentBody,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: BrowserCommentsContext_module_css_default.targetRow,
+											"aria-label": content === "" ? tag : `${tag} ${content}`,
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("code", {
+													className: BrowserCommentsContext_module_css_default.targetTag,
+													"data-browser-comment-tag": true,
+													children: [
+														"<",
+														tag,
+														">"
+													]
+												}),
+												content !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", {
+													className: BrowserCommentsContext_module_css_default.targetContent,
+													"data-browser-comment-content": true,
+													children: content
+												}),
+												source !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: BrowserCommentsContext_module_css_default.source,
+													children: source
+												})
+											]
+										}),
+										comment.comment.trim() !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: BrowserCommentsContext_module_css_default.intent,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: BrowserCommentsContext_module_css_default.intentSource,
+												children: t("context.userInput")
+											}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+												className: BrowserCommentsContext_module_css_default.intentText,
+												children: comment.comment
+											})]
+										}),
+										(comment.changes.length > 0 || comment.textChange !== null) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: BrowserCommentsContext_module_css_default.diffs,
+											children: [comment.changes.map((change) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: BrowserCommentsContext_module_css_default.diff,
+												children: [
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+														className: BrowserCommentsContext_module_css_default.property,
+														children: change.property
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: BrowserCommentsContext_module_css_default.before,
+														children: change.before
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: BrowserCommentsContext_module_css_default.arrow,
+														"aria-hidden": true,
+														children: "→"
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: BrowserCommentsContext_module_css_default.after,
+														children: change.after
+													})
+												]
+											}, change.property)), comment.textChange !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: BrowserCommentsContext_module_css_default.diff,
+												children: [
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: BrowserCommentsContext_module_css_default.property,
+														children: t("context.text")
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: BrowserCommentsContext_module_css_default.before,
+														children: comment.textChange.before
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: BrowserCommentsContext_module_css_default.arrow,
+														"aria-hidden": true,
+														children: "→"
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														className: BrowserCommentsContext_module_css_default.after,
+														children: comment.textChange.after
+													})
+												]
+											})]
+										})
+									]
+								})]
+							}, comment.id);
+						})
+					})]
+				})
+			});
+		}
+		//#endregion
 		//#region src/client/index.ts
 		/** Dictionary namespace owned by this plugin. */
 		const NS = "webview";
-		/** Required services (cordis fiber inject 鈥?activation waits on them). */
+		/** Required services (cordis fiber inject — activation waits on them). */
 		const inject = [
 			"slots",
 			"conversation",
 			"layout",
 			"locale",
 			"sessions",
-			"command"
+			"commandUi"
 		];
 		const SKILL_DESCRIPTION_KEYS = {
 			"better-ui": "editor.skills.betterUi",
@@ -5664,8 +6054,13 @@
 			}), "dsh-web-review: dictionaries");
 			const t = ctx.locale.bind(NS);
 			const webviewStore = createWebviewStore();
-			ctx.inject(["command"], (scope) => {
-				scope.effect(() => scope.command.register({
+			ctx.slots.inject("conversation.chat.contextview", () => ctx.slots.register({
+				name: "conversation.chat.contextview",
+				select: ({ node }) => browserCommentsContextSourceOf(node.source) ?? null,
+				locale: NS
+			}, BrowserCommentsContext));
+			ctx.inject(["commandUi"], (scope) => {
+				scope.effect(() => scope.commandUi.register({
 					name: "skills",
 					description: t("command.skills.description"),
 					available: () => true,
@@ -5691,6 +6086,9 @@
 				store: webviewStore,
 				inject: (sessionId) => ({
 					sendAnnotationsWithoutDraft: () => scopedConversation(ctx, sessionId).send(t("panel.pick.defaultPrompt")),
+					returnToChat: () => {
+						activateConversationTab(document, t("view.chat"));
+					},
 					createPreviewSession,
 					releasePreviewSessions
 				})
@@ -5711,7 +6109,7 @@
 						actions.setTitle("");
 						actions.clearPicks();
 						ctx.layout.closeDetails();
-						activatePreviewTab(document, t("view.tab"));
+						activateConversationTab(document, t("view.tab"));
 					}
 				})
 			}, DraftOverlayBar));

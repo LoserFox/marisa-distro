@@ -35,4 +35,7 @@ export declare function TabBar(props: {
     onDropTab: (payload: TabDragPayload, before: string | null) => void;
     /** Icon resolver for tab labels (reads from the tab descriptor registry). */
     getTabIcon?: (tab: SidebarTab) => ReactNode;
+    /** Badge resolver for tab labels (reads the descriptor's `badge`; the
+     *  resolver returns the rendered pill or null). */
+    getTabBadge?: (tab: SidebarTab) => ReactNode;
 }): import("react").JSX.Element;

@@ -1,0 +1,16 @@
+# dsh-bash-terminal bundle layer — applied automatically when a profile lists
+# this package in dsh.profile.bundles (dsh.bundle.patch declaration).
+#
+# Marisa fork config: all values optional. The four *Path/Distro fields stay
+# empty so the runtime auto-detects; see docs/plugins/dsh-bash-terminal.md.
+- insert:
+    - id: tool-bash-terminal
+      name: 'dsh-bash-terminal'
+      config:
+        defaultShell: 'powershell'
+        msys2Root: ''
+        msys2Msystem: 'MINGW64'
+        wslDistro: ''
+        pwshPath: ''
+        gitBashPath: ''
+        wslPath: ''

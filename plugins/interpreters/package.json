@@ -1,10 +1,12 @@
 {
   "name": "@huanlin/dsh-plugin-interpreters",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["dsh-plugin"],
+  "keywords": [
+    "dsh-plugin"
+  ],
   "description": "Exposes run_python and run_node tools with configurable interpreter paths; settings card (via /interpreters/api HTTP route) lets users set the executable locations.",
   "type": "module",
   "license": "AGPL-3.0",
@@ -40,63 +42,85 @@
       "platform": "web"
     }
   },
-  "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs && tsc -p tsconfig.json"
-  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1-rc.1",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-client-locale": "workspace:^",
-    "@deepseek-ai/dsh-client-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-settings-plugins": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-client-web-react": "workspace:^",
-    "@deepseek-ai/dsh-host-webserver": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-settings-plugins": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-host-webserver": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.8",
     "react": "^18.2.0",
     "schemastery": "^3.18.0"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/cordis": { "optional": true },
-    "@deepseek-ai/dsh-client-connection": { "optional": true },
-    "@deepseek-ai/dsh-client-locale": { "optional": true },
-    "@deepseek-ai/dsh-client-runtime": { "optional": true },
-    "@deepseek-ai/dsh-client-ui-settings-plugins": { "optional": true },
-    "@deepseek-ai/dsh-client-ui-primitives": { "optional": true },
-    "@deepseek-ai/dsh-client-ui-slots": { "optional": true },
-    "@deepseek-ai/dsh-client-web-react": { "optional": true },
-    "@deepseek-ai/dsh-host-webserver": { "optional": true },
-    "@deepseek-ai/dsh-settings": { "optional": true },
-    "@deepseek-ai/dsh-tools": { "optional": true },
-    "react": { "optional": true },
-    "schemastery": { "optional": true }
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-connection": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-locale": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-runtime": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-settings-plugins": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-primitives": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-slots": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-host-webserver": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-settings": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "schemastery": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.1-rc.1",
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-client-locale": "workspace:^",
-    "@deepseek-ai/dsh-client-runtime": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-settings-plugins": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
-    "@deepseek-ai/dsh-client-web-react": "workspace:^",
-    "@deepseek-ai/dsh-host-webserver": "workspace:^",
-    "@deepseek-ai/dsh-settings": "workspace:^",
-    "@deepseek-ai/dsh-tools": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-settings-plugins": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-host-webserver": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.8",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "esbuild": "^0.28.2",
     "lightningcss": "^1.29.2",
     "tsdown": "^0.22.2",
     "typescript": "^5.9.0",
+    "use-sync-external-store": "^1.2.0",
     "vitest": "^3.2.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs && tsc -p tsconfig.json"
   }
 }

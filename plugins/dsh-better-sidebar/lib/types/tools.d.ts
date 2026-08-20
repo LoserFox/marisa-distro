@@ -25,4 +25,7 @@ export declare function boundBytes(text: string, maxBytes: number): {
  * @returns a disposer that unregisters all eight tools (the caller gates
  * registration on the side-card setting and calls this to turn them off).
  */
-export declare function registerTools(ctx: Context, registry: AgentPtyRegistry, resolveCwd: (sessionId: string) => string): () => void;
+export declare function registerTools(ctx: Context, registry: AgentPtyRegistry, resolveCwd: (sessionId: string) => string, readShellOverrides: () => {
+    shell?: string;
+    shellArgs?: string[];
+}): () => void;

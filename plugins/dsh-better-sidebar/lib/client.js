@@ -10,23 +10,41 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		/** Fallback prefs used whenever the settings document is unreachable or malformed. */
 		const SIDEBAR_PREFS_DEFAULTS = {
-			openByDefault: true,
-			defaultWidthPercent: 30,
+			openByDefault: false,
+			defaultWidthPercent: 35,
 			autoOpenSubagent: true,
 			autoOpenJobs: true,
 			agentTerminalTools: false,
 			bottomPanelAutoTerminal: true,
+			terminalFontFamily: "",
+			terminalFontSize: 13,
 			interceptOpenPath: true,
+			editorExplorer: false,
+			terminalShell: "",
+			terminalShellArgs: "",
+			titleBarCompat: false,
+			titleBarStripPx: 40,
 			htmlViewerNoSandbox: false,
 			htmlViewerDefaultUnsafe: false,
 			browserNoSandbox: false,
 			browserInterceptLinks: true,
+			browserInterceptHttp: true,
+			browserInterceptHttps: false,
 			tabsEnabled: {},
-			viewersEnabled: {}
+			viewersEnabled: {},
+			pluginSettings: {}
 		};
 		/** Clamp one width percent into the contract range (shared by schema and client reads). */
 		function clampWidthPercent(value) {
 			return Math.min(60, Math.max(20, Math.round(value)));
+		}
+		/** Clamp one terminal font size into the contract range (shared by schema and client reads). */
+		function clampTerminalFontSize(value) {
+			return Math.min(32, Math.max(9, Math.round(value)));
+		}
+		/** Clamp one title-bar strip height into the contract range (shared by schema and client reads). */
+		function clampTitleBarStrip(value) {
+			return Math.min(120, Math.max(0, Math.round(value)));
 		}
 		/** Whether a viewport width is narrow (mobile). */
 		function isNarrowWidth(width) {
@@ -65,6 +83,12 @@ window.__ModuleLoader__.load({
 			nextIdCounter += 1;
 			return `${prefix}:${nextIdCounter}`;
 		}
+		/** Mint a fresh uid-based tab id. The `'editor:' + path` convention only
+		*  covers openSidebarFile opens (per-path dedupe); opens that must not
+		*  dedupe (the tree's "open to the side") mint through here. */
+		function mintTabId() {
+			return uid("tab");
+		}
 		/**
 		* The largest numeric suffix across a raw persisted state's counter ids
 		* (`pane:N` / `tab:N` / `split:N`). The uid counter is module-global and
@@ -94,25 +118,28 @@ window.__ModuleLoader__.load({
 			walk(parsed?.bottomSplits);
 			return max;
 		}
-		/** A fresh default state: one explorer tab in one pane, open per the caller's
+		/** A fresh default state: one seeded tab in one pane, open per the caller's
 		* preference. `width` is the caller's preferred panel width (default
 		* PANEL_DEFAULT) and `panelOpen` whether the panel starts expanded (default
 		* true); the store seeds new sessions from the user's side card prefs.
-		* `seedExplorer` places the default explorer tab — the store passes false
-		* when the user disabled the explorer tab type in settings, so a fresh
-		* session starts with an empty pane instead of a tab they turned off. */
-		function makeDefaultState(width = 400, panelOpen = true, seedExplorer = true) {
+		* `seed` picks the seeded tab: 'editor-home' places the EMPTY files window
+		* (an editor tab with no path whose tree panel starts open,
+		* `meta.treeOpen: true`) — in BOTH editorExplorer modes that window is the
+		* file explorer page — and 'none' starts with an empty pane (the store
+		* passes it when the user disabled the editor tab type in settings). */
+		function makeDefaultState(width = 400, panelOpen = true, seed = "editor-home") {
 			const leaf = {
 				kind: "leaf",
 				id: uid("pane"),
 				tabs: [],
 				active: null
 			};
-			if (seedExplorer) {
+			if (seed === "editor-home") {
 				leaf.tabs = [{
 					id: uid("tab"),
-					type: "explorer",
-					title: "Explorer"
+					type: "editor",
+					title: "Files",
+					meta: { treeOpen: true }
 				}];
 				leaf.active = leaf.tabs[0].id;
 			}
@@ -383,7 +410,7 @@ window.__ModuleLoader__.load({
 				})
 			};
 		}
-		/** Update the display fields of one open tab (title / path) without
+		/** Update the display fields of one open tab (title / path / meta) without
 		*  re-opening it. The browser tab persists its current URL and hostname
 		*  title through this reducer so a reload restores the visited page. A
 		*  missing tab id is a no-op. The tab may live in either tree. */
@@ -397,7 +424,8 @@ window.__ModuleLoader__.load({
 						return {
 							...tab,
 							...patch.title !== void 0 ? { title: patch.title } : {},
-							...patch.path !== void 0 ? { path: patch.path } : {}
+							...patch.path !== void 0 ? { path: patch.path } : {},
+							...patch.meta !== void 0 ? { meta: patch.meta } : {}
 						};
 					});
 					return tabs === node.tabs ? node : {
@@ -689,7 +717,7 @@ window.__ModuleLoader__.load({
 				}
 			} catch {}
 			const viewport = typeof window !== "undefined" ? window.innerWidth : void 0;
-			return makeDefaultState(viewport === void 0 ? 400 : defaultWidthFor(viewport, prefs.defaultWidthPercent), prefs.openByDefault && (viewport === void 0 || !isNarrowWidth(viewport)), prefs.tabsEnabled["explorer"] !== false);
+			return makeDefaultState(viewport === void 0 ? 400 : defaultWidthFor(viewport, prefs.defaultWidthPercent), prefs.openByDefault && (viewport === void 0 || !isNarrowWidth(viewport)), prefs.tabsEnabled["editor"] === false ? "none" : "editor-home");
 		}
 		/**
 		* Structural validation of one persisted state. A malformed or stale shape
@@ -773,11 +801,25 @@ window.__ModuleLoader__.load({
 						continue;
 					}
 					if (typeof candidate.type !== "string") return void 0;
+					if (candidate.type === "explorer") {
+						const meta = candidate.meta !== null && typeof candidate.meta === "object" && !Array.isArray(candidate.meta) ? candidate.meta : void 0;
+						tabs.push({
+							id: candidate.id,
+							type: "editor",
+							title: "Files",
+							meta: {
+								treeOpen: true,
+								...meta
+							}
+						});
+						continue;
+					}
 					tabs.push({
 						id: candidate.id,
 						type: candidate.type,
 						title: candidate.title,
-						...typeof candidate.path === "string" ? { path: candidate.path } : {}
+						...typeof candidate.path === "string" ? { path: candidate.path } : {},
+						...candidate.meta !== void 0 ? { meta: candidate.meta } : {}
 					});
 				}
 				const active = typeof record.active === "string" ? record.active : null;
@@ -818,9 +860,29 @@ window.__ModuleLoader__.load({
 				prefs: { ...SIDEBAR_PREFS_DEFAULTS }
 			};
 			listeners = /* @__PURE__ */ new Set();
-			persistTimer;
+			/** Per-session persist debounce timers (v0.12.0+: one per session, so a
+			*  targeted open never cancels another session's pending write). */
+			persistTimers = /* @__PURE__ */ new Map();
 			/** User-facing side card prefs seeding brand-new session states (defaults until the settings RPC resolves). */
 			prefs = { ...SIDEBAR_PREFS_DEFAULTS };
+			/**
+			* External disable (the dsh-web-ui family's aionui-panel provider choice):
+			* while true the sidebar must not mount at all. Not part of the snapshot —
+			* nothing renders on it; the mount gate and the intercept predicates read
+			* it directly.
+			*/
+			suspended = false;
+			/**
+			* Set the external-disable flag (from the settings route) and remember it
+			* for the mount gate and the intercept predicates.
+			*/
+			setSuspended(suspended) {
+				this.suspended = suspended;
+			}
+			/** Whether the sidebar is externally disabled (aionui-panel chosen). */
+			getSuspended() {
+				return this.suspended;
+			}
 			/**
 			* Replace the side card prefs (the settings RPC result / settings page
 			* write). Notifies like any store change: the snapshot carries the prefs,
@@ -905,6 +967,7 @@ window.__ModuleLoader__.load({
 				const state = this.snapshot.state;
 				if (sessionId === void 0 || state === void 0) return;
 				const next = reducer(state);
+				if (next === state) return;
 				this.bySession.set(sessionId, next);
 				this.snapshot = {
 					sessionId,
@@ -914,13 +977,36 @@ window.__ModuleLoader__.load({
 				this.schedulePersist(sessionId, next);
 				this.notify();
 			}
+			/**
+			* Apply a pure reducer to a TARGET session's state (not the active one),
+			* loading it on demand and persisting the result — WITHOUT switching the
+			* active snapshot or notifying (the UI must not follow along). Used by the
+			* service's targeted `openTab(seed, scope)`: the open lands in the target
+			* session's layout and is visible whenever the user switches to it.
+			*/
+			reduceFor(sessionId, reducer) {
+				const counterBefore = nextIdCounter;
+				let state = this.bySession.get(sessionId);
+				if (state === void 0) {
+					state = loadState(sessionId, this.prefs);
+					this.bySession.set(sessionId, state);
+				} else nextIdCounter = maxCounterId(state);
+				const next = reducer(state);
+				nextIdCounter = Math.max(nextIdCounter, counterBefore);
+				if (next === state) return;
+				this.bySession.set(sessionId, next);
+				this.schedulePersist(sessionId, next);
+			}
 			schedulePersist(sessionId, state) {
-				window.clearTimeout(this.persistTimer);
-				this.persistTimer = window.setTimeout(() => {
+				const existing = this.persistTimers.get(sessionId);
+				if (existing !== void 0) window.clearTimeout(existing);
+				const timer = window.setTimeout(() => {
+					this.persistTimers.delete(sessionId);
 					try {
 						localStorage.setItem(`${STORAGE_PREFIX}:${sessionId}`, JSON.stringify(state));
 					} catch {}
 				}, 200);
+				this.persistTimers.set(sessionId, timer);
 			}
 			notify() {
 				for (const listener of [...this.listeners]) listener();
@@ -944,6 +1030,75 @@ window.__ModuleLoader__.load({
 			if (at === -1) return "";
 			const base = path.slice(at + 1).toLowerCase();
 			return base.includes("/") || base.includes("\\") ? "" : base;
+		}
+		/** The file name of a path (both separators). */
+		function baseNameOf(path) {
+			const at = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+			return at === -1 ? path : path.slice(at + 1);
+		}
+		/**
+		* Find the tab type that claims an intercepted external-link URL (v0.13.0+).
+		* Walks the descriptors in REGISTRATION order and returns the first one
+		* that declares `urlTarget` and matches `url`; a throwing predicate is
+		* swallowed (console.error, type skipped) so one broken plugin can never
+		* break the whole link pipeline. The caller passes the ENABLED tab
+		* descriptors (enablement is the caller's prefs domain — filter
+		* `service.getTabs()` through `tabsEnabled` before matching) and falls
+		* back to the built-in browser tab when nothing claims the URL (the
+		* browser never declares `urlTarget` itself, so it can never shadow a
+		* plugin claim).
+		*/
+		function matchUrlTarget(tabs, url) {
+			for (const tab of tabs) {
+				if (tab.urlTarget === void 0) continue;
+				let claimed = false;
+				try {
+					claimed = tab.urlTarget(url) === true;
+				} catch (error) {
+					console.error("[dsh-better-sidebar] urlTarget error:", error);
+					continue;
+				}
+				if (claimed) return tab;
+			}
+		}
+		/**
+		* The plugin version this service instance reports. Keep in lockstep with
+		* `package.json`'s version — `tests/service.spec.ts` asserts the pair.
+		*/
+		const SIDEBAR_SERVICE_VERSION = "0.14.0";
+		/**
+		* Monotonic capability list consumers use to gate new API usage (features
+		* are never removed). Each string names a v0.12.0+ capability:
+		* - 'badge': TabDescriptor.badge
+		* - 'tabLifecycle': TabDescriptor.onOpen/onActivate/onClose
+		* - 'updateTab': BetterSidebarService.updateTab
+		* - 'openFile': BetterSidebarService.openFile
+		* - 'targetedOpen': BetterSidebarService.openTab(seed, scope?)
+		* - 'stateSubscription': getSnapshot/subscribeState
+		* - 'tabMeta': SidebarTab.meta (seeds, createTab, updateTab, persistence)
+		* - 'pluginSettings': SidebarSettingsDeclaration.pluginToggles/render
+		* - 'urlTarget' (v0.13.0): TabDescriptor.urlTarget (external-link claims)
+		* - 'settingSelect': SidebarSettingToggle type 'select' (options/multi)
+		*/
+		const SIDEBAR_FEATURES = [
+			"badge",
+			"tabLifecycle",
+			"updateTab",
+			"openFile",
+			"targetedOpen",
+			"stateSubscription",
+			"tabMeta",
+			"pluginSettings",
+			"urlTarget",
+			"settingSelect"
+		];
+		/** Run one plugin callback; a throw is logged and never breaks the caller. */
+		function safeCall(fn) {
+			try {
+				fn();
+			} catch (error) {
+				console.error("[dsh-better-sidebar] plugin callback error:", error);
+			}
 		}
 		/**
 		* Create one BetterSidebar service bound to a store. The service owns the
@@ -1004,14 +1159,21 @@ window.__ModuleLoader__.load({
 					if (v.exts.includes(ext)) return v;
 				}
 			};
-			const openTab = (seed) => {
+			const openTab = (seed, scope) => {
 				if (!isTabEnabled(seed.type)) {
 					console.warn(`[dsh-better-sidebar] tab type "${seed.type}" is disabled in the side card settings`);
 					return;
 				}
-				store.reduce((state) => {
-					const descriptor = tabs.get(seed.type);
-					if (descriptor === void 0) return state;
+				const descriptor = tabs.get(seed.type);
+				if (descriptor === void 0) return;
+				const targetSessionId = scope?.sessionId ?? store.getSnapshot().sessionId;
+				if (targetSessionId === void 0) return;
+				const callbackScope = scope ?? { sessionId: targetSessionId };
+				const activeSessionId = store.getSnapshot().sessionId;
+				const targetsInactiveSession = scope !== void 0 && scope.sessionId !== activeSessionId;
+				let created;
+				let activated;
+				const reducer = (state) => {
 					let tab;
 					let next;
 					if (descriptor.createTab !== void 0) {
@@ -1029,17 +1191,29 @@ window.__ModuleLoader__.load({
 							type: seed.type,
 							title: seed.title ?? (typeof descriptor.title === "function" ? descriptor.title() : descriptor.title),
 							...seed.path !== void 0 ? { path: seed.path } : {},
-							...seed.diff !== void 0 ? { diff: seed.diff } : {}
+							...seed.diff !== void 0 ? { diff: seed.diff } : {},
+							...seed.meta !== void 0 ? { meta: seed.meta } : {}
 						};
 						next = applyDedupe(state, tab, descriptor);
 					}
-					let landed;
-					if (seed.url !== void 0) landed = patchTab(next, tab.id, {
+					const dedupeKey = descriptor.dedupeKey ?? (descriptor.single === true ? () => descriptor.id : void 0);
+					const key = dedupeKey?.(tab);
+					const inputTabs = allLeaves(state.splits).concat(allLeaves(state.bottomSplits)).flatMap((leaf) => leaf.tabs);
+					const existedByKey = key !== void 0 && inputTabs.some((candidate) => candidate.type === tab.type && dedupeKey(candidate) === key);
+					const existedById = tabOpenIn(state, tab.id);
+					const isCreation = !existedByKey && !existedById;
+					let landed = next;
+					if (seed.url !== void 0 && isCreation) landed = patchTab(next, tab.id, {
 						path: seed.url,
 						...seed.title !== void 0 ? { title: seed.title } : {}
 					});
-					else landed = next;
-					if (typeof window !== "undefined" && (seed.path !== void 0 || seed.url !== void 0)) {
+					if (isCreation) created = allLeaves(landed.splits).concat(allLeaves(landed.bottomSplits)).flatMap((leaf) => leaf.tabs).find((candidate) => candidate.id === tab.id) ?? tab;
+					else {
+						const candidates = allLeaves(landed.splits).concat(allLeaves(landed.bottomSplits)).flatMap((leaf) => leaf.tabs);
+						activated = key !== void 0 ? candidates.find((candidate) => candidate.type === tab.type && dedupeKey(candidate) === key) : candidates.find((candidate) => candidate.id === tab.id);
+						activated ??= tab;
+					}
+					if (!targetsInactiveSession && typeof window !== "undefined" && (seed.path !== void 0 || seed.url !== void 0)) {
 						if (isNarrowWidth(window.innerWidth)) {
 							if (!landed.panelOpen) return togglePanel(landed);
 						} else if (treeOf(landed, landed.activePane ?? "") === "bottomSplits") {
@@ -1050,14 +1224,67 @@ window.__ModuleLoader__.load({
 						} else if (!landed.panelOpen) return togglePanel(landed);
 					}
 					return landed;
-				});
+				};
+				if (targetsInactiveSession) store.reduceFor(scope.sessionId, reducer);
+				else store.reduce(reducer);
+				if (created !== void 0) safeCall(() => descriptor.onOpen?.(created, callbackScope));
+				else if (activated !== void 0) safeCall(() => descriptor.onActivate?.(activated, callbackScope));
 			};
-			const closeTab$1 = (tabId) => {
+			const closeTab$1 = (tabId, scope) => {
+				let closed;
 				store.reduce((state) => {
+					if (!tabOpenIn(state, tabId)) return state;
 					const paneId = findPaneIdOf(state, tabId);
-					if (paneId === "") return state;
+					closed = leafWithTab(state[treeOf(state, paneId)], tabId)?.tabs.find((tab) => tab.id === tabId);
 					return closeTab(state, paneId, tabId);
 				});
+				if (closed !== void 0) {
+					const sessionId = scope?.sessionId ?? store.getSnapshot().sessionId;
+					if (sessionId !== void 0) {
+						const descriptor = tabs.get(closed.type);
+						safeCall(() => descriptor?.onClose?.(closed, scope ?? { sessionId }));
+					}
+				}
+			};
+			/** The snapshot the store publishes (state/prefs carry the active session). */
+			const getSnapshot = () => store.getSnapshot();
+			/** Store changes: session switch, state mutations, prefs writes. */
+			const subscribeState = (listener) => store.subscribe(listener);
+			/** Patch an open tab's display fields (a missing tab id is a no-op). */
+			const updateTab = (tabId, patch) => {
+				store.reduce((state) => patchTab(state, tabId, {
+					...patch.title !== void 0 ? { title: patch.title } : {},
+					...patch.path !== void 0 ? { path: patch.path } : {},
+					...patch.meta !== void 0 ? { meta: patch.meta } : {}
+				}));
+			};
+			/** Activate an open tab (the tab-bar activation path; fires onActivate). */
+			const activateTab$1 = (tabId, scope) => {
+				let activated;
+				store.reduce((state) => {
+					if (!tabOpenIn(state, tabId)) return state;
+					const paneId = findPaneIdOf(state, tabId);
+					activated = leafWithTab(state[treeOf(state, paneId)], tabId)?.tabs.find((tab) => tab.id === tabId);
+					return activateTab(state, paneId, tabId);
+				});
+				if (activated !== void 0) {
+					const sessionId = scope?.sessionId ?? store.getSnapshot().sessionId;
+					if (sessionId !== void 0) {
+						const descriptor = tabs.get(activated.type);
+						safeCall(() => descriptor?.onActivate?.(activated, scope ?? { sessionId }));
+					}
+				}
+			};
+			/** Open a file in the sidebar editor of `scope`'s session (title defaults
+			*  to the file name; the tab id is path-derived, like the internal
+			*  open-path interception, so distinct files open side by side). */
+			const openFile = (scope, path, title) => {
+				openTab({
+					type: "editor",
+					title: title ?? baseNameOf(path),
+					path,
+					id: `editor:${path}`
+				}, scope);
 			};
 			return {
 				registerTab,
@@ -1070,7 +1297,14 @@ window.__ModuleLoader__.load({
 				matchFileViewer,
 				openTab,
 				closeTab: closeTab$1,
-				subscribe
+				subscribe,
+				version: SIDEBAR_SERVICE_VERSION,
+				features: SIDEBAR_FEATURES,
+				getSnapshot,
+				subscribeState,
+				updateTab,
+				activateTab: activateTab$1,
+				openFile
 			};
 		}
 		/**
@@ -1100,7 +1334,12 @@ window.__ModuleLoader__.load({
 		* The platform externals a chunk bundle may require (mirror of
 		* CLIENT_EXTERNALS in tsdown.config.ts — the chunk builds keep these
 		* external and the loader resolves them here). A superset is safe: the
-		* require only answers what the chunk actually asks for.
+		* require only answers what the chunk actually asks for. The shell's static
+		* module table seeds React, Cordis, and the UI libraries (primitives/slots);
+		* `dsh-client-runtime/client` normalizes onto the runtime package row
+		* (stripClientSuffix). dsh-client-web-react / dsh-client-schema-form were
+		* dropped in DSH 0.1.0-rc.8 (no rc.8 publish, nothing requires them) — the
+		* chunks never asked for them, so they no longer belong here.
 		*/
 		const CHUNK_EXTERNALS = [
 			"react",
@@ -1109,16 +1348,42 @@ window.__ModuleLoader__.load({
 			"react-dom/client",
 			"cordis",
 			"@deepseek-ai/dsh-client-ui-slots",
-			"@deepseek-ai/dsh-client-web-react",
 			"@deepseek-ai/dsh-client-ui-primitives",
-			"@deepseek-ai/dsh-client-schema-form",
 			"@deepseek-ai/dsh-client-runtime/client"
 		];
 		/** Chunk script endpoint served by the plugin host half (src/bundle-route.ts). */
 		const CHUNK_URL = (name) => `/sidebar/bundle/${name}.js`;
-		/** Resolve the shell-installed module system (set before any plugin activates). */
+		/** Bound on the revalidation HEAD round-trip. A timeout fails open (drop +
+		*  re-fetch on the next open) so a stuck bundle route can never wedge lazy
+		*  chunk loads behind the revalidation barrier. */
+		const CHUNK_REVALIDATE_TIMEOUT_MS = 5e3;
+		/** The module system injected by the client half at activation (rc.8+). */
+		let injectedModuleSystem;
+		/**
+		* Plugin-owned page global carrying the injected module system across
+		* bundle copies: the lazy chunk bundles (client-editor.js etc.) inline their
+		* own chunk-loader instance, and rc.8 no longer exposes the shell module
+		* system as a page global — so the core bundle's injection must be visible
+		* to the chunk copies through a namespace of our own.
+		*/
+		const MODULE_SYSTEM_GLOBAL = "__dshSidebarModuleSystem__";
+		/**
+		* Inject the client module system the chunk externals resolve through.
+		* Called by the client half's apply() with `ctx.modules` (rc.8+); pass
+		* undefined to clear (tests). Survives {@link resetChunks} — the module
+		* system is shell state, not chunk state, and stays live across HMR.
+		*/
+		function setChunkModuleSystem(system) {
+			injectedModuleSystem = system;
+			const g = globalThis;
+			if (system === void 0) delete g[MODULE_SYSTEM_GLOBAL];
+			else g[MODULE_SYSTEM_GLOBAL] = system;
+		}
+		/** Resolve the shell-installed module system (injected, then the plugin
+		*  global shared with chunk-bundle copies, then the rc.7 page global). */
 		function moduleSystem() {
-			return globalThis.__DSH_MODULES__;
+			const g = globalThis;
+			return injectedModuleSystem ?? g[MODULE_SYSTEM_GLOBAL] ?? g.__DSH_MODULES__;
 		}
 		function chunkRegistry() {
 			const g = globalThis;
@@ -1161,6 +1426,30 @@ window.__ModuleLoader__.load({
 		}
 		/** In-flight/memoized chunk loads; a failure removes its entry so a retry re-fetches. */
 		const cache = /* @__PURE__ */ new Map();
+		/** Chunk names whose exports are currently cached (loaded successfully). */
+		const loadedChunks = /* @__PURE__ */ new Set();
+		/** ETags observed for loaded chunks (HEAD revalidation, see
+		*  {@link revalidateChunksOnReactivate}). */
+		const chunkEtags = /* @__PURE__ */ new Map();
+		/** Pending revalidation barrier: while set, {@link loadChunk} awaits it
+		*  before serving cache (see revalidateChunksOnReactivate). */
+		let revalidation = null;
+		/** Best-effort ETag capture for revalidation. The script tag itself exposes
+		*  no response headers, so after a successful load we HEAD the bundle route
+		*  once. Failures (including a stuck route — bounded by the timeout) are
+		*  ignored — revalidation then fails open (re-fetch). */
+		async function recordEtag(name) {
+			try {
+				const etag = (await fetch(CHUNK_URL(name), {
+					method: "HEAD",
+					cache: "no-cache",
+					signal: AbortSignal.timeout(CHUNK_REVALIDATE_TIMEOUT_MS)
+				})).headers.get("etag");
+				if (etag !== null && etag !== "") chunkEtags.set(name, etag);
+			} catch {
+				chunkEtags.delete(name);
+			}
+		}
 		/**
 		* Load (once) and materialize a lazy chunk, returning its module exports.
 		* Concurrent callers share one in-flight load; a failure clears the cache
@@ -1168,10 +1457,12 @@ window.__ModuleLoader__.load({
 		* global registry slot — assignments are idempotent).
 		* @param name - the chunk to load.
 		*/
-		function loadChunk(name) {
+		async function loadChunk(name) {
+			if (revalidation !== null) await revalidation;
 			const cached = cache.get(name);
 			if (cached !== void 0) return cached;
-			const task = (async () => {
+			let task;
+			task = (async () => {
 				const test = testLoaders.get(name);
 				if (test !== void 0) return test();
 				const modules = moduleSystem();
@@ -1179,24 +1470,66 @@ window.__ModuleLoader__.load({
 				await scriptLoader(CHUNK_URL(name));
 				const factory = chunkRegistry()[name];
 				if (typeof factory !== "function") throw new Error(`[dsh-better-sidebar] chunk "${name}" script did not register its factory`);
-				return factory(await buildExternalsRequire(modules));
+				const exports = factory(await buildExternalsRequire(modules));
+				if (cache.get(name) !== void 0) {
+					loadedChunks.add(name);
+					recordEtag(name);
+				}
+				return exports;
 			})();
 			cache.set(name, task);
 			task.catch(() => {
 				cache.delete(name);
+				loadedChunks.delete(name);
+				chunkEtags.delete(name);
 			});
 			return task;
 		}
 		/**
-		* Drop all chunk state for a fresh plugin activation (HMR-safe): clear the
-		* in-memory cache and any test-registry entries, so the next lazy open
-		* re-fetches and re-executes the current chunk scripts (the registry slots
-		* are overwritten by the re-execution — no cleanup needed).
+		* HMR-safe re-activation hook (index.tsx calls this instead of a full
+		* reset): keep the resolved exports of every loaded chunk and drop only the
+		* ones whose script changed on disk — the bundle route revalidates every
+		* request (cache-control: no-cache + ETag), so an unchanged chunk keeps its
+		* memory cache and the next lazy open skips the re-inject / re-execute.
+		* Fail-open: an unreachable, ETag-less, or timed-out chunk is dropped
+		* (re-fetch on next open). Test-registry entries are always cleared
+		* (per-test fixtures).
+		* A page refresh remains the authoritative reset (the HMR poll watches only
+		* client.js; chunk-only edits surface here on the next core re-activation).
+		*
+		* The returned promise is also a BARRIER for {@link loadChunk}: while a
+		* revalidation is pending, every chunk load awaits it before serving cache,
+		* so a lazy tab opening mid-revalidation can never render stale exports
+		* that the sweep is about to invalidate (CR #232 P1).
 		*/
-		function resetChunks() {
-			cache.clear();
+		function revalidateChunksOnReactivate() {
 			testLoaders.clear();
-			externalsRequire = void 0;
+			const task = (async () => {
+				for (const name of [...cache.keys()]) if (!loadedChunks.has(name)) cache.delete(name);
+				if (loadedChunks.size === 0) return;
+				const stale = [];
+				await Promise.all([...loadedChunks].map(async (name) => {
+					try {
+						const etag = (await fetch(CHUNK_URL(name), {
+							method: "HEAD",
+							cache: "no-cache",
+							signal: AbortSignal.timeout(CHUNK_REVALIDATE_TIMEOUT_MS)
+						})).headers.get("etag");
+						if (etag !== null && etag !== "" && chunkEtags.get(name) === etag) return;
+					} catch {}
+					stale.push(name);
+				}));
+				for (const name of stale) {
+					cache.delete(name);
+					loadedChunks.delete(name);
+					chunkEtags.delete(name);
+				}
+			})();
+			revalidation = task;
+			task.finally(() => {
+				if (revalidation === task) revalidation = null;
+			});
+			return task;
 		}
 		//#endregion
 		//#region src/client/locales.ts
@@ -1212,12 +1545,28 @@ window.__ModuleLoader__.load({
 		*/
 		/** The zh dictionary (also registered into the DSH locale registry under {@link LOCALE_NS}). */
 		const zh = {
+			files: "文件",
 			explorer: "资源管理器",
 			git: "源代码管理",
 			terminal: "终端",
 			editor: "编辑器",
+			editorExplorer: "文件打开方式",
+			editorExplorerDesc: "控制文件打开方式",
+			editorExplorerMerged: "合并",
+			editorExplorerMergedDesc: "文件在同一窗口内原地切换；新窗口默认展开文件树",
+			editorExplorerSplit: "独立",
+			editorExplorerSplitDesc: "无路径窗口即资源管理器（仅文件树）；文件各自新开窗口（带文件树，默认收起）",
+			editorTreeToggle: "文件树面板",
+			editorPathPlaceholder: "输入文件路径（相对会话目录或绝对路径），Enter 打开",
+			editorSearchPlaceholder: "按文件名搜索…",
+			editorSearchNoResults: "无匹配文件",
+			editorSearchTruncated: "结果过多，仅显示部分匹配",
+			editorEmptyHint: "从右侧文件树或上方路径输入框选择文件开始预览",
+			openFileNewTab: "在新 Tab 中打开",
+			openFileSide: "在侧边打开",
 			newTab: "新建标签页",
 			openExplorer: "资源管理器",
+			brokenSymlink: "失效的软链接",
 			openGit: "Git 面板",
 			newTerminal: "新终端",
 			terminalLimit: "终端数量已达上限 (3)",
@@ -1229,8 +1578,16 @@ window.__ModuleLoader__.load({
 			terminalError: "终端连接失败",
 			terminalConnectFailed: "终端多次连接失败",
 			terminalRetry: "重试",
+			terminalDepsFailed: "终端依赖 node-pty 加载失败",
+			terminalDepsHint: "在 DSH 所在环境的终端或 cmd 中执行以下命令修复，然后点重试（node-pty 与 DSH 核心保持同一版本）：",
+			terminalDepsProfile: "（检测到 profile：{profile}）",
 			preview: "预览",
 			edit: "编辑",
+			mermaidError: "Mermaid 渲染失败",
+			mermaidZoomIn: "放大",
+			mermaidZoomOut: "缩小",
+			mermaidZoomReset: "重置",
+			mermaidZoomHint: "滚轮缩放 · 拖拽平移 · Esc 关闭",
 			refresh: "刷新",
 			save: "保存",
 			saved: "已保存",
@@ -1307,6 +1664,9 @@ window.__ModuleLoader__.load({
 			copyAbsolute: "复制绝对地址",
 			download: "下载",
 			settingsNav: "侧边卡片",
+			settingsIntro: "管理侧边卡片的显示内容与默认行为",
+			settingsPopupDesc: "为「{feature}」配置相关选项",
+			settingsDone: "完成",
 			settingsOpenTitle: "新会话默认打开",
 			settingsOpenDesc: "新建会话时自动展开侧边卡片；已存在的会话保持各自布局",
 			settingsWidthTitle: "默认宽度占比",
@@ -1314,18 +1674,14 @@ window.__ModuleLoader__.load({
 			settingsWidthSuffix: "%",
 			settingsOpenPathTitle: "聊天区文件在侧边栏打开",
 			settingsOpenPathDesc: "在聊天里点击文件链接（工具行、产物列表、文件提及）时，在侧边栏编辑器中打开，不再调用系统默认应用",
+			settingsTitleBarTitle: "位置兼容模式",
+			settingsTitleBarDesc: "为 Windows 右上角的原生标题栏预留空间：侧边栏按钮与侧边栏内容整体下移，避免被标题栏遮挡",
+			settingsTitleBarStripTitle: "下移距离",
+			settingsTitleBarStripDesc: "标题栏条带高度：侧边栏按钮与内容下移的像素数（0–120，默认 40）",
 			settingsSaveFailed: "保存失败",
 			settingsConflict: "设置已被其他窗口修改，请重试",
 			binaryNoPreview: "此文件类型不支持预览",
 			downloadToView: "下载查看",
-			officeTooLarge: "文件过大，无法预览",
-			officeCorrupt: "文件损坏或格式无效",
-			officeEncrypted: "不支持加密文件",
-			officeLoadFailed: "Office 预览组件加载失败",
-			previousSlide: "上一页",
-			nextSlide: "下一页",
-			zoom: "缩放",
-			zoomHint: "Alt + 滚轮",
 			settingsSubagentTitle: "检测到子代理时自动展开任务管理页",
 			settingsSubagentDesc: "当前会话产生新的子代理时，自动展开侧边栏并打开任务管理页；关闭后需手动打开",
 			settingsJobsTitle: "有新后台任务时自动展开后台任务页",
@@ -1334,6 +1690,18 @@ window.__ModuleLoader__.load({
 			settingsToolsDesc: "开启后，模型可通过 terminal_create 等 8 个工具创建并操作侧边栏终端（默认关闭）",
 			settingsBottomTerminalTitle: "底部面板首次展开自动开终端",
 			settingsBottomTerminalDesc: "每次会话中第一次展开底部面板时，尝试在底部面板自动打开一个新终端标签（终端数量上限仍会限制；默认开启）",
+			settingsFontFamilyTitle: "终端字体",
+			settingsFontFamilyDesc: "自定义终端字体族（CSS font-family，如 \"JetBrains Mono\", monospace；留空跟随主题等宽字体）",
+			settingsFontFamilyPlaceholder: "\"JetBrains Mono\", monospace",
+			settingsFontSizeTitle: "终端字号",
+			settingsFontSizeDesc: "终端字号（9–32，默认 13）",
+			settingsFontSizeSuffix: "px",
+			settingsShellTitle: "Shell 路径",
+			settingsShellDesc: "UI 与模型终端启动的 shell（绝对路径或可执行名）。留空按既有顺序解析：yaml 的 config.shell → $SHELL / 登录 shell / Windows 的 powershell.exe。对之后打开的终端生效",
+			settingsShellPlaceholder: "如 /bin/zsh（留空自动解析）",
+			settingsShellArgsTitle: "Shell 参数",
+			settingsShellArgsDesc: "显式 shell 启动参数，空格分隔；非空时完全替换默认参数（与 yaml 的 shellArgs 契约一致）",
+			settingsShellArgsPlaceholder: "如 -l（留空用默认参数）",
 			settingsTabsTitle: "侧边栏内容",
 			settingsViewersTitle: "文件预览",
 			settingsGeneralTitle: "常规",
@@ -1341,9 +1709,6 @@ window.__ModuleLoader__.load({
 			settingsViewerCatchAll: "兜底：任意文件",
 			viewerImage: "图片",
 			viewerPdf: "PDF",
-			viewerDocx: "Word 文档",
-			viewerXlsx: "Excel 表格",
-			viewerPptx: "PPT 演示",
 			viewerMarkdown: "Markdown",
 			viewerCode: "代码",
 			viewerBinary: "二进制下载",
@@ -1369,7 +1734,11 @@ window.__ModuleLoader__.load({
 			settingsBrowserSandboxTitle: "关闭浏览器沙箱（不安全）",
 			settingsBrowserSandboxDesc: "关闭后，访问的任何网站都将与界面同源运行，可读取会话数据并冒充你的登录状态。仅对完全可信的站点开启",
 			settingsBrowserLinksTitle: "聊天区外链在侧边栏打开",
-			settingsBrowserLinksDesc: "开启后，点击聊天或界面中的 http/https 外链时在侧边栏浏览器中打开，不再弹出新窗口；Ctrl/Cmd 点击可临时放行",
+			settingsBrowserLinksDesc: "开启后，点击聊天或界面中的外链时在侧边栏打开，不再弹出新窗口；HTTP 与 HTTPS 可分别通过下方开关控制；Ctrl/Cmd 点击可临时放行",
+			settingsBrowserHttpTitle: "侧边打开HTTP网页",
+			settingsBrowserHttpDesc: "开启后，点击聊天或界面中的 HTTP 外链时在侧边栏打开（声明了 urlTarget 的插件页面优先）；Ctrl/Cmd 点击可临时放行",
+			settingsBrowserHttpsTitle: "侧边打开HTTPS网页",
+			settingsBrowserHttpsDesc: "开启后，点击聊天或界面中的 HTTPS 外链时在侧边栏打开。默认关闭：多数 HTTPS 站点拒绝被嵌入，走系统浏览器更顺畅",
 			browserOpenExternal: "在浏览器中打开",
 			browserEmbedBlocked: "{host} 拒绝了嵌入请求",
 			browserEmbedBlockedDesc: "该站点通过 X-Frame-Options / frame-ancestors 禁止在其它页面中显示，无法在侧边栏内加载。可在浏览器中直接打开",
@@ -1408,16 +1777,50 @@ window.__ModuleLoader__.load({
 			jobOutputError: "输出读取失败",
 			jobKill: "终止",
 			jobKillConfirm: "再次点击确认终止",
-			jobKillError: "终止失败"
+			jobKillError: "终止失败",
+			addPluginsTabCard: "添加 Tab 插件",
+			addPluginsTabCardDesc: "注册新的侧边栏页面",
+			addPluginsViewerCard: "添加预览插件",
+			addPluginsViewerCardDesc: "注册新的文件类型预览",
+			addPluginsTabDesc: "侧边栏页面（Tab）可以由插件扩展。插件通过 ctx.betterSidebar 服务注册；点击「安装」复制安装命令，粘贴到 DSH 所在环境的终端执行。",
+			addPluginsViewerDesc: "文件预览器可以由插件扩展。插件通过 ctx.betterSidebar 服务注册；点击「安装」复制安装命令，粘贴到 DSH 所在环境的终端执行。",
+			addPluginsBrowseMore: "在 GitHub 上浏览更多插件（topic: dsh-better-sidebar）",
+			addPluginsSearch: "搜索插件名称 / 描述…",
+			addPluginsNoMatch: "没有匹配的插件",
+			addPluginsRecommended: "推荐插件",
+			addPluginsEmpty: "暂未收录插件，欢迎在 GitHub topic 下发布你的插件",
+			openPlugin: "跳转",
+			copyInstall: "复制安装命令",
+			pluginOfficeDesc: "为 better-sidebar 编辑器提供 Office 三件套预览（.docx / .xlsx / .pptx），把重型 Office 渲染库拆出主包、按需安装",
+			pluginGitRemotesDesc: "better-sidebar Git 远程 Tab：看分支/上游/ahead-behind，fetch（可 prune）、ff-only pull、确认后才 push。不替换内置 Git 的暂存/提交，也不提供 force-push 或模型自动推送",
+			pluginSentinelDesc: "条件驱动的 agent 唤醒系统：文件/进程/端口/HTTP/命令/webhook 传感器，条件达成自动唤醒休眠会话；注册「哨兵」Tab 展示服务器全局监控表",
+			pluginSidebarQaDesc: "基于 better-sidebar 的划选提问tab分页: 对话划选 → 右侧面板提问 → 同工作区独立追问会话（❓追问·主题）：快速无思考模型压缩主对话上下文后与引文一起注入，不打断主对话；追问可嵌套、可继续、可归档",
+			pluginVideoPreviewDesc: "在 better-sidebar 编辑器内联预览视频文件（.mp4/.webm/.mov/.mkv/.avi 等），自带支持 HTTP Range（206）的 /video 宿主路由，可拖动进度条、不受 20MB mediaLimit 限制"
 		};
 		/** The en dictionary (key-set-equal to zh, enforced by the type annotation). */
 		const en = {
+			files: "Files",
 			explorer: "Explorer",
 			git: "Source Control",
 			terminal: "Terminal",
 			editor: "Editor",
+			editorExplorer: "File open behavior",
+			editorExplorerDesc: "Controls how files open",
+			editorExplorerMerged: "Merged",
+			editorExplorerMergedDesc: "Files switch in place in the same window; new windows start with the tree open",
+			editorExplorerSplit: "Separate",
+			editorExplorerSplitDesc: "Path-less windows are the standalone explorer (tree only); each file opens its own window (tree docked, closed by default)",
+			editorTreeToggle: "File tree panel",
+			editorPathPlaceholder: "File path (relative to the session directory or absolute), Enter to open",
+			editorSearchPlaceholder: "Search files by name…",
+			editorSearchNoResults: "No matching files",
+			editorSearchTruncated: "Too many results — showing a partial list",
+			editorEmptyHint: "Pick a file from the tree panel or the path input above to start previewing",
+			openFileNewTab: "Open in New Tab",
+			openFileSide: "Open to the Side",
 			newTab: "New tab",
 			openExplorer: "Explorer",
+			brokenSymlink: "Broken symlink",
 			openGit: "Git panel",
 			newTerminal: "New terminal",
 			terminalLimit: "Terminal limit reached (3)",
@@ -1429,8 +1832,16 @@ window.__ModuleLoader__.load({
 			terminalError: "Terminal connection failed",
 			terminalConnectFailed: "Terminal failed to connect repeatedly",
 			terminalRetry: "Retry",
+			terminalDepsFailed: "Terminal dependency node-pty failed to load",
+			terminalDepsHint: "Run the command below in a terminal or cmd on the DSH machine to repair it, then retry (node-pty stays in sync with the DSH core version):",
+			terminalDepsProfile: " (detected profile: {profile})",
 			preview: "Preview",
 			edit: "Edit",
+			mermaidError: "Mermaid render failed",
+			mermaidZoomIn: "Zoom in",
+			mermaidZoomOut: "Zoom out",
+			mermaidZoomReset: "Reset",
+			mermaidZoomHint: "Scroll to zoom · drag to pan · Esc to close",
 			refresh: "Refresh",
 			save: "Save",
 			saved: "Saved",
@@ -1507,6 +1918,9 @@ window.__ModuleLoader__.load({
 			copyAbsolute: "Copy absolute path",
 			download: "Download",
 			settingsNav: "Side card",
+			settingsIntro: "Manage what the side card shows and how it behaves",
+			settingsPopupDesc: "Configure related options for {feature}",
+			settingsDone: "Done",
 			settingsOpenTitle: "Open by default for new conversations",
 			settingsOpenDesc: "Expand the side card automatically for brand-new conversations; existing conversations keep their own layouts",
 			settingsWidthTitle: "Default width share",
@@ -1514,18 +1928,14 @@ window.__ModuleLoader__.load({
 			settingsWidthSuffix: "%",
 			settingsOpenPathTitle: "Open chat files in the sidebar",
 			settingsOpenPathDesc: "Open file links in the chat (tool rows, produced files, mentions) in the sidebar editor instead of the system default app",
+			settingsTitleBarTitle: "Position compatibility mode",
+			settingsTitleBarDesc: "Reserve space for the native Windows title bar at the top-right so the sidebar buttons and content sit below it instead of underneath",
+			settingsTitleBarStripTitle: "Shift distance",
+			settingsTitleBarStripDesc: "Title-bar strip height: how far the sidebar buttons and content move down in px (0–120, default 40)",
 			settingsSaveFailed: "Failed to save",
 			settingsConflict: "The setting changed in another window — please retry",
 			binaryNoPreview: "This file type cannot be previewed",
 			downloadToView: "Download to view",
-			officeTooLarge: "File too large to preview",
-			officeCorrupt: "File is corrupt or in an invalid format",
-			officeEncrypted: "Encrypted files are not supported",
-			officeLoadFailed: "Office preview component failed to load",
-			previousSlide: "Previous",
-			nextSlide: "Next",
-			zoom: "Zoom",
-			zoomHint: "Alt + wheel",
 			settingsSubagentTitle: "Auto-open the Tasks page when a subagent appears",
 			settingsSubagentDesc: "Expand the side card and open the Tasks page when the current conversation spawns a new subagent; turn off to open it manually",
 			settingsJobsTitle: "Auto-open the Jobs page on a new background job",
@@ -1534,6 +1944,18 @@ window.__ModuleLoader__.load({
 			settingsToolsDesc: "When enabled, the model can create and drive sidebar terminals through the 8 terminal_* tools (off by default)",
 			settingsBottomTerminalTitle: "Auto-open a terminal on the bottom panel's first expansion",
 			settingsBottomTerminalDesc: "When the bottom panel is expanded for the first time in a session, try to open a fresh terminal tab there (the terminal quota still applies; on by default)",
+			settingsFontFamilyTitle: "Terminal font family",
+			settingsFontFamilyDesc: "Custom terminal font family (a CSS font-family stack like \"JetBrains Mono\", monospace; leave empty to follow the theme's monospace font)",
+			settingsFontFamilyPlaceholder: "\"JetBrains Mono\", monospace",
+			settingsFontSizeTitle: "Terminal font size",
+			settingsShellTitle: "Shell path",
+			settingsShellDesc: "Shell spawned for UI and model terminals (absolute path or bare executable). Empty keeps the legacy order: yaml config.shell → $SHELL / login shell / Windows powershell.exe. Applies to terminals opened afterwards",
+			settingsShellPlaceholder: "e.g. /bin/zsh (empty = auto)",
+			settingsShellArgsTitle: "Shell arguments",
+			settingsShellArgsDesc: "Explicit shell arguments, space-separated; when non-empty they fully replace the defaults (same contract as the yaml shellArgs)",
+			settingsShellArgsPlaceholder: "e.g. -l (empty = defaults)",
+			settingsFontSizeDesc: "Terminal font size in px (9–32, default 13)",
+			settingsFontSizeSuffix: "px",
 			settingsTabsTitle: "Sidebar content",
 			settingsViewersTitle: "File viewers",
 			settingsGeneralTitle: "General",
@@ -1541,9 +1963,6 @@ window.__ModuleLoader__.load({
 			settingsViewerCatchAll: "Catch-all: any file",
 			viewerImage: "Image",
 			viewerPdf: "PDF",
-			viewerDocx: "Word",
-			viewerXlsx: "Excel",
-			viewerPptx: "PowerPoint",
 			viewerMarkdown: "Markdown",
 			viewerCode: "Code",
 			viewerBinary: "Binary download",
@@ -1569,7 +1988,11 @@ window.__ModuleLoader__.load({
 			settingsBrowserSandboxTitle: "Disable browser sandbox (unsafe)",
 			settingsBrowserSandboxDesc: "With the sandbox off, any visited site runs with the same origin as the GUI: it can read session data and act as your logged-in session. Only enable for fully trusted sites",
 			settingsBrowserLinksTitle: "Open chat external links in the sidebar",
-			settingsBrowserLinksDesc: "When on, clicking an http/https external link in the chat or GUI opens the sidebar browser instead of a new window; Ctrl/Cmd+click always bypasses",
+			settingsBrowserLinksDesc: "When on, clicking an external link in the chat or GUI opens the sidebar instead of a new window; HTTP and HTTPS are controlled separately by the switches below; Ctrl/Cmd+click always bypasses",
+			settingsBrowserHttpTitle: "Open HTTP pages in the sidebar",
+			settingsBrowserHttpDesc: "When on, clicking an HTTP external link in the chat or GUI opens the sidebar (plugin pages declaring urlTarget win); Ctrl/Cmd+click always bypasses",
+			settingsBrowserHttpsTitle: "Open HTTPS pages in the sidebar",
+			settingsBrowserHttpsDesc: "When on, clicking an HTTPS external link in the chat or GUI opens the sidebar. Off by default: most HTTPS sites refuse to be embedded, so the system browser is the smoother default",
 			browserOpenExternal: "Open in browser",
 			browserEmbedBlocked: "{host} refused to be embedded",
 			browserEmbedBlockedDesc: "The site forbids being displayed inside other pages (X-Frame-Options / frame-ancestors), so it cannot load in the sidebar. Open it directly in your browser instead.",
@@ -1608,7 +2031,25 @@ window.__ModuleLoader__.load({
 			jobOutputError: "Failed to read output",
 			jobKill: "Kill",
 			jobKillConfirm: "Click again to confirm kill",
-			jobKillError: "Kill failed"
+			jobKillError: "Kill failed",
+			addPluginsTabCard: "Add tab plugins",
+			addPluginsTabCardDesc: "Register a new sidebar page",
+			addPluginsViewerCard: "Add preview plugins",
+			addPluginsViewerCardDesc: "Register a file-type preview",
+			addPluginsTabDesc: "Sidebar pages (tabs) can be extended by plugins. Plugins register through the ctx.betterSidebar service; clicking Install copies the install command — paste it into a terminal where your DSH profile lives and run it.",
+			addPluginsViewerDesc: "File previewers can be extended by plugins. Plugins register through the ctx.betterSidebar service; clicking Install copies the install command — paste it into a terminal where your DSH profile lives and run it.",
+			addPluginsBrowseMore: "Browse more plugins on GitHub (topic: dsh-better-sidebar)",
+			addPluginsSearch: "Search by plugin name or description…",
+			addPluginsNoMatch: "No plugins match",
+			addPluginsRecommended: "Recommended plugins",
+			addPluginsEmpty: "No plugins curated yet — publish yours under the GitHub topic",
+			openPlugin: "Open",
+			copyInstall: "Copy install command",
+			pluginOfficeDesc: "Office-suite preview (.docx / .xlsx / .pptx) for the better-sidebar editor, keeping the heavy Office render libraries out of the core bundle",
+			pluginGitRemotesDesc: "Git Remotes tab: branch/upstream/ahead-behind, fetch (optional prune), ff-only pull, and push only after an in-tab confirm. Does not replace the built-in Git stage/commit tab, and does not offer force-push or a model auto-push tool",
+			pluginSentinelDesc: "Condition-driven agent wakeup: file/process/port/http/command/webhook sensors wake dormant sessions when conditions fire; registers a \"Sentinel\" tab with the server-wide watch table",
+			pluginSidebarQaDesc: "Select-and-ask: Select conversation text → ask in the right-side panel → a dedicated follow-up session (❓追问) in the same workspace; a fast no-thinking model compresses the main context and injects it with the quote, without interrupting the main conversation. Follow-ups nest, continue, and archive",
+			pluginVideoPreviewDesc: "Inline video preview (.mp4/.webm/.mov/.mkv/.avi etc.) for the better-sidebar editor, backed by a dedicated /video host route with HTTP Range (206) support — scrubbing works and files are not capped by the 20MB mediaLimit"
 		};
 		/**
 		* The dictionary namespace this plugin owns in the DSH locale registry
@@ -1652,6 +2093,53 @@ window.__ModuleLoader__.load({
 			const date = new Date(then);
 			const pad = (value) => String(value).padStart(2, "0");
 			return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+		}
+		//#endregion
+		//#region src/client/paths.ts
+		/**
+		* Path projection helpers shared by the explorer rows: a path relative to
+		* the session cwd (for the @-reference button and "copy relative path").
+		* The fs-tree joins with '/' even on Windows, so both separators normalize
+		* to '/' before comparison.
+		*
+		* This module is dependency-free (no node:path in the client bundle): the
+		* host is the authority for path semantics, so this mirror deliberately
+		* accepts a SUPERSET of absolute forms — anything a Windows host would emit
+		* (drive letters, UNC) plus POSIX roots. A form the host would reject
+		* (e.g. a backslash UNC path on a POSIX host) passes through here and then
+		* fails loudly in the host's requireAbsolute instead of being silently
+		* joined onto the cwd.
+		*/
+		/**
+		* Mirror of the host's absolute-path notion (see fs-tree.requireAbsolute):
+		* POSIX roots, Windows drive letters, and Windows UNC network shares in
+		* both backslash (`\\server\share\...`) and forward-slash
+		* (`//server/share/...`) form. Deliberately a superset — see the module
+		* comment — so a produced UNC path is never joined onto the cwd.
+		*/
+		function isAbsolutePath(path) {
+			return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || /^[\\/]{2}[^\\/]/.test(path);
+		}
+		/**
+		* The path relative to the session's working directory.
+		* @param cwd - the explorer root (absolute).
+		* @param path - an absolute entry path from the fs-tree.
+		* @returns the relative path with '/' separators ('.' for the cwd itself),
+		* or `path` unchanged when it lies outside the cwd.
+		*
+		* The prefix test is case-insensitive: Windows paths (and macOS's
+		* case-insensitive volumes) may arrive with different casing than the cwd
+		* row, and the containment decision must not depend on it. The returned
+		* relative text keeps the caller's own casing.
+		*/
+		function relativeTo(cwd, path) {
+			const base = cwd.replace(/[\\/]+$/, "");
+			const norm = (value) => value.replace(/\\/g, "/");
+			const nBase = norm(base);
+			const nPath = norm(path);
+			if (nPath === nBase) return ".";
+			if (nPath.toLowerCase().startsWith(`${nBase.toLowerCase()}/`)) return nPath.slice(nBase.length + 1);
+			return path;
 		}
 		//#endregion
 		//#region src/client/produced-files.ts
@@ -1724,9 +2212,13 @@ window.__ModuleLoader__.load({
 			const paths = producedForClosing(record.nodes, record.seq);
 			return paths.length === 0 ? null : paths;
 		}
-		/** Resolve a (possibly relative) path against the session cwd for the sidebar. */
+		/**
+		* Resolve a (possibly relative) path against the session cwd for the sidebar.
+		* Absolute detection mirrors the host (see client/paths.isAbsolutePath):
+		* POSIX roots, drive letters and UNC shares must not be joined onto the cwd.
+		*/
 		function resolveSidebarPath(cwd, path) {
-			if (path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path)) return path;
+			if (isAbsolutePath(path)) return path;
 			const base = cwd ?? "";
 			if (base === "") return path;
 			const separator = base.includes("\\") ? "\\" : "/";
@@ -1760,8 +2252,8 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/menghuan/Code/DSH-better-sidebar/src/client/sidebar.module.css.mjs
-		const css$3 = ".W-zNGW_toggleCluster{z-index:55;flex-direction:row;gap:4px;display:flex;position:fixed;top:3px;right:10px}.W-zNGW_panel:not(.W-zNGW_panelHidden) .W-zNGW_tabBar{padding-right:72px}.W-zNGW_toggleButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), color var(--ds-transition-duration-slow) var(--ds-ease-in-out);background:0 0;border:none;border-radius:50%;justify-content:center;align-items:center;display:flex}.W-zNGW_toggleButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_toggleButton:disabled{opacity:.4;cursor:default}.W-zNGW_panel{z-index:50;background:var(--dsw-specific-sidebar-fill);border-left:1px solid var(--dsw-alias-border-l2);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:fixed;top:0;bottom:0;right:0}.W-zNGW_panelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translate(102%)}.W-zNGW_panel[data-dragging]{transition:none}.W-zNGW_panelResize{cursor:col-resize;z-index:2;touch-action:none;width:8px;position:absolute;top:0;bottom:0;left:-4px}.W-zNGW_panelResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.W-zNGW_panelBody{flex:1;min-width:0;min-height:0;display:flex}.W-zNGW_bottomPanel{z-index:50;background:var(--dsw-specific-sidebar-fill);border-top:1px solid var(--dsw-alias-border-l2);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:fixed;bottom:0}.W-zNGW_bottomPanelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translateY(102%)}.W-zNGW_bottomPanel[data-dragging]{transition:none}.W-zNGW_bottomResize{cursor:row-resize;z-index:2;touch-action:none;height:8px;position:absolute;top:-4px;left:0;right:0}.W-zNGW_bottomResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.W-zNGW_bottomClose{z-index:4;width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex;position:absolute;top:3px;right:6px}.W-zNGW_bottomClose:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_bottomPanel .W-zNGW_tabBar{padding-right:40px}.W-zNGW_cornerHandle{z-index:52;cursor:nwse-resize;touch-action:none;width:12px;height:12px;position:fixed}.W-zNGW_cornerHandle:hover,.W-zNGW_cornerHandle[data-dragging]{background:var(--dsw-alias-interactive-bg-hover-accent)}.W-zNGW_iconButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.W-zNGW_iconButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_iconButton:disabled{opacity:.4;cursor:default}.W-zNGW_workbench,.W-zNGW_split{flex:1;min-width:0;min-height:0;display:flex}.W-zNGW_splitRow{flex-direction:row}.W-zNGW_splitCol{flex-direction:column}.W-zNGW_splitChild{display:flex;position:relative;overflow:hidden}.W-zNGW_divider{z-index:3;touch-action:none;flex:none;position:relative}.W-zNGW_dividerRow:after,.W-zNGW_dividerCol:after{content:\"\";background:var(--dsw-alias-border-l2);transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out);position:absolute}.W-zNGW_dividerRow{cursor:col-resize;width:7px;margin:0 -2px}.W-zNGW_dividerRow:after{width:1px;top:0;bottom:0;left:50%;transform:translate(-50%)}.W-zNGW_dividerCol{cursor:row-resize;height:7px;margin:-2px 0}.W-zNGW_dividerCol:after{height:1px;top:50%;left:0;right:0;transform:translateY(-50%)}.W-zNGW_divider:hover:after,.W-zNGW_dividerActive:after{background:var(--dsw-alias-interactive-bg-hover-accent)}.W-zNGW_pane{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;position:relative}.W-zNGW_paneDrop{outline:1px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.W-zNGW_dropOverlay{z-index:6;pointer-events:none;background:var(--dsw-alias-interactive-bg-hover-accent);opacity:.5;position:absolute}.W-zNGW_dropLeft{width:25%;top:0;bottom:0;left:0}.W-zNGW_dropRight{width:25%;top:0;bottom:0;right:0}.W-zNGW_dropUp{height:25%;top:0;left:0;right:0}.W-zNGW_dropDown{height:25%;bottom:0;left:0;right:0}.W-zNGW_dropCenter{outline:2px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-2px;background:0 0;inset:25%}.W-zNGW_paneContent{flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden}.W-zNGW_paneTab{flex-direction:column;flex:1;min-height:0;display:flex}.W-zNGW_paneTabHidden{display:none}.W-zNGW_paneEmptyCards{flex:1;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));align-content:start;gap:8px;min-height:0;padding:12px;display:grid;overflow:hidden}.W-zNGW_paneCard{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;text-align:center;border-radius:8px;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:12px 8px;display:flex}.W-zNGW_paneCard:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2)}.W-zNGW_paneCard:disabled{opacity:.45;cursor:default}.W-zNGW_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);flex:none;align-items:stretch;height:34px;display:flex}.W-zNGW_tabBarDrop{outline:1px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.W-zNGW_tabList{scrollbar-width:none;flex:1;min-width:0;display:flex;overflow-x:auto}.W-zNGW_tabList::-webkit-scrollbar{display:none}.W-zNGW_tab{min-width:64px;max-width:160px;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);border-right:1px solid var(--dsw-alias-border-l1);cursor:pointer;user-select:none;background:0 0;flex:none;align-items:center;gap:4px;padding:0 4px 0 10px;display:flex}.W-zNGW_tab:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_tabActive{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}.W-zNGW_tabTitle{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.W-zNGW_tabClose{width:18px;height:18px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:4px;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.W-zNGW_tabClose:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_tabBarPlus{background:var(--dsw-alias-bg-layer-1);width:22px;height:22px;color:var(--dsw-alias-label-tertiary);cursor:pointer;border:none;border-radius:5px;flex:none;justify-content:center;align-self:center;align-items:center;margin:0 6px;padding:0;display:inline-flex;position:sticky;right:0}.W-zNGW_tabBarPlus:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_explorer{flex-direction:column;flex:1;min-height:0;display:flex}.W-zNGW_explorerHeader{flex:none;justify-content:space-between;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.W-zNGW_explorerRoot{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.W-zNGW_explorerBody{flex:1;min-height:0;padding:2px 6px 8px;overflow-y:auto}.W-zNGW_explorerRow{width:100%;height:34px;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;white-space:nowrap;animation:W-zNGW_dsh-row-in .15s var(--ds-ease-in-out);background:0 0;border:none;border-radius:8px;align-items:center;gap:6px;padding:0 8px;display:flex}.W-zNGW_explorerRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_explorerDir{font:var(--dsw-font-s-strong-14)}.W-zNGW_explorerHidden{opacity:.45}.W-zNGW_explorerName{text-overflow:ellipsis;overflow:hidden}.W-zNGW_explorerRef{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:20px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;align-items:center;padding:0 8px;display:none}.W-zNGW_explorerRef:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_explorerRow:hover .W-zNGW_explorerRef,.W-zNGW_explorerRow:focus-within .W-zNGW_explorerRef{display:inline-flex}.W-zNGW_explorerCopied{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.W-zNGW_explorerError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);cursor:default}@keyframes W-zNGW_dsh-row-in{0%{opacity:0}}.W-zNGW_explorerEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.W-zNGW_editor{flex-direction:column;flex:1;min-height:0;display:flex}.W-zNGW_editorHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:6px;padding:4px 8px;display:flex}.W-zNGW_editorTitle{min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.W-zNGW_editorStatus{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.W-zNGW_editorStatusError{color:var(--dsw-alias-state-error-primary)}.W-zNGW_dirtyDot{background:var(--dsw-alias-state-warn-primary);border-radius:50%;flex:none;width:7px;height:7px}.W-zNGW_editorPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;flex:1;justify-content:center;align-items:center;padding:16px;display:flex}.W-zNGW_orphanedType{opacity:.7;overflow-wrap:anywhere;margin-top:8px;font-size:12px;display:block}.W-zNGW_editorBinary{text-align:center;flex-direction:column;flex:1;justify-content:center;align-items:center;gap:12px;padding:24px 16px;display:flex}.W-zNGW_editorBinaryNotice{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.W-zNGW_editorDownloadLink{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), border-color var(--ds-transition-duration-slow) var(--ds-ease-in-out);border-radius:6px;align-items:center;gap:6px;padding:6px 14px;text-decoration:none;display:inline-flex}.W-zNGW_editorDownloadLink:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-border-l2)}.W-zNGW_editorError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);padding:12px 16px}.W-zNGW_editorBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 12px}.W-zNGW_sandboxStatus{font:var(--dsw-font-xxxs-11);flex:none;align-items:center;gap:8px;padding:4px 10px;display:flex}.W-zNGW_sandboxStatusOn{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1);border-bottom:1px solid var(--dsw-alias-border-l1)}.W-zNGW_sandboxStatusOff{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);border-bottom:1px solid color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent)}.W-zNGW_sandboxDot{background:var(--dsw-alias-state-success-primary);border-radius:50%;flex:none;width:6px;height:6px}.W-zNGW_sandboxStatusOff .W-zNGW_sandboxDot{background:var(--dsw-alias-state-error-primary)}.W-zNGW_sandboxStatusText{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.W-zNGW_sandboxAction{border:1px solid var(--dsw-alias-border-l2);font:inherit;color:inherit;cursor:pointer;background:0 0;border-radius:6px;flex:none;padding:2px 8px}.W-zNGW_sandboxAction:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_editorHtml{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.W-zNGW_browser{flex-direction:column;flex:1;min-height:0;display:flex}.W-zNGW_browserBar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:4px;padding:6px 8px;display:flex}.W-zNGW_browserInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.W-zNGW_browserInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.W-zNGW_browserMessage{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 12px}.W-zNGW_browserFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.W-zNGW_browserStart{text-align:center;min-height:0;font:var(--dsw-font-xs-13);color:var(--dsw-alias-label-tertiary);flex:1;justify-content:center;align-items:center;padding:20px;display:flex}.W-zNGW_browserBlocked{text-align:center;min-height:0;color:var(--dsw-alias-state-warn-primary);flex-direction:column;flex:1;justify-content:center;align-items:center;gap:6px;padding:24px;display:flex}.W-zNGW_browserBlockedTitle{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary)}.W-zNGW_browserBlockedDesc{max-width:280px;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-secondary)}.W-zNGW_browserBlockedActions{gap:8px;margin-top:6px;display:flex}.W-zNGW_browserBlockedButton{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-11);cursor:pointer;border-radius:6px;padding:4px 12px}.W-zNGW_browserBlockedButton:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_editorCm{background:0 0;flex:1;min-height:0;overflow:hidden}.W-zNGW_editorCmHidden{display:none}.W-zNGW_editorCm .cm-editor{height:100%}.W-zNGW_editorCm .cm-editor.cm-focused{outline:none}.W-zNGW_editorModeToggle{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:6px;flex:none;align-items:center;gap:2px;padding:2px;display:inline-flex}.W-zNGW_editorModeButton{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);cursor:pointer;background:0 0;border:none;border-radius:4px;padding:2px 8px}.W-zNGW_editorModeButton:hover{color:var(--dsw-alias-label-primary)}.W-zNGW_editorModeActive{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}.W-zNGW_editorImageWrap{flex:1;justify-content:center;align-items:center;min-height:0;padding:12px;display:flex;overflow:auto}.W-zNGW_editorImage{object-fit:contain;max-width:100%;max-height:100%}.W-zNGW_editorMd{min-height:0;font:var(--dsw-font-xs-13);flex:1;padding:10px 14px;overflow-y:auto}.W-zNGW_selectionPopup{z-index:60;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-strong-11);white-space:nowrap;cursor:pointer;border-radius:6px;align-items:center;padding:0 10px;display:inline-flex;position:fixed;transform:translate(-50%,calc(-100% - 8px))}.W-zNGW_selectionPopup:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_editorDocx{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex}.W-zNGW_editorDocxViewport{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex;overflow:auto}.W-zNGW_editorDocxWrap{flex:none;padding:16px}.W-zNGW_editorDocxZoom{border-top:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);flex:none;align-items:center;gap:8px;min-height:34px;padding:4px 10px;display:flex}.W-zNGW_editorDocxZoomHint,.W-zNGW_editorDocxZoomValue{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.W-zNGW_editorDocxZoomValue{text-align:right;width:36px}.W-zNGW_editorDocxZoomRange{min-width:72px;accent-color:var(--dsw-alias-brand-primary);cursor:pointer;flex:1}.W-zNGW_editorPdf{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex}.W-zNGW_editorPdfToolbar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;justify-content:flex-end;padding:6px 8px;display:flex}.W-zNGW_editorPdfStage{flex:1;min-height:0;display:flex;position:relative}.W-zNGW_editorPdfFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.W-zNGW_editorPdfFrameBlocked{pointer-events:none}.W-zNGW_editorPdfDragShield{z-index:4;pointer-events:none;background:0 0;position:absolute;inset:0}.W-zNGW_editorPdfDragShieldActive{pointer-events:auto}body[data-dsh-tab-dragging] .W-zNGW_editorPdfFrame{pointer-events:none!important}body[data-dsh-tab-dragging] .W-zNGW_editorPdfDragShield{pointer-events:auto!important}.W-zNGW_editorXlsx{background:var(--dsw-alias-bg-base);flex:1;min-height:0;position:relative;overflow:hidden}.W-zNGW_editorUniverHost{width:100%;min-width:0;height:100%;min-height:0}.W-zNGW_editorOfficeOverlay{z-index:2;background:var(--dsw-alias-bg-base);display:flex;position:absolute;inset:0}.W-zNGW_editorPptx{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex}.W-zNGW_editorPptxToolbar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;justify-content:center;align-items:center;gap:8px;padding:6px 8px;display:flex}.W-zNGW_editorPptxToolbar .W-zNGW_editorDownloadLink{margin-left:auto}.W-zNGW_editorPptxButton{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);height:28px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;border-radius:6px;padding:0 10px}.W-zNGW_editorPptxButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_editorPptxButton:disabled{opacity:.4;cursor:default}.W-zNGW_editorPptxPosition{text-align:center;min-width:64px;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.W-zNGW_editorPptxStage{flex:1;min-height:0;position:relative;overflow:hidden}.W-zNGW_editorPptxHost{width:100%;min-width:0;height:100%;min-height:0;overflow:auto}.W-zNGW_terminalWrap{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.W-zNGW_terminal{flex:1;min-height:0;padding:6px 4px 6px 8px}.W-zNGW_terminal .xterm{height:100%}.W-zNGW_terminalBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex-wrap:wrap;flex:none;align-items:center;gap:8px;padding:3px 10px;display:flex}.W-zNGW_terminalBannerUrl{word-break:break-all;opacity:.85;flex-basis:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.W-zNGW_boundaryError{z-index:50;background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);flex-direction:column;align-items:flex-start;gap:8px;padding:16px;display:flex;position:fixed;top:0;bottom:0;right:0;overflow:auto}.W-zNGW_terminalRetry{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;padding:1px 8px}.W-zNGW_terminalRetry:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_git{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.W-zNGW_gitHeader{flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.W-zNGW_gitBranchSelect{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);min-width:0;height:26px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 6px}.W-zNGW_gitSection{border-top:1px solid var(--dsw-alias-border-l1)}.W-zNGW_gitSectionHeader{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary);text-transform:uppercase;justify-content:space-between;align-items:center;padding:6px 12px 4px;display:flex}.W-zNGW_gitLink{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-brand-primary);cursor:pointer;background:0 0;border:none;padding:0}.W-zNGW_gitLink:hover:not(:disabled){text-decoration:underline}.W-zNGW_gitLink:disabled{opacity:.4;cursor:default}.W-zNGW_gitRow{min-height:34px;animation:W-zNGW_dsh-row-in .15s var(--ds-ease-in-out);border-radius:8px;align-items:center;gap:6px;margin:0 6px;padding:0 8px;display:flex}.W-zNGW_gitRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_gitRowSelected{background:var(--dsw-alias-interactive-bg-active)}.W-zNGW_gitRowMain{cursor:pointer;text-align:left;background:0 0;border:none;flex:1;align-items:center;gap:8px;min-width:0;padding:3px 0;display:flex}.W-zNGW_gitBadge{width:20px;height:16px;font:var(--dsw-font-xxxs-strong-11);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);border-radius:4px;flex:none;justify-content:center;align-items:center;display:inline-flex}.W-zNGW_gitName{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.W-zNGW_gitEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);padding:4px 12px 8px}.W-zNGW_gitPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.W-zNGW_gitError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);white-space:pre-wrap;padding:8px 12px}.W-zNGW_gitDiff{border-top:1px solid var(--dsw-alias-border-l1);padding:8px}.W-zNGW_gitDiffTab{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.W-zNGW_gitDiffTabHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.W-zNGW_gitDiffTabTitle{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.W-zNGW_gitDiffFile{align-items:baseline;gap:6px;padding:8px 2px 2px;display:flex}.W-zNGW_gitDiffFilePath{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.W-zNGW_gitDiffFileOld{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:none;max-width:40%;overflow:hidden}.W-zNGW_gitDiffFileTag{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);border-radius:999px;flex:none;padding:0 6px}.W-zNGW_gitDiffHunk{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);gap:8px;padding:3px 2px;display:flex}.W-zNGW_gitDiffHunkHeader{color:var(--dsw-alias-label-secondary);flex:none}.W-zNGW_gitDiffHunkSection{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.W-zNGW_gitDiffLine{font:var(--dsw-font-markdown-code-block-small);white-space:pre-wrap;overflow-wrap:anywhere;align-items:stretch;min-width:0;line-height:20px;display:flex}.W-zNGW_gitDiffNum{text-align:right;width:36px;color:var(--dsw-alias-label-tertiary);user-select:none;flex:none;padding-right:8px}.W-zNGW_gitDiffCode{flex:1;min-width:0;overflow:visible}.W-zNGW_gitDiffCtx{color:var(--dsw-alias-label-primary)}.W-zNGW_gitDiffDel{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent)}.W-zNGW_gitDiffAdd{color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent)}.W-zNGW_gitDiffMeta{padding-left:2px}.W-zNGW_gitDiffMetaText{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);font-style:italic}.W-zNGW_gitDiffExpand{width:100%;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-brand-primary);cursor:pointer;text-align:center;background:0 0;border:none;margin:4px 0;display:block}.W-zNGW_gitDiffExpand:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_gitConfirmDesc{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);white-space:pre-wrap;margin:0}.W-zNGW_gitCommit{border-top:1px solid var(--dsw-alias-border-l1);align-items:center;gap:6px;padding:8px 12px;display:flex}.W-zNGW_gitCommitInput{flex:1;min-width:0}.W-zNGW_gitCommitButton{background:var(--dsw-alias-button-primary-fill);height:26px;color:var(--dsw-alias-label-primary-inverted);font:var(--dsw-font-xxs-strong-12);cursor:pointer;border:none;border-radius:6px;flex:none;padding:0 12px}.W-zNGW_gitCommitButton:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}.W-zNGW_gitCommitButton:disabled{opacity:.45;cursor:default}.W-zNGW_gitLogRow{cursor:pointer;border-radius:8px;flex-direction:column;gap:2px;padding:5px 12px;display:flex}.W-zNGW_gitLogRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.W-zNGW_gitLogLine1{align-items:baseline;gap:8px;min-width:0;display:flex}.W-zNGW_gitLogHash{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);flex:none}.W-zNGW_gitLogLine2{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:flex}.W-zNGW_gitLogRef{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-brand-primary);white-space:nowrap;border-radius:999px;flex:none;padding:0 5px}.W-zNGW_gitLogSubject{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.W-zNGW_gitLogMeta{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.W-zNGW_gitLogMore{border:1px solid var(--dsw-alias-border-l2);width:calc(100% - 24px);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border-radius:6px;margin:4px 12px 8px;padding:6px 0;display:block}.W-zNGW_gitLogMore:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_gitLogMore:disabled{opacity:.5;cursor:default}.W-zNGW_producedRow{flex-wrap:wrap;align-items:center;gap:8px;padding:4px 0;display:flex}.W-zNGW_producedLabel{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.W-zNGW_producedChip{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);max-width:200px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);cursor:pointer;border-radius:999px;align-items:center;gap:4px;padding:2px 8px;display:inline-flex;overflow:hidden}.W-zNGW_producedChip:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.W-zNGW_producedChip span{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.W-zNGW_producedMore{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.W-zNGW_toggleButton:focus-visible,.W-zNGW_bottomClose:focus-visible,.W-zNGW_iconButton:focus-visible,.W-zNGW_tab:focus-visible,.W-zNGW_tabClose:focus-visible,.W-zNGW_tabBarPlus:focus-visible,.W-zNGW_paneCard:focus-visible,.W-zNGW_explorerRow:focus-visible,.W-zNGW_explorerRef:focus-visible,.W-zNGW_gitRowMain:focus-visible,.W-zNGW_gitLink:focus-visible,.W-zNGW_gitCommitButton:focus-visible,.W-zNGW_gitLogRow:focus-visible,.W-zNGW_gitLogMore:focus-visible,.W-zNGW_gitDiffExpand:focus-visible,.W-zNGW_terminalRetry:focus-visible,.W-zNGW_editorModeButton:focus-visible,.W-zNGW_editorDownloadLink:focus-visible,.W-zNGW_editorPptxButton:focus-visible,.W-zNGW_editorDocxZoomRange:focus-visible{outline:2px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}@media (prefers-reduced-motion:reduce){.W-zNGW_panel,.W-zNGW_panelHidden,.W-zNGW_bottomPanel,.W-zNGW_bottomPanelHidden,.W-zNGW_toggleCluster,.W-zNGW_toggleButton,.W-zNGW_tab,.W-zNGW_tabBarPlus,.W-zNGW_paneCard,.W-zNGW_explorerRow,.W-zNGW_gitRow,.W-zNGW_divider,.W-zNGW_dividerRow:after,.W-zNGW_dividerCol:after{transition:none;animation:none}}@media (width<=767px){.W-zNGW_panel:not(.W-zNGW_panelHidden) .W-zNGW_tabBar{padding-right:40px}.W-zNGW_tab{min-width:48px;max-width:128px}}";
+		//#region \0dsh-css:/home/runner/work/DSH-better-sidebar/DSH-better-sidebar/src/client/sidebar.module.css.mjs
+		const css$3 = "[data-dsh-panel-host]{z-index:40;pointer-events:none;position:fixed;inset:0}[data-dsh-panel-host][data-dsh-panel-host-degraded]{position:absolute;top:0;left:0}.nArs4W_toggleCluster{top:calc(3px + env(safe-area-inset-top));z-index:45;pointer-events:auto;flex-direction:row;gap:4px;display:flex;position:absolute;right:10px}.nArs4W_panel:not(.nArs4W_panelHidden) .nArs4W_tabBar{padding-right:72px}.nArs4W_toggleButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), color var(--ds-transition-duration-slow) var(--ds-ease-in-out);background:0 0;border:none;border-radius:50%;justify-content:center;align-items:center;display:flex}.nArs4W_toggleButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_toggleButton:disabled{opacity:.4;cursor:default}.nArs4W_panel{z-index:40;pointer-events:auto;background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);padding-bottom:env(safe-area-inset-bottom);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:absolute;top:0;bottom:0;right:0}.nArs4W_panelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translate(102%)}.nArs4W_panel[data-dragging]{transition:none}.nArs4W_panelResize{cursor:col-resize;z-index:2;touch-action:none;width:8px;position:absolute;top:0;bottom:0;left:-4px}.nArs4W_panelResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_panelBody{flex:1;min-width:0;min-height:0;display:flex}.nArs4W_bottomPanel{z-index:40;background:var(--dsw-alias-bg-layer-1);border-top:1px solid var(--dsw-alias-border-l2);pointer-events:auto;padding-bottom:env(safe-area-inset-bottom);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:absolute;bottom:0}.nArs4W_bottomPanelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translateY(102%)}.nArs4W_bottomPanel[data-dragging]{transition:none}.nArs4W_panel,.nArs4W_bottomPanel{contain:layout style}body[data-dsh-sidebar-dragging] .nArs4W_panel,body[data-dsh-sidebar-dragging] .nArs4W_bottomPanel{will-change:transform}.nArs4W_bottomResize{cursor:row-resize;z-index:2;touch-action:none;height:8px;position:absolute;top:-4px;left:0;right:0}.nArs4W_bottomResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_bottomClose{z-index:4;width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex;position:absolute;top:3px;right:6px}.nArs4W_bottomClose:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_bottomPanel .nArs4W_tabBar{padding-right:40px}body[data-dsh-title-bar-compat] .nArs4W_toggleCluster{top:calc(var(--dsh-title-bar-strip,40px) + 3px)}body[data-dsh-title-bar-compat] .nArs4W_panel{padding-top:var(--dsh-title-bar-strip,40px)}.nArs4W_cornerHandle{left:-6px;bottom:calc(var(--dsh-sidebar-height,0px) + 6px);z-index:2;cursor:nwse-resize;touch-action:none;width:12px;height:12px;position:absolute}.nArs4W_cornerHandle:hover,.nArs4W_cornerHandle[data-dragging]{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_iconButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.nArs4W_iconButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_iconButton:disabled{opacity:.4;cursor:default}.nArs4W_workbench,.nArs4W_split{flex:1;min-width:0;min-height:0;display:flex}.nArs4W_splitRow{flex-direction:row}.nArs4W_splitCol{flex-direction:column}.nArs4W_splitChild{display:flex;position:relative;overflow:hidden}.nArs4W_divider{z-index:3;touch-action:none;flex:none;position:relative}.nArs4W_dividerRow:after,.nArs4W_dividerCol:after{content:\"\";background:var(--dsw-alias-border-l2);transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out);position:absolute}.nArs4W_dividerRow{cursor:col-resize;width:7px;margin:0 -2px}.nArs4W_dividerRow:after{width:1px;top:0;bottom:0;left:50%;transform:translate(-50%)}.nArs4W_dividerCol{cursor:row-resize;height:7px;margin:-2px 0}.nArs4W_dividerCol:after{height:1px;top:50%;left:0;right:0;transform:translateY(-50%)}.nArs4W_divider:hover:after,.nArs4W_dividerActive:after{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_pane{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;position:relative}.nArs4W_paneDrop{outline:1px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.nArs4W_dropOverlay{z-index:6;pointer-events:none;background:var(--dsw-alias-interactive-bg-hover-accent);opacity:.5;position:absolute}.nArs4W_dropLeft{width:25%;top:0;bottom:0;left:0}.nArs4W_dropRight{width:25%;top:0;bottom:0;right:0}.nArs4W_dropUp{height:25%;top:0;left:0;right:0}.nArs4W_dropDown{height:25%;bottom:0;left:0;right:0}.nArs4W_dropCenter{outline:2px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-2px;background:0 0;inset:25%}.nArs4W_paneContent{flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden}.nArs4W_paneTab{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_paneTabHidden{display:none}.nArs4W_paneEmptyCards{flex:1;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));align-content:start;gap:8px;min-height:0;padding:12px;display:grid;overflow:hidden}.nArs4W_paneCard{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;text-align:center;border-radius:8px;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:12px 8px;display:flex}.nArs4W_paneCard:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2)}.nArs4W_paneCard:disabled{opacity:.45;cursor:default}.nArs4W_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);flex:none;align-items:stretch;height:34px;display:flex}.nArs4W_tabBarDrop{outline:1px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.nArs4W_tabList{scrollbar-width:none;flex:1;min-width:0;display:flex;overflow-x:auto}.nArs4W_tabList::-webkit-scrollbar{display:none}.nArs4W_tab{min-width:64px;max-width:160px;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);border-right:1px solid var(--dsw-alias-border-l1);cursor:pointer;user-select:none;background:0 0;flex:none;align-items:center;gap:4px;padding:0 4px 0 10px;display:flex}.nArs4W_tab:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_tabActive{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}.nArs4W_tabTitle{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.nArs4W_tabBadge{min-width:16px;height:15px;font:var(--dsw-font-xxxs-strong-11);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-brand-primary);border-radius:8px;flex:none;justify-content:center;align-items:center;padding:0 4px;display:inline-flex}.nArs4W_tabClose{width:18px;height:18px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:4px;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.nArs4W_tabClose:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_tabBarPlus{background:var(--dsw-alias-bg-layer-1);width:22px;height:22px;color:var(--dsw-alias-label-tertiary);cursor:pointer;border:none;border-radius:5px;flex:none;justify-content:center;align-self:center;align-items:center;margin:0 6px;padding:0;display:inline-flex;position:sticky;right:0}.nArs4W_tabBarPlus:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_explorer{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_explorerHeader{flex:none;justify-content:space-between;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_explorerRoot{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_explorerBody{flex:1;min-height:0;padding:2px 6px 8px;overflow:hidden auto}.nArs4W_explorerRow{box-sizing:border-box;width:100%;max-width:100%;height:34px;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;white-space:nowrap;animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);background:0 0;border:none;border-radius:8px;align-items:center;gap:6px;padding:0 8px;display:flex}.nArs4W_explorerRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_explorerDir{font:var(--dsw-font-s-strong-14)}.nArs4W_explorerHidden{opacity:.45}.nArs4W_explorerSymlink{color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_explorerBroken .nArs4W_explorerName{color:var(--dsw-alias-state-error-primary)}.nArs4W_explorerName{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.nArs4W_explorerRef{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:20px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;align-items:center;padding:0 8px;display:none}.nArs4W_explorerRef:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_explorerRow:hover .nArs4W_explorerRef,.nArs4W_explorerRow:focus-within .nArs4W_explorerRef{display:inline-flex}.nArs4W_explorerCopied{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_explorerError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);cursor:default}@keyframes nArs4W_dsh-row-in{0%{opacity:0}}.nArs4W_explorerEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.nArs4W_editor{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_editorHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:6px;padding:4px 8px;display:flex}.nArs4W_editorTitle{min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.nArs4W_editorPathInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_editorPathInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_editorTreeToggleActive{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}.nArs4W_editorBody{flex:1;min-height:0;display:flex}.nArs4W_editorMain{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}.nArs4W_editorTreeDock{border-left:1px solid var(--dsw-alias-border-l1);flex:none;min-height:0;display:flex;position:relative}.nArs4W_editorTreeResize{cursor:col-resize;touch-action:none;z-index:3;width:6px;position:absolute;top:0;bottom:0;left:0}.nArs4W_editorTreeResize:hover{background:var(--dsw-alias-border-l2)}.nArs4W_editorTreePanel{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}.nArs4W_editorTreePanelFull{flex:1}.nArs4W_editorTreeSearch{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:4px;padding:6px 8px;display:flex}.nArs4W_editorSearchInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:26px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_editorSearchInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_editorSearchHint{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);padding:8px 12px}.nArs4W_editorSearchResult{width:100%;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:none;border-radius:6px;padding:4px 8px;display:block;overflow:hidden}.nArs4W_editorSearchResult:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorStatus{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_editorStatusError{color:var(--dsw-alias-state-error-primary)}.nArs4W_dirtyDot{background:var(--dsw-alias-state-warn-primary);border-radius:50%;flex:none;width:7px;height:7px}.nArs4W_editorPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;flex:1;justify-content:center;align-items:center;padding:16px;display:flex}.nArs4W_orphanedType{opacity:.7;overflow-wrap:anywhere;margin-top:8px;font-size:12px;display:block}.nArs4W_editorBinary{text-align:center;flex-direction:column;flex:1;justify-content:center;align-items:center;gap:12px;padding:24px 16px;display:flex}.nArs4W_editorBinaryNotice{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_editorDownloadLink{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), border-color var(--ds-transition-duration-slow) var(--ds-ease-in-out);border-radius:6px;align-items:center;gap:6px;padding:6px 14px;text-decoration:none;display:inline-flex}.nArs4W_editorDownloadLink:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-border-l2)}.nArs4W_editorError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);padding:12px 16px}.nArs4W_editorBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 12px}.nArs4W_sandboxStatus{font:var(--dsw-font-xxxs-11);flex:none;align-items:center;gap:8px;padding:4px 10px;display:flex}.nArs4W_sandboxStatusOn{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1);border-bottom:1px solid var(--dsw-alias-border-l1)}.nArs4W_sandboxStatusOff{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);border-bottom:1px solid color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent)}.nArs4W_sandboxDot{background:var(--dsw-alias-state-success-primary);border-radius:50%;flex:none;width:6px;height:6px}.nArs4W_sandboxStatusOff .nArs4W_sandboxDot{background:var(--dsw-alias-state-error-primary)}.nArs4W_sandboxStatusText{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.nArs4W_sandboxAction{border:1px solid var(--dsw-alias-border-l2);font:inherit;color:inherit;cursor:pointer;background:0 0;border-radius:6px;flex:none;padding:2px 8px}.nArs4W_sandboxAction:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorHtml{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_browser{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_browserBar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:4px;padding:6px 8px;display:flex}.nArs4W_browserInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_browserInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_browserMessage{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 12px}.nArs4W_browserFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_browserStart{text-align:center;min-height:0;font:var(--dsw-font-xs-13);color:var(--dsw-alias-label-tertiary);flex:1;justify-content:center;align-items:center;padding:20px;display:flex}.nArs4W_browserBlocked{text-align:center;min-height:0;color:var(--dsw-alias-state-warn-primary);flex-direction:column;flex:1;justify-content:center;align-items:center;gap:6px;padding:24px;display:flex}.nArs4W_browserBlockedTitle{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary)}.nArs4W_browserBlockedDesc{max-width:280px;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-secondary)}.nArs4W_browserBlockedActions{gap:8px;margin-top:6px;display:flex}.nArs4W_browserBlockedButton{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-11);cursor:pointer;border-radius:6px;padding:4px 12px}.nArs4W_browserBlockedButton:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorCm{background:0 0;flex:1;min-height:0;overflow:hidden}.nArs4W_editorCmHidden{display:none}.nArs4W_editorCm .cm-editor{height:100%}.nArs4W_editorCm .cm-editor.cm-focused{outline:none}.nArs4W_editorModeToggle{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:6px;flex:none;align-items:center;gap:2px;padding:2px;display:inline-flex}.nArs4W_editorModeButton{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);cursor:pointer;background:0 0;border:none;border-radius:4px;padding:2px 8px}.nArs4W_editorModeButton:hover{color:var(--dsw-alias-label-primary)}.nArs4W_editorModeActive{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}.nArs4W_editorImageWrap{flex:1;justify-content:center;align-items:center;min-height:0;padding:12px;display:flex;overflow:auto}.nArs4W_editorImage{object-fit:contain;max-width:100%;max-height:100%}.nArs4W_editorMd{min-height:0;font:var(--dsw-font-xs-13);flex:1;padding:10px 14px;overflow-y:auto}.nArs4W_mermaidWrap{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:6px;margin:6px 0;overflow:hidden}.nArs4W_mermaidHeader{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);justify-content:space-between;align-items:center;gap:6px;padding:4px 8px;display:flex}.nArs4W_mermaidInfo{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_mermaidCopy{height:20px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-11);cursor:pointer;background:0 0;border:none;border-radius:4px;align-items:center;gap:4px;padding:0 6px;display:inline-flex}.nArs4W_mermaidCopy:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_mermaidBody{cursor:zoom-in;justify-content:center;padding:10px;display:flex;overflow:auto}.nArs4W_mermaidBody svg{max-width:100%;height:auto}.nArs4W_mermaidError{border-bottom:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-state-error-primary);font:var(--dsw-font-xxxs-11);padding:6px 10px}.nArs4W_mermaidCode{font:var(--dsw-font-xxxs-11);margin:0;padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:auto}.nArs4W_mermaidMarkdown .md-code-block[data-mermaid-processed]{display:contents}.nArs4W_mermaidModal{z-index:1000;background:var(--dsw-alias-bg-mask-1);backdrop-filter:blur(2px);flex-direction:column;justify-content:center;align-items:center;display:flex;position:fixed;inset:0}.nArs4W_mermaidModalToolbar{z-index:10;gap:8px;display:flex;position:absolute;top:16px;right:16px}.nArs4W_mermaidModalButton{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);width:36px;height:36px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;border-radius:8px;justify-content:center;align-items:center;display:inline-flex}.nArs4W_mermaidModalButton:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_mermaidModalStage{justify-content:center;align-items:center;width:90vw;height:80vh;display:flex;position:relative;overflow:hidden}.nArs4W_mermaidModalStage svg{cursor:grab;transform-origin:50%;user-select:none;-webkit-user-drag:none;background:var(--dsw-alias-bg-layer-1);border-radius:12px;max-width:none;max-height:none;padding:16px}.nArs4W_mermaidModalStage svg:active{cursor:grabbing}.nArs4W_mermaidModalHint{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);pointer-events:none;position:absolute;bottom:16px;left:50%;transform:translate(-50%)}.nArs4W_selectionPopup{z-index:60;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-strong-11);white-space:nowrap;cursor:pointer;border-radius:6px;align-items:center;padding:0 10px;display:inline-flex;position:fixed;transform:translate(-50%,calc(-100% - 8px))}.nArs4W_selectionPopup:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorPdf{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_editorPdfToolbar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;justify-content:flex-end;padding:6px 8px;display:flex}.nArs4W_editorPdfStage{flex:1;min-height:0;display:flex;position:relative}.nArs4W_editorPdfFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_editorPdfFrameBlocked{pointer-events:none}.nArs4W_editorPdfDragShield{z-index:4;pointer-events:none;background:0 0;position:absolute;inset:0}.nArs4W_editorPdfDragShieldActive{pointer-events:auto}body[data-dsh-tab-dragging] .nArs4W_editorPdfFrame{pointer-events:none!important}body[data-dsh-tab-dragging] .nArs4W_editorPdfDragShield{pointer-events:auto!important}.nArs4W_terminalWrap{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.nArs4W_terminal{flex:1;min-height:0;padding:6px 4px 6px 8px}.nArs4W_terminal .xterm{height:100%}.nArs4W_terminalBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex-wrap:wrap;flex:none;align-items:center;gap:8px;padding:3px 10px;display:flex}.nArs4W_terminalBannerUrl{word-break:break-all;opacity:.85;flex-basis:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.nArs4W_boundaryError{z-index:50;background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);flex-direction:column;align-items:flex-start;gap:8px;padding:16px;display:flex;position:fixed;top:0;bottom:0;right:0;overflow:auto}.nArs4W_terminalRetry{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;padding:1px 8px}.nArs4W_terminalRetry:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_terminalDepsBanner{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex-direction:column;flex:none;gap:6px;padding:10px;display:flex}.nArs4W_terminalDepsTitle{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-state-warn-primary)}.nArs4W_terminalDepsHint{opacity:.9}.nArs4W_terminalDepsCommandRow{align-items:flex-start;gap:8px;display:flex}.nArs4W_terminalRepairCommand{white-space:pre-wrap;word-break:break-all;user-select:text;min-width:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:4px;flex:1;max-height:160px;margin:0;padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;overflow:auto}.nArs4W_terminalDepsNote{opacity:.85}.nArs4W_terminalDepsActions{align-items:center;gap:8px;display:flex}.nArs4W_tabBoundaryError{min-height:0;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);flex-direction:column;flex:1;align-items:flex-start;gap:8px;padding:12px 16px;display:flex;overflow:auto}.nArs4W_git{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.nArs4W_gitHeader{flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_gitBranchSelect{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);min-width:0;height:26px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 6px}.nArs4W_gitSection{border-top:1px solid var(--dsw-alias-border-l1)}.nArs4W_gitSectionHeader{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary);text-transform:uppercase;justify-content:space-between;align-items:center;padding:6px 12px 4px;display:flex}.nArs4W_gitLink{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-brand-primary);cursor:pointer;background:0 0;border:none;padding:0}.nArs4W_gitLink:hover:not(:disabled){text-decoration:underline}.nArs4W_gitLink:disabled{opacity:.4;cursor:default}.nArs4W_gitRow{min-height:34px;animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);border-radius:8px;align-items:center;gap:6px;margin:0 6px;padding:0 8px;display:flex}.nArs4W_gitRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitRowSelected{background:var(--dsw-alias-interactive-bg-active)}.nArs4W_gitRowMain{cursor:pointer;text-align:left;background:0 0;border:none;flex:1;align-items:center;gap:8px;min-width:0;padding:3px 0;display:flex}.nArs4W_gitBadge{width:20px;height:16px;font:var(--dsw-font-xxxs-strong-11);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);border-radius:4px;flex:none;justify-content:center;align-items:center;display:inline-flex}.nArs4W_gitName{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);padding:4px 12px 8px}.nArs4W_gitPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.nArs4W_gitError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);white-space:pre-wrap;padding:8px 12px}.nArs4W_gitDiff{border-top:1px solid var(--dsw-alias-border-l1);padding:8px}.nArs4W_gitDiffTab{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.nArs4W_gitDiffTabHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_gitDiffTabTitle{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitDiffFile{align-items:baseline;gap:6px;padding:8px 2px 2px;display:flex}.nArs4W_gitDiffFilePath{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_gitDiffFileOld{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:none;max-width:40%;overflow:hidden}.nArs4W_gitDiffFileTag{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);border-radius:999px;flex:none;padding:0 6px}.nArs4W_gitDiffHunk{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);gap:8px;padding:3px 2px;display:flex}.nArs4W_gitDiffHunkHeader{color:var(--dsw-alias-label-secondary);flex:none}.nArs4W_gitDiffHunkSection{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_gitDiffLine{font:var(--dsw-font-markdown-code-block-small);white-space:pre-wrap;overflow-wrap:anywhere;align-items:stretch;min-width:0;line-height:20px;display:flex}.nArs4W_gitDiffNum{text-align:right;width:36px;color:var(--dsw-alias-label-tertiary);user-select:none;flex:none;padding-right:8px}.nArs4W_gitDiffCode{flex:1;min-width:0;overflow:visible}.nArs4W_gitDiffCtx{color:var(--dsw-alias-label-primary)}.nArs4W_gitDiffDel{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent)}.nArs4W_gitDiffAdd{color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent)}.nArs4W_gitDiffMeta{padding-left:2px}.nArs4W_gitDiffMetaText{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);font-style:italic}.nArs4W_gitDiffExpand{width:100%;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-brand-primary);cursor:pointer;text-align:center;background:0 0;border:none;margin:4px 0;display:block}.nArs4W_gitDiffExpand:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitConfirmDesc{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);white-space:pre-wrap;margin:0}.nArs4W_gitCommit{border-top:1px solid var(--dsw-alias-border-l1);align-items:center;gap:6px;padding:8px 12px;display:flex}.nArs4W_gitCommitInput{flex:1;min-width:0}.nArs4W_gitCommitButton{background:var(--dsw-alias-button-primary-fill);height:26px;color:var(--dsw-alias-label-primary-inverted);font:var(--dsw-font-xxs-strong-12);cursor:pointer;border:none;border-radius:6px;flex:none;padding:0 12px}.nArs4W_gitCommitButton:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}.nArs4W_gitCommitButton:disabled{opacity:.45;cursor:default}.nArs4W_gitLogRow{cursor:pointer;border-radius:8px;flex-direction:column;gap:2px;padding:5px 12px;display:flex}.nArs4W_gitLogRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitLogLine1{align-items:baseline;gap:8px;min-width:0;display:flex}.nArs4W_gitLogHash{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_gitLogLine2{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:flex}.nArs4W_gitLogRef{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-brand-primary);white-space:nowrap;border-radius:999px;flex:none;padding:0 5px}.nArs4W_gitLogSubject{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitLogMeta{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_gitLogMore{border:1px solid var(--dsw-alias-border-l2);width:calc(100% - 24px);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border-radius:6px;margin:4px 12px 8px;padding:6px 0;display:block}.nArs4W_gitLogMore:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_gitLogMore:disabled{opacity:.5;cursor:default}.nArs4W_producedRow{flex-wrap:wrap;align-items:center;gap:8px;padding:4px 0;display:flex}.nArs4W_producedLabel{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_producedChip{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);max-width:200px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);cursor:pointer;border-radius:999px;align-items:center;gap:4px;padding:2px 8px;display:inline-flex;overflow:hidden}.nArs4W_producedChip:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_producedChip span{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_producedMore{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_toggleButton:focus-visible,.nArs4W_bottomClose:focus-visible,.nArs4W_iconButton:focus-visible,.nArs4W_tab:focus-visible,.nArs4W_tabClose:focus-visible,.nArs4W_tabBarPlus:focus-visible,.nArs4W_paneCard:focus-visible,.nArs4W_explorerRow:focus-visible,.nArs4W_explorerRef:focus-visible,.nArs4W_gitRowMain:focus-visible,.nArs4W_gitLink:focus-visible,.nArs4W_gitCommitButton:focus-visible,.nArs4W_gitLogRow:focus-visible,.nArs4W_gitLogMore:focus-visible,.nArs4W_gitDiffExpand:focus-visible,.nArs4W_terminalRetry:focus-visible,.nArs4W_editorModeButton:focus-visible,.nArs4W_editorDownloadLink:focus-visible,.nArs4W_editorPptxButton:focus-visible,.nArs4W_editorDocxZoomRange:focus-visible{outline:2px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}@media (prefers-reduced-motion:reduce){.nArs4W_panel,.nArs4W_panelHidden,.nArs4W_bottomPanel,.nArs4W_bottomPanelHidden,.nArs4W_toggleCluster,.nArs4W_toggleButton,.nArs4W_tab,.nArs4W_tabBarPlus,.nArs4W_paneCard,.nArs4W_explorerRow,.nArs4W_gitRow,.nArs4W_divider,.nArs4W_dividerRow:after,.nArs4W_dividerCol:after{transition:none;animation:none}}@media (width<=767px){.nArs4W_panel:not(.nArs4W_panelHidden) .nArs4W_tabBar{padding-right:40px}.nArs4W_tab{min-width:48px;max-width:128px}}";
 		const tagId$3 = "dsh-better-sidebar/sidebar.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$3) + "]") === null) {
 			const tag = document.createElement("style");
@@ -1771,182 +2263,204 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var sidebar_module_css_default = {
-			"editorPdfDragShieldActive": "W-zNGW_editorPdfDragShieldActive",
-			"editorDocxZoom": "W-zNGW_editorDocxZoom",
-			"gitDiffExpand": "W-zNGW_gitDiffExpand",
-			"gitDiffAdd": "W-zNGW_gitDiffAdd",
-			"explorerHidden": "W-zNGW_explorerHidden",
-			"tabBarDrop": "W-zNGW_tabBarDrop",
-			"editorPlaceholder": "W-zNGW_editorPlaceholder",
-			"editorCm": "W-zNGW_editorCm",
-			"tabBar": "W-zNGW_tabBar",
-			"gitDiffMetaText": "W-zNGW_gitDiffMetaText",
-			"producedMore": "W-zNGW_producedMore",
-			"gitDiffDel": "W-zNGW_gitDiffDel",
-			"editorModeButton": "W-zNGW_editorModeButton",
-			"editorBinaryNotice": "W-zNGW_editorBinaryNotice",
-			"split": "W-zNGW_split",
-			"dividerRow": "W-zNGW_dividerRow",
-			"editorPdfToolbar": "W-zNGW_editorPdfToolbar",
-			"dividerCol": "W-zNGW_dividerCol",
-			"bottomPanel": "W-zNGW_bottomPanel",
-			"dropDown": "W-zNGW_dropDown",
-			"editorPptxButton": "W-zNGW_editorPptxButton",
-			"editorPptxHost": "W-zNGW_editorPptxHost",
-			"splitRow": "W-zNGW_splitRow",
-			"browserBlockedTitle": "W-zNGW_browserBlockedTitle",
-			"editorDocxWrap": "W-zNGW_editorDocxWrap",
-			"browserBlockedActions": "W-zNGW_browserBlockedActions",
-			"gitPlaceholder": "W-zNGW_gitPlaceholder",
-			"panelBody": "W-zNGW_panelBody",
-			"explorerRef": "W-zNGW_explorerRef",
-			"gitLogRef": "W-zNGW_gitLogRef",
-			"dirtyDot": "W-zNGW_dirtyDot",
-			"boundaryError": "W-zNGW_boundaryError",
-			"gitBranchSelect": "W-zNGW_gitBranchSelect",
-			"gitDiffFileTag": "W-zNGW_gitDiffFileTag",
-			"panelResizeActive": "W-zNGW_panelResizeActive",
-			"gitDiff": "W-zNGW_gitDiff",
-			"gitCommit": "W-zNGW_gitCommit",
-			"explorerName": "W-zNGW_explorerName",
-			"editorPptxToolbar": "W-zNGW_editorPptxToolbar",
-			"editorError": "W-zNGW_editorError",
-			"gitSection": "W-zNGW_gitSection",
-			"terminalWrap": "W-zNGW_terminalWrap",
-			"tab": "W-zNGW_tab",
-			"editorHtml": "W-zNGW_editorHtml",
-			"browserInput": "W-zNGW_browserInput",
-			"panelResize": "W-zNGW_panelResize",
-			"browserBlockedDesc": "W-zNGW_browserBlockedDesc",
-			"paneTabHidden": "W-zNGW_paneTabHidden",
-			"gitDiffMeta": "W-zNGW_gitDiffMeta",
-			"editorImage": "W-zNGW_editorImage",
-			"gitSectionHeader": "W-zNGW_gitSectionHeader",
-			"gitDiffHunkSection": "W-zNGW_gitDiffHunkSection",
-			"gitRow": "W-zNGW_gitRow",
-			"gitConfirmDesc": "W-zNGW_gitConfirmDesc",
-			"editorStatusError": "W-zNGW_editorStatusError",
-			"panelHidden": "W-zNGW_panelHidden",
-			"gitDiffTabHeader": "W-zNGW_gitDiffTabHeader",
-			"sandboxStatusOn": "W-zNGW_sandboxStatusOn",
-			"gitDiffNum": "W-zNGW_gitDiffNum",
-			"gitCommitInput": "W-zNGW_gitCommitInput",
-			"gitLogSubject": "W-zNGW_gitLogSubject",
-			"producedLabel": "W-zNGW_producedLabel",
-			"bottomPanelHidden": "W-zNGW_bottomPanelHidden",
-			"bottomResize": "W-zNGW_bottomResize",
-			"gitLogRow": "W-zNGW_gitLogRow",
-			"editorModeToggle": "W-zNGW_editorModeToggle",
-			"explorerRow": "W-zNGW_explorerRow",
-			"editorCmHidden": "W-zNGW_editorCmHidden",
-			"editorPdfFrame": "W-zNGW_editorPdfFrame",
-			"bottomClose": "W-zNGW_bottomClose",
-			"tabClose": "W-zNGW_tabClose",
-			"editorDocxZoomValue": "W-zNGW_editorDocxZoomValue",
-			"pane": "W-zNGW_pane",
-			"gitLogLine1": "W-zNGW_gitLogLine1",
-			"explorerEmpty": "W-zNGW_explorerEmpty",
-			"paneCard": "W-zNGW_paneCard",
-			"sandboxStatusOff": "W-zNGW_sandboxStatusOff",
-			"explorerError": "W-zNGW_explorerError",
-			"gitDiffHunkHeader": "W-zNGW_gitDiffHunkHeader",
-			"paneTab": "W-zNGW_paneTab",
-			"gitCommitButton": "W-zNGW_gitCommitButton",
-			"toggleButton": "W-zNGW_toggleButton",
-			"browserStart": "W-zNGW_browserStart",
-			"editorDocx": "W-zNGW_editorDocx",
-			"gitEmpty": "W-zNGW_gitEmpty",
-			"panel": "W-zNGW_panel",
-			"editorMd": "W-zNGW_editorMd",
-			"editorUniverHost": "W-zNGW_editorUniverHost",
-			"terminal": "W-zNGW_terminal",
-			"paneEmptyCards": "W-zNGW_paneEmptyCards",
-			"gitLogHash": "W-zNGW_gitLogHash",
-			"explorerDir": "W-zNGW_explorerDir",
-			"gitDiffTabTitle": "W-zNGW_gitDiffTabTitle",
-			"editorDownloadLink": "W-zNGW_editorDownloadLink",
-			"browserBar": "W-zNGW_browserBar",
-			"browserBlocked": "W-zNGW_browserBlocked",
-			"selectionPopup": "W-zNGW_selectionPopup",
-			"editorDocxViewport": "W-zNGW_editorDocxViewport",
-			"gitError": "W-zNGW_gitError",
-			"gitLogLine2": "W-zNGW_gitLogLine2",
-			"editorPdfStage": "W-zNGW_editorPdfStage",
-			"orphanedType": "W-zNGW_orphanedType",
-			"editorPptxStage": "W-zNGW_editorPptxStage",
-			"gitName": "W-zNGW_gitName",
-			"gitDiffFilePath": "W-zNGW_gitDiffFilePath",
-			"dropCenter": "W-zNGW_dropCenter",
-			"editorBinary": "W-zNGW_editorBinary",
-			"paneDrop": "W-zNGW_paneDrop",
-			"gitBadge": "W-zNGW_gitBadge",
-			"gitLink": "W-zNGW_gitLink",
-			"workbench": "W-zNGW_workbench",
-			"terminalRetry": "W-zNGW_terminalRetry",
-			"git": "W-zNGW_git",
-			"editor": "W-zNGW_editor",
-			"gitDiffHunk": "W-zNGW_gitDiffHunk",
-			"browserFrame": "W-zNGW_browserFrame",
-			"gitLogMore": "W-zNGW_gitLogMore",
-			"toggleCluster": "W-zNGW_toggleCluster",
-			"bottomResizeActive": "W-zNGW_bottomResizeActive",
-			"editorPdfFrameBlocked": "W-zNGW_editorPdfFrameBlocked",
-			"editorPptxPosition": "W-zNGW_editorPptxPosition",
-			"gitRowSelected": "W-zNGW_gitRowSelected",
-			"iconButton": "W-zNGW_iconButton",
-			"sandboxAction": "W-zNGW_sandboxAction",
-			"editorTitle": "W-zNGW_editorTitle",
-			"editorDocxZoomRange": "W-zNGW_editorDocxZoomRange",
-			"sandboxStatusText": "W-zNGW_sandboxStatusText",
-			"splitChild": "W-zNGW_splitChild",
-			"dividerActive": "W-zNGW_dividerActive",
-			"terminalBannerUrl": "W-zNGW_terminalBannerUrl",
-			"gitHeader": "W-zNGW_gitHeader",
-			"gitDiffCode": "W-zNGW_gitDiffCode",
-			"gitDiffCtx": "W-zNGW_gitDiffCtx",
-			"editorBanner": "W-zNGW_editorBanner",
-			"editorImageWrap": "W-zNGW_editorImageWrap",
-			"dropLeft": "W-zNGW_dropLeft",
-			"paneContent": "W-zNGW_paneContent",
-			"dsh-row-in": "W-zNGW_dsh-row-in",
-			"sandboxStatus": "W-zNGW_sandboxStatus",
-			"editorDocxZoomHint": "W-zNGW_editorDocxZoomHint",
-			"editorPptx": "W-zNGW_editorPptx",
-			"terminalBanner": "W-zNGW_terminalBanner",
-			"browser": "W-zNGW_browser",
-			"tabActive": "W-zNGW_tabActive",
-			"gitDiffTab": "W-zNGW_gitDiffTab",
-			"producedChip": "W-zNGW_producedChip",
-			"tabList": "W-zNGW_tabList",
-			"producedRow": "W-zNGW_producedRow",
-			"cornerHandle": "W-zNGW_cornerHandle",
-			"tabTitle": "W-zNGW_tabTitle",
-			"editorXlsx": "W-zNGW_editorXlsx",
-			"explorerCopied": "W-zNGW_explorerCopied",
-			"editorPdfDragShield": "W-zNGW_editorPdfDragShield",
-			"splitCol": "W-zNGW_splitCol",
-			"sandboxDot": "W-zNGW_sandboxDot",
-			"gitDiffFile": "W-zNGW_gitDiffFile",
-			"tabBarPlus": "W-zNGW_tabBarPlus",
-			"explorerBody": "W-zNGW_explorerBody",
-			"browserMessage": "W-zNGW_browserMessage",
-			"editorStatus": "W-zNGW_editorStatus",
-			"editorPdf": "W-zNGW_editorPdf",
-			"explorerRoot": "W-zNGW_explorerRoot",
-			"browserBlockedButton": "W-zNGW_browserBlockedButton",
-			"gitRowMain": "W-zNGW_gitRowMain",
-			"dropOverlay": "W-zNGW_dropOverlay",
-			"explorer": "W-zNGW_explorer",
-			"gitDiffLine": "W-zNGW_gitDiffLine",
-			"gitLogMeta": "W-zNGW_gitLogMeta",
-			"explorerHeader": "W-zNGW_explorerHeader",
-			"gitDiffFileOld": "W-zNGW_gitDiffFileOld",
-			"editorHeader": "W-zNGW_editorHeader",
-			"divider": "W-zNGW_divider",
-			"dropUp": "W-zNGW_dropUp",
-			"editorOfficeOverlay": "W-zNGW_editorOfficeOverlay",
-			"dropRight": "W-zNGW_dropRight",
-			"editorModeActive": "W-zNGW_editorModeActive"
+			"paneContent": "nArs4W_paneContent",
+			"editorDownloadLink": "nArs4W_editorDownloadLink",
+			"explorerName": "nArs4W_explorerName",
+			"divider": "nArs4W_divider",
+			"browserBlocked": "nArs4W_browserBlocked",
+			"mermaidBody": "nArs4W_mermaidBody",
+			"terminalWrap": "nArs4W_terminalWrap",
+			"gitConfirmDesc": "nArs4W_gitConfirmDesc",
+			"sandboxStatusText": "nArs4W_sandboxStatusText",
+			"browserBlockedDesc": "nArs4W_browserBlockedDesc",
+			"editorTreePanel": "nArs4W_editorTreePanel",
+			"explorerSymlink": "nArs4W_explorerSymlink",
+			"gitRowMain": "nArs4W_gitRowMain",
+			"gitDiffTabHeader": "nArs4W_gitDiffTabHeader",
+			"editorModeActive": "nArs4W_editorModeActive",
+			"tabBarPlus": "nArs4W_tabBarPlus",
+			"orphanedType": "nArs4W_orphanedType",
+			"editorCmHidden": "nArs4W_editorCmHidden",
+			"producedRow": "nArs4W_producedRow",
+			"editorPptxButton": "nArs4W_editorPptxButton",
+			"terminalBanner": "nArs4W_terminalBanner",
+			"editorBinary": "nArs4W_editorBinary",
+			"browser": "nArs4W_browser",
+			"gitLogSubject": "nArs4W_gitLogSubject",
+			"gitLogMeta": "nArs4W_gitLogMeta",
+			"producedLabel": "nArs4W_producedLabel",
+			"splitChild": "nArs4W_splitChild",
+			"browserBlockedActions": "nArs4W_browserBlockedActions",
+			"editorTreeSearch": "nArs4W_editorTreeSearch",
+			"dividerCol": "nArs4W_dividerCol",
+			"gitDiffLine": "nArs4W_gitDiffLine",
+			"split": "nArs4W_split",
+			"gitLogRow": "nArs4W_gitLogRow",
+			"gitDiffTab": "nArs4W_gitDiffTab",
+			"gitDiffCode": "nArs4W_gitDiffCode",
+			"editorSearchResult": "nArs4W_editorSearchResult",
+			"editorPdfToolbar": "nArs4W_editorPdfToolbar",
+			"dropDown": "nArs4W_dropDown",
+			"gitRowSelected": "nArs4W_gitRowSelected",
+			"gitLogRef": "nArs4W_gitLogRef",
+			"explorerRow": "nArs4W_explorerRow",
+			"toggleButton": "nArs4W_toggleButton",
+			"mermaidHeader": "nArs4W_mermaidHeader",
+			"editorCm": "nArs4W_editorCm",
+			"bottomPanel": "nArs4W_bottomPanel",
+			"sandboxAction": "nArs4W_sandboxAction",
+			"dirtyDot": "nArs4W_dirtyDot",
+			"mermaidMarkdown": "nArs4W_mermaidMarkdown",
+			"paneTab": "nArs4W_paneTab",
+			"editorModeToggle": "nArs4W_editorModeToggle",
+			"gitPlaceholder": "nArs4W_gitPlaceholder",
+			"gitHeader": "nArs4W_gitHeader",
+			"editorDocxZoomRange": "nArs4W_editorDocxZoomRange",
+			"cornerHandle": "nArs4W_cornerHandle",
+			"tabBoundaryError": "nArs4W_tabBoundaryError",
+			"dividerRow": "nArs4W_dividerRow",
+			"mermaidInfo": "nArs4W_mermaidInfo",
+			"terminalDepsNote": "nArs4W_terminalDepsNote",
+			"gitDiffFilePath": "nArs4W_gitDiffFilePath",
+			"gitCommitInput": "nArs4W_gitCommitInput",
+			"editorHeader": "nArs4W_editorHeader",
+			"mermaidModal": "nArs4W_mermaidModal",
+			"pane": "nArs4W_pane",
+			"paneEmptyCards": "nArs4W_paneEmptyCards",
+			"editorTreePanelFull": "nArs4W_editorTreePanelFull",
+			"explorerBody": "nArs4W_explorerBody",
+			"gitName": "nArs4W_gitName",
+			"workbench": "nArs4W_workbench",
+			"editorPdfStage": "nArs4W_editorPdfStage",
+			"producedMore": "nArs4W_producedMore",
+			"editorImageWrap": "nArs4W_editorImageWrap",
+			"mermaidWrap": "nArs4W_mermaidWrap",
+			"gitDiffExpand": "nArs4W_gitDiffExpand",
+			"editorPdfFrameBlocked": "nArs4W_editorPdfFrameBlocked",
+			"editorBody": "nArs4W_editorBody",
+			"panel": "nArs4W_panel",
+			"mermaidModalHint": "nArs4W_mermaidModalHint",
+			"paneDrop": "nArs4W_paneDrop",
+			"explorer": "nArs4W_explorer",
+			"sandboxStatusOn": "nArs4W_sandboxStatusOn",
+			"gitDiff": "nArs4W_gitDiff",
+			"gitDiffFile": "nArs4W_gitDiffFile",
+			"iconButton": "nArs4W_iconButton",
+			"dividerActive": "nArs4W_dividerActive",
+			"terminal": "nArs4W_terminal",
+			"gitLogLine2": "nArs4W_gitLogLine2",
+			"tabTitle": "nArs4W_tabTitle",
+			"editorError": "nArs4W_editorError",
+			"dsh-row-in": "nArs4W_dsh-row-in",
+			"sandboxStatusOff": "nArs4W_sandboxStatusOff",
+			"boundaryError": "nArs4W_boundaryError",
+			"gitSection": "nArs4W_gitSection",
+			"terminalRetry": "nArs4W_terminalRetry",
+			"terminalDepsBanner": "nArs4W_terminalDepsBanner",
+			"mermaidCode": "nArs4W_mermaidCode",
+			"explorerError": "nArs4W_explorerError",
+			"editorSearchHint": "nArs4W_editorSearchHint",
+			"gitDiffFileTag": "nArs4W_gitDiffFileTag",
+			"gitDiffMeta": "nArs4W_gitDiffMeta",
+			"explorerDir": "nArs4W_explorerDir",
+			"gitCommit": "nArs4W_gitCommit",
+			"editorStatus": "nArs4W_editorStatus",
+			"explorerCopied": "nArs4W_explorerCopied",
+			"gitError": "nArs4W_gitError",
+			"panelHidden": "nArs4W_panelHidden",
+			"dropRight": "nArs4W_dropRight",
+			"gitCommitButton": "nArs4W_gitCommitButton",
+			"gitLogHash": "nArs4W_gitLogHash",
+			"tabBarDrop": "nArs4W_tabBarDrop",
+			"dropLeft": "nArs4W_dropLeft",
+			"mermaidModalToolbar": "nArs4W_mermaidModalToolbar",
+			"splitRow": "nArs4W_splitRow",
+			"tabBadge": "nArs4W_tabBadge",
+			"gitDiffNum": "nArs4W_gitDiffNum",
+			"panelBody": "nArs4W_panelBody",
+			"editorModeButton": "nArs4W_editorModeButton",
+			"editorImage": "nArs4W_editorImage",
+			"gitDiffDel": "nArs4W_gitDiffDel",
+			"tabList": "nArs4W_tabList",
+			"editorPlaceholder": "nArs4W_editorPlaceholder",
+			"paneCard": "nArs4W_paneCard",
+			"browserInput": "nArs4W_browserInput",
+			"tab": "nArs4W_tab",
+			"editorSearchInput": "nArs4W_editorSearchInput",
+			"tabClose": "nArs4W_tabClose",
+			"git": "nArs4W_git",
+			"gitLink": "nArs4W_gitLink",
+			"gitEmpty": "nArs4W_gitEmpty",
+			"explorerRoot": "nArs4W_explorerRoot",
+			"browserStart": "nArs4W_browserStart",
+			"editorStatusError": "nArs4W_editorStatusError",
+			"gitDiffHunkHeader": "nArs4W_gitDiffHunkHeader",
+			"editorPdfDragShieldActive": "nArs4W_editorPdfDragShieldActive",
+			"dropOverlay": "nArs4W_dropOverlay",
+			"editorMain": "nArs4W_editorMain",
+			"dropCenter": "nArs4W_dropCenter",
+			"gitDiffMetaText": "nArs4W_gitDiffMetaText",
+			"tabActive": "nArs4W_tabActive",
+			"gitDiffFileOld": "nArs4W_gitDiffFileOld",
+			"editorPdfDragShield": "nArs4W_editorPdfDragShield",
+			"explorerEmpty": "nArs4W_explorerEmpty",
+			"terminalDepsActions": "nArs4W_terminalDepsActions",
+			"editorHtml": "nArs4W_editorHtml",
+			"terminalDepsTitle": "nArs4W_terminalDepsTitle",
+			"terminalDepsCommandRow": "nArs4W_terminalDepsCommandRow",
+			"toggleCluster": "nArs4W_toggleCluster",
+			"terminalDepsHint": "nArs4W_terminalDepsHint",
+			"explorerHeader": "nArs4W_explorerHeader",
+			"gitBranchSelect": "nArs4W_gitBranchSelect",
+			"gitBadge": "nArs4W_gitBadge",
+			"gitDiffAdd": "nArs4W_gitDiffAdd",
+			"gitDiffHunkSection": "nArs4W_gitDiffHunkSection",
+			"sandboxDot": "nArs4W_sandboxDot",
+			"terminalBannerUrl": "nArs4W_terminalBannerUrl",
+			"browserBlockedTitle": "nArs4W_browserBlockedTitle",
+			"browserBar": "nArs4W_browserBar",
+			"selectionPopup": "nArs4W_selectionPopup",
+			"gitDiffHunk": "nArs4W_gitDiffHunk",
+			"editorBinaryNotice": "nArs4W_editorBinaryNotice",
+			"mermaidModalButton": "nArs4W_mermaidModalButton",
+			"explorerHidden": "nArs4W_explorerHidden",
+			"editorPathInput": "nArs4W_editorPathInput",
+			"mermaidCopy": "nArs4W_mermaidCopy",
+			"terminalRepairCommand": "nArs4W_terminalRepairCommand",
+			"gitLogLine1": "nArs4W_gitLogLine1",
+			"gitLogMore": "nArs4W_gitLogMore",
+			"producedChip": "nArs4W_producedChip",
+			"bottomClose": "nArs4W_bottomClose",
+			"mermaidModalStage": "nArs4W_mermaidModalStage",
+			"splitCol": "nArs4W_splitCol",
+			"editorPdf": "nArs4W_editorPdf",
+			"gitRow": "nArs4W_gitRow",
+			"bottomResize": "nArs4W_bottomResize",
+			"editorMd": "nArs4W_editorMd",
+			"editorTreeToggleActive": "nArs4W_editorTreeToggleActive",
+			"editorTreeResize": "nArs4W_editorTreeResize",
+			"editorBanner": "nArs4W_editorBanner",
+			"browserBlockedButton": "nArs4W_browserBlockedButton",
+			"panelResizeActive": "nArs4W_panelResizeActive",
+			"explorerRef": "nArs4W_explorerRef",
+			"editor": "nArs4W_editor",
+			"editorTreeDock": "nArs4W_editorTreeDock",
+			"browserMessage": "nArs4W_browserMessage",
+			"dropUp": "nArs4W_dropUp",
+			"panelResize": "nArs4W_panelResize",
+			"bottomPanelHidden": "nArs4W_bottomPanelHidden",
+			"bottomResizeActive": "nArs4W_bottomResizeActive",
+			"paneTabHidden": "nArs4W_paneTabHidden",
+			"explorerBroken": "nArs4W_explorerBroken",
+			"mermaidError": "nArs4W_mermaidError",
+			"editorPdfFrame": "nArs4W_editorPdfFrame",
+			"gitDiffTabTitle": "nArs4W_gitDiffTabTitle",
+			"gitSectionHeader": "nArs4W_gitSectionHeader",
+			"tabBar": "nArs4W_tabBar",
+			"gitDiffCtx": "nArs4W_gitDiffCtx",
+			"sandboxStatus": "nArs4W_sandboxStatus",
+			"editorTitle": "nArs4W_editorTitle",
+			"browserFrame": "nArs4W_browserFrame"
 		};
 		//#endregion
 		//#region src/client/intercept.tsx
@@ -2021,6 +2535,7 @@ window.__ModuleLoader__.load({
 			return ctx.slots.inject("conversation.chat.turnTail", () => ctx.slots.register({
 				name: "conversation.chat.turnTail",
 				select: (owner) => {
+					if (store.getSuspended()) return null;
 					if (store.getPrefs().tabsEnabled["editor"] === false) return null;
 					return selectProducedFiles(owner);
 				},
@@ -2041,7 +2556,7 @@ window.__ModuleLoader__.load({
 		*/
 		function registerOpenPathInterception(ctx, store) {
 			return wrapOpenPath(ctx.workspaces, {
-				takeoverEnabled: () => store.getPrefs().interceptOpenPath !== false && store.getPrefs().tabsEnabled["editor"] !== false,
+				takeoverEnabled: () => !store.getSuspended() && store.getPrefs().interceptOpenPath !== false && store.getPrefs().tabsEnabled["editor"] !== false,
 				currentSessionId: () => ctx.sessions.list.getSnapshot().current,
 				openInSidebar: (path, sessionId) => {
 					openSidebarFile(ctx, store, sessionId, path);
@@ -2101,6 +2616,9 @@ window.__ModuleLoader__.load({
 		const api = {
 			sessionCwd: (scope, signal) => call("session.cwd", scopePayload(scope, {}), signal),
 			fsTree: (scope, path, signal) => call("fs.tree", scopePayload(scope, { path }), signal),
+			/** Global recursive file-name search rooted at the session cwd (the editor
+			*  side panel's search box); matches are cwd-relative '/'-separated paths. */
+			fsSearch: (scope, query, signal) => call("fs.search", scopePayload(scope, { query }), signal),
 			fsRead: (scope, path, signal) => call("fs.read", scopePayload(scope, { path }), signal),
 			fsWrite: (scope, path, content) => call("fs.write", scopePayload(scope, {
 				path,
@@ -2135,6 +2653,10 @@ window.__ModuleLoader__.load({
 			ptyClose: (scope, tab) => call("pty.close", scopePayload(scope, { tab })),
 			/** Release an agent terminal by uuid (tab closed while WS was down). */
 			agentPtyClose: (uuid) => call("agent-pty.close", { uuid }),
+			/** Terminal dependency status (issue #140): after a WS close 1011 with
+			*  reason `pty-deps-missing` the view fetches the full repair details here
+			*  (the close reason itself is capped at 123 bytes). */
+			terminalDeps: () => call("terminal.deps", {}),
 			/**
 			* The output the model has read so far for one background job (replayed
 			* from the owner session's event log — never the model's job_output
@@ -2146,6 +2668,8 @@ window.__ModuleLoader__.load({
 				id,
 				...reason !== void 0 ? { reason } : {}
 			})),
+			/** The effective terminal shell and its display name (plugin-global). */
+			shellGet: () => call("shell.get", {}),
 			/** Read the side card preferences (plugin-global, no session scope). */
 			settingsGet: () => call("settings.get", {}),
 			/** Merge a patch into the side card preferences (revision-guarded). */
@@ -2177,47 +2701,101 @@ window.__ModuleLoader__.load({
 			return `/sidebar/file?${params.toString()}`;
 		}
 		//#endregion
-		//#region src/client/paths.ts
-		/**
-		* Path projection helpers shared by the explorer rows: a path relative to
-		* the session cwd (for the @-reference button and "copy relative path").
-		* The fs-tree joins with '/' even on Windows, so both separators normalize
-		* to '/' before comparison.
-		*/
-		/**
-		* The path relative to the session's working directory.
-		* @param cwd - the explorer root (absolute).
-		* @param path - an absolute entry path from the fs-tree.
-		* @returns the relative path with '/' separators ('.' for the cwd itself),
-		* or `path` unchanged when it lies outside the cwd.
-		*
-		* The prefix test is case-insensitive: Windows paths (and macOS's
-		* case-insensitive volumes) may arrive with different casing than the cwd
-		* row, and the containment decision must not depend on it. The returned
-		* relative text keeps the caller's own casing.
-		*/
-		function relativeTo(cwd, path) {
-			const base = cwd.replace(/[\\/]+$/, "");
-			const norm = (value) => value.replace(/\\/g, "/");
-			const nBase = norm(base);
-			const nPath = norm(path);
-			if (nPath === nBase) return ".";
-			if (nPath.toLowerCase().startsWith(`${nBase.toLowerCase()}/`)) return nPath.slice(nBase.length + 1);
-			return path;
+		//#region src/client/binary-download.tsx
+		function BinaryDownload(props) {
+			const { scope, path } = props;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: sidebar_module_css_default.editorBinary,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: sidebar_module_css_default.editorBinaryNotice,
+					children: t("binaryNoPreview")
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+					className: sidebar_module_css_default.editorDownloadLink,
+					href: downloadUrl(scope, path),
+					download: true,
+					children: t("downloadToView")
+				})]
+			});
 		}
 		//#endregion
-		//#region src/client/ExplorerView.tsx
+		//#region src/client/editor-load.ts
+		/** Decode the host's base64 head bytes into the sniffing buffer. */
+		function decodeHead(headBase64) {
+			const binary = atob(headBase64);
+			const bytes = new Uint8Array(binary.length);
+			for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+			return bytes;
+		}
 		/**
-		* The file explorer: a lazy VSCode-style tree rooted at the session's
-		* working directory. Levels load on expansion (one API call per directory),
-		* directories sort first, hidden entries render dimmed, and the expansion
-		* set lives in the per-session state. Clicking a file opens an editor tab.
+		* Dispatch one matched viewer's fetchStrategy. A missing viewer or a
+		* `binary-download` strategy both mean "no client-side renderer" → the
+		* download UI. `mediaUrlOf` builds the media URL for `mediaUrl`/`none`
+		* strategies (pure, but scope-bound — injected by the host).
+		*/
+		function planFirstMatch(viewer, mediaUrlOf) {
+			if (viewer === void 0 || viewer.fetchStrategy === "binary-download") return { kind: "binary" };
+			switch (viewer.fetchStrategy) {
+				case "mediaUrl":
+				case "none": return {
+					kind: "render",
+					viewer,
+					mediaUrl: mediaUrlOf()
+				};
+				case "custom": return {
+					kind: "customLoad",
+					viewer
+				};
+				case "fsRead": return {
+					kind: "fetchFsRead",
+					viewer
+				};
+			}
+		}
+		/**
+		* Decide what an fsRead result means for the editor.
+		* - Text: the first match stands (content is valid for any fsRead viewer).
+		* - Binary: the host head bytes enable a re-match — a `detect` viewer (e.g.
+		*   a plugin sniffing a binary format) may claim the file. `custom` viewers
+		*   load their own bytes; `mediaUrl`/`none` viewers render the media route;
+		*   an fsRead viewer or nothing cannot render binary → download UI.
+		*/
+		function planFsReadOutcome(viewer, result, rematch, mediaUrlOf) {
+			if (!result.binary) return {
+				kind: "render",
+				viewer,
+				content: result.content,
+				truncated: result.truncated
+			};
+			const claimed = result.head === void 0 ? void 0 : rematch(decodeHead(result.head));
+			if (claimed !== void 0 && claimed.fetchStrategy === "custom") return {
+				kind: "customLoad",
+				viewer: claimed
+			};
+			if (claimed !== void 0 && (claimed.fetchStrategy === "mediaUrl" || claimed.fetchStrategy === "none")) return {
+				kind: "render",
+				viewer: claimed,
+				mediaUrl: mediaUrlOf()
+			};
+			return { kind: "binary" };
+		}
+		//#endregion
+		//#region src/client/FileTree.tsx
+		/**
+		* The controlled file tree behind the files window's tree panel (TreePanel
+		* wraps it with the search box): a lazy VSCode-style tree rooted at the
+		* session's working directory. Levels load on expansion (one API call per
+		* directory), directories sort first, hidden entries render dimmed. The
+		* expansion set lives in the per-session state (owned by the caller); the
+		* caller also owns the refresh affordance — a `refreshTick` bump wipes the
+		* level cache so the visible set reloads.
 		*
 		* Row actions: hovering a row reveals an @-reference button on the far
 		* right (appends `@<relative path>` to the composer draft), and right-click
-		* opens a context menu to copy the relative or absolute path (with a brief
-		* "copied" label replacing the button after a successful write); file rows
-		* also offer a download action (the host serves raw bytes, binary-safe).
+		* opens a context menu: file rows offer the caller's open escapes
+		* (new tab / to the side, only when the callbacks exist) and a download
+		* action (the host serves raw bytes, binary-safe); every row can copy the
+		* relative or absolute path (with a brief "copied" label replacing the
+		* button after a successful write).
 		*/
 		/** Root label: the last path segment (mirror of the host rootLabel). */
 		function baseName$1(path) {
@@ -2227,11 +2805,10 @@ window.__ModuleLoader__.load({
 		}
 		/** How long the row's "copied" label stays after a successful write. */
 		const COPIED_MS = 1200;
-		function ExplorerView(props) {
-			const { sessionId, cwd, expanded, onToggle, onOpenFile, onReferenceFile } = props;
+		function FileTree(props) {
+			const { sessionId, cwd, expanded, onToggle, onOpenFile, onOpenFileNewTab, onOpenFileSide, onReferenceFile, refreshTick } = props;
 			const [data, setData] = (0, react.useState)({});
 			const dataRef = (0, react.useRef)(data);
-			const [refreshTick, setRefreshTick] = (0, react.useState)(0);
 			/** The row whose path was just copied ("copied" label replaces its button). */
 			const [copiedPath, setCopiedPath] = (0, react.useState)(null);
 			/** Open context menu: the row path (and whether it is a directory) plus the cursor position. */
@@ -2259,6 +2836,13 @@ window.__ModuleLoader__.load({
 				cwd,
 				storeLevel
 			]);
+			const lastTick = (0, react.useRef)(refreshTick);
+			(0, react.useEffect)(() => {
+				if (lastTick.current === refreshTick) return;
+				lastTick.current = refreshTick;
+				dataRef.current = {};
+				setData({});
+			}, [refreshTick]);
 			(0, react.useEffect)(() => {
 				const root = cwd;
 				if (root === void 0) return;
@@ -2360,6 +2944,10 @@ window.__ModuleLoader__.load({
 									className: sidebar_module_css_default.explorerName,
 									children: entry.name
 								}),
+								entry.isSymlink && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconLinkOutline16, {
+									size: 12,
+									className: sidebar_module_css_default.explorerSymlink
+								}),
 								rowActions(entry)
 							]
 						}), isOpen && renderLevel(entry.path, depth + 1)] }, entry.path);
@@ -2367,9 +2955,9 @@ window.__ModuleLoader__.load({
 					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						role: "button",
 						tabIndex: 0,
-						className: clsx(sidebar_module_css_default.explorerRow, entry.hidden && sidebar_module_css_default.explorerHidden),
+						className: clsx(sidebar_module_css_default.explorerRow, entry.hidden && sidebar_module_css_default.explorerHidden, entry.broken && sidebar_module_css_default.explorerBroken),
 						style: { paddingLeft: depth * 22 + 6 },
-						title: entry.path,
+						title: entry.broken ? `${entry.path} — ${t("brokenSymlink")}` : entry.path,
 						onClick: () => {
 							onOpenFile(entry.path);
 						},
@@ -2388,202 +2976,357 @@ window.__ModuleLoader__.load({
 								className: sidebar_module_css_default.explorerName,
 								children: entry.name
 							}),
+							entry.isSymlink && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconLinkOutline16, {
+								size: 12,
+								className: sidebar_module_css_default.explorerSymlink
+							}),
 							rowActions(entry)
 						]
 					}, entry.path);
 				});
 			};
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: sidebar_module_css_default.explorer,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: sidebar_module_css_default.explorerHeader,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: sidebar_module_css_default.explorerRoot,
-							title: root,
-							children: root === void 0 ? t("noSession") : baseName$1(root)
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				className: sidebar_module_css_default.explorerBody,
+				children: [root === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: sidebar_module_css_default.explorerEmpty,
+					children: t("noSession")
+				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: sidebar_module_css_default.explorerRow,
+					style: { paddingLeft: 6 },
+					onContextMenu: (event) => {
+						openRowMenu(event, root, true);
+					},
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 14 }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: sidebar_module_css_default.explorerName,
+							children: baseName$1(root)
+						}),
+						copiedPath === root ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: sidebar_module_css_default.explorerCopied,
+							children: t("copied")
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
-							className: sidebar_module_css_default.iconButton,
-							"aria-label": t("refresh"),
-							title: t("refresh"),
-							onClick: () => {
-								dataRef.current = {};
-								setData({});
-								setRefreshTick((tick) => tick + 1);
+							className: sidebar_module_css_default.explorerRef,
+							"aria-label": t("referenceFile"),
+							title: t("referenceFile"),
+							onClick: (event) => {
+								event.stopPropagation();
+								onReferenceFile(root);
 							},
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, {})
-						})]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: sidebar_module_css_default.explorerBody,
-						children: root === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: sidebar_module_css_default.explorerEmpty,
-							children: t("noSession")
-						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: sidebar_module_css_default.explorerRow,
-							style: { paddingLeft: 6 },
-							onContextMenu: (event) => {
-								openRowMenu(event, root, true);
-							},
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 14 }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: sidebar_module_css_default.explorerName,
-									children: baseName$1(root)
-								}),
-								copiedPath === root ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: sidebar_module_css_default.explorerCopied,
-									children: t("copied")
-								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: sidebar_module_css_default.explorerRef,
-									"aria-label": t("referenceFile"),
-									title: t("referenceFile"),
-									onClick: (event) => {
-										event.stopPropagation();
-										onReferenceFile(root);
-									},
-									children: t("referenceFile")
-								})
-							]
-						}), data[root] !== void 0 && renderLevel(root, 1)] })
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-						open: rowMenu !== null,
-						onClose: () => {
-							setRowMenu(null);
+							children: t("referenceFile")
+						})
+					]
+				}), data[root] !== void 0 && renderLevel(root, 1)] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+					open: rowMenu !== null,
+					onClose: () => {
+						setRowMenu(null);
+					},
+					items: [
+						...rowMenu?.isDir === false && onOpenFileNewTab !== void 0 ? [{
+							id: "open-new-tab",
+							label: t("openFileNewTab"),
+							icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, { size: 14 })
+						}] : [],
+						...rowMenu?.isDir === false && onOpenFileSide !== void 0 ? [{
+							id: "open-side",
+							label: t("openFileSide"),
+							icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 14 })
+						}] : [],
+						...rowMenu?.isDir === false ? [{
+							id: "download",
+							label: t("download"),
+							icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDownloadOutline16, { size: 14 })
+						}] : [],
+						{
+							id: "relative",
+							label: t("copyRelative"),
+							icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutline16, { size: 14 })
 						},
-						items: [
-							...rowMenu?.isDir === false ? [{
-								id: "download",
-								label: t("download"),
-								icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconDownloadOutline16, { size: 14 })
-							}] : [],
-							{
-								id: "relative",
-								label: t("copyRelative"),
-								icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutline16, { size: 14 })
-							},
-							{
-								id: "absolute",
-								label: t("copyAbsolute"),
-								icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutline16, { size: 14 })
-							}
-						],
-						onSelect: (id) => {
-							const target = rowMenu;
-							if (target === null) return;
-							setRowMenu(null);
-							if (id === "download") {
-								downloadFile(target.path);
-								return;
-							}
-							copyPath(id === "relative" ? relativeTo(cwd ?? "", target.path) : target.path, target.path);
-						},
-						portal: true,
-						align: "start",
-						getAnchorRect: () => rowMenu === null ? null : new DOMRect(rowMenu.x, rowMenu.y, 0, 0),
-						anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {})
-					})
-				]
-			});
-		}
-		//#endregion
-		//#region src/client/binary-download.tsx
-		function BinaryDownload(props) {
-			const { scope, path } = props;
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: sidebar_module_css_default.editorBinary,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-					className: sidebar_module_css_default.editorBinaryNotice,
-					children: t("binaryNoPreview")
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-					className: sidebar_module_css_default.editorDownloadLink,
-					href: downloadUrl(scope, path),
-					download: true,
-					children: t("downloadToView")
+						{
+							id: "absolute",
+							label: t("copyAbsolute"),
+							icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutline16, { size: 14 })
+						}
+					],
+					onSelect: (id) => {
+						const target = rowMenu;
+						if (target === null) return;
+						setRowMenu(null);
+						if (id === "open-new-tab") {
+							onOpenFileNewTab?.(target.path);
+							return;
+						}
+						if (id === "open-side") {
+							onOpenFileSide?.(target.path);
+							return;
+						}
+						if (id === "download") {
+							downloadFile(target.path);
+							return;
+						}
+						copyPath(id === "relative" ? relativeTo(cwd ?? "", target.path) : target.path, target.path);
+					},
+					portal: true,
+					align: "start",
+					getAnchorRect: () => rowMenu === null ? null : new DOMRect(rowMenu.x, rowMenu.y, 0, 0),
+					anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {})
 				})]
 			});
 		}
 		//#endregion
-		//#region src/client/editor-load.ts
-		/** Decode the host's base64 head bytes into the sniffing buffer. */
-		function decodeHead(headBase64) {
-			const binary = atob(headBase64);
-			const bytes = new Uint8Array(binary.length);
-			for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-			return bytes;
-		}
+		//#region src/client/TreePanel.tsx
 		/**
-		* Dispatch one matched viewer's fetchStrategy. A missing viewer or a
-		* `binary-download` strategy both mean "no client-side renderer" → the
-		* download UI. `mediaUrlOf` builds the media URL for `mediaUrl`/`none`
-		* strategies (pure, but scope-bound — injected by the host).
+		* The files window's tree surface: a global file-name search box on top
+		* (300ms debounce; an in-flight search is aborted by the next keystroke)
+		* over either the shared controlled FileTree (empty query) or the flat
+		* result list (relative paths; click opens through the caller's mode-aware
+		* open). Owns its refresh tick: the icon next to the search input clears
+		* the tree cache. EditorHost docks it as the tab's right panel (wrapped in
+		* a drag-resize handle) and provides the file context-menu open escapes.
 		*/
-		function planFirstMatch(viewer, mediaUrlOf) {
-			if (viewer === void 0 || viewer.fetchStrategy === "binary-download") return { kind: "binary" };
-			switch (viewer.fetchStrategy) {
-				case "mediaUrl":
-				case "none": return {
-					kind: "render",
-					viewer,
-					mediaUrl: mediaUrlOf()
+		function TreePanel(props) {
+			const { sessionId, cwd, expanded, onToggle, onOpenFile, onOpenFileNewTab, onOpenFileSide, onReferenceFile, full } = props;
+			const [query, setQuery] = (0, react.useState)("");
+			const [results, setResults] = (0, react.useState)(null);
+			const [error, setError] = (0, react.useState)(null);
+			const [refreshTick, setRefreshTick] = (0, react.useState)(0);
+			const needle = query.trim();
+			(0, react.useEffect)(() => {
+				if (needle === "") {
+					setResults(null);
+					setError(null);
+					return;
+				}
+				const controller = new AbortController();
+				const timer = window.setTimeout(() => {
+					api.fsSearch({
+						sessionId,
+						cwd
+					}, needle, controller.signal).then((found) => {
+						setResults(found);
+						setError(null);
+					}).catch((failure) => {
+						if (controller.signal.aborted) return;
+						setResults(null);
+						setError(failure instanceof Error ? failure.message : String(failure));
+					});
+				}, 300);
+				return () => {
+					window.clearTimeout(timer);
+					controller.abort();
 				};
-				case "custom": return {
-					kind: "customLoad",
-					viewer
-				};
-				case "fsRead": return {
-					kind: "fetchFsRead",
-					viewer
-				};
-			}
-		}
-		/**
-		* Decide what an fsRead result means for the editor.
-		* - Text: the first match stands (content is valid for any fsRead viewer).
-		* - Binary: the host head bytes enable a re-match — a `detect` viewer (e.g.
-		*   a plugin sniffing a binary format) may claim the file. `custom` viewers
-		*   load their own bytes; `mediaUrl`/`none` viewers render the media route;
-		*   an fsRead viewer or nothing cannot render binary → download UI.
-		*/
-		function planFsReadOutcome(viewer, result, rematch, mediaUrlOf) {
-			if (!result.binary) return {
-				kind: "render",
-				viewer,
-				content: result.content,
-				truncated: result.truncated
-			};
-			const claimed = result.head === void 0 ? void 0 : rematch(decodeHead(result.head));
-			if (claimed !== void 0 && claimed.fetchStrategy === "custom") return {
-				kind: "customLoad",
-				viewer: claimed
-			};
-			if (claimed !== void 0 && (claimed.fetchStrategy === "mediaUrl" || claimed.fetchStrategy === "none")) return {
-				kind: "render",
-				viewer: claimed,
-				mediaUrl: mediaUrlOf()
-			};
-			return { kind: "binary" };
+			}, [
+				sessionId,
+				cwd,
+				needle
+			]);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: clsx(sidebar_module_css_default.editorTreePanel, full === true && sidebar_module_css_default.editorTreePanelFull),
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: sidebar_module_css_default.editorTreeSearch,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+						className: sidebar_module_css_default.editorSearchInput,
+						value: query,
+						placeholder: t("editorSearchPlaceholder"),
+						spellCheck: false,
+						onChange: (event) => {
+							setQuery(event.target.value);
+						}
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: sidebar_module_css_default.iconButton,
+						"aria-label": t("refresh"),
+						title: t("refresh"),
+						onClick: () => {
+							setRefreshTick((tick) => tick + 1);
+						},
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 })
+					})]
+				}), needle === "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FileTree, {
+					sessionId,
+					cwd,
+					expanded,
+					onToggle,
+					onOpenFile,
+					onOpenFileNewTab,
+					onOpenFileSide,
+					onReferenceFile,
+					refreshTick
+				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: sidebar_module_css_default.explorerBody,
+					children: [
+						error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: clsx(sidebar_module_css_default.editorSearchHint, sidebar_module_css_default.editorError),
+							children: error
+						}),
+						error === null && results === null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: sidebar_module_css_default.editorSearchHint,
+							children: t("loading")
+						}),
+						error === null && results !== null && results.matches.length === 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: sidebar_module_css_default.editorSearchHint,
+							children: t("editorSearchNoResults")
+						}),
+						error === null && results !== null && results.matches.map((rel) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: sidebar_module_css_default.editorSearchResult,
+							title: rel,
+							onClick: () => {
+								onOpenFile(resolveSidebarPath(cwd, rel));
+							},
+							children: rel
+						}, rel)),
+						error === null && results?.truncated === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: sidebar_module_css_default.editorSearchHint,
+							children: t("editorSearchTruncated")
+						})
+					]
+				})]
+			});
 		}
 		//#endregion
 		//#region src/client/EditorHost.tsx
 		/**
-		* The editor tab host: resolves a file's previewer through the sidebar
-		* registry (`matchFileViewer`), fetches bytes per the matched viewer's
-		* fetch strategy, and renders its component — or the shared download pane
-		* when nothing can render the file. The header shows the file title; the
-		* editable code/markdown viewers render their own toolbar below it.
+		* The editor tab host: the single FILES WINDOW. It resolves a file's
+		* previewer through the sidebar registry (`matchFileViewer`), fetches bytes
+		* per the matched viewer's fetch strategy, and renders its component — or
+		* the shared download pane when nothing can render the file. A tab without
+		* a path (the seeded "Files" home) renders an empty-state hint instead of
+		* the viewer loading flow; that path-less window IS the file explorer.
+		*
+		* The chrome depends on the `editorExplorer` mode (read reactively so
+		* toggling it re-renders without a reload):
+		* - merged (in-place): tree click / path-input Enter switch the CURRENT
+		*   tab in place (updateTab rewrites path/title; the tab keeps its id and
+		*   meta, so treeOpen/treeWidth survive the switch);
+		* - split: they open through `openSidebarFile` (a per-path dedupe tab),
+		*   and a PATH-LESS window is the standalone explorer — it renders ONLY
+		*   the tree panel (search + FileTree, full-window), no editor chrome.
+		*   Editor tabs (with a path) keep the full chrome in both modes.
+		* The tree's context menu offers the explicit escapes in both modes: open
+		* in a new tab (per-path dedupe) or to the side (a fresh tab in a fresh
+		* rightward split of the current pane).
 		*
 		* The strategy dispatch is pure (planFirstMatch / planFsReadOutcome in
 		* editor-load.ts); this component only wires it to the host APIs.
 		*/
+		/** The docked tree panel's width bounds (drag-resize clamps into them). */
+		const TREE_WIDTH_DEFAULT = 240;
+		const TREE_WIDTH_MIN = 160;
+		const TREE_WIDTH_MAX = 480;
+		/** The tab's persisted meta object (a malformed meta reads as empty). */
+		function metaOf(tab) {
+			return tab.meta !== null && typeof tab.meta === "object" && !Array.isArray(tab.meta) ? tab.meta : {};
+		}
+		/** Read the persisted tree-panel flag of one editor tab: an explicit
+		*  boolean meta wins; otherwise path-less tabs (the seeded home) default
+		*  open and file tabs default closed. */
+		function treeOpenOf(tab) {
+			const treeOpen = metaOf(tab).treeOpen;
+			return typeof treeOpen === "boolean" ? treeOpen : tab.path === void 0 || tab.path === "";
+		}
+		/** Read the persisted tree-panel width (clamped; default 240). */
+		function treeWidthOf(tab) {
+			const width = metaOf(tab).treeWidth;
+			return typeof width === "number" && Number.isFinite(width) ? Math.min(TREE_WIDTH_MAX, Math.max(TREE_WIDTH_MIN, Math.round(width))) : TREE_WIDTH_DEFAULT;
+		}
+		/** Merge a patch into the tab's persisted meta (rides the layout). */
+		function patchMeta(ctx, tab, patch) {
+			ctx.betterSidebar?.updateTab(tab.id, { meta: {
+				...metaOf(tab),
+				...patch
+			} });
+		}
+		/** Clamp one dock width into the contract range. */
+		function clampTreeWidth(value) {
+			return Math.min(TREE_WIDTH_MAX, Math.max(TREE_WIDTH_MIN, Math.round(value)));
+		}
 		function EditorHost(props) {
-			const { ctx, store, scope, path, title } = props;
+			const { ctx, store, scope, tab, expanded, onToggleDir, onReferenceFile } = props;
+			const path = tab.path ?? "";
+			const title = tab.title;
 			const [load, setLoad] = (0, react.useState)({ status: "loading" });
+			const inPlace = (0, react.useSyncExternalStore)((0, react.useCallback)((callback) => store.subscribe(callback), [store]), (0, react.useCallback)(() => store.getSnapshot().prefs.editorExplorer, [store]));
+			const showEmpty = path === "";
+			const treeOnly = showEmpty && !inPlace;
+			/**
+			* Open a file from THIS window (tree click / search row / path input):
+			* merged mode switches this tab in place (stable id, meta survives);
+			* split mode opens a per-path dedupe tab through openSidebarFile.
+			*/
+			const openFile = (absolute) => {
+				if (inPlace) ctx.betterSidebar?.updateTab(tab.id, {
+					path: absolute,
+					title: baseName$1(absolute)
+				});
+				else openSidebarFile(ctx, store, scope.sessionId, absolute);
+			};
+			/** The context menu's explicit "new tab" escape (per-path dedupe). */
+			const openFileNewTab = (absolute) => {
+				openSidebarFile(ctx, store, scope.sessionId, absolute);
+			};
+			/**
+			* The context menu's "open to the side": a fresh editor tab (uid id — the
+			* `'editor:' + path` convention would clash with the id safety net on a
+			* second side-open of the same file) in a rightward split of THIS pane.
+			*/
+			const openFileSide = (absolute) => {
+				store.reduce((state) => {
+					const key = treeOf(state, tab.id);
+					const pane = leafWithTab(state[key], tab.id) ?? firstLeaf(state[key]);
+					const fresh = {
+						id: mintTabId(),
+						type: "editor",
+						title: baseName$1(absolute),
+						path: absolute,
+						meta: { treeOpen: false }
+					};
+					const { node, leafId } = insertLeafAt(state[key], pane.id, "row", fresh, false);
+					return {
+						...state,
+						[key]: node,
+						activePane: leafId
+					};
+				});
+			};
+			const [toolbar, setToolbar] = (0, react.useState)(null);
+			const controlsRef = (0, react.useRef)(null);
+			const onToolbarState = (0, react.useCallback)((next) => {
+				setToolbar((prev) => prev !== null && JSON.stringify(prev) === JSON.stringify(next) ? prev : next);
+			}, []);
+			const onToolbarControls = (0, react.useCallback)((controls) => {
+				controlsRef.current = controls;
+			}, []);
+			const [dragWidth, setDragWidth] = (0, react.useState)(null);
+			const dragRef = (0, react.useRef)(null);
+			const treeWidth = dragWidth ?? treeWidthOf(tab);
+			const onResizeStart = (event) => {
+				event.preventDefault();
+				event.currentTarget.setPointerCapture?.(event.pointerId);
+				dragRef.current = {
+					startX: event.clientX,
+					startWidth: treeWidth
+				};
+			};
+			const onResizeMove = (event) => {
+				const drag = dragRef.current;
+				if (drag === null) return;
+				setDragWidth(clampTreeWidth(drag.startWidth + (drag.startX - event.clientX)));
+			};
+			const onResizeEnd = (event) => {
+				const drag = dragRef.current;
+				if (drag === null) return;
+				dragRef.current = null;
+				setDragWidth(null);
+				const finalWidth = clampTreeWidth(drag.startWidth + (drag.startX - event.clientX));
+				if (finalWidth !== treeWidthOf(tab)) patchMeta(ctx, tab, { treeWidth: finalWidth });
+			};
 			(0, react.useEffect)(() => {
+				setToolbar(null);
+				if (showEmpty) return;
 				let cancelled = false;
+				const controller = new AbortController();
 				setLoad({ status: "loading" });
 				const mediaUrlOf = () => mediaUrl(scope, path);
 				const apply = (action) => {
@@ -2603,7 +3346,7 @@ window.__ModuleLoader__.load({
 							});
 							return;
 						case "customLoad":
-							action.viewer.load?.(path, scope).then((data) => {
+							action.viewer.load?.(path, scope, controller.signal).then((data) => {
 								if (cancelled) return;
 								setLoad({
 									status: "ready",
@@ -2641,49 +3384,193 @@ window.__ModuleLoader__.load({
 				apply(planFirstMatch(ctx.betterSidebar?.matchFileViewer(path), mediaUrlOf));
 				return () => {
 					cancelled = true;
+					controller.abort();
 				};
 			}, [
 				scope.sessionId,
 				scope.cwd,
 				path,
-				ctx
+				ctx,
+				showEmpty
 			]);
+			const treeOpen = treeOpenOf(tab);
+			/** Persist the panel flag on the tab (survives reloads with the layout). */
+			const toggleTree = () => {
+				patchMeta(ctx, tab, { treeOpen: !treeOpen });
+			};
+			const saveLabel = toolbar === null ? "" : toolbar.saveState === "saving" ? t("loading") : toolbar.saveState === "saved" ? t("saved") : toolbar.saveState === "failed" ? t("saveFailed") : "";
+			if (treeOnly) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: sidebar_module_css_default.editor,
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TreePanel, {
+					full: true,
+					sessionId: scope.sessionId,
+					cwd: scope.cwd,
+					expanded,
+					onToggle: onToggleDir,
+					onOpenFile: openFile,
+					onOpenFileNewTab: openFileNewTab,
+					onOpenFileSide: openFileSide,
+					onReferenceFile
+				})
+			});
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: sidebar_module_css_default.editor,
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: sidebar_module_css_default.editorHeader,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: sidebar_module_css_default.editorTitle,
-							title: path,
-							children: title
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: sidebar_module_css_default.editorHeader,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(EditorPathInput, {
+							path,
+							cwd: scope.cwd,
+							onOpen: openFile
+						}, path),
+						toolbar?.modes === true && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: sidebar_module_css_default.editorModeToggle,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: clsx(sidebar_module_css_default.editorModeButton, toolbar.mode === "preview" && sidebar_module_css_default.editorModeActive),
+								onClick: () => {
+									controlsRef.current?.setMode("preview");
+								},
+								children: t("preview")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: clsx(sidebar_module_css_default.editorModeButton, toolbar.mode === "edit" && sidebar_module_css_default.editorModeActive),
+								onClick: () => {
+									controlsRef.current?.setMode("edit");
+								},
+								children: t("edit")
+							})]
+						}),
+						toolbar?.dirty === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: sidebar_module_css_default.dirtyDot,
+							title: t("unsaved")
+						}),
+						toolbar?.editable === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: sidebar_module_css_default.iconButton,
+							"aria-label": t("save"),
+							title: `${t("save")} (Ctrl/Cmd+S)`,
+							onClick: () => {
+								controlsRef.current?.save();
+							},
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, { size: 14 })
+						}),
+						saveLabel !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: clsx(sidebar_module_css_default.editorStatus, toolbar?.saveState === "failed" && sidebar_module_css_default.editorStatusError),
+							children: saveLabel
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: clsx(sidebar_module_css_default.iconButton, treeOpen && sidebar_module_css_default.editorTreeToggleActive),
+							"aria-label": t("editorTreeToggle"),
+							title: t("editorTreeToggle"),
+							"aria-pressed": treeOpen,
+							onClick: toggleTree,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size: 14 })
 						})
-					}),
-					load.status === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: sidebar_module_css_default.editorPlaceholder,
-						children: t("loading")
-					}),
-					load.status === "error" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: sidebar_module_css_default.editorError,
-						children: load.message
-					}),
-					load.status === "binary" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BinaryDownload, {
-						scope,
-						path
-					}),
-					load.status === "ready" && (0, react.createElement)(load.viewer.component, {
-						ctx,
-						store,
-						scope,
-						path,
-						title,
-						viewerId: load.viewer.id,
-						content: load.content,
-						truncated: load.truncated,
-						mediaUrl: load.mediaUrl,
-						customData: load.customData
-					})
-				]
+					]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: sidebar_module_css_default.editorBody,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: sidebar_module_css_default.editorMain,
+						children: [
+							showEmpty && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: sidebar_module_css_default.editorPlaceholder,
+								children: t("editorEmptyHint")
+							}),
+							!showEmpty && load.status === "loading" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: sidebar_module_css_default.editorPlaceholder,
+								children: t("loading")
+							}),
+							!showEmpty && load.status === "error" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: sidebar_module_css_default.editorError,
+								children: load.message
+							}),
+							!showEmpty && load.status === "binary" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BinaryDownload, {
+								scope,
+								path
+							}),
+							!showEmpty && load.status === "ready" && (0, react.createElement)(load.viewer.component, {
+								ctx,
+								store,
+								scope,
+								path,
+								title,
+								viewerId: load.viewer.id,
+								content: load.content,
+								truncated: load.truncated,
+								mediaUrl: load.mediaUrl,
+								customData: load.customData,
+								toolbar: "host",
+								onToolbarState,
+								onToolbarControls
+							})
+						]
+					}), treeOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: sidebar_module_css_default.editorTreeDock,
+						style: { width: treeWidth },
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: sidebar_module_css_default.editorTreeResize,
+							role: "separator",
+							"aria-orientation": "vertical",
+							"aria-label": t("editorTreeToggle"),
+							onPointerDown: onResizeStart,
+							onPointerMove: onResizeMove,
+							onPointerUp: onResizeEnd,
+							onPointerCancel: onResizeEnd
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TreePanel, {
+							sessionId: scope.sessionId,
+							cwd: scope.cwd,
+							expanded,
+							onToggle: onToggleDir,
+							onOpenFile: openFile,
+							onOpenFileNewTab: openFileNewTab,
+							onOpenFileSide: openFileSide,
+							onReferenceFile
+						})]
+					})]
+				})]
+			});
+		}
+		/**
+		* The header's path input: shows the current file relative to the session
+		* cwd (absolute when outside it). Enter resolves the typed path (relative
+		* input joins onto the cwd — the same resolution `openSidebarFile` uses)
+		* and opens it through the parent's mode-aware open (in-place switch or a
+		* per-path dedupe tab); Escape/blur restores the current value. The parent
+		* keys it by `path` so an in-place switch remounts and reseeds the draft.
+		*/
+		function EditorPathInput(props) {
+			const { path, cwd, onOpen } = props;
+			const display = path === "" ? "" : relativeTo(cwd ?? "", path);
+			const [value, setValue] = (0, react.useState)(display);
+			const commit = () => {
+				const input = value.trim();
+				if (input === "" || input === display) {
+					setValue(display);
+					return;
+				}
+				onOpen(resolveSidebarPath(cwd, input));
+				setValue(display);
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+				className: sidebar_module_css_default.editorPathInput,
+				value,
+				placeholder: t("editorPathPlaceholder"),
+				title: path,
+				spellCheck: false,
+				onChange: (event) => {
+					setValue(event.target.value);
+				},
+				onKeyDown: (event) => {
+					if (event.key === "Enter") {
+						event.preventDefault();
+						commit();
+					} else if (event.key === "Escape") setValue(display);
+				},
+				onBlur: () => {
+					setValue(display);
+				}
 			});
 		}
 		//#endregion
@@ -3055,7 +3942,7 @@ window.__ModuleLoader__.load({
 							onClick: () => {
 								refresh();
 							},
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, {})
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 })
 						})]
 					}),
 					loading && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -3785,7 +4672,7 @@ window.__ModuleLoader__.load({
 							"aria-label": t("refresh"),
 							title: t("refresh"),
 							onClick: refresh,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, {})
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutline16, { size: 14 })
 						})]
 					}),
 					loading && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -4287,96 +5174,6 @@ window.__ModuleLoader__.load({
 				})
 			]
 		});
-		/** Word viewer glyph: a document frame with a "W". */
-		const IconDocxOutline16 = ({ size = 16, className }) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-			width: size,
-			height: size,
-			className,
-			viewBox: "0 0 16 16",
-			fill: "none",
-			xmlns: "http://www.w3.org/2000/svg",
-			children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-					d: "M3.5 1.5h6.5L13.5 5v9.5h-10z",
-					stroke: "currentColor",
-					strokeWidth: "1.5",
-					strokeLinejoin: "round"
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-					d: "M9.5 1.5V5h4",
-					stroke: "currentColor",
-					strokeWidth: "1.5",
-					strokeLinejoin: "round"
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-					d: "M6.2 13.4 7.4 10l1.2 3.4M7.4 10.6l-.35-1.1c-.2-.62.2-1.25.85-1.25h.2c.65 0 1.05.63.85 1.25l-.35 1.1",
-					stroke: "currentColor",
-					strokeWidth: "1.25",
-					strokeLinecap: "round",
-					strokeLinejoin: "round"
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-					d: "M8.75 10.6 9.2 9.4",
-					stroke: "currentColor",
-					strokeWidth: "1.25",
-					strokeLinecap: "round"
-				})
-			]
-		});
-		/** Excel viewer glyph: a spreadsheet grid. */
-		const IconXlsxOutline16 = ({ size = 16, className }) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-			width: size,
-			height: size,
-			className,
-			viewBox: "0 0 16 16",
-			fill: "none",
-			xmlns: "http://www.w3.org/2000/svg",
-			children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
-					x: "1.5",
-					y: "2",
-					width: "13",
-					height: "12",
-					rx: "2",
-					stroke: "currentColor",
-					strokeWidth: "1.5"
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-					d: "M1.5 6h13M1.5 9.5h13M6 6v8M10.5 6v8",
-					stroke: "currentColor",
-					strokeWidth: "1.25"
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-					d: "m3.8 13.2 2-3M5.8 13.2l-2-3",
-					stroke: "currentColor",
-					strokeWidth: "1.25",
-					strokeLinecap: "round"
-				})
-			]
-		});
-		/** PowerPoint viewer glyph: a chart with rising bars. */
-		const IconPptxOutline16 = ({ size = 16, className }) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
-			width: size,
-			height: size,
-			className,
-			viewBox: "0 0 16 16",
-			fill: "none",
-			xmlns: "http://www.w3.org/2000/svg",
-			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
-				x: "1.5",
-				y: "2.5",
-				width: "13",
-				height: "11",
-				rx: "2",
-				stroke: "currentColor",
-				strokeWidth: "1.5"
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", {
-				d: "M4 12.5v-3M7 12.5V7M10 12.5V4.5M13 12.5v-1.5",
-				stroke: "currentColor",
-				strokeWidth: "1.5",
-				strokeLinecap: "round"
-			})]
-		});
 		/** Markdown viewer glyph: the classic "M with a down arrow" badge. */
 		const IconMarkdownOutline16 = ({ size = 16, className }) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
 			width: size,
@@ -4464,8 +5261,8 @@ window.__ModuleLoader__.load({
 			]
 		});
 		//#endregion
-		//#region \0dsh-css:/Users/menghuan/Code/DSH-better-sidebar/src/client/SubagentView.module.css.mjs
-		const css$2 = ".mub3NW_subagent{flex-direction:column;flex:1;min-height:0;display:flex}.mub3NW_subagentHeader{flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.mub3NW_subagentTitle{min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.mub3NW_subagentCount{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.mub3NW_subagentRefresh{width:24px;height:24px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:6px;flex:none;justify-content:center;align-items:center;display:inline-flex}.mub3NW_subagentRefresh:hover{background:var(--dsw-alias-interactive-bg-hover)}.mub3NW_subagentBody{flex:1;min-height:0;padding:2px 6px 8px;overflow-y:auto}.mub3NW_subagentRow{box-sizing:border-box;width:100%;min-height:50px;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;background:0 0;border:none;border-radius:8px;outline:none;align-items:flex-start;gap:8px;padding:7px 8px 7px 11px;display:flex;position:relative}.mub3NW_subagentRow:hover,.mub3NW_subagentRow:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}.mub3NW_subagentRowActive,.mub3NW_subagentRowActive:hover,.mub3NW_subagentRowActive:focus-visible{background:var(--dsw-alias-interactive-bg-active)}.mub3NW_subagentRowDisabled{color:var(--dsw-alias-label-dimmed);cursor:not-allowed}.mub3NW_subagentRowDisabled:hover{background:0 0}.mub3NW_subagentRowLoading{cursor:default}.mub3NW_subagentDot{margin-top:4px}.mub3NW_subagentContent{flex-direction:column;flex:1;gap:2px;min-width:0;display:flex}.mub3NW_subagentLabel,.mub3NW_subagentSecondary{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.mub3NW_subagentLabel{color:inherit;font-weight:400}.mub3NW_subagentSecondary{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.mub3NW_subagentLive{min-width:0;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);align-items:baseline;gap:4px;display:flex;overflow:hidden}.mub3NW_subagentLiveTool{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);flex:none}.mub3NW_subagentLiveArgs{min-width:0;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);line-height:var(--dsw-font-xxxs-11-line-height);color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.mub3NW_subagentLiveText{-webkit-line-clamp:2;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-secondary);-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.mub3NW_subagentNode{min-width:0;position:relative}.mub3NW_subagentChildren{margin-left:18px;padding-left:4px;position:relative}.mub3NW_subagentChildren:before{content:\"\";border-left:1px solid var(--dsw-alias-border-l2);height:26px;position:absolute;top:-26px;left:0}.mub3NW_subagentChildren[aria-busy=true]:before{content:none}.mub3NW_subagentChildren>.mub3NW_subagentNode:before{content:\"\";border-left:1px solid var(--dsw-alias-border-l2);position:absolute;top:0;bottom:0;left:-4px}.mub3NW_subagentChildren>.mub3NW_subagentNode:last-child:before{height:17px;bottom:auto}.mub3NW_subagentChildren>.mub3NW_subagentNode>.mub3NW_subagentRow:before{content:\"\";border-top:1px solid var(--dsw-alias-border-l2);width:14px;position:absolute;top:16px;left:-4px}.mub3NW_subagentEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;flex-direction:column;gap:2px;padding:16px;display:flex}.mub3NW_subagentEmptyHint{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-dimmed)}.mub3NW_subagentError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;display:flex}.mub3NW_subagentErrorRetry{height:24px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;background:0 0;border:none;border-radius:6px;flex:none;align-items:center;gap:4px;padding:0 8px;display:inline-flex}.mub3NW_subagentErrorRetry:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mub3NW_jobs{border-top:1px solid var(--dsw-alias-border-l2);margin-top:10px;padding-top:8px}.mub3NW_jobsHeader{align-items:center;gap:8px;height:26px;padding:0 2px;display:flex}.mub3NW_jobsTitle{min-width:0;font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.mub3NW_jobsCount{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.mub3NW_jobsList{flex-direction:column;gap:2px;margin:0;padding:0;list-style:none;display:flex}.mub3NW_jobsRow{border-radius:8px;align-items:center;gap:4px;display:flex}.mub3NW_jobsRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.mub3NW_jobsRowSettled{opacity:.8}.mub3NW_jobsRowSelected,.mub3NW_jobsRowSelected:hover{background:var(--dsw-alias-interactive-bg-active)}.mub3NW_jobsRowMain{min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;background:0 0;border:none;border-radius:8px;outline:none;flex:1;align-items:flex-start;gap:8px;padding:6px 8px 6px 11px;display:flex}.mub3NW_jobsRowMain:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}.mub3NW_jobsDot{margin-top:5px}.mub3NW_jobsContent{flex-direction:column;gap:1px;min-width:0;display:flex}.mub3NW_jobsLabelLine{align-items:center;gap:6px;min-width:0;display:flex}.mub3NW_jobsKind{text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--dsw-alias-border-l2);max-width:90px;font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary);border-radius:4px;flex:none;padding:0 5px;line-height:14px;overflow:hidden}.mub3NW_jobsLabel{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);line-height:var(--dsw-font-xxxs-11-line-height);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.mub3NW_jobsSecondary{text-overflow:ellipsis;white-space:nowrap;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);overflow:hidden}.mub3NW_jobsKill{width:22px;height:22px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:6px;flex:none;justify-content:center;align-items:center;margin-right:4px;display:inline-flex}.mub3NW_jobsKill:hover{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);color:var(--dsw-alias-state-error-primary)}.mub3NW_jobsKillArmed,.mub3NW_jobsKillArmed:hover{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);width:auto;height:20px;color:var(--dsw-alias-state-error-primary);font:var(--dsw-font-xxxs-strong-11);white-space:nowrap;padding:0 8px}.mub3NW_jobsKill:disabled{opacity:.5;cursor:default}.mub3NW_jobsKillError{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-error-primary);flex:none;margin-right:4px}.mub3NW_jobsPane{z-index:1;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);border-radius:8px;margin-top:4px;position:sticky;bottom:0;overflow:hidden;box-shadow:0 -6px 12px -8px #00000059}.mub3NW_jobsPaneHeader{border-bottom:1px solid var(--dsw-alias-border-l1);align-items:center;gap:6px;height:28px;padding:0 4px 0 10px;display:flex}.mub3NW_jobsPaneDot{flex:none}.mub3NW_jobsPaneLabel{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);line-height:var(--dsw-font-xxxs-11-line-height);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.mub3NW_jobsPaneStatus{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.mub3NW_jobsPaneClose{width:20px;height:20px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:5px;flex:none;justify-content:center;align-items:center;display:inline-flex}.mub3NW_jobsPaneClose:hover{background:var(--dsw-alias-interactive-bg-hover)}.mub3NW_jobsPanePre{max-height:200px;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);color:var(--dsw-alias-label-primary);white-space:pre-wrap;word-break:break-word;margin:0;padding:6px 10px;line-height:1.5;overflow:auto}.mub3NW_jobsPaneHint{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);padding:8px 10px}.mub3NW_jobsPaneError{color:var(--dsw-alias-state-error-primary)}";
+		//#region \0dsh-css:/home/runner/work/DSH-better-sidebar/DSH-better-sidebar/src/client/SubagentView.module.css.mjs
+		const css$2 = ".wxwsGW_subagent{flex-direction:column;flex:1;min-height:0;display:flex}.wxwsGW_subagentHeader{flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.wxwsGW_subagentTitle{min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.wxwsGW_subagentCount{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.wxwsGW_subagentRefresh{width:24px;height:24px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:6px;flex:none;justify-content:center;align-items:center;display:inline-flex}.wxwsGW_subagentRefresh:hover{background:var(--dsw-alias-interactive-bg-hover)}.wxwsGW_subagentBody{flex:1;min-height:0;padding:2px 6px 8px;overflow-y:auto}.wxwsGW_subagentRow{box-sizing:border-box;width:100%;min-height:50px;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;background:0 0;border:none;border-radius:8px;outline:none;align-items:flex-start;gap:8px;padding:7px 8px 7px 11px;display:flex;position:relative}.wxwsGW_subagentRow:hover,.wxwsGW_subagentRow:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}.wxwsGW_subagentRowActive,.wxwsGW_subagentRowActive:hover,.wxwsGW_subagentRowActive:focus-visible{background:var(--dsw-alias-interactive-bg-active)}.wxwsGW_subagentRowDisabled{color:var(--dsw-alias-label-dimmed);cursor:not-allowed}.wxwsGW_subagentRowDisabled:hover{background:0 0}.wxwsGW_subagentRowLoading{cursor:default}.wxwsGW_subagentDot{margin-top:4px}.wxwsGW_subagentContent{flex-direction:column;flex:1;gap:2px;min-width:0;display:flex}.wxwsGW_subagentLabel,.wxwsGW_subagentSecondary{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.wxwsGW_subagentLabel{color:inherit;font-weight:400}.wxwsGW_subagentSecondary{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.wxwsGW_subagentLive{min-width:0;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);align-items:baseline;gap:4px;display:flex;overflow:hidden}.wxwsGW_subagentLiveTool{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);flex:none}.wxwsGW_subagentLiveArgs{min-width:0;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);line-height:var(--dsw-font-xxxs-11-line-height);color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.wxwsGW_subagentLiveText{-webkit-line-clamp:2;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-secondary);-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.wxwsGW_subagentNode{min-width:0;position:relative}.wxwsGW_subagentChildren{margin-left:18px;padding-left:4px;position:relative}.wxwsGW_subagentChildren:before{content:\"\";border-left:1px solid var(--dsw-alias-border-l2);height:26px;position:absolute;top:-26px;left:0}.wxwsGW_subagentChildren[aria-busy=true]:before{content:none}.wxwsGW_subagentChildren>.wxwsGW_subagentNode:before{content:\"\";border-left:1px solid var(--dsw-alias-border-l2);position:absolute;top:0;bottom:0;left:-4px}.wxwsGW_subagentChildren>.wxwsGW_subagentNode:last-child:before{height:17px;bottom:auto}.wxwsGW_subagentChildren>.wxwsGW_subagentNode>.wxwsGW_subagentRow:before{content:\"\";border-top:1px solid var(--dsw-alias-border-l2);width:14px;position:absolute;top:16px;left:-4px}.wxwsGW_subagentEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;flex-direction:column;gap:2px;padding:16px;display:flex}.wxwsGW_subagentEmptyHint{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-dimmed)}.wxwsGW_subagentError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;display:flex}.wxwsGW_subagentErrorRetry{height:24px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;background:0 0;border:none;border-radius:6px;flex:none;align-items:center;gap:4px;padding:0 8px;display:inline-flex}.wxwsGW_subagentErrorRetry:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.wxwsGW_jobs{border-top:1px solid var(--dsw-alias-border-l2);margin-top:10px;padding-top:8px}.wxwsGW_jobsHeader{align-items:center;gap:8px;height:26px;padding:0 2px;display:flex}.wxwsGW_jobsTitle{min-width:0;font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.wxwsGW_jobsCount{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.wxwsGW_jobsList{flex-direction:column;gap:2px;margin:0;padding:0;list-style:none;display:flex}.wxwsGW_jobsRow{border-radius:8px;align-items:center;gap:4px;display:flex}.wxwsGW_jobsRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.wxwsGW_jobsRowSettled{opacity:.8}.wxwsGW_jobsRowSelected,.wxwsGW_jobsRowSelected:hover{background:var(--dsw-alias-interactive-bg-active)}.wxwsGW_jobsRowMain{min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;background:0 0;border:none;border-radius:8px;outline:none;flex:1;align-items:flex-start;gap:8px;padding:6px 8px 6px 11px;display:flex}.wxwsGW_jobsRowMain:focus-visible{background:var(--dsw-alias-interactive-bg-hover)}.wxwsGW_jobsDot{margin-top:5px}.wxwsGW_jobsContent{flex-direction:column;gap:1px;min-width:0;display:flex}.wxwsGW_jobsLabelLine{align-items:center;gap:6px;min-width:0;display:flex}.wxwsGW_jobsKind{text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--dsw-alias-border-l2);max-width:90px;font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary);border-radius:4px;flex:none;padding:0 5px;line-height:14px;overflow:hidden}.wxwsGW_jobsLabel{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);line-height:var(--dsw-font-xxxs-11-line-height);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.wxwsGW_jobsSecondary{text-overflow:ellipsis;white-space:nowrap;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);overflow:hidden}.wxwsGW_jobsKill{width:22px;height:22px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:6px;flex:none;justify-content:center;align-items:center;margin-right:4px;display:inline-flex}.wxwsGW_jobsKill:hover{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);color:var(--dsw-alias-state-error-primary)}.wxwsGW_jobsKillArmed,.wxwsGW_jobsKillArmed:hover{background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent);width:auto;height:20px;color:var(--dsw-alias-state-error-primary);font:var(--dsw-font-xxxs-strong-11);white-space:nowrap;padding:0 8px}.wxwsGW_jobsKill:disabled{opacity:.5;cursor:default}.wxwsGW_jobsKillError{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-error-primary);flex:none;margin-right:4px}.wxwsGW_jobsPane{z-index:1;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);border-radius:8px;margin-top:4px;position:sticky;bottom:0;overflow:hidden;box-shadow:0 -6px 12px -8px #00000059}.wxwsGW_jobsPaneHeader{border-bottom:1px solid var(--dsw-alias-border-l1);align-items:center;gap:6px;height:28px;padding:0 4px 0 10px;display:flex}.wxwsGW_jobsPaneDot{flex:none}.wxwsGW_jobsPaneLabel{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);line-height:var(--dsw-font-xxxs-11-line-height);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.wxwsGW_jobsPaneStatus{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.wxwsGW_jobsPaneClose{width:20px;height:20px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:5px;flex:none;justify-content:center;align-items:center;display:inline-flex}.wxwsGW_jobsPaneClose:hover{background:var(--dsw-alias-interactive-bg-hover)}.wxwsGW_jobsPanePre{max-height:200px;font-family:var(--ds-font-family-code);font-size:var(--dsw-font-xxxs-11-font-size);color:var(--dsw-alias-label-primary);white-space:pre-wrap;word-break:break-word;margin:0;padding:6px 10px;line-height:1.5;overflow:auto}.wxwsGW_jobsPaneHint{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);padding:8px 10px}.wxwsGW_jobsPaneError{color:var(--dsw-alias-state-error-primary)}";
 		const tagId$2 = "dsh-better-sidebar/SubagentView.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -4475,57 +5272,57 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var SubagentView_module_css_default = {
-			"subagentTitle": "mub3NW_subagentTitle",
-			"jobsPaneHint": "mub3NW_jobsPaneHint",
-			"subagentDot": "mub3NW_subagentDot",
-			"subagentRowLoading": "mub3NW_subagentRowLoading",
-			"subagentLabel": "mub3NW_subagentLabel",
-			"jobsPaneStatus": "mub3NW_jobsPaneStatus",
-			"subagentLiveText": "mub3NW_subagentLiveText",
-			"subagentBody": "mub3NW_subagentBody",
-			"jobsRowMain": "mub3NW_jobsRowMain",
-			"subagentContent": "mub3NW_subagentContent",
-			"jobsLabelLine": "mub3NW_jobsLabelLine",
-			"jobsHeader": "mub3NW_jobsHeader",
-			"jobsTitle": "mub3NW_jobsTitle",
-			"jobsKillArmed": "mub3NW_jobsKillArmed",
-			"jobsKillError": "mub3NW_jobsKillError",
-			"jobsRowSettled": "mub3NW_jobsRowSettled",
-			"jobsList": "mub3NW_jobsList",
-			"subagentLiveArgs": "mub3NW_subagentLiveArgs",
-			"subagentEmptyHint": "mub3NW_subagentEmptyHint",
-			"jobsPanePre": "mub3NW_jobsPanePre",
-			"subagentCount": "mub3NW_subagentCount",
-			"subagentSecondary": "mub3NW_subagentSecondary",
-			"subagentRefresh": "mub3NW_subagentRefresh",
-			"subagentRowActive": "mub3NW_subagentRowActive",
-			"subagentLive": "mub3NW_subagentLive",
-			"subagentNode": "mub3NW_subagentNode",
-			"subagentLiveTool": "mub3NW_subagentLiveTool",
-			"jobsKind": "mub3NW_jobsKind",
-			"subagentError": "mub3NW_subagentError",
-			"subagentEmpty": "mub3NW_subagentEmpty",
-			"jobs": "mub3NW_jobs",
-			"jobsLabel": "mub3NW_jobsLabel",
-			"subagentRowDisabled": "mub3NW_subagentRowDisabled",
-			"jobsRowSelected": "mub3NW_jobsRowSelected",
-			"jobsSecondary": "mub3NW_jobsSecondary",
-			"jobsPaneLabel": "mub3NW_jobsPaneLabel",
-			"jobsPaneError": "mub3NW_jobsPaneError",
-			"subagentChildren": "mub3NW_subagentChildren",
-			"subagent": "mub3NW_subagent",
-			"subagentErrorRetry": "mub3NW_subagentErrorRetry",
-			"jobsRow": "mub3NW_jobsRow",
-			"jobsPane": "mub3NW_jobsPane",
-			"jobsPaneDot": "mub3NW_jobsPaneDot",
-			"jobsPaneClose": "mub3NW_jobsPaneClose",
-			"jobsCount": "mub3NW_jobsCount",
-			"jobsKill": "mub3NW_jobsKill",
-			"subagentRow": "mub3NW_subagentRow",
-			"jobsDot": "mub3NW_jobsDot",
-			"jobsContent": "mub3NW_jobsContent",
-			"jobsPaneHeader": "mub3NW_jobsPaneHeader",
-			"subagentHeader": "mub3NW_subagentHeader"
+			"subagentRowDisabled": "wxwsGW_subagentRowDisabled",
+			"subagentBody": "wxwsGW_subagentBody",
+			"subagentLabel": "wxwsGW_subagentLabel",
+			"jobsList": "wxwsGW_jobsList",
+			"jobsPanePre": "wxwsGW_jobsPanePre",
+			"subagentRowLoading": "wxwsGW_subagentRowLoading",
+			"jobsKillArmed": "wxwsGW_jobsKillArmed",
+			"jobsHeader": "wxwsGW_jobsHeader",
+			"subagentLiveTool": "wxwsGW_subagentLiveTool",
+			"subagentChildren": "wxwsGW_subagentChildren",
+			"subagentTitle": "wxwsGW_subagentTitle",
+			"subagentHeader": "wxwsGW_subagentHeader",
+			"subagentNode": "wxwsGW_subagentNode",
+			"subagentError": "wxwsGW_subagentError",
+			"subagent": "wxwsGW_subagent",
+			"subagentErrorRetry": "wxwsGW_subagentErrorRetry",
+			"jobsCount": "wxwsGW_jobsCount",
+			"subagentRowActive": "wxwsGW_subagentRowActive",
+			"jobsRowSelected": "wxwsGW_jobsRowSelected",
+			"jobsKind": "wxwsGW_jobsKind",
+			"jobsKillError": "wxwsGW_jobsKillError",
+			"subagentDot": "wxwsGW_subagentDot",
+			"subagentRow": "wxwsGW_subagentRow",
+			"subagentLiveText": "wxwsGW_subagentLiveText",
+			"jobsContent": "wxwsGW_jobsContent",
+			"jobs": "wxwsGW_jobs",
+			"jobsPaneClose": "wxwsGW_jobsPaneClose",
+			"jobsLabel": "wxwsGW_jobsLabel",
+			"jobsPaneDot": "wxwsGW_jobsPaneDot",
+			"jobsKill": "wxwsGW_jobsKill",
+			"subagentLive": "wxwsGW_subagentLive",
+			"jobsTitle": "wxwsGW_jobsTitle",
+			"jobsPaneLabel": "wxwsGW_jobsPaneLabel",
+			"subagentCount": "wxwsGW_subagentCount",
+			"subagentSecondary": "wxwsGW_subagentSecondary",
+			"jobsPaneHeader": "wxwsGW_jobsPaneHeader",
+			"jobsPaneHint": "wxwsGW_jobsPaneHint",
+			"jobsRowSettled": "wxwsGW_jobsRowSettled",
+			"jobsDot": "wxwsGW_jobsDot",
+			"jobsPaneStatus": "wxwsGW_jobsPaneStatus",
+			"jobsLabelLine": "wxwsGW_jobsLabelLine",
+			"subagentRefresh": "wxwsGW_subagentRefresh",
+			"jobsRow": "wxwsGW_jobsRow",
+			"jobsRowMain": "wxwsGW_jobsRowMain",
+			"subagentEmpty": "wxwsGW_subagentEmpty",
+			"jobsPaneError": "wxwsGW_jobsPaneError",
+			"subagentContent": "wxwsGW_subagentContent",
+			"jobsSecondary": "wxwsGW_jobsSecondary",
+			"jobsPane": "wxwsGW_jobsPane",
+			"subagentEmptyHint": "wxwsGW_subagentEmptyHint",
+			"subagentLiveArgs": "wxwsGW_subagentLiveArgs"
 		};
 		//#endregion
 		//#region src/client/SubagentView.tsx
@@ -5676,12 +6473,13 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/builtins/tabs.tsx
 		/**
-		* The 7 built-in tab descriptors: the plugin registers its own pages
-		* (explorer / git / terminal / browser / subagent / editor / diff) through
+		* The 6 built-in tab descriptors: the plugin registers its own pages
+		* (editor / git / terminal / browser / subagent / diff) through
 		* the same {@link BetterSidebarService} external plugins use — eating its
 		* own dogfood. The terminal descriptor owns its quota (`TERMINAL_LIMIT`)
-		* and mints `terminal:<n>` ids through `createTab`; the browser mints
-		* `browser:<n>` the same way (no quota).
+		* and mints `terminal:<uuid>` ids through `createTab`; the browser mints
+		* `browser:<n>` the same way (no quota). The editor IS the files window
+		* (the old standalone explorer merged into it).
 		*/
 		/**
 		* Lazy wrapper over the terminal view: xterm (and its stylesheet) is fetched
@@ -5696,42 +6494,49 @@ window.__ModuleLoader__.load({
 		* `undefined.startsWith` (regression-pinned in tests/lazy-chunk.spec.tsx).
 		*/
 		const LazyTerminal = lazyChunkComponent("terminal", (mod) => mod.TerminalView);
+		/** A client-side uuid for terminal tab identity (not shown in the UI). */
+		function terminalUuid() {
+			if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+			return `t${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+		}
 		/** Count UI-owned terminals (agent:` tabs excluded — they are the model's). */
 		function uiTerminalCount(state) {
 			return allLeaves(state.splits).flatMap((leaf) => leaf.tabs).filter((tab) => tab.type === "terminal" && !isAgentTabId(tab.id)).length;
 		}
-		/** The 7 built-in tab descriptors. */
-		function builtinTabs(ctx) {
+		/** The 6 built-in tab descriptors. */
+		function builtinTabs(ctx, options = {}) {
 			return [
 				{
 					id: "editor",
-					title: () => t("editor"),
-					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, { size }),
-					order: -1,
-					hidden: true,
+					title: () => t("files"),
+					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size }),
+					order: 10,
+					hidden: false,
 					dedupeKey: (tab) => tab.path,
-					component: ({ ctx, store, scope, tab }) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(EditorHost, {
+					settings: { toggles: [{
+						key: "editorExplorer",
+						type: "select",
+						title: () => t("editorExplorer"),
+						desc: () => t("editorExplorerDesc"),
+						options: [{
+							value: true,
+							icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPanelLeftOutline16, { size }),
+							title: () => t("editorExplorerMerged"),
+							desc: () => t("editorExplorerMergedDesc")
+						}, {
+							value: false,
+							icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, { size }),
+							title: () => t("editorExplorerSplit"),
+							desc: () => t("editorExplorerSplitDesc")
+						}]
+					}] },
+					component: ({ ctx, store, scope, tab, expanded, onToggleDir, onReferenceFile }) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(EditorHost, {
 						ctx,
 						store,
 						scope,
-						path: tab.path ?? "",
-						title: tab.title
-					})
-				},
-				{
-					id: "explorer",
-					title: () => t("explorer"),
-					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, { size }),
-					order: 10,
-					single: true,
-					component: ({ ctx, store, scope, expanded, onToggleDir, onReferenceFile }) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ExplorerView, {
-						sessionId: scope.sessionId,
-						cwd: scope.cwd,
+						tab,
 						expanded: expanded ?? [],
-						onToggle: onToggleDir ?? (() => {}),
-						onOpenFile: (path) => {
-							openSidebarFile(ctx, store, scope.sessionId, path);
-						},
+						onToggleDir: onToggleDir ?? (() => {}),
 						onReferenceFile: onReferenceFile ?? (() => {})
 					})
 				},
@@ -5779,22 +6584,55 @@ window.__ModuleLoader__.load({
 					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconTerminalOutline16, { size }),
 					order: 40,
 					available: (_ctx, _scope, state) => uiTerminalCount(state) < 3,
-					settings: { toggles: [{
-						key: "agentTerminalTools",
-						title: () => t("settingsToolsTitle"),
-						desc: () => t("settingsToolsDesc")
-					}, {
-						key: "bottomPanelAutoTerminal",
-						title: () => t("settingsBottomTerminalTitle"),
-						desc: () => t("settingsBottomTerminalDesc")
-					}] },
+					settings: { toggles: [
+						{
+							key: "agentTerminalTools",
+							title: () => t("settingsToolsTitle"),
+							desc: () => t("settingsToolsDesc")
+						},
+						{
+							key: "bottomPanelAutoTerminal",
+							title: () => t("settingsBottomTerminalTitle"),
+							desc: () => t("settingsBottomTerminalDesc")
+						},
+						{
+							key: "terminalShell",
+							type: "text",
+							title: () => t("settingsShellTitle"),
+							desc: () => t("settingsShellDesc"),
+							placeholder: t("settingsShellPlaceholder")
+						},
+						{
+							key: "terminalShellArgs",
+							type: "text",
+							title: () => t("settingsShellArgsTitle"),
+							desc: () => t("settingsShellArgsDesc"),
+							placeholder: t("settingsShellArgsPlaceholder")
+						},
+						{
+							key: "terminalFontFamily",
+							type: "text",
+							title: () => t("settingsFontFamilyTitle"),
+							desc: () => t("settingsFontFamilyDesc"),
+							placeholder: t("settingsFontFamilyPlaceholder")
+						},
+						{
+							key: "terminalFontSize",
+							type: "number",
+							title: () => t("settingsFontSizeTitle"),
+							desc: () => t("settingsFontSizeDesc"),
+							min: 9,
+							max: 32,
+							unit: "px"
+						}
+					] },
 					createTab: (state) => {
 						if (uiTerminalCount(state) >= 3) return null;
 						return {
 							tab: {
-								id: `terminal:${state.nextTerminal}`,
+								id: `terminal:${terminalUuid()}`,
 								type: "terminal",
-								title: `${t("terminal")} ${state.nextTerminal}`
+								title: options.terminalTitle?.() ?? t("terminal")
 							},
 							patch: { nextTerminal: state.nextTerminal + 1 }
 						};
@@ -5810,15 +6648,28 @@ window.__ModuleLoader__.load({
 					title: () => t("browser"),
 					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconGlobeOutline16, { size }),
 					order: 50,
-					settings: { toggles: [{
-						key: "browserNoSandbox",
-						title: () => t("settingsBrowserSandboxTitle"),
-						desc: () => t("settingsBrowserSandboxDesc")
-					}, {
-						key: "browserInterceptLinks",
-						title: () => t("settingsBrowserLinksTitle"),
-						desc: () => t("settingsBrowserLinksDesc")
-					}] },
+					settings: { toggles: [
+						{
+							key: "browserNoSandbox",
+							title: () => t("settingsBrowserSandboxTitle"),
+							desc: () => t("settingsBrowserSandboxDesc")
+						},
+						{
+							key: "browserInterceptLinks",
+							title: () => t("settingsBrowserLinksTitle"),
+							desc: () => t("settingsBrowserLinksDesc")
+						},
+						{
+							key: "browserInterceptHttp",
+							title: () => t("settingsBrowserHttpTitle"),
+							desc: () => t("settingsBrowserHttpDesc")
+						},
+						{
+							key: "browserInterceptHttps",
+							title: () => t("settingsBrowserHttpsTitle"),
+							desc: () => t("settingsBrowserHttpsDesc")
+						}
+					] },
 					createTab: (state) => ({
 						tab: {
 							id: `browser:${state.nextBrowser}`,
@@ -5956,36 +6807,37 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/builtins/viewers.tsx
 		/**
-		* The 9 built-in file viewer descriptors: every preview surface is a
-		* registered viewer (image / pdf / docx / xlsx / pptx / markdown / html /
-		* code / binary-download), exactly like external plugins register theirs.
-		* The `binary-download` viewer sniffs NUL bytes via `detect` for unknown
-		* binaries and serves doc/xls/ppt by extension; `code` is the catch-all
-		* (`exts: []`, lowest priority) that claims any file no other viewer did.
+		* The 6 built-in file viewer descriptors: every preview surface is a
+		* registered viewer (image / pdf / markdown / html / code /
+		* binary-download), exactly like external plugins register theirs. Office
+		* previews (.docx / .xlsx / .pptx) are NOT built in anymore — they moved to
+		* the recommended office plugin (see plugins-viewers.ts), which registers
+		* the same ids through this service.
 		*
-		* The heavy viewers (docx/xlsx/pptx and the CodeMirror-backed
-		* markdown/html/code) render through {@link lazyChunkComponent} wrappers —
-		* their libraries are fetched only when such a file is first opened (see
-		* chunk-loader.ts). The descriptor metadata (id/exts/priority/detect) is
-		* identical either way, so matching semantics and external-plugin
-		* overrides are unaffected; the `component` wrapper keeps the descriptor
-		* contract `(props) => ReactNode`.
+		* The `binary-download` viewer sniffs NUL bytes via `detect` for unknown
+		* binaries and serves legacy doc/xls/ppt by extension; `code` is the
+		* catch-all (`exts: []`, lowest priority) that claims any file no other
+		* viewer did.
+		*
+		* The heavy viewers (the CodeMirror-backed markdown/html/code) render
+		* through {@link lazyChunkComponent} wrappers — their libraries are fetched
+		* only when such a file is first opened (see chunk-loader.ts). The
+		* descriptor metadata (id/exts/priority/detect) is identical either way,
+		* so matching semantics and external-plugin overrides are unaffected; the
+		* `component` wrapper keeps the descriptor contract `(props) => ReactNode`.
 		*
 		* Every viewer carries the declarative settings-surface fields — `title`
 		* and `icon` — so the Side card settings page can render the enable/disable
 		* inventory without hardcoding (eating our own dogfood).
 		*/
 		/**
-		* Lazy wrappers over the chunk-resident viewer components. The `pick`
-		* functions are module-level (stable identity — the wrapper effect depends
-		* on them); the cast bridges the chunk exports record to the descriptor
-		* prop shape (the views read only their own subset of FileViewerProps).
+		* Lazy wrapper over the chunk-resident viewer component. The `pick`
+		* function is module-level (stable identity — the wrapper effect depends
+		* on it); the cast bridges the chunk exports record to the descriptor prop
+		* shape (the view reads only its own subset of FileViewerProps).
 		*/
-		const LazyDocx = lazyChunkComponent("docx", (mod) => mod.DocxView);
-		const LazyXlsx = lazyChunkComponent("xlsx", (mod) => mod.XlsxView);
-		const LazyPptx = lazyChunkComponent("pptx", (mod) => mod.PptxView);
 		const LazyTextEditor = lazyChunkComponent("editor", (mod) => mod.TextEditor);
-		/** The 9 built-in file viewer descriptors. */
+		/** The 6 built-in file viewer descriptors. */
 		function builtinViewers() {
 			return [
 				{
@@ -6024,30 +6876,6 @@ window.__ModuleLoader__.load({
 						path,
 						title
 					})
-				},
-				{
-					id: "docx",
-					title: () => t("viewerDocx"),
-					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconDocxOutline16, { size }),
-					exts: ["docx"],
-					fetchStrategy: "mediaUrl",
-					component: (props) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LazyDocx, { ...props })
-				},
-				{
-					id: "xlsx",
-					title: () => t("viewerXlsx"),
-					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconXlsxOutline16, { size }),
-					exts: ["xlsx"],
-					fetchStrategy: "mediaUrl",
-					component: (props) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LazyXlsx, { ...props })
-				},
-				{
-					id: "pptx",
-					title: () => t("viewerPptx"),
-					icon: (size) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPptxOutline16, { size }),
-					exts: ["pptx"],
-					fetchStrategy: "mediaUrl",
-					component: (props) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LazyPptx, { ...props })
 				},
 				{
 					id: "markdown",
@@ -6110,9 +6938,9 @@ window.__ModuleLoader__.load({
 		* disposal). The `ctx` is threaded into tab descriptors that need it
 		* (EditorHost reads `ctx.betterSidebar` for file-viewer matching).
 		*/
-		function registerBuiltins(ctx, service) {
+		function registerBuiltins(ctx, service, options = {}) {
 			const disposers = [];
-			for (const tab of builtinTabs(ctx)) disposers.push(service.registerTab(tab));
+			for (const tab of builtinTabs(ctx, options)) disposers.push(service.registerTab(tab));
 			for (const viewer of builtinViewers()) disposers.push(service.registerFileViewer(viewer));
 			return () => {
 				for (const d of disposers) try {
@@ -6171,9 +6999,42 @@ window.__ModuleLoader__.load({
 			else document.body.removeAttribute("data-dsh-tab-dragging");
 		}
 		function TabBar(props) {
-			const { paneId, tabs, active, onActivate, onClose, onNewTab, newTabOptions, onDropTab, getTabIcon } = props;
+			const { paneId, tabs, active, onActivate, onClose, onNewTab, newTabOptions, onDropTab, getTabIcon, getTabBadge } = props;
 			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
 			const [dragOver, setDragOver] = (0, react.useState)(false);
+			const listRef = (0, react.useRef)(null);
+			const onCloseRef = (0, react.useRef)(onClose);
+			const middlePressed = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				onCloseRef.current = onClose;
+			});
+			(0, react.useEffect)(() => {
+				const onMouseUp = (event) => {
+					if (event.button !== 1) return;
+					const pressed = middlePressed.current;
+					middlePressed.current = null;
+					if (pressed !== null && pressed.node.isConnected && pressed.node.contains(event.target)) onCloseRef.current(pressed.id);
+				};
+				window.addEventListener("mouseup", onMouseUp);
+				return () => {
+					window.removeEventListener("mouseup", onMouseUp);
+				};
+			}, []);
+			(0, react.useEffect)(() => {
+				const el = listRef.current;
+				if (el === null) return;
+				const onWheel = (event) => {
+					if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+					if (el.scrollWidth <= el.clientWidth) return;
+					event.preventDefault();
+					const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? el.clientWidth : 1;
+					el.scrollLeft += (event.deltaX + event.deltaY) * unit;
+				};
+				el.addEventListener("wheel", onWheel, { passive: false });
+				return () => {
+					el.removeEventListener("wheel", onWheel);
+				};
+			}, []);
 			(0, react.useEffect)(() => {
 				const clear = () => {
 					setTabDragging(false);
@@ -6207,6 +7068,7 @@ window.__ModuleLoader__.load({
 					if (payload !== null) onDropTab(payload, null);
 				},
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					ref: listRef,
 					className: sidebar_module_css_default.tabList,
 					children: [tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: clsx(sidebar_module_css_default.tab, active === tab.id && sidebar_module_css_default.tabActive),
@@ -6238,14 +7100,18 @@ window.__ModuleLoader__.load({
 						onClick: () => {
 							onActivate(tab.id);
 						},
-						onAuxClick: (event) => {
+						onMouseDown: (event) => {
 							if (event.button === 1) {
 								event.preventDefault();
-								onClose(tab.id);
+								middlePressed.current = {
+									id: tab.id,
+									node: event.currentTarget
+								};
 							}
 						},
 						children: [
 							getTabIcon?.(tab) ?? null,
+							getTabBadge?.(tab) ?? null,
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: sidebar_module_css_default.tabTitle,
 								children: tab.title
@@ -6380,7 +7246,7 @@ window.__ModuleLoader__.load({
 		}
 		/** A leaf: tab strip + active content + VSCode-style drop target for tabs. */
 		function LeafView(props) {
-			const { leaf, newTabOptions, actions, onNewTab, renderTab, getTabIcon } = props;
+			const { leaf, newTabOptions, actions, onNewTab, renderTab, getTabIcon, getTabBadge } = props;
 			const [dropZone, setDropZone] = (0, react.useState)(null);
 			const activeTab = leaf.tabs.find((tab) => tab.id === leaf.active) ?? leaf.tabs[leaf.tabs.length - 1];
 			(0, react.useEffect)(() => {
@@ -6431,6 +7297,7 @@ window.__ModuleLoader__.load({
 						onNewTab,
 						newTabOptions,
 						getTabIcon,
+						getTabBadge,
 						onDropTab: (payload, before) => {
 							if (before === null) actions.moveTabToEdge(payload, leaf.id, "center");
 							else actions.moveTabBefore(payload, leaf.id, before);
@@ -6451,14 +7318,15 @@ window.__ModuleLoader__.load({
 		}
 		/** Recursive node renderer. */
 		function NodeView(props) {
-			const { node, state, newTabOptions, actions, onNewTab, renderTab, getTabIcon } = props;
+			const { node, state, newTabOptions, actions, onNewTab, renderTab, getTabIcon, getTabBadge } = props;
 			if (node.kind === "leaf") return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LeafView, {
 				leaf: node,
 				newTabOptions,
 				actions,
 				onNewTab,
 				renderTab,
-				getTabIcon
+				getTabIcon,
+				getTabBadge
 			});
 			const isRow = node.dir === "row";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -6483,7 +7351,8 @@ window.__ModuleLoader__.load({
 						actions,
 						onNewTab,
 						renderTab,
-						getTabIcon
+						getTabIcon,
+						getTabBadge
 					})
 				})] }, child.id))
 			});
@@ -6493,7 +7362,7 @@ window.__ModuleLoader__.load({
 		*  `state.bottomSplits` — the actions route by pane id, so one action set
 		*  serves both). */
 		function Workbench(props) {
-			const { state, tree, newTabOptions, actions, onNewTab, renderTab, getTabIcon } = props;
+			const { state, tree, newTabOptions, actions, onNewTab, renderTab, getTabIcon, getTabBadge } = props;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: sidebar_module_css_default.workbench,
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(NodeView, {
@@ -6503,9 +7372,30 @@ window.__ModuleLoader__.load({
 					actions,
 					onNewTab,
 					renderTab,
-					getTabIcon
+					getTabIcon,
+					getTabBadge
 				})
 			});
+		}
+		//#endregion
+		//#region src/client/desktop-env.ts
+		let cached;
+		/** Read the shell's desktop stamps (memoized per page). */
+		function parseDesktopEnv() {
+			if (cached !== void 0) return cached;
+			const params = new URLSearchParams(window.location.search.replace(/^\?/, ""));
+			const modeParam = params.get("dsh-desktop-mode");
+			const mode = modeParam === "compatibility" || modeParam === "advanced" ? modeParam : null;
+			const platformParam = params.get("dsh-desktop-platform");
+			const platform = platformParam !== null && platformParam !== "" ? platformParam.toLowerCase() : null;
+			const desktop = mode !== null || typeof window.__DSH_DESKTOP_FILE_PATH__ !== "undefined";
+			cached = {
+				desktop,
+				mode,
+				platform,
+				win32OverlayTop: desktop && mode === "advanced" && platform === "win32" ? 32 : 0
+			};
+			return cached;
 		}
 		//#endregion
 		//#region src/client/OrphanedTab.tsx
@@ -6530,20 +7420,64 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region src/client/RenderBoundary.tsx
+		/**
+		* The generic render error boundary for the sidebar tree: a render error in
+		* the wrapped subtree shows a dismissible error strip (retry re-renders the
+		* children) instead of blanking the shell. Used at two scopes:
+		*
+		* - ROOT (index.tsx, `css.boundaryError`): last-resort containment for
+		*   errors in the sidebar shell itself (Workbench, drag layout, …) — a full
+		*   swap keeps the page alive.
+		* - PER-TAB (Sidebar.tsx TabContent, `css.tabBoundaryError`): a crashing
+		*   viewer/editor shows a strip inside ITS OWN pane; the toggle cluster, the
+		*   other tabs, and the panel itself stay alive (issue #31 — a tab crash
+		*   must never take down the whole sidebar).
+		*
+		* The className prop selects the strip's geometry: the root's full-height
+		* fixed rail vs. the tab's pane-filling block.
+		*/
+		var RenderBoundary = class extends react.Component {
+			state = { error: null };
+			static getDerivedStateFromError(error) {
+				return { error: error instanceof Error ? error.message : String(error) };
+			}
+			componentDidCatch(error, info) {
+				console.error("[dsh-better-sidebar] render error:", error, info.componentStack);
+			}
+			render() {
+				if (this.state.error !== null) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: this.props.className,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: ["dsh-better-sidebar: ", this.state.error] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: sidebar_module_css_default.terminalRetry,
+						onClick: () => {
+							this.setState({ error: null });
+						},
+						children: t("terminalRetry")
+					})]
+				});
+				return this.props.children;
+			}
+		};
+		//#endregion
 		//#region src/client/Sidebar.tsx
 		/**
-		* The sidebar shell: fixed-position panels portalled onto document.body
-		* (the core AppFrame owns the left sidebar / center / details columns and
-		* has no right-side hole for plugins). The right panel hosts the original
-		* workbench; the bottom panel hosts a second, independent workbench. The
-		* bottom panel squeezes ONLY the center column (the agent output area): it
-		* spans from the app shell's own left sidebar to the right panel's left
-		* edge, so neither sidebar gives up any position (the right panel keeps its
-		* full height). A persistent two-button cluster at the top-right corner
-		* toggles each panel; the right panel's width drags from its left edge, the
-		* bottom panel's height from its top edge, and the shared corner drags both
-		* at once. The whole layout lives in the per-session store, so switching
-		* conversations swaps the sidebar.
+		* The sidebar shell: panels mounted inside the unified panel host — a
+		* fixed, viewport-sized containing block ([data-dsh-panel-host]) appended
+		* to document.body — instead of individual fixed-position elements, so a
+		* desktop shell's intermediate wrapper transforms can never hijack the
+		* panels' fixed containing block (the core AppFrame owns the left sidebar /
+		* center / details columns and has no right-side hole for plugins). The
+		* right panel hosts the original workbench; the bottom panel hosts a
+		* second, independent workbench. The bottom panel squeezes ONLY the center
+		* column (the agent output area): it spans from the app shell's own left
+		* sidebar to the right panel's left edge, so neither sidebar gives up any
+		* position (the right panel keeps its full height). A persistent two-button
+		* cluster at the top-right corner toggles each panel; the right panel's
+		* width drags from its left edge, the bottom panel's height from its top
+		* edge, and the shared corner drags both at once. The whole layout lives in
+		* the per-session store, so switching conversations swaps the sidebar.
 		*
 		* The shell binds the workbench actions to the store and dispatches tab
 		* content to the views. New tabs come from the + menu (explorer / git /
@@ -6576,7 +7510,7 @@ window.__ModuleLoader__.load({
 				tab,
 				visible
 			});
-			return descriptor.component({
+			return (0, react.createElement)(RenderBoundary, { className: sidebar_module_css_default.tabBoundaryError }, (0, react.createElement)(descriptor.component, {
 				ctx,
 				store,
 				scope,
@@ -6587,7 +7521,7 @@ window.__ModuleLoader__.load({
 				onReferenceFile,
 				onOpenDiff,
 				onSubagentJump
-			});
+			}));
 		}
 		/** The + menu options for the current state, driven by the tab registry.
 		* Hidden tabs (editor/diff) never show; `available` returning false shows
@@ -6608,6 +7542,28 @@ window.__ModuleLoader__.load({
 			const { ctx, store } = props;
 			(0, react.useSyncExternalStore)((0, react.useMemo)(() => (callback) => ctx.locale.subscribe(callback), [ctx]), (0, react.useCallback)(() => ctx.locale.getSnapshot().active, [ctx]));
 			const narrow = useNarrowViewport();
+			const [keyboardInset, setKeyboardInset] = (0, react.useState)(0);
+			(0, react.useEffect)(() => {
+				const vv = window.visualViewport;
+				if (vv === null || vv === void 0) return;
+				let frame = null;
+				const measure = () => {
+					frame = null;
+					const inset = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+					setKeyboardInset(inset > 1 ? Math.round(inset) : 0);
+				};
+				const onResize = () => {
+					if (frame === null) frame = requestAnimationFrame(measure);
+				};
+				vv.addEventListener("resize", onResize);
+				vv.addEventListener("scroll", onResize);
+				measure();
+				return () => {
+					vv.removeEventListener("resize", onResize);
+					vv.removeEventListener("scroll", onResize);
+					if (frame !== null) cancelAnimationFrame(frame);
+				};
+			}, []);
 			const sessionList = (0, react.useSyncExternalStore)((0, react.useMemo)(() => (callback) => ctx.sessions.list.subscribe(callback), [ctx]), (0, react.useCallback)(() => ctx.sessions.list.getSnapshot(), [ctx]));
 			const current = sessionList.current;
 			const snapshot = (0, react.useSyncExternalStore)((0, react.useCallback)((callback) => store.subscribe(callback), [store]), (0, react.useCallback)(() => store.getSnapshot(), [store]));
@@ -6625,6 +7581,24 @@ window.__ModuleLoader__.load({
 					document.body.removeAttribute("data-dsh-sidebar-collapsed");
 				};
 			}, [collapsed]);
+			const desktopEnv = parseDesktopEnv();
+			const autoTitleBarCompat = desktopEnv.win32OverlayTop > 0;
+			const titleBarCompat = snapshot.prefs.titleBarCompat || autoTitleBarCompat;
+			const titleBarStrip = snapshot.prefs.titleBarCompat ? snapshot.prefs.titleBarStripPx : desktopEnv.win32OverlayTop;
+			(0, react.useEffect)(() => {
+				const root = document.documentElement;
+				if (titleBarCompat) {
+					document.body.setAttribute("data-dsh-title-bar-compat", "");
+					root.style.setProperty("--dsh-title-bar-strip", `${titleBarStrip}px`);
+				} else {
+					document.body.removeAttribute("data-dsh-title-bar-compat");
+					root.style.removeProperty("--dsh-title-bar-strip");
+				}
+				return () => {
+					document.body.removeAttribute("data-dsh-title-bar-compat");
+					root.style.removeProperty("--dsh-title-bar-strip");
+				};
+			}, [titleBarCompat, titleBarStrip]);
 			/**
 			* Bottom-panel merge on narrow viewports: whenever a session is current
 			* while narrow (mount, session switch, or a desktop→narrow transition),
@@ -6843,13 +7817,19 @@ window.__ModuleLoader__.load({
 				const watcher = new MutationObserver(locate);
 				const root = document.getElementById("root");
 				if (root !== null) watcher.observe(root, { childList: true });
+				const htmlStyleWatcher = new MutationObserver(locate);
+				htmlStyleWatcher.observe(document.documentElement, {
+					attributes: true,
+					attributeFilter: ["style"]
+				});
 				return () => {
 					disposed = true;
 					observer?.disconnect();
 					watcher.disconnect();
+					htmlStyleWatcher.disconnect();
 					centerColRef.current = null;
 				};
-			}, [measureCenter]);
+			}, [measureCenter, state?.bottomOpen]);
 			/**
 			* Bottom-panel first-expansion auto terminal: the FIRST time the user
 			* expands the bottom panel in a session, try to open a fresh terminal tab
@@ -6885,7 +7865,6 @@ window.__ModuleLoader__.load({
 			]);
 			const panelRef = (0, react.useRef)(null);
 			const bottomRef = (0, react.useRef)(null);
-			const cornerRef = (0, react.useRef)(null);
 			const widthDrag = (0, react.useRef)({
 				startX: 0,
 				startWidth: 0
@@ -6910,20 +7889,24 @@ window.__ModuleLoader__.load({
 			}, [anyDragging, measureCenter]);
 			const clampWidth = (width) => Math.min(Math.max(280, Math.round(width)), Math.max(280, window.innerWidth));
 			const clampHeight = (height) => Math.min(Math.max(120, Math.round(height)), Math.max(120, window.innerHeight - 280));
+			/** Single writer for the layout-push variables: the app shell gives up
+			*  the panel's width/height while open (0 while collapsed) through
+			*  layout.css's margins. Every size change — drag frames and committed
+			*  state — flows through here so the push never forks between paths. */
+			const writeGeometry = (width, height) => {
+				document.documentElement.style.setProperty("--dsh-sidebar-width", `${width}px`);
+				document.documentElement.style.setProperty("--dsh-sidebar-height", `${height}px`);
+			};
 			/** Apply a drag size to the DOM without touching React state or the store.
 			*  The bottom panel's right edge tracks the right panel's left edge HERE
 			*  too — React state only updates on release, so the inline right must be
-			*  written directly or the bottom panel would lag the sidebar mid-drag. */
+			*  written directly or the bottom panel would lag the sidebar mid-drag.
+			*  The layout push rides the shared writer (writeGeometry). */
 			const applyDrag = (width, height) => {
 				panelRef.current?.style.setProperty("width", `${width}px`);
 				bottomRef.current?.style.setProperty("height", `${height}px`);
 				bottomRef.current?.style.setProperty("right", `${window.innerWidth - centerRect.right + (width - (state?.width ?? 0))}px`);
-				document.documentElement.style.setProperty("--dsh-sidebar-width", `${width}px`);
-				document.documentElement.style.setProperty("--dsh-sidebar-height", `${height}px`);
-				if (cornerRef.current !== null) {
-					cornerRef.current.style.left = `${window.innerWidth - width - 6}px`;
-					cornerRef.current.style.top = `${window.innerHeight - height - 6}px`;
-				}
+				writeGeometry(width, height);
 			};
 			const dragFrame = (0, react.useRef)(null);
 			const pendingDrag = (0, react.useRef)(null);
@@ -6951,11 +7934,88 @@ window.__ModuleLoader__.load({
 				}
 				pendingDrag.current = null;
 			};
+			/**
+			* Finalize a drag on pointer up: flush the LAST drag frame to the DOM
+			* synchronously, then commit the SAME clamped values to the store. A fast
+			* release cancels the rAF before it ran — without the flush the DOM would
+			* sit at the pre-drag size until React re-renders with the committed
+			* value, and a value that never made it into a move handler would never
+			* be applied at all. The measurement pause ends here too: the center
+			* column is re-measured BEFORE the committed re-render lands, so the
+			* bottom panel's React-rendered right edge already reflects the new
+			* width (otherwise the re-render would re-apply the stale rect — the
+			* bottom panel visibly jumps for one frame).
+			*/
+			const commitDrag = (width, height, reduce) => {
+				stopDragScheduling();
+				applyDrag(width, height);
+				draggingRef.current = false;
+				measureCenter();
+				store.reduce(reduce);
+			};
+			/** Set once a drag's pointerup handler commits — premature capture loss
+			*  (pointercancel / lostpointercapture without pointerup) must then be told
+			*  apart from a normal release. */
+			const dragCommitted = (0, react.useRef)(false);
+			/**
+			* Abort a drag whose pointer stream was interrupted (pointercancel, or
+			* capture lost before pointerup): no pointerup will arrive, so without
+			* this the dragging state would stick true and center-column measurement
+			* would stay paused forever — the bottom panel freezes at stale edges and
+			* stops tracking sidebar/app-rail layout changes.
+			*
+			* A FAST release is the common trigger: browsers merge pointermove bursts,
+			* and an ultra-fast flick can cancel the stream before ANY move lands.
+			* The commit order is therefore: the LAST KNOWN dragged size (the rAF
+			* pending value) first, then the interrupting event's own pointer
+			* position (pointercancel / lostpointercapture still carry coordinates),
+			* and only a drag that produced neither (pure down+up at the same spot)
+			* reverts to the store's committed sizes.
+			*/
+			const abortDrag = (reset, event) => {
+				if (dragCommitted.current) return;
+				const pending = pendingDrag.current;
+				let width;
+				let height;
+				if (pending !== null) {
+					width = pending.width;
+					height = pending.height;
+				} else if (event !== void 0) {
+					if (draggingWidth) {
+						width = clampWidth(widthDrag.current.startWidth + (widthDrag.current.startX - event.clientX));
+						height = state?.bottomOpen === true ? Math.min(state.bottomHeight, window.innerHeight) : 0;
+					} else if (draggingBottom) {
+						width = Math.min(state?.width ?? 0, window.innerWidth);
+						height = clampHeight(bottomDrag.current.startHeight + (bottomDrag.current.startY - event.clientY));
+					} else if (draggingCorner) {
+						width = clampWidth(cornerDrag.current.startWidth + (cornerDrag.current.startX - event.clientX));
+						height = clampHeight(cornerDrag.current.startHeight + (cornerDrag.current.startY - event.clientY));
+					}
+				}
+				if (width !== void 0 && height !== void 0) {
+					pendingDrag.current = null;
+					if (dragFrame.current !== null) {
+						cancelAnimationFrame(dragFrame.current);
+						dragFrame.current = null;
+					}
+					applyDrag(width, height);
+					draggingRef.current = false;
+					measureCenter();
+					store.reduce((s) => setBottomHeight(setWidth(s, width), height));
+				} else {
+					stopDragScheduling();
+					applyDrag(!narrow && state?.panelOpen === true ? Math.min(state?.width ?? 0, window.innerWidth) : 0, !narrow && state?.bottomOpen === true ? Math.min(state.bottomHeight, window.innerHeight) : 0);
+				}
+				reset();
+			};
 			(0, react.useEffect)(() => {
 				const width = !narrow && snapshot.state?.panelOpen === true ? Math.min(snapshot.state.width, window.innerWidth) : 0;
 				const height = !narrow && snapshot.state?.bottomOpen === true ? Math.min(snapshot.state.bottomHeight, window.innerHeight) : 0;
-				document.documentElement.style.setProperty("--dsh-sidebar-width", `${width}px`);
-				document.documentElement.style.setProperty("--dsh-sidebar-height", `${height}px`);
+				writeGeometry(width, height);
+				return () => {
+					document.documentElement.style.removeProperty("--dsh-sidebar-width");
+					document.documentElement.style.removeProperty("--dsh-sidebar-height");
+				};
 			}, [
 				narrow,
 				snapshot.state?.panelOpen,
@@ -6970,8 +8030,11 @@ window.__ModuleLoader__.load({
 			const actions = (0, react.useMemo)(() => ({
 				closeTab: (paneId, tabId) => {
 					const current = store.getSnapshot().state;
-					const tab = (current === void 0 ? void 0 : leafWithTab(current.splits, tabId))?.tabs.find((candidate) => candidate.id === tabId);
-					store.reduce((s) => closeTab(s, paneId, tabId));
+					const tab = (current === void 0 ? void 0 : leafWithTab(current.splits, tabId) ?? leafWithTab(current.bottomSplits, tabId))?.tabs.find((candidate) => candidate.id === tabId);
+					ctx.betterSidebar?.closeTab(tabId, sessionId === void 0 ? void 0 : {
+						sessionId,
+						cwd
+					});
 					if (tab?.type === "terminal") {
 						if (isAgentTabId(tabId)) {
 							const uuid = agentUuidOf(tabId);
@@ -6983,13 +8046,10 @@ window.__ModuleLoader__.load({
 					}
 				},
 				activateTab: (paneId, tabId) => {
-					store.reduce((s) => ({
-						...s,
-						activePane: paneId,
-						splits: mapLeaf(s.splits, paneId, (leaf) => {
-							if (leaf.tabs.some((tab) => tab.id === tabId)) leaf.active = tabId;
-						})
-					}));
+					ctx.betterSidebar?.activateTab(tabId, sessionId === void 0 ? void 0 : {
+						sessionId,
+						cwd
+					});
 				},
 				focusPane: (paneId) => {
 					store.reduce((s) => ({
@@ -7033,31 +8093,34 @@ window.__ModuleLoader__.load({
 				sessionId,
 				cwd
 			]);
-			if (state === void 0 || sessionId === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: sidebar_module_css_default.toggleCluster,
-				children: [!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					label: t("noSession"),
-					side: "bottom",
-					delayMs: 500,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: sidebar_module_css_default.toggleButton,
-						disabled: true,
-						"aria-label": t("noSession"),
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelBottomOutline16, {})
-					})
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					label: t("noSession"),
-					side: "bottom",
-					delayMs: 500,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: sidebar_module_css_default.toggleButton,
-						disabled: true,
-						"aria-label": t("noSession"),
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelRightOutline16, {})
-					})
-				})]
+			if (state === void 0 || sessionId === void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				"data-dsh-panel-host": true,
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: sidebar_module_css_default.toggleCluster,
+					children: [!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+						label: t("noSession"),
+						side: "bottom",
+						delayMs: 500,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: sidebar_module_css_default.toggleButton,
+							disabled: true,
+							"aria-label": t("noSession"),
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelBottomOutline16, {})
+						})
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+						label: t("noSession"),
+						side: "bottom",
+						delayMs: 500,
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: sidebar_module_css_default.toggleButton,
+							disabled: true,
+							"aria-label": t("noSession"),
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelRightOutline16, {})
+						})
+					})]
+				})
 			});
 			const onNewTab = (optionId) => {
 				const service = ctx.betterSidebar;
@@ -7067,6 +8130,9 @@ window.__ModuleLoader__.load({
 				service.openTab({
 					type: optionId,
 					title
+				}, {
+					sessionId,
+					cwd
 				});
 			};
 			/**
@@ -7080,6 +8146,31 @@ window.__ModuleLoader__.load({
 				const descriptor = ctx.betterSidebar?.getTab(tab.type);
 				if (descriptor === void 0) return null;
 				return typeof descriptor.icon === "function" ? descriptor.icon(14) : descriptor.icon;
+			};
+			/**
+			* The tab badge from the tab-type registry: a count (99+ capped) or a
+			* short text pill. A throwing badge is swallowed (no pill) — the tab
+			* strip must never break because a plugin's badge computation failed.
+			*/
+			const tabBadgeOf = (tab) => {
+				const descriptor = ctx.betterSidebar?.getTab(tab.type);
+				if (descriptor?.badge === void 0) return null;
+				let value;
+				try {
+					value = descriptor.badge(ctx, {
+						sessionId,
+						cwd
+					}, state);
+				} catch (error) {
+					console.error("[dsh-better-sidebar] tab badge error:", error);
+					return null;
+				}
+				if (value === null || value === void 0 || value === "") return null;
+				const text = typeof value === "number" ? value > 99 ? "99+" : String(value) : String(value);
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: sidebar_module_css_default.tabBadge,
+					children: text
+				});
 			};
 			/**
 			* Render one tab's content. `active` (from the workbench) tells whether
@@ -7107,197 +8198,236 @@ window.__ModuleLoader__.load({
 					store.reduce((s) => openDiffTab(s, paneId, diffTab));
 				}
 			});
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: sidebar_module_css_default.toggleCluster,
-					children: [!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-						label: state.bottomOpen ? t("collapseBottomPanel") : t("expandBottomPanel"),
-						side: "bottom",
-						delayMs: 500,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							type: "button",
-							className: sidebar_module_css_default.toggleButton,
-							"aria-label": state.bottomOpen ? t("collapseBottomPanel") : t("expandBottomPanel"),
-							onClick: () => {
-								store.reduce(toggleBottomPanel);
-							},
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelBottomOutline16, {})
-						})
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-						label: state.panelOpen ? t("collapse") : t("expand"),
-						side: "bottom",
-						delayMs: 500,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							type: "button",
-							className: sidebar_module_css_default.toggleButton,
-							"aria-label": state.panelOpen ? t("collapse") : t("expand"),
-							onClick: () => {
-								store.reduce(togglePanel);
-							},
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelRightOutline16, {})
-						})
-					})]
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					ref: panelRef,
-					className: clsx(sidebar_module_css_default.panel, !state.panelOpen && sidebar_module_css_default.panelHidden),
-					style: { width: narrow ? "100vw" : Math.min(state.width, window.innerWidth) },
-					"data-dragging": anyDragging || void 0,
-					children: [!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: clsx(sidebar_module_css_default.panelResize, draggingWidth && sidebar_module_css_default.panelResizeActive),
-						onPointerDown: (event) => {
-							event.preventDefault();
-							event.currentTarget.setPointerCapture(event.pointerId);
-							widthDrag.current = {
-								startX: event.clientX,
-								startWidth: state.width
-							};
-							setDraggingWidth(true);
-						},
-						onPointerMove: (event) => {
-							if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-							const { startX, startWidth } = widthDrag.current;
-							const width = clampWidth(startWidth + (startX - event.clientX));
-							const height = state.bottomOpen ? Math.min(state.bottomHeight, window.innerHeight) : 0;
-							scheduleDrag(width, height);
-						},
-						onPointerUp: (event) => {
-							if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-							event.currentTarget.releasePointerCapture(event.pointerId);
-							const { startX, startWidth } = widthDrag.current;
-							stopDragScheduling();
-							store.reduce((s) => setWidth(s, startWidth + (startX - event.clientX)));
-							setDraggingWidth(false);
-						}
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: sidebar_module_css_default.panelBody,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Workbench, {
-							state,
-							newTabOptions: buildNewTabOptions(state, ctx, {
-								sessionId,
-								cwd
-							}),
-							actions,
-							onNewTab,
-							renderTab,
-							getTabIcon: tabIconOf
-						})
-					})]
-				}),
-				!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					ref: bottomRef,
-					className: clsx(sidebar_module_css_default.bottomPanel, !state.bottomOpen && sidebar_module_css_default.bottomPanelHidden),
-					style: {
-						height: Math.min(state.bottomHeight, window.innerHeight),
-						left: centerRect.left,
-						right: window.innerWidth - centerRect.right,
-						borderRight: state.panelOpen ? "1px solid var(--dsw-alias-border-l2)" : void 0
-					},
-					"data-dragging": draggingBottom || draggingCorner || void 0,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: clsx(sidebar_module_css_default.bottomResize, draggingBottom && sidebar_module_css_default.bottomResizeActive),
-							onPointerDown: (event) => {
-								event.preventDefault();
-								event.currentTarget.setPointerCapture(event.pointerId);
-								bottomDrag.current = {
-									startY: event.clientY,
-									startHeight: state.bottomHeight
-								};
-								setDraggingBottom(true);
-							},
-							onPointerMove: (event) => {
-								if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-								const { startY, startHeight } = bottomDrag.current;
-								const height = clampHeight(startHeight + (startY - event.clientY));
-								scheduleDrag(Math.min(state.width, window.innerWidth), height);
-							},
-							onPointerUp: (event) => {
-								if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-								event.currentTarget.releasePointerCapture(event.pointerId);
-								const { startY, startHeight } = bottomDrag.current;
-								stopDragScheduling();
-								store.reduce((s) => setBottomHeight(s, startHeight + (startY - event.clientY)));
-								setDraggingBottom(false);
-							}
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-							label: t("collapseBottomPanel"),
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				"data-dsh-panel-host": true,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: sidebar_module_css_default.toggleCluster,
+						children: [!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+							label: state.bottomOpen ? t("collapseBottomPanel") : t("expandBottomPanel"),
 							side: "bottom",
 							delayMs: 500,
 							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
-								className: sidebar_module_css_default.bottomClose,
-								"aria-label": t("collapseBottomPanel"),
+								className: sidebar_module_css_default.toggleButton,
+								"aria-label": state.bottomOpen ? t("collapseBottomPanel") : t("expandBottomPanel"),
 								onClick: () => {
 									store.reduce(toggleBottomPanel);
 								},
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseFill14, {})
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelBottomOutline16, {})
 							})
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: sidebar_module_css_default.panelBody,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Workbench, {
-								state,
-								tree: state.bottomSplits,
-								newTabOptions: buildNewTabOptions(state, ctx, {
-									sessionId,
-									cwd
-								}),
-								actions,
-								onNewTab,
-								renderTab: (tab, active, paneId) => renderTab(tab, active, paneId, true),
-								getTabIcon: tabIconOf
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+							label: state.panelOpen ? t("collapse") : t("expand"),
+							side: "bottom",
+							delayMs: 500,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: sidebar_module_css_default.toggleButton,
+								"aria-label": state.panelOpen ? t("collapse") : t("expand"),
+								onClick: () => {
+									store.reduce(togglePanel);
+								},
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(IconPanelRightOutline16, {})
 							})
-						})
-					]
-				}),
-				!narrow && state.panelOpen && state.bottomOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					ref: cornerRef,
-					className: sidebar_module_css_default.cornerHandle,
-					style: {
-						left: window.innerWidth - state.width - 6,
-						top: window.innerHeight - state.bottomHeight - 6
-					},
-					"data-dragging": draggingCorner || void 0,
-					onPointerDown: (event) => {
-						event.preventDefault();
-						event.currentTarget.setPointerCapture(event.pointerId);
-						cornerDrag.current = {
-							startX: event.clientX,
-							startY: event.clientY,
-							startWidth: state.width,
-							startHeight: state.bottomHeight
-						};
-						setDraggingCorner(true);
-					},
-					onPointerMove: (event) => {
-						if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-						const { startX, startY, startWidth, startHeight } = cornerDrag.current;
-						const width = clampWidth(startWidth + (startX - event.clientX));
-						const height = clampHeight(startHeight + (startY - event.clientY));
-						scheduleDrag(width, height);
-					},
-					onPointerUp: (event) => {
-						if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-						event.currentTarget.releasePointerCapture(event.pointerId);
-						const { startX, startY, startWidth, startHeight } = cornerDrag.current;
-						stopDragScheduling();
-						store.reduce((s) => setBottomHeight(setWidth(s, startWidth + (startX - event.clientX)), startHeight + (startY - event.clientY)));
-						setDraggingCorner(false);
-					}
-				})
-			] });
+						})]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						ref: panelRef,
+						className: clsx(sidebar_module_css_default.panel, !state.panelOpen && sidebar_module_css_default.panelHidden),
+						style: {
+							width: narrow ? "100vw" : Math.min(state.width, window.innerWidth),
+							bottom: narrow && keyboardInset > 0 ? `${keyboardInset}px` : void 0
+						},
+						"data-dragging": anyDragging || void 0,
+						children: [
+							!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: clsx(sidebar_module_css_default.panelResize, draggingWidth && sidebar_module_css_default.panelResizeActive),
+								onPointerDown: (event) => {
+									event.preventDefault();
+									event.currentTarget.setPointerCapture(event.pointerId);
+									dragCommitted.current = false;
+									widthDrag.current = {
+										startX: event.clientX,
+										startWidth: state.width
+									};
+									setDraggingWidth(true);
+								},
+								onPointerMove: (event) => {
+									if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+									const { startX, startWidth } = widthDrag.current;
+									const width = clampWidth(startWidth + (startX - event.clientX));
+									const height = state.bottomOpen ? Math.min(state.bottomHeight, window.innerHeight) : 0;
+									scheduleDrag(width, height);
+								},
+								onPointerUp: (event) => {
+									if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+									dragCommitted.current = true;
+									event.currentTarget.releasePointerCapture(event.pointerId);
+									const { startX, startWidth } = widthDrag.current;
+									const pending = pendingDrag.current;
+									const width = pending !== null ? pending.width : clampWidth(startWidth + (startX - event.clientX));
+									const height = state.bottomOpen ? Math.min(state.bottomHeight, window.innerHeight) : 0;
+									commitDrag(width, height, (s) => setWidth(s, width));
+									setDraggingWidth(false);
+								},
+								onPointerCancel: () => {
+									abortDrag(() => setDraggingWidth(false));
+								},
+								onLostPointerCapture: () => {
+									abortDrag(() => setDraggingWidth(false));
+								}
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: sidebar_module_css_default.panelBody,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Workbench, {
+									state,
+									newTabOptions: buildNewTabOptions(state, ctx, {
+										sessionId,
+										cwd
+									}),
+									actions,
+									onNewTab,
+									renderTab,
+									getTabIcon: tabIconOf,
+									getTabBadge: tabBadgeOf
+								})
+							}),
+							!narrow && state.panelOpen && state.bottomOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: sidebar_module_css_default.cornerHandle,
+								"data-dragging": draggingCorner || void 0,
+								onPointerDown: (event) => {
+									event.preventDefault();
+									event.currentTarget.setPointerCapture(event.pointerId);
+									dragCommitted.current = false;
+									cornerDrag.current = {
+										startX: event.clientX,
+										startY: event.clientY,
+										startWidth: state.width,
+										startHeight: state.bottomHeight
+									};
+									setDraggingCorner(true);
+								},
+								onPointerMove: (event) => {
+									if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+									const { startX, startY, startWidth, startHeight } = cornerDrag.current;
+									const width = clampWidth(startWidth + (startX - event.clientX));
+									const height = clampHeight(startHeight + (startY - event.clientY));
+									scheduleDrag(width, height);
+								},
+								onPointerUp: (event) => {
+									if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+									dragCommitted.current = true;
+									event.currentTarget.releasePointerCapture(event.pointerId);
+									const { startX, startY, startWidth, startHeight } = cornerDrag.current;
+									const pending = pendingDrag.current;
+									const width = pending !== null ? pending.width : clampWidth(startWidth + (startX - event.clientX));
+									const height = pending !== null ? pending.height : clampHeight(startHeight + (startY - event.clientY));
+									commitDrag(width, height, (s) => setBottomHeight(setWidth(s, width), height));
+									setDraggingCorner(false);
+								},
+								onPointerCancel: () => {
+									abortDrag(() => setDraggingCorner(false));
+								},
+								onLostPointerCapture: () => {
+									abortDrag(() => setDraggingCorner(false));
+								}
+							})
+						]
+					}),
+					!narrow && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						ref: bottomRef,
+						className: clsx(sidebar_module_css_default.bottomPanel, !state.bottomOpen && sidebar_module_css_default.bottomPanelHidden),
+						style: {
+							height: Math.min(state.bottomHeight, window.innerHeight),
+							left: centerRect.left,
+							bottom: keyboardInset > 0 ? `${keyboardInset}px` : void 0,
+							right: window.innerWidth - centerRect.right,
+							borderRight: state.panelOpen ? "1px solid var(--dsw-alias-border-l2)" : void 0,
+							visibility: centerRect.right > 0 ? void 0 : "hidden"
+						},
+						"data-dragging": draggingBottom || draggingCorner || void 0,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: clsx(sidebar_module_css_default.bottomResize, draggingBottom && sidebar_module_css_default.bottomResizeActive),
+								onPointerDown: (event) => {
+									event.preventDefault();
+									event.currentTarget.setPointerCapture(event.pointerId);
+									dragCommitted.current = false;
+									bottomDrag.current = {
+										startY: event.clientY,
+										startHeight: state.bottomHeight
+									};
+									setDraggingBottom(true);
+								},
+								onPointerMove: (event) => {
+									if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+									const { startY, startHeight } = bottomDrag.current;
+									const height = clampHeight(startHeight + (startY - event.clientY));
+									scheduleDrag(Math.min(state.width, window.innerWidth), height);
+								},
+								onPointerUp: (event) => {
+									if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+									dragCommitted.current = true;
+									event.currentTarget.releasePointerCapture(event.pointerId);
+									const { startY, startHeight } = bottomDrag.current;
+									const pending = pendingDrag.current;
+									const height = pending !== null ? pending.height : clampHeight(startHeight + (startY - event.clientY));
+									commitDrag(Math.min(state.width, window.innerWidth), height, (s) => setBottomHeight(s, height));
+									setDraggingBottom(false);
+								},
+								onPointerCancel: () => {
+									abortDrag(() => setDraggingBottom(false));
+								},
+								onLostPointerCapture: () => {
+									abortDrag(() => setDraggingBottom(false));
+								}
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+								label: t("collapseBottomPanel"),
+								side: "bottom",
+								delayMs: 500,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: sidebar_module_css_default.bottomClose,
+									"aria-label": t("collapseBottomPanel"),
+									onClick: () => {
+										store.reduce(toggleBottomPanel);
+									},
+									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseFill14, {})
+								})
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: sidebar_module_css_default.panelBody,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Workbench, {
+									state,
+									tree: state.bottomSplits,
+									newTabOptions: buildNewTabOptions(state, ctx, {
+										sessionId,
+										cwd
+									}),
+									actions,
+									onNewTab,
+									renderTab: (tab, active, paneId) => renderTab(tab, active, paneId, true),
+									getTabIcon: tabIconOf,
+									getTabBadge: tabBadgeOf
+								})
+							})
+						]
+					})
+				]
+			});
 		}
 		//#endregion
 		//#region src/client/link-intercept.ts
 		/**
 		* Chat/GUI external-link interception: clicking an http(s) link that points
 		* OUTSIDE the GUI (chat messages, tool rows, prose mentions) opens the
-		* sidebar browser instead of a new browser tab. Gated by BOTH the
-		* `browserInterceptLinks` pref and the browser tab's enable switch; a
-		* Ctrl/Cmd/Shift/Alt-modified click always bypasses the takeover so the
-		* user can still force a real browser tab.
+		* sidebar instead of a new browser tab. Gated by the caller through
+		* `takeoverEnabled(url)` — the `browserInterceptLinks` master, the URL's
+		* protocol flag (`browserInterceptHttp` / `browserInterceptHttps`) and the
+		* target tab's enable switch — and a Ctrl/Cmd/Shift/Alt-modified click
+		* always bypasses the takeover so the user can still force a real browser
+		* tab.
 		*
 		* Only the GUI's OWN document is watched — links inside the browser tab's
 		* sandboxed iframe live in another document and never bubble here (and
@@ -7305,7 +8435,10 @@ window.__ModuleLoader__.load({
 		*/
 		/** The pure decision: the URL to open in the sidebar, or null to let the
 		*  click fall through. Extracted so the policy is unit-testable without a
-		*  DOM. `anchorHref` must be the ABSOLUTE href (`<a>.href` already is). */
+		*  DOM. `anchorHref` must be the ABSOLUTE href (`<a>.href` already is).
+		*  The protocol/same-origin policy lives HERE; the prefs gates (master +
+		*  protocol flags + target enablement) live in the caller's
+		*  `takeoverEnabled(url)` callback. */
 		function shouldInterceptLink(anchorHref, selfOrigin) {
 			let url;
 			try {
@@ -7325,19 +8458,19 @@ window.__ModuleLoader__.load({
 		}
 		/**
 		* Register the document-level click capture that funnels external links
-		* into the sidebar browser. Returns the disposer (HMR-safe).
+		* into the sidebar. Returns the disposer (HMR-safe).
 		*/
 		function registerLinkInterception(opts) {
 			const onClick = (event) => {
 				if (!isPlainLeftClick(event)) return;
 				if (event.defaultPrevented) return;
-				if (!opts.takeoverEnabled()) return;
 				const target = event.target;
 				if (target === null || typeof target.closest !== "function") return;
 				const anchor = target.closest("a[href]");
 				if (anchor === null) return;
 				const url = shouldInterceptLink(anchor.href, opts.selfOrigin);
 				if (url === null) return;
+				if (!opts.takeoverEnabled(new URL(url))) return;
 				event.preventDefault();
 				opts.openInSidebar(url);
 			};
@@ -7394,6 +8527,50 @@ window.__ModuleLoader__.load({
 			};
 		}
 		//#endregion
+		//#region src/client/settings-nav-icon.ts
+		/**
+		* Mark this plugin's row in the DSH settings navigation so its bundled CSS
+		* can replace the shell's fallback gear with the Side card glyph.
+		*
+		* DSH 0.1.x projects only `id`, `order`, and `label` from a
+		* `settings.section` registration, then chooses icons inside the settings
+		* shell from a closed list of built-in ids. Until that public contract grows
+		* an icon field, the plugin identifies only its own localized row after the
+		* dialog mounts. The marker owns no shell structure and is removed on fiber
+		* disposal, so the adaptation remains HMR-safe.
+		*/
+		const SETTINGS_NAV_MARKER = "data-dsh-better-sidebar-settings-nav";
+		/**
+		* Keep the marker on the settings-nav button whose visible text is this
+		* plugin's current localized section label.
+		* @param label - locale-aware label resolver used by the section registration.
+		* @returns disposer that disconnects observation and removes owned markers.
+		*/
+		function registerSettingsNavIcon(label) {
+			let disposed = false;
+			const sync = () => {
+				if (disposed) return;
+				const currentLabel = label().trim();
+				const buttons = document.querySelectorAll("[role=\"dialog\"] nav button");
+				for (const button of buttons) if (currentLabel.length > 0 && button.textContent?.trim() === currentLabel) button.setAttribute(SETTINGS_NAV_MARKER, "");
+				else button.removeAttribute(SETTINGS_NAV_MARKER);
+			};
+			sync();
+			const observer = new MutationObserver(sync);
+			observer.observe(document.body, {
+				childList: true,
+				subtree: true,
+				characterData: true
+			});
+			return () => {
+				disposed = true;
+				observer.disconnect();
+				document.querySelectorAll(`[${SETTINGS_NAV_MARKER}]`).forEach((element) => {
+					element.removeAttribute(SETTINGS_NAV_MARKER);
+				});
+			};
+		}
+		//#endregion
 		//#region src/client/prefs.ts
 		/** Validate one raw resolved value into {@link SidebarPrefs}. Used for the
 		* settings.get payload AND the settings.update response (both carry the
@@ -7411,14 +8588,36 @@ window.__ModuleLoader__.load({
 				autoOpenJobs: typeof record.autoOpenJobs === "boolean" ? record.autoOpenJobs : SIDEBAR_PREFS_DEFAULTS.autoOpenJobs,
 				agentTerminalTools: typeof record.agentTerminalTools === "boolean" ? record.agentTerminalTools : SIDEBAR_PREFS_DEFAULTS.agentTerminalTools,
 				bottomPanelAutoTerminal: typeof record.bottomPanelAutoTerminal === "boolean" ? record.bottomPanelAutoTerminal : SIDEBAR_PREFS_DEFAULTS.bottomPanelAutoTerminal,
+				terminalFontFamily: typeof record.terminalFontFamily === "string" ? record.terminalFontFamily : SIDEBAR_PREFS_DEFAULTS.terminalFontFamily,
+				terminalShell: typeof record.terminalShell === "string" ? record.terminalShell : SIDEBAR_PREFS_DEFAULTS.terminalShell,
+				terminalShellArgs: typeof record.terminalShellArgs === "string" ? record.terminalShellArgs : SIDEBAR_PREFS_DEFAULTS.terminalShellArgs,
+				terminalFontSize: typeof record.terminalFontSize === "number" && Number.isFinite(record.terminalFontSize) ? clampTerminalFontSize(record.terminalFontSize) : SIDEBAR_PREFS_DEFAULTS.terminalFontSize,
 				interceptOpenPath: typeof record.interceptOpenPath === "boolean" ? record.interceptOpenPath : SIDEBAR_PREFS_DEFAULTS.interceptOpenPath,
+				editorExplorer: typeof record.editorExplorer === "boolean" ? record.editorExplorer : SIDEBAR_PREFS_DEFAULTS.editorExplorer,
+				titleBarCompat: typeof record.titleBarCompat === "boolean" ? record.titleBarCompat : SIDEBAR_PREFS_DEFAULTS.titleBarCompat,
+				titleBarStripPx: typeof record.titleBarStripPx === "number" && Number.isFinite(record.titleBarStripPx) ? clampTitleBarStrip(record.titleBarStripPx) : SIDEBAR_PREFS_DEFAULTS.titleBarStripPx,
 				htmlViewerNoSandbox: typeof record.htmlViewerNoSandbox === "boolean" ? record.htmlViewerNoSandbox : SIDEBAR_PREFS_DEFAULTS.htmlViewerNoSandbox,
 				htmlViewerDefaultUnsafe: typeof record.htmlViewerDefaultUnsafe === "boolean" ? record.htmlViewerDefaultUnsafe : SIDEBAR_PREFS_DEFAULTS.htmlViewerDefaultUnsafe,
 				browserNoSandbox: typeof record.browserNoSandbox === "boolean" ? record.browserNoSandbox : SIDEBAR_PREFS_DEFAULTS.browserNoSandbox,
 				browserInterceptLinks: typeof record.browserInterceptLinks === "boolean" ? record.browserInterceptLinks : SIDEBAR_PREFS_DEFAULTS.browserInterceptLinks,
+				browserInterceptHttp: typeof record.browserInterceptHttp === "boolean" ? record.browserInterceptHttp : SIDEBAR_PREFS_DEFAULTS.browserInterceptHttp,
+				browserInterceptHttps: typeof record.browserInterceptHttps === "boolean" ? record.browserInterceptHttps : SIDEBAR_PREFS_DEFAULTS.browserInterceptHttps,
 				tabsEnabled: booleanMapOf(record.tabsEnabled),
-				viewersEnabled: booleanMapOf(record.viewersEnabled)
+				viewersEnabled: booleanMapOf(record.viewersEnabled),
+				pluginSettings: pluginSettingsMapOf(record.pluginSettings)
 			};
+		}
+		/**
+		* Validate the plugin-owned settings map (v0.12.0+): `{ descriptorId: { key:
+		* value } }`, nested open maps. Any non-object value (or a malformed whole)
+		* falls back to the empty map — the schema defaults already guard the wire
+		* shape, this is the client's second line.
+		*/
+		function pluginSettingsMapOf(value) {
+			if (value === null || typeof value !== "object" || Array.isArray(value)) return {};
+			const out = {};
+			for (const [id, blob] of Object.entries(value)) if (blob !== null && typeof blob === "object" && !Array.isArray(blob)) out[id] = blob;
+			return out;
 		}
 		/**
 		* Validate one enable-switch map (per-tab / per-viewer). Only boolean values
@@ -7444,9 +8643,100 @@ window.__ModuleLoader__.load({
 				return { ...SIDEBAR_PREFS_DEFAULTS };
 			}
 		}
+		/**
+		* Read the external-disable flag from the same settings route: the
+		* dsh-web-ui family's aionui-panel provider choice. True only when the host
+		* resolved `aionui-panel.rightPanel` to 'aionui-panel' — while true the
+		* sidebar must not mount (the two right panels are mutually exclusive). Any
+		* failure (route rejected, aionui absent, malformed response) reads false,
+		* so a missing family never hides the sidebar.
+		* @param settings - the settings wire face (the plugin api by default).
+		* @returns the external-disable flag (false on any failure).
+		*/
+		async function loadExternalDisable(settings) {
+			try {
+				return (await settings.settingsGet()).externalDisable === true;
+			} catch {
+				return false;
+			}
+		}
 		//#endregion
-		//#region \0dsh-css:/Users/menghuan/Code/DSH-better-sidebar/src/client/SideCardSection.module.css.mjs
-		const css$1 = ".Pz1RTq_section{flex-direction:column;gap:8px;width:100%;height:100%;min-height:0;display:flex;overflow-y:auto}.Pz1RTq_section>:last-child{border-bottom:none}.Pz1RTq_grid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;display:grid}.Pz1RTq_card{border:1px solid var(--dsw-alias-border-l2);font:inherit;color:inherit;cursor:pointer;background:0 0;border-radius:8px;flex-direction:column;transition:background .12s,border-color .12s;display:flex;position:relative}.Pz1RTq_card:not(.Pz1RTq_cardOn):hover{background:var(--dsw-alias-interactive-bg-hover)}.Pz1RTq_cardOn{border-color:var(--dsw-alias-button-primary-fill);background:var(--dsw-alias-interactive-bg-active)}.Pz1RTq_cardMain{border-radius:inherit;width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;flex-direction:column;gap:2px;padding:10px 12px;display:flex}.Pz1RTq_cardMain:focus-visible,.Pz1RTq_cardGear:focus-visible{outline:2px solid var(--dsw-alias-border-l4);outline-offset:2px}.Pz1RTq_cardTop{align-items:center;gap:6px;min-width:0;display:flex}.Pz1RTq_cardIcon{color:var(--dsw-alias-label-tertiary);flex:none;align-items:center;display:inline-flex}.Pz1RTq_cardOn .Pz1RTq_cardIcon{color:var(--dsw-alias-button-primary-fill)}.Pz1RTq_cardTitle{min-width:0;color:var(--dsw-alias-label-secondary);white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:13px;line-height:20px;overflow:hidden}.Pz1RTq_cardOn .Pz1RTq_cardTitle{color:var(--dsw-alias-label-primary)}.Pz1RTq_cardCheck{color:var(--dsw-alias-button-primary-fill);flex:none;align-items:center;display:inline-flex}.Pz1RTq_cardDesc{color:var(--dsw-alias-label-tertiary);white-space:nowrap;text-overflow:ellipsis;font-size:11px;line-height:16px;overflow:hidden}.Pz1RTq_cardOn .Pz1RTq_cardDesc{color:var(--dsw-alias-label-secondary)}.Pz1RTq_cardWithGear .Pz1RTq_cardDesc{padding-right:18px}.Pz1RTq_cardGear{width:20px;height:20px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:0;border-radius:6px;justify-content:center;align-items:center;padding:0;display:inline-flex;position:absolute;bottom:6px;right:6px}.Pz1RTq_cardGear:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.Pz1RTq_sectionHeading{letter-spacing:.02em;color:var(--dsw-alias-label-secondary);padding:14px 0 0;font-size:12px;font-weight:600;line-height:17px}.Pz1RTq_row{border-bottom:1px solid var(--dsw-alias-border-l2);justify-content:space-between;align-items:center;gap:16px;padding:12px 0;display:flex}.Pz1RTq_rowText{flex-direction:column;gap:4px;min-width:0;display:flex}.Pz1RTq_title{color:var(--dsw-alias-label-primary);font-size:14px;line-height:22px}.Pz1RTq_desc{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:17px}.Pz1RTq_toggle{width:16px;height:16px;accent-color:var(--dsw-alias-button-primary-fill);cursor:pointer;flex:none;margin:0}.Pz1RTq_toggle:focus-visible{outline:2px solid var(--dsw-alias-border-l4);outline-offset:2px}.Pz1RTq_popupRows{flex-direction:column;width:100%;display:flex}.Pz1RTq_popupRow{border-bottom:1px solid var(--dsw-alias-border-l2);cursor:pointer;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;display:flex}.Pz1RTq_popupRows>:last-child{border-bottom:none}.Pz1RTq_control{flex:none;align-items:center;gap:6px;display:flex}.Pz1RTq_percentInput{width:76px}.Pz1RTq_suffix{color:var(--dsw-alias-label-secondary);font-size:14px;line-height:22px}.Pz1RTq_error{color:var(--dsw-alias-state-error-primary);padding:10px 0 2px;font-size:12px;line-height:17px}@media (prefers-reduced-motion:reduce){.Pz1RTq_card{transition:none}}";
+		//#region src/client/plugins-shared.ts
+		/**
+		* Shared vocabulary of the recommended plugin catalogs: the entry shape and
+		* the GitHub topic URL. The two catalogs live in sibling modules —
+		* `plugins-tabs.ts` (tab registrations) and `plugins-viewers.ts` (file
+		* previewer registrations) — and are shown in the two "add plugin" modals
+		* (Side card settings → the dashed cards at the end of the 侧边栏内容 /
+		* 文件预览 grids).
+		*/
+		/** The GitHub topic page listing every repo tagged `dsh-better-sidebar`. */
+		const PLUGIN_TOPIC_URL = "https://github.com/topics/dsh-better-sidebar";
+		//#endregion
+		//#region src/client/plugins-tabs.ts
+		/**
+		* The built-in catalog of TAB-registration plugins (sidebar pages),
+		* shown in the "add tab plugin" modal (Side card settings → 侧边栏内容 grid
+		* → the dashed card). Adding an entry: append one object here (unique
+		* `id` = npm package name, `url` = GitHub repo, `description` =
+		* i18n-friendly (add a `pluginXxxDesc` key in locales.ts), `install` = the
+		* full one-line install script — it starts with `cd ~/.dsh` so the install
+		* runs with the DSH home as the working directory). Data integrity is
+		* guarded by `tests/plugin-list.spec.ts`.
+		*/
+		/** Tab-registration plugins (alphabetical order). */
+		const builtinTabPlugins = [
+			{
+				id: "@dsh-external/dsh-sentinel",
+				name: "dsh-sentinel 唤醒系统",
+				url: "https://github.com/fuhefei/dsh-sentinel",
+				description: () => t("pluginSentinelDesc"),
+				install: "cd ~/.dsh && dsh plugin --profile web add \"github:fuhefei/dsh-sentinel#v0.7.0\""
+			},
+			{
+				id: "dsh-git-remotes",
+				name: "dsh-git-remotes Git 远程",
+				url: "https://github.com/yq04/dsh-git-remotes",
+				description: () => t("pluginGitRemotesDesc"),
+				install: "cd ~/.dsh && dsh plugin --profile web add dsh-better-sidebar && dsh plugin --profile web add git+https://github.com/yq04/dsh-git-remotes.git"
+			},
+			{
+				id: "dsh-sidebar-qa",
+				name: "dsh-sidebar-qa 划选追问",
+				url: "https://github.com/ChenRuoT/dsh-sidebar-qa",
+				description: () => t("pluginSidebarQaDesc"),
+				install: "cd ~/.dsh && dsh plugin --profile web add dsh-better-sidebar && dsh plugin --profile web add git+https://github.com/ChenRuoT/dsh-sidebar-qa.git"
+			}
+		];
+		//#endregion
+		//#region src/client/plugins-viewers.ts
+		/**
+		* The built-in catalog of FILE-PREVIEWER plugins (file-type previewers),
+		* shown in the "add preview plugin" modal (Side card settings → 文件预览
+		* grid → the dashed card). Adding an entry: append one object here (unique
+		* `id` = npm package name, `url` = GitHub repo, `description` =
+		* i18n-friendly, `install` = the full shell command pre-filled into the
+		* install terminal — it starts with `cd ~/.dsh` so the install runs with
+		* the DSH home as the working directory). Data integrity is guarded by
+		* `tests/plugin-list.spec.ts`.
+		*/
+		/** File-previewer plugins (alphabetical order). */
+		const builtinViewerPlugins = [{
+			id: "@huanlin/dsh-plugin-better-sidebar-plugin-office",
+			name: "Office 预览插件",
+			url: "https://github.com/HuanLinOTO/dsh-plugin-better-sidebar-plugin-office",
+			description: () => t("pluginOfficeDesc"),
+			install: "cd ~/.dsh && dsh plugin --profile web add @huanlin/dsh-plugin-better-sidebar-plugin-office"
+		}, {
+			id: "dsh-video-preview",
+			name: "视频预览插件",
+			url: "https://github.com/zemul/dsh-video-preview",
+			description: () => t("pluginVideoPreviewDesc"),
+			install: "cd ~/.dsh && dsh plugin --profile web add dsh-video-preview"
+		}];
+		//#endregion
+		//#region \0dsh-css:/home/runner/work/DSH-better-sidebar/DSH-better-sidebar/src/client/SideCardSection.module.css.mjs
+		const css$1 = "._2vuxea_section{flex-direction:column;gap:14px;width:100%;max-width:760px;display:flex}._2vuxea_intro{color:var(--dsw-alias-label-tertiary);margin:0;padding:0 2px;font-size:13px;line-height:20px}._2vuxea_group{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:16px;flex-direction:column;flex:none;gap:8px;padding:18px 20px 20px;display:flex}._2vuxea_groupHeading{color:var(--dsw-alias-label-primary);align-items:baseline;gap:7px;padding:0 2px 6px;font-size:13px;font-weight:600;line-height:20px;display:flex}._2vuxea_count{color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;font-size:12px;font-weight:400;line-height:18px}._2vuxea_grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;display:grid}._2vuxea_card{border:1px solid var(--dsw-alias-border-l2);font:inherit;color:inherit;cursor:pointer;background:0 0;border-radius:12px;flex-direction:column;transition:background .12s,border-color .12s;display:flex;position:relative}._2vuxea_card:not(._2vuxea_cardOn):hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-label-dimmed)}._2vuxea_cardOn{border-color:var(--dsw-alias-button-primary-fill);background:var(--dsw-alias-interactive-bg-active)}._2vuxea_cardMain{border-radius:inherit;width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;flex-direction:column;gap:6px;padding:12px;display:flex}._2vuxea_cardMain:focus-visible,._2vuxea_cardGear:focus-visible,._2vuxea_rowGear:focus-visible{outline:2px solid var(--dsw-alias-border-l4);outline-offset:2px}._2vuxea_cardTop{align-items:center;gap:8px;min-width:0;display:flex}._2vuxea_cardIconChip{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);width:28px;height:28px;color:var(--dsw-alias-label-tertiary);border-radius:8px;flex:none;justify-content:center;align-items:center;display:inline-flex}._2vuxea_cardOn ._2vuxea_cardIconChip{border-color:color-mix(in srgb, var(--dsw-alias-button-primary-fill) 35%, transparent);background:color-mix(in srgb, var(--dsw-alias-button-primary-fill) 12%, transparent);color:var(--dsw-alias-button-primary-fill)}._2vuxea_cardTitle{min-width:0;color:var(--dsw-alias-label-secondary);white-space:nowrap;text-overflow:ellipsis;flex:1;font-size:13px;font-weight:600;line-height:20px;overflow:hidden}._2vuxea_cardOn ._2vuxea_cardTitle{color:var(--dsw-alias-label-primary)}._2vuxea_cardCheck{background:var(--dsw-alias-button-primary-fill);width:16px;height:16px;color:var(--dsw-alias-bg-layer-3);border-radius:50%;flex:none;justify-content:center;align-items:center;display:inline-flex}._2vuxea_cardDesc{color:var(--dsw-alias-label-tertiary);white-space:nowrap;text-overflow:ellipsis;font-size:11px;line-height:16px;overflow:hidden}._2vuxea_addCard{border-style:dashed;border-color:var(--dsw-alias-border-l2);text-align:left;align-items:flex-start;padding:12px}._2vuxea_addCard:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-interactive-bg-hover-accent);color:var(--dsw-alias-label-primary)}._2vuxea_addCard:hover ._2vuxea_cardTitle{color:var(--dsw-alias-label-primary)}._2vuxea_addCard:hover ._2vuxea_cardIconChip{border-color:color-mix(in srgb, var(--dsw-alias-button-primary-fill) 35%, transparent);color:var(--dsw-alias-button-primary-fill)}._2vuxea_addCard:focus-visible{outline:2px solid var(--dsw-alias-border-l4);outline-offset:2px}._2vuxea_cardOn ._2vuxea_cardDesc{color:var(--dsw-alias-label-secondary)}._2vuxea_cardWithGear ._2vuxea_cardDesc{padding-right:30px}._2vuxea_cardGear{width:16px;height:16px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:0;border-radius:50%;justify-content:center;align-items:center;padding:0;display:inline-flex;position:absolute;top:46px;right:12px}._2vuxea_cardGear:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}._2vuxea_rowGear{width:22px;height:22px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}._2vuxea_rowGear:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}._2vuxea_row{border-bottom:1px solid var(--dsw-alias-border-l2);justify-content:space-between;align-items:center;gap:16px;padding:12px 2px;display:flex}._2vuxea_row:last-child{border-bottom:none}._2vuxea_rowText{flex-direction:column;gap:4px;min-width:0;display:flex}._2vuxea_title{color:var(--dsw-alias-label-primary);font-size:14px;line-height:22px}._2vuxea_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}._2vuxea_switch{cursor:pointer;flex:none;display:inline-flex;position:relative}._2vuxea_switchInput{opacity:0;width:1px;height:1px;margin:0;position:absolute}._2vuxea_switchTrack{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:10px;align-items:center;width:36px;height:20px;padding:2px;transition:background .15s,border-color .15s;display:inline-flex}._2vuxea_switchThumb{background:var(--dsw-alias-label-secondary);border-radius:50%;width:14px;height:14px;transition:transform .15s,background .15s;display:block}._2vuxea_switch:hover ._2vuxea_switchTrack{border-color:var(--dsw-alias-label-dimmed)}._2vuxea_switchInput:checked+._2vuxea_switchTrack{border-color:var(--dsw-alias-button-primary-fill);background:var(--dsw-alias-button-primary-fill)}._2vuxea_switchInput:checked+._2vuxea_switchTrack ._2vuxea_switchThumb{background:var(--dsw-alias-bg-layer-3);transform:translate(16px)}._2vuxea_switchInput:focus-visible+._2vuxea_switchTrack{outline:2px solid var(--dsw-alias-state-business-primary);outline-offset:2px}._2vuxea_control{flex:none;align-items:center;gap:6px;display:flex}._2vuxea_percentInput{width:76px}._2vuxea_typedInput{width:200px}._2vuxea_typedInputNumber{width:76px}._2vuxea_selectAnchor{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);max-width:220px;color:var(--dsw-alias-label-primary);cursor:pointer;border-radius:8px;align-items:center;gap:6px;padding:4px 8px;font-size:13px;line-height:20px;display:flex}._2vuxea_selectAnchor:hover{border-color:var(--dsw-alias-label-dimmed)}._2vuxea_selectAnchorIcon{flex:none;display:inline-flex}._2vuxea_selectAnchorText{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}._2vuxea_selectOption{align-items:center;gap:10px;min-width:200px;display:flex}._2vuxea_selectOptionIcon{color:var(--dsw-alias-label-secondary);flex:none;display:inline-flex}._2vuxea_selectOptionText{flex-direction:column;min-width:0;display:flex}._2vuxea_suffix{color:var(--dsw-alias-label-secondary);font-size:14px;line-height:22px}._2vuxea_popupDialog._2vuxea_popupDialog{width:min(460px,100%)}._2vuxea_popupRows{flex-direction:column;gap:10px;width:100%;display:flex}._2vuxea_popupRow{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:12px;justify-content:space-between;align-items:center;gap:16px;min-width:0;padding:14px 16px;transition:border-color .16s,background .16s;display:flex}._2vuxea_popupRow:hover{border-color:var(--dsw-alias-label-dimmed)}._2vuxea_done{appearance:none;font:inherit;cursor:pointer;background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-3);border:1px solid #0000;border-radius:8px;padding:5px 14px;font-size:13px;line-height:1.5}._2vuxea_done:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}._2vuxea_error{color:var(--dsw-alias-state-error-primary);padding:10px 0 2px;font-size:12px;line-height:17px}._2vuxea_pluginModal._2vuxea_pluginModal{width:min(560px,100%)}._2vuxea_pluginList{flex-direction:column;gap:12px;width:100%;display:flex}._2vuxea_pluginTopicBtn{appearance:none;border:1px solid var(--dsw-alias-border-l2);width:100%;font:inherit;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1);cursor:pointer;border-radius:8px;padding:6px 12px;font-size:12px;line-height:18px}._2vuxea_pluginTopicBtn:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-interactive-bg-hover-accent);color:var(--dsw-alias-label-primary)}._2vuxea_pluginTopicBtn:focus-visible{outline:2px solid var(--dsw-alias-border-l4);outline-offset:1px}._2vuxea_pluginEmpty{color:var(--dsw-alias-label-tertiary);padding:20px 2px;font-size:12px;line-height:18px}._2vuxea_pluginEntries{flex-direction:column;gap:10px;display:flex}._2vuxea_pluginEntry{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:12px;flex-direction:column;gap:4px;padding:12px;display:flex}._2vuxea_pluginEntryHead{justify-content:space-between;align-items:center;gap:12px;display:flex}._2vuxea_pluginEntryActions{flex:none;align-items:center;gap:6px;display:inline-flex}._2vuxea_pluginJumpBtn{appearance:none;border:1px solid var(--dsw-alias-border-l2);font:inherit;cursor:pointer;color:var(--dsw-alias-label-secondary);background:0 0;border-radius:8px;flex:none;padding:3px 12px;font-size:12px;line-height:1.5}._2vuxea_pluginJumpBtn:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-interactive-bg-hover-accent);color:var(--dsw-alias-label-primary)}._2vuxea_pluginJumpBtn:focus-visible{outline:2px solid var(--dsw-alias-border-l4);outline-offset:1px}._2vuxea_pluginName{appearance:none;min-width:0;font:inherit;color:var(--dsw-alias-label-primary);text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;background:0 0;border:0;padding:0;font-size:13px;font-weight:600;line-height:20px;text-decoration:none;overflow:hidden}._2vuxea_pluginName:hover{color:var(--dsw-alias-button-primary-fill);text-decoration:underline}._2vuxea_pluginDesc{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}._2vuxea_pluginInstall{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);white-space:nowrap;border-radius:8px;padding:6px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:16px;display:block;overflow-x:auto}._2vuxea_pluginCopyBtn{appearance:none;font:inherit;cursor:pointer;background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-3);border:1px solid #0000;border-radius:8px;flex:none;padding:3px 12px;font-size:12px;line-height:1.5}._2vuxea_pluginCopyBtn:hover{background:var(--dsw-alias-button-primary-hover)}._2vuxea_pluginCopyBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}@media (prefers-reduced-motion:reduce){._2vuxea_card,._2vuxea_switchTrack,._2vuxea_switchThumb{transition:none}}._2vuxea_versionBadge{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);border-radius:999px;align-self:flex-start;align-items:center;gap:8px;padding:4px 12px 4px 14px;font-size:12px;line-height:18px;display:inline-flex}._2vuxea_versionBadgeName{color:var(--dsw-alias-label-primary);font-weight:600}._2vuxea_versionBadgeTag{background:var(--dsw-alias-accent-soft,var(--dsw-alias-border-l2));color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;border-radius:999px;padding:1px 8px}._2vuxea_pluginSearch{box-sizing:border-box;appearance:none;border:1px solid var(--dsw-alias-border-l2);width:100%;font:inherit;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border-radius:8px;padding:6px 10px;font-size:12px;line-height:18px}._2vuxea_pluginSearch::placeholder{color:var(--dsw-alias-label-tertiary)}._2vuxea_pluginSearch:focus-visible{outline:2px solid var(--dsw-alias-border-l4);outline-offset:1px}._2vuxea_pluginEntries{flex-direction:column;gap:10px;max-height:46vh;padding-right:2px;display:flex;overflow-y:auto}._2vuxea_pluginGroup{flex-direction:column;gap:8px;display:flex}._2vuxea_pluginGroupHeading{color:var(--dsw-alias-label-secondary);padding:2px 2px 0;font-size:12px;font-weight:600;line-height:18px}";
 		const tagId$1 = "dsh-better-sidebar/SideCardSection.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7456,31 +8746,251 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var SideCardSection_module_css_default = {
-			"cardIcon": "Pz1RTq_cardIcon",
-			"control": "Pz1RTq_control",
-			"suffix": "Pz1RTq_suffix",
-			"toggle": "Pz1RTq_toggle",
-			"desc": "Pz1RTq_desc",
-			"cardTitle": "Pz1RTq_cardTitle",
-			"error": "Pz1RTq_error",
-			"cardOn": "Pz1RTq_cardOn",
-			"card": "Pz1RTq_card",
-			"cardGear": "Pz1RTq_cardGear",
-			"popupRow": "Pz1RTq_popupRow",
-			"percentInput": "Pz1RTq_percentInput",
-			"popupRows": "Pz1RTq_popupRows",
-			"rowText": "Pz1RTq_rowText",
-			"grid": "Pz1RTq_grid",
-			"cardDesc": "Pz1RTq_cardDesc",
-			"cardCheck": "Pz1RTq_cardCheck",
-			"section": "Pz1RTq_section",
-			"cardWithGear": "Pz1RTq_cardWithGear",
-			"row": "Pz1RTq_row",
-			"cardMain": "Pz1RTq_cardMain",
-			"cardTop": "Pz1RTq_cardTop",
-			"sectionHeading": "Pz1RTq_sectionHeading",
-			"title": "Pz1RTq_title"
+			"pluginEntry": "_2vuxea_pluginEntry",
+			"addCard": "_2vuxea_addCard",
+			"cardOn": "_2vuxea_cardOn",
+			"percentInput": "_2vuxea_percentInput",
+			"selectOptionIcon": "_2vuxea_selectOptionIcon",
+			"pluginDesc": "_2vuxea_pluginDesc",
+			"grid": "_2vuxea_grid",
+			"suffix": "_2vuxea_suffix",
+			"pluginEmpty": "_2vuxea_pluginEmpty",
+			"cardCheck": "_2vuxea_cardCheck",
+			"section": "_2vuxea_section",
+			"switchThumb": "_2vuxea_switchThumb",
+			"control": "_2vuxea_control",
+			"pluginEntryActions": "_2vuxea_pluginEntryActions",
+			"pluginModal": "_2vuxea_pluginModal",
+			"pluginJumpBtn": "_2vuxea_pluginJumpBtn",
+			"pluginCopyBtn": "_2vuxea_pluginCopyBtn",
+			"switchInput": "_2vuxea_switchInput",
+			"selectAnchor": "_2vuxea_selectAnchor",
+			"pluginEntryHead": "_2vuxea_pluginEntryHead",
+			"cardDesc": "_2vuxea_cardDesc",
+			"pluginInstall": "_2vuxea_pluginInstall",
+			"selectOption": "_2vuxea_selectOption",
+			"popupRow": "_2vuxea_popupRow",
+			"pluginGroupHeading": "_2vuxea_pluginGroupHeading",
+			"card": "_2vuxea_card",
+			"intro": "_2vuxea_intro",
+			"typedInput": "_2vuxea_typedInput",
+			"row": "_2vuxea_row",
+			"cardIconChip": "_2vuxea_cardIconChip",
+			"pluginEntries": "_2vuxea_pluginEntries",
+			"selectAnchorIcon": "_2vuxea_selectAnchorIcon",
+			"switch": "_2vuxea_switch",
+			"rowGear": "_2vuxea_rowGear",
+			"cardTop": "_2vuxea_cardTop",
+			"desc": "_2vuxea_desc",
+			"typedInputNumber": "_2vuxea_typedInputNumber",
+			"group": "_2vuxea_group",
+			"error": "_2vuxea_error",
+			"groupHeading": "_2vuxea_groupHeading",
+			"rowText": "_2vuxea_rowText",
+			"pluginTopicBtn": "_2vuxea_pluginTopicBtn",
+			"versionBadge": "_2vuxea_versionBadge",
+			"versionBadgeName": "_2vuxea_versionBadgeName",
+			"versionBadgeTag": "_2vuxea_versionBadgeTag",
+			"title": "_2vuxea_title",
+			"cardMain": "_2vuxea_cardMain",
+			"popupRows": "_2vuxea_popupRows",
+			"count": "_2vuxea_count",
+			"selectOptionText": "_2vuxea_selectOptionText",
+			"switchTrack": "_2vuxea_switchTrack",
+			"pluginName": "_2vuxea_pluginName",
+			"pluginGroup": "_2vuxea_pluginGroup",
+			"done": "_2vuxea_done",
+			"popupDialog": "_2vuxea_popupDialog",
+			"selectAnchorText": "_2vuxea_selectAnchorText",
+			"pluginSearch": "_2vuxea_pluginSearch",
+			"cardGear": "_2vuxea_cardGear",
+			"cardTitle": "_2vuxea_cardTitle",
+			"cardWithGear": "_2vuxea_cardWithGear",
+			"pluginList": "_2vuxea_pluginList"
 		};
+		//#endregion
+		//#region src/client/add-plugin-modal.tsx
+		/**
+		* The "add plugin" modals (Side card settings → the dashed cards at the
+		* end of the 侧边栏内容 / 文件预览 grids): declare that the sidebar's
+		* extension points — tab pages and file previewers — are open to plugins
+		* (registered through `ctx.betterSidebar`), point at the GitHub topic page
+		* for discovery, and show the repo's recommended plugin catalog of the
+		* matching kind (name / url / description / install script).
+		*
+		* Per entry there are two actions:
+		* - 「跳转」opens the plugin's repo in a REAL new browser tab (window.open
+		*   — a button, so the sidebar link takeover cannot reroute it);
+		* - 「安装」only COPIES the install script to the clipboard (writeClipboard)
+		*   with a transient "已复制" feedback on the button — the user pastes and
+		*   runs it wherever they manage their DSH profile. No terminal is opened,
+		*   nothing is closed, nothing can fail outward.
+		*
+		* The body is extracted as {@link PluginListBody} so tests render it
+		* directly — the Modal primitive runs hooks unconditionally, so an open
+		* Modal must never be renderToString'd (same rule as the settingsFor popup
+		* in SideCardSection); the modal itself mounts only while open.
+		*/
+		/** The catalog of one kind (kept in two repo files: plugins-tabs.ts /
+		*  plugins-viewers.ts). */
+		function catalogOf(kind) {
+			return kind === "tab" ? builtinTabPlugins : builtinViewerPlugins;
+		}
+		/** How long the "已复制" feedback stays on the copy button. */
+		const COPIED_FEEDBACK_MS = 1500;
+		/** The modal body: the GitHub topic button + the recommended plugin list
+		*  with per-entry jump/copy buttons (extracted for direct testing). */
+		function PluginListBody(props) {
+			const { service, kind } = props;
+			const [copiedId, setCopiedId] = (0, react.useState)(null);
+			const [query, setQuery] = (0, react.useState)("");
+			const catalog = catalogOf(kind);
+			const needle = query.trim().toLowerCase();
+			const matches = (entry) => {
+				if (needle === "") return true;
+				const description = typeof entry.description === "function" ? entry.description() : entry.description;
+				return entry.name.toLowerCase().includes(needle) || entry.id.toLowerCase().includes(needle) || description.toLowerCase().includes(needle);
+			};
+			const filtered = catalog.filter(matches);
+			const groups = /* @__PURE__ */ new Map();
+			for (const entry of filtered) {
+				const key = entry.category === void 0 ? void 0 : typeof entry.category === "function" ? entry.category() : entry.category;
+				const list = groups.get(key);
+				if (list === void 0) groups.set(key, [entry]);
+				else list.push(entry);
+			}
+			/** Copy the entry's install script to the clipboard and flash the button's
+			*  "已复制" label for a moment. The feedback ONLY appears after a
+			*  successful write — when the clipboard is unavailable or denied
+			*  (writeClipboard resolves false) nothing is shown, so the user is never
+			*  told to paste a command that was not placed on the clipboard. Never
+			*  closes anything, never throws outward. */
+			const copy = async (entry) => {
+				if (!await (0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(entry.install)) return;
+				setCopiedId(entry.id);
+				window.setTimeout(() => {
+					setCopiedId((current) => current === entry.id ? null : current);
+				}, COPIED_FEEDBACK_MS);
+			};
+			/** Open the plugin's repo in a REAL new browser tab (window.open — a
+			*  button, so the sidebar link takeover cannot reroute it). */
+			const jump = (entry) => {
+				window.open(entry.url, "_blank", "noopener");
+			};
+			/** One catalog row (extracted so the group render stays flat). */
+			const renderEntry = (entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: SideCardSection_module_css_default.pluginEntry,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: SideCardSection_module_css_default.pluginEntryHead,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: SideCardSection_module_css_default.pluginName,
+							"aria-label": `${t("openPlugin")}: ${entry.name}`,
+							onClick: () => {
+								jump(entry);
+							},
+							children: entry.name
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: SideCardSection_module_css_default.pluginEntryActions,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: SideCardSection_module_css_default.pluginJumpBtn,
+								"aria-label": `${t("openPlugin")}: ${entry.name}`,
+								onClick: () => {
+									jump(entry);
+								},
+								children: t("openPlugin")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: SideCardSection_module_css_default.pluginCopyBtn,
+								"aria-label": `${t("copyInstall")}: ${entry.name}`,
+								onClick: () => {
+									copy(entry);
+								},
+								children: copiedId === entry.id ? t("copied") : t("copy")
+							})]
+						})]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: SideCardSection_module_css_default.pluginDesc,
+						children: typeof entry.description === "function" ? entry.description() : entry.description
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+						className: SideCardSection_module_css_default.pluginInstall,
+						children: entry.install
+					})
+				]
+			}, entry.id);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: SideCardSection_module_css_default.pluginList,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						className: SideCardSection_module_css_default.pluginTopicBtn,
+						onClick: () => {
+							window.open(PLUGIN_TOPIC_URL, "_blank", "noopener");
+						},
+						children: t("addPluginsBrowseMore")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+						type: "search",
+						className: SideCardSection_module_css_default.pluginSearch,
+						placeholder: t("addPluginsSearch"),
+						"aria-label": t("addPluginsSearch"),
+						value: query,
+						onChange: (event) => {
+							setQuery(event.currentTarget.value);
+						}
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: SideCardSection_module_css_default.groupHeading,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("addPluginsRecommended") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: SideCardSection_module_css_default.count,
+							children: filtered.length
+						})]
+					}),
+					catalog.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: SideCardSection_module_css_default.pluginEmpty,
+						children: t("addPluginsEmpty")
+					}) : filtered.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: SideCardSection_module_css_default.pluginEmpty,
+						children: t("addPluginsNoMatch")
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: SideCardSection_module_css_default.pluginEntries,
+						children: [...groups.entries()].map(([category, entries]) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: SideCardSection_module_css_default.pluginGroup,
+							children: [category !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: SideCardSection_module_css_default.pluginGroupHeading,
+								children: category
+							}), entries.map(renderEntry)]
+						}, category ?? "\0"))
+					})
+				]
+			});
+		}
+		/** The modal itself (mounted only while open — see the module comment). */
+		function AddPluginModal(props) {
+			const { service, onClose, kind } = props;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+				open: true,
+				onClose,
+				title: kind === "tab" ? t("addPluginsTabCard") : t("addPluginsViewerCard"),
+				description: kind === "tab" ? t("addPluginsTabDesc") : t("addPluginsViewerDesc"),
+				closeLabel: t("close"),
+				className: SideCardSection_module_css_default.pluginModal,
+				footer: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					type: "button",
+					className: SideCardSection_module_css_default.done,
+					onClick: onClose,
+					children: t("settingsDone")
+				}),
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PluginListBody, {
+					service,
+					kind
+				})
+			});
+		}
 		//#endregion
 		//#region src/client/SideCardSection.tsx
 		/**
@@ -7489,21 +8999,30 @@ window.__ModuleLoader__.load({
 		*
 		* The section is DECLARATIVE — it renders the enable/disable inventory from
 		* the sidebar service's registries instead of hardcoding rows:
-		*  - 常规: new conversations open the panel by default (a toggle card), and
-		*    the default panel width as a percent of the window (number input row).
+		*  - 常规: new conversations open the panel by default (a toggle row), the
+		*    default panel width as a percent of the window (number input row), and
+		*    the open-path interception toggle — the DSH settings-row recipe
+		*    (title/desc left + control right, hairline separators).
 		*  - 侧边栏内容: one SMALL CARD per REGISTERED tab type (built-ins and
 		*    external plugins alike), laid out in a responsive grid that wraps
-		*    several cards per row — icon + title + type id, clicked to toggle the
-		*    switch persisted in `prefs.tabsEnabled[id]`.
-		*  - 文件预览: one SMALL CARD per REGISTERED file viewer — icon + title +
-		*    the extensions it covers, clicked to toggle `prefs.viewersEnabled[id]`.
+		*    several cards per row — icon chip + title + type id, clicked to toggle
+		*    the switch persisted in `prefs.tabsEnabled[id]`.
+		*  - 文件预览: one SMALL CARD per REGISTERED file viewer — icon chip + title
+		*    + the extensions it covers, clicked to toggle `prefs.viewersEnabled[id]`.
+		*
+		* Every group lives in a container card (the DSH PluginCard recipe: l2
+		* hairline, 16px radius, layer-3 fill) with a heading and an inventory count
+		* badge (the settings catalogHeading recipe); the section opens with a
+		* one-line intro (the DSH section heading+intro recipe).
 		*
 		* A card's on/off state is its VISUAL STATE: enabled = highlighted (brand
-		* border + tinted fill + a check badge pinned to the card's far right),
-		* disabled = neutral and dimmed. Features that declare `settings.toggles`
-		* carry a gear corner button that opens a native Modal with the related
-		* settings as native checkbox rows (e.g. the Subagent page's "auto-open
-		* when a subagent appears", the Terminal page's model terminal tools).
+		* border + tinted fill + a circular check badge pinned to the card's far
+		* right), disabled = neutral and dimmed. Features that declare
+		* `settings.toggles` carry a gear corner button that opens a native Modal
+		* (wider than the primitive default) with the related settings as
+		* title/desc + custom-switch rows and a Done footer. The toggles
+		* themselves are custom switches: a real checkbox (native semantics and
+		* focus) driving a styled track/thumb.
 		*
 		* Writes ride the plugin's own fenced settings route (the host calls the
 		* settings seam in-process — the DSH settings RPC domain does not serve
@@ -7538,22 +9057,97 @@ window.__ModuleLoader__.load({
 		function viewerOrder(a, b) {
 			return (b.priority ?? 0) - (a.priority ?? 0);
 		}
-		/** Read one boolean pref by declarative key (missing = false). */
-		function prefBool(prefs, key) {
-			return prefs[key] === true;
+		/** Whether a feature declares any secondary settings (gear button shows). */
+		function hasSettings(feature) {
+			const settings = feature.settings;
+			return settings !== void 0 && ((settings.toggles?.length ?? 0) > 0 || (settings.pluginToggles?.length ?? 0) > 0 || settings.render !== void 0);
+		}
+		/** A feature's display name (viewers fall back to their id). */
+		function featureNameOf(feature) {
+			return textOf("title" in feature ? feature.title : void 0) || feature.id;
 		}
 		/**
-		* The body of a feature's secondary settings popup: one native checkbox row
-		* per declared toggle. Extracted so the rows are testable without opening
-		* the Modal (the Modal portal renders only while open).
+		* Merge one plugin-owned setting into a pluginSettings map (pure, v0.12.0+).
+		* Sequential merges are additive: each call spreads the map it was GIVEN,
+		* so building from the latest optimistic map keeps earlier keys intact
+		* (two same-tick writes must not drop each other).
+		*/
+		function mergePluginSetting(pluginSettings, descriptorId, key, value) {
+			return {
+				...pluginSettings,
+				[descriptorId]: {
+					...pluginSettings[descriptorId] ?? {},
+					[key]: value
+				}
+			};
+		}
+		/**
+		* Render a custom settings panel (`settings.render`) with error containment:
+		* a throwing panel shows an inline error line instead of breaking the whole
+		* settings page.
+		*/
+		function SettingsRender(props) {
+			let content;
+			try {
+				content = props.render(props.renderProps);
+			} catch (error) {
+				content = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: SideCardSection_module_css_default.error,
+					role: "alert",
+					children: [
+						t("settingsSaveFailed"),
+						" ",
+						error instanceof Error ? error.message : String(error)
+					]
+				});
+			}
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: content });
+		}
+		/**
+		* The custom switch: a real checkbox (hidden, native semantics and focus)
+		* driving a styled track/thumb. Used by the general toggle rows and the
+		* secondary settings popup rows.
+		*/
+		function Switch(props) {
+			const { checked, onChange, label } = props;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+				className: SideCardSection_module_css_default.switch,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+					type: "checkbox",
+					className: SideCardSection_module_css_default.switchInput,
+					checked,
+					"aria-label": label,
+					onChange: (event) => {
+						onChange(event.currentTarget.checked);
+					}
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: SideCardSection_module_css_default.switchTrack,
+					"aria-hidden": "true",
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: SideCardSection_module_css_default.switchThumb })
+				})]
+			});
+		}
+		/**
+		* The body of a feature's secondary settings popup: one row (title/desc +
+		* control) per declared setting. Switches render the custom switch; text and
+		* number rows render a free-form / numeric input committed on blur/Enter
+		* (clamped to the declared min/max). Extracted so the rows are testable
+		* without opening the Modal (the Modal portal renders only while open).
 		*/
 		function FeatureSettingsRows(props) {
-			const { toggles, prefs, onToggle } = props;
+			const { toggles, prefs, onToggle, onCommit, onSelectValue, valueSource } = props;
+			const read = valueSource ?? ((key) => prefs[key]);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: SideCardSection_module_css_default.popupRows,
 				children: toggles.map((toggle) => {
 					const title = textOf(toggle.title);
-					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+					if (toggle.type === "select") return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SelectRow, {
+						toggle,
+						title,
+						value: read(toggle.key),
+						onSelectValue
+					}, toggle.key);
+					if ((toggle.type ?? "switch") === "switch") return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: SideCardSection_module_css_default.popupRow,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: SideCardSection_module_css_default.rowText,
@@ -7564,17 +9158,217 @@ window.__ModuleLoader__.load({
 								className: SideCardSection_module_css_default.desc,
 								children: textOf(toggle.desc)
 							})]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-							type: "checkbox",
-							className: SideCardSection_module_css_default.toggle,
-							checked: prefBool(prefs, toggle.key),
-							"aria-label": title,
-							onChange: (event) => {
-								onToggle(toggle, event.currentTarget.checked);
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Switch, {
+							label: title,
+							checked: read(toggle.key) === true,
+							onChange: (next) => {
+								onToggle(toggle, next);
 							}
 						})]
 					}, toggle.key);
+					const value = String(read(toggle.key) ?? "");
+					return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TypedRow, {
+						toggle,
+						title,
+						value,
+						onCommit
+					}, `${toggle.key}:${value}`);
 				})
+			});
+		}
+		/**
+		* One text/number row: a controlled input whose draft is local state,
+		* committed on blur/Enter through the parent's onCommit. The parent's
+		* canonical return is adopted (clamped numbers, stored value for invalid
+		* input); a `unit` suffix renders after the input (e.g. 'px').
+		*/
+		function TypedRow(props) {
+			const { toggle, title, value, onCommit } = props;
+			const [draft, setDraft] = (0, react.useState)(value);
+			const commit = () => {
+				const canonical = onCommit?.(toggle, draft) ?? draft;
+				setDraft(canonical);
+			};
+			const number = toggle.type === "number";
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: SideCardSection_module_css_default.popupRow,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					className: SideCardSection_module_css_default.rowText,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: SideCardSection_module_css_default.title,
+						children: title
+					}), textOf(toggle.desc) !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: SideCardSection_module_css_default.desc,
+						children: textOf(toggle.desc)
+					})]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					className: SideCardSection_module_css_default.control,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Input, {
+						type: number ? "number" : "text",
+						className: number ? SideCardSection_module_css_default.typedInputNumber : SideCardSection_module_css_default.typedInput,
+						value: draft,
+						min: toggle.min,
+						max: toggle.max,
+						step: 1,
+						placeholder: toggle.placeholder,
+						"aria-label": title,
+						onChange: (event) => {
+							setDraft(event.currentTarget.value);
+						},
+						onBlur: commit,
+						onKeyDown: (event) => {
+							if (event.key === "Enter") event.currentTarget.blur();
+						}
+					}), toggle.unit !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: SideCardSection_module_css_default.suffix,
+						children: toggle.unit
+					})]
+				})]
+			});
+		}
+		/**
+		* One select row: a dropdown over the toggle's declared `options`. When any
+		* option carries an icon, the dropdown renders big-icon option cards (icon +
+		* title + desc) and the closed anchor shows the selected option's icon as
+		* well; without icons both are a single line of text. Single-pick commits the
+		* option's value and closes; `multi` toggles membership, commits the picked
+		* values as an array (in options order), and stays open.
+		*/
+		function SelectRow(props) {
+			const { toggle, title, value, onSelectValue } = props;
+			const options = toggle.options ?? [];
+			const multi = toggle.multi === true;
+			const [open, setOpen] = (0, react.useState)(false);
+			const hasIcons = options.some((option) => option.icon !== void 0);
+			const picked = multi ? Array.isArray(value) ? value : [] : [value];
+			const selected = options.filter((option) => picked.includes(option.value));
+			/** Commit one picked option (toggle semantics under multi). */
+			const pick = (index) => {
+				const option = options[index];
+				if (option === void 0) return;
+				if (!multi) {
+					onSelectValue?.(toggle, option.value);
+					setOpen(false);
+					return;
+				}
+				const current = Array.isArray(value) ? [...value] : [];
+				const at = current.indexOf(option.value);
+				if (at >= 0) current.splice(at, 1);
+				else current.push(option.value);
+				onSelectValue?.(toggle, options.filter((o) => current.includes(o.value)).map((o) => o.value));
+			};
+			const anchor = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+				type: "button",
+				className: SideCardSection_module_css_default.selectAnchor,
+				"aria-label": title,
+				"aria-haspopup": "listbox",
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen((now) => !now);
+				},
+				children: [
+					!multi && hasIcons && selected[0] !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: SideCardSection_module_css_default.selectAnchorIcon,
+						children: iconOf(selected[0].icon, 16)
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: SideCardSection_module_css_default.selectAnchorText,
+						children: selected.length === 0 ? "—" : selected.map((option) => textOf(option.title)).join(", ")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { size: 12 })
+				]
+			});
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: SideCardSection_module_css_default.popupRow,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					className: SideCardSection_module_css_default.rowText,
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: SideCardSection_module_css_default.title,
+						children: title
+					}), textOf(toggle.desc) !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: SideCardSection_module_css_default.desc,
+						children: textOf(toggle.desc)
+					})]
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: SideCardSection_module_css_default.control,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+						open,
+						anchor,
+						items: options.map((option, index) => ({
+							id: String(index),
+							label: hasIcons ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: SideCardSection_module_css_default.selectOption,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: SideCardSection_module_css_default.selectOptionIcon,
+									children: iconOf(option.icon, 24)
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.selectOptionText,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.title,
+										children: textOf(option.title)
+									}), textOf(option.desc) !== "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.desc,
+										children: textOf(option.desc)
+									})]
+								})]
+							}) : textOf(option.title)
+						})),
+						selectedId: !multi && selected[0] !== void 0 ? String(options.indexOf(selected[0])) : void 0,
+						selectedIds: multi ? selected.map((option) => String(options.indexOf(option))) : void 0,
+						onSelect: (id) => {
+							pick(Number(id));
+						},
+						onClose: () => {
+							setOpen(false);
+						},
+						portal: true
+					})
+				})]
+			});
+		}
+		/**
+		* The secondary settings popup body of one feature (tab or viewer):
+		* - `settings.render` (custom panel) when declared — rendered with the
+		*   shared store/service, the live prefs, the descriptor's own plugin
+		*   settings blob, a persistence helper, and a close callback;
+		* - otherwise the host-prefs `toggles` rows, then the plugin-owned
+		*   `pluginToggles` rows (their values live in `pluginSettings[feature.id]`,
+		*   projected onto the prefs face so the shared row renderer reads them).
+		*/
+		function SettingsBody(props) {
+			const { feature, prefs, store, service, onToggle, onCommit, onSelectValue, onPluginToggle, onPluginCommit, onPluginSelectValue, onPluginWrite, onClose } = props;
+			const render = feature.settings?.render;
+			if (render !== void 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRender, {
+				render,
+				renderProps: {
+					store,
+					service,
+					prefs,
+					pluginSettings: prefs.pluginSettings[feature.id] ?? {},
+					updatePluginSetting: onPluginWrite,
+					close: onClose
+				}
+			});
+			const toggles = feature.settings?.toggles ?? [];
+			const pluginToggles = feature.settings?.pluginToggles ?? [];
+			if (toggles.length === 0 && pluginToggles.length === 0) return null;
+			const pluginBlob = prefs.pluginSettings[feature.id] ?? {};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: SideCardSection_module_css_default.popupRows,
+				children: [toggles.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FeatureSettingsRows, {
+					toggles,
+					prefs,
+					onToggle,
+					onCommit,
+					onSelectValue
+				}), pluginToggles.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FeatureSettingsRows, {
+					toggles: pluginToggles,
+					prefs,
+					onToggle: onPluginToggle,
+					onCommit: onPluginCommit,
+					onSelectValue: onPluginSelectValue,
+					valueSource: (key) => pluginBlob[key]
+				})]
 			});
 		}
 		/**
@@ -7587,6 +9381,12 @@ window.__ModuleLoader__.load({
 			const [widthDraft, setWidthDraft] = (0, react.useState)(String(store.getPrefs().defaultWidthPercent));
 			const [error, setError] = (0, react.useState)(null);
 			const [settingsFor, setSettingsFor] = (0, react.useState)(null);
+			const [stripSettingsOpen, setStripSettingsOpen] = (0, react.useState)(false);
+			const [addPluginsOpen, setAddPluginsOpen] = (0, react.useState)(null);
+			const optimisticRef = (0, react.useRef)(prefs);
+			(0, react.useEffect)(() => {
+				optimisticRef.current = prefs;
+			}, [prefs]);
 			const [tabs, setTabs] = (0, react.useState)(() => [...service.getTabs()].sort(tabOrder));
 			const [viewers, setViewers] = (0, react.useState)(() => [...service.getFileViewers()].sort(viewerOrder));
 			(0, react.useEffect)(() => service.subscribe(() => {
@@ -7638,36 +9438,88 @@ window.__ModuleLoader__.load({
 				setPrefs(settled);
 				setWidthDraft(String(settled.defaultWidthPercent));
 			};
-			/** Optimistically flip one boolean pref, then commit (revert on failure). */
-			const togglePref = (patch) => {
-				const previous = prefs;
-				setPrefs({
+			/** Optimistically apply one pref patch, then commit (revert on failure). */
+			const applyPref = (patch) => {
+				const previous = optimisticRef.current;
+				const next = {
 					...previous,
 					...patch
-				});
+				};
+				optimisticRef.current = next;
+				setPrefs(next);
 				setError(null);
 				commit(patch).then((outcome) => applyOutcome(previous, outcome));
 			};
 			const onToggle = (next) => {
-				togglePref({ openByDefault: next });
+				applyPref({ openByDefault: next });
 			};
 			/** Flip one per-tab enable switch (merge into the tabsEnabled map). */
 			const onToggleTab = (id, next) => {
-				togglePref({ tabsEnabled: {
-					...prefs.tabsEnabled,
+				applyPref({ tabsEnabled: {
+					...optimisticRef.current.tabsEnabled,
 					[id]: next
 				} });
 			};
 			/** Flip one per-viewer enable switch (merge into the viewersEnabled map). */
 			const onToggleViewer = (id, next) => {
-				togglePref({ viewersEnabled: {
-					...prefs.viewersEnabled,
+				applyPref({ viewersEnabled: {
+					...optimisticRef.current.viewersEnabled,
 					[id]: next
 				} });
 			};
 			/** Flip one declaratively-declared toggle (a SidebarPrefs boolean field). */
 			const onToggleSetting = (toggle, next) => {
-				togglePref({ [toggle.key]: next });
+				applyPref({ [toggle.key]: next });
+			};
+			/** Commit one declaratively-declared select row (the option's value, or an
+			*  array of values under `multi`). */
+			const onSelectSetting = (toggle, next) => {
+				applyPref({ [toggle.key]: next });
+			};
+			/**
+			* Commit one declaratively-declared text/number row. Numbers are parsed
+			* and clamped to the toggle's declared min/max (an unparsable input falls
+			* back to the CURRENT stored value, mirroring the width row); text rows
+			* persist as-is (empty is meaningful, e.g. the theme-default font).
+			* Returns the canonical value the row should display.
+			*/
+			const onCommitSetting = (toggle, raw) => {
+				if (toggle.type === "number") {
+					const parsed = Number(raw);
+					const fallback = String(prefs[toggle.key] ?? "");
+					if (!Number.isFinite(parsed)) return fallback;
+					let clamped = Math.round(parsed);
+					if (toggle.min !== void 0) clamped = Math.max(toggle.min, clamped);
+					if (toggle.max !== void 0) clamped = Math.min(toggle.max, clamped);
+					applyPref({ [toggle.key]: clamped });
+					return String(clamped);
+				}
+				applyPref({ [toggle.key]: raw });
+				return raw;
+			};
+			/** Persist one plugin-owned setting of one descriptor (merged into the pluginSettings blob). */
+			const applyPluginSetting = (descriptorId, key, value) => {
+				applyPref({ pluginSettings: mergePluginSetting(optimisticRef.current.pluginSettings, descriptorId, key, value) });
+			};
+			/** Flip one plugin-owned switch row (same row shape, plugin-scoped key). */
+			const onPluginToggle = (descriptorId, toggle, next) => {
+				applyPluginSetting(descriptorId, toggle.key, next);
+			};
+			/** Commit one plugin-owned text/number row (clamped like the host rows). */
+			const onPluginCommitSetting = (descriptorId, toggle, raw) => {
+				if (toggle.type === "number") {
+					const parsed = Number(raw);
+					const blob = prefs.pluginSettings[descriptorId] ?? {};
+					const fallback = String(blob[toggle.key] ?? "");
+					if (!Number.isFinite(parsed)) return fallback;
+					let clamped = Math.round(parsed);
+					if (toggle.min !== void 0) clamped = Math.max(toggle.min, clamped);
+					if (toggle.max !== void 0) clamped = Math.min(toggle.max, clamped);
+					applyPluginSetting(descriptorId, toggle.key, clamped);
+					return String(clamped);
+				}
+				applyPluginSetting(descriptorId, toggle.key, raw);
+				return raw;
 			};
 			const commitWidth = () => {
 				const parsed = Number(widthDraft);
@@ -7687,9 +9539,10 @@ window.__ModuleLoader__.load({
 			};
 			/**
 			* One SMALL toggle card for the responsive inventory grid: the card's main
-			* area is the switch (click to flips, visual state IS the state), the
-			* check badge sits at the far right, and a feature that declares related
-			* settings carries a gear corner button opening its settings popup.
+			* area is the switch (click to flips, visual state IS the state), the icon
+			* sits in a rounded chip, the check badge pins to the far right, and a
+			* feature that declares related settings carries a gear corner button
+			* opening its settings popup.
 			*/
 			const renderCard = (props) => {
 				const hasSettings = props.onOpenSettings !== void 0;
@@ -7707,7 +9560,7 @@ window.__ModuleLoader__.load({
 							className: SideCardSection_module_css_default.cardTop,
 							children: [
 								props.icon !== null && props.icon !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: SideCardSection_module_css_default.cardIcon,
+									className: SideCardSection_module_css_default.cardIconChip,
 									children: props.icon
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -7716,7 +9569,7 @@ window.__ModuleLoader__.load({
 								}),
 								props.enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: SideCardSection_module_css_default.cardCheck,
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, { size: 14 })
+									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, { size: 12 })
 								})
 							]
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
@@ -7729,114 +9582,301 @@ window.__ModuleLoader__.load({
 						"aria-label": `${props.title} ${t("settingsPopup")}`,
 						title: t("settingsPopup"),
 						onClick: props.onOpenSettings,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSettingsOutline16, { size: 14 })
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSettingsOutline16, { size: 12 })
 					})]
 				});
 			};
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: SideCardSection_module_css_default.section,
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: SideCardSection_module_css_default.sectionHeading,
-						children: t("settingsGeneralTitle")
-					}),
-					renderCard({
-						title: t("settingsOpenTitle"),
-						desc: t("settingsOpenDesc"),
-						icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPanelLeftOutline16, { size: 16 }),
-						enabled: prefs.openByDefault,
-						onToggle
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+						className: SideCardSection_module_css_default.intro,
+						children: t("settingsIntro")
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: SideCardSection_module_css_default.row,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: SideCardSection_module_css_default.rowText,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: SideCardSection_module_css_default.title,
-								children: t("settingsWidthTitle")
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: SideCardSection_module_css_default.desc,
-								children: t("settingsWidthDesc")
-							})]
+						className: SideCardSection_module_css_default.versionBadge,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: SideCardSection_module_css_default.versionBadgeName,
+							children: "DSH-better-sidebar"
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: SideCardSection_module_css_default.control,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Input, {
-								type: "number",
-								className: SideCardSection_module_css_default.percentInput,
-								value: widthDraft,
-								min: 20,
-								max: 60,
-								step: 1,
-								"aria-label": t("settingsWidthTitle"),
-								onChange: (event) => {
-									setWidthDraft(event.currentTarget.value);
+							className: SideCardSection_module_css_default.versionBadgeTag,
+							children: ["v", service.version]
+						})]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: SideCardSection_module_css_default.group,
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: SideCardSection_module_css_default.groupHeading,
+								children: t("settingsGeneralTitle")
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: SideCardSection_module_css_default.row,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.rowText,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.title,
+										children: t("settingsOpenTitle")
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.desc,
+										children: t("settingsOpenDesc")
+									})]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Switch, {
+									label: t("settingsOpenTitle"),
+									checked: prefs.openByDefault,
+									onChange: onToggle
+								})]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: SideCardSection_module_css_default.row,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.rowText,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.title,
+										children: t("settingsWidthTitle")
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.desc,
+										children: t("settingsWidthDesc")
+									})]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.control,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Input, {
+										type: "number",
+										className: SideCardSection_module_css_default.percentInput,
+										value: widthDraft,
+										min: 20,
+										max: 60,
+										step: 1,
+										"aria-label": t("settingsWidthTitle"),
+										onChange: (event) => {
+											setWidthDraft(event.currentTarget.value);
+										},
+										onBlur: commitWidth,
+										onKeyDown: (event) => {
+											if (event.key === "Enter") event.currentTarget.blur();
+										}
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.suffix,
+										children: t("settingsWidthSuffix")
+									})]
+								})]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: SideCardSection_module_css_default.row,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.rowText,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.title,
+										children: t("settingsOpenPathTitle")
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.desc,
+										children: t("settingsOpenPathDesc")
+									})]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Switch, {
+									label: t("settingsOpenPathTitle"),
+									checked: prefs.interceptOpenPath,
+									onChange: (next) => {
+										applyPref({ interceptOpenPath: next });
+									}
+								})]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: SideCardSection_module_css_default.row,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.rowText,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.title,
+										children: t("settingsTitleBarTitle")
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.desc,
+										children: t("settingsTitleBarDesc")
+									})]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.control,
+									children: [prefs.titleBarCompat && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+										type: "button",
+										className: SideCardSection_module_css_default.rowGear,
+										"aria-label": `${t("settingsTitleBarTitle")} ${t("settingsPopup")}`,
+										title: t("settingsPopup"),
+										onClick: () => {
+											setStripSettingsOpen(true);
+										},
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconSettingsOutline16, { size: 14 })
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Switch, {
+										label: t("settingsTitleBarTitle"),
+										checked: prefs.titleBarCompat,
+										onChange: (next) => {
+											applyPref({ titleBarCompat: next });
+										}
+									})]
+								})]
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: SideCardSection_module_css_default.group,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: SideCardSection_module_css_default.groupHeading,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("settingsTabsTitle") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: SideCardSection_module_css_default.count,
+								children: tabs.length
+							})]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: SideCardSection_module_css_default.grid,
+							children: [tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderCard({
+								title: textOf(tab.title),
+								desc: tab.id,
+								icon: iconOf(tab.icon, 16),
+								enabled: prefs.tabsEnabled[tab.id] !== false,
+								onToggle: (next) => {
+									onToggleTab(tab.id, next);
 								},
-								onBlur: commitWidth,
-								onKeyDown: (event) => {
-									if (event.key === "Enter") event.currentTarget.blur();
-								}
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: SideCardSection_module_css_default.suffix,
-								children: t("settingsWidthSuffix")
+								onOpenSettings: prefs.tabsEnabled[tab.id] !== false && hasSettings(tab) ? () => {
+									setSettingsFor(tab);
+								} : void 0
+							}) }, tab.id)), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+								type: "button",
+								className: clsx(SideCardSection_module_css_default.card, SideCardSection_module_css_default.addCard),
+								onClick: () => {
+									setAddPluginsOpen("tab");
+								},
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.cardTop,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.cardIconChip,
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 16 })
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.cardTitle,
+										children: t("addPluginsTabCard")
+									})]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: SideCardSection_module_css_default.cardDesc,
+									children: t("addPluginsTabCardDesc")
+								})]
 							})]
 						})]
 					}),
-					renderCard({
-						title: t("settingsOpenPathTitle"),
-						desc: t("settingsOpenPathDesc"),
-						icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutline16, { size: 16 }),
-						enabled: prefs.interceptOpenPath,
-						onToggle: (next) => {
-							togglePref({ interceptOpenPath: next });
-						}
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: SideCardSection_module_css_default.sectionHeading,
-						children: t("settingsTabsTitle")
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: SideCardSection_module_css_default.grid,
-						children: tabs.map((tab) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderCard({
-							title: textOf(tab.title),
-							desc: tab.id,
-							icon: iconOf(tab.icon, 16),
-							enabled: prefs.tabsEnabled[tab.id] !== false,
-							onToggle: (next) => {
-								onToggleTab(tab.id, next);
-							},
-							onOpenSettings: prefs.tabsEnabled[tab.id] !== false && (tab.settings?.toggles?.length ?? 0) > 0 ? () => {
-								setSettingsFor(tab);
-							} : void 0
-						}) }, tab.id))
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: SideCardSection_module_css_default.sectionHeading,
-						children: t("settingsViewersTitle")
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: SideCardSection_module_css_default.grid,
-						children: viewers.map((viewer) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderCard({
-							title: textOf(viewer.title) || viewer.id,
-							desc: viewer.exts.length === 0 ? t("settingsViewerCatchAll") : viewer.exts.join(" · "),
-							icon: iconOf(viewer.icon, 16),
-							enabled: prefs.viewersEnabled[viewer.id] !== false,
-							onToggle: (next) => {
-								onToggleViewer(viewer.id, next);
-							}
-						}) }, viewer.id))
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: SideCardSection_module_css_default.group,
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: SideCardSection_module_css_default.groupHeading,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("settingsViewersTitle") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: SideCardSection_module_css_default.count,
+								children: viewers.length
+							})]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: SideCardSection_module_css_default.grid,
+							children: [viewers.map((viewer) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react.Fragment, { children: renderCard({
+								title: textOf(viewer.title) || viewer.id,
+								desc: viewer.exts.length === 0 ? t("settingsViewerCatchAll") : viewer.exts.join(" · "),
+								icon: iconOf(viewer.icon, 16),
+								enabled: prefs.viewersEnabled[viewer.id] !== false,
+								onToggle: (next) => {
+									onToggleViewer(viewer.id, next);
+								},
+								onOpenSettings: prefs.viewersEnabled[viewer.id] !== false && hasSettings(viewer) ? () => {
+									setSettingsFor(viewer);
+								} : void 0
+							}) }, viewer.id)), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+								type: "button",
+								className: clsx(SideCardSection_module_css_default.card, SideCardSection_module_css_default.addCard),
+								onClick: () => {
+									setAddPluginsOpen("viewer");
+								},
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+									className: SideCardSection_module_css_default.cardTop,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.cardIconChip,
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 16 })
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: SideCardSection_module_css_default.cardTitle,
+										children: t("addPluginsViewerCard")
+									})]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: SideCardSection_module_css_default.cardDesc,
+									children: t("addPluginsViewerCardDesc")
+								})]
+							})]
+						})]
 					}),
 					settingsFor !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 						open: true,
 						onClose: () => {
 							setSettingsFor(null);
 						},
-						title: textOf(settingsFor.title),
+						title: featureNameOf(settingsFor),
+						description: t("settingsPopupDesc", { feature: featureNameOf(settingsFor) }),
 						closeLabel: t("close"),
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FeatureSettingsRows, {
-							toggles: settingsFor.settings?.toggles ?? [],
+						className: SideCardSection_module_css_default.popupDialog,
+						footer: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: SideCardSection_module_css_default.done,
+							onClick: () => {
+								setSettingsFor(null);
+							},
+							children: t("settingsDone")
+						}),
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsBody, {
+							feature: settingsFor,
 							prefs,
-							onToggle: onToggleSetting
+							onToggle: onToggleSetting,
+							onCommit: onCommitSetting,
+							onSelectValue: onSelectSetting,
+							onPluginToggle: (toggle, next) => {
+								onPluginToggle(settingsFor.id, toggle, next);
+							},
+							onPluginCommit: (toggle, raw) => onPluginCommitSetting(settingsFor.id, toggle, raw),
+							onPluginSelectValue: (toggle, next) => {
+								applyPluginSetting(settingsFor.id, toggle.key, next);
+							},
+							onPluginWrite: (key, value) => {
+								applyPluginSetting(settingsFor.id, key, value);
+							},
+							onClose: () => {
+								setSettingsFor(null);
+							},
+							store,
+							service
 						})
+					}),
+					stripSettingsOpen && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+						open: true,
+						onClose: () => {
+							setStripSettingsOpen(false);
+						},
+						title: t("settingsTitleBarTitle"),
+						description: t("settingsPopupDesc", { feature: t("settingsTitleBarTitle") }),
+						closeLabel: t("close"),
+						className: SideCardSection_module_css_default.popupDialog,
+						footer: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: SideCardSection_module_css_default.done,
+							onClick: () => {
+								setStripSettingsOpen(false);
+							},
+							children: t("settingsDone")
+						}),
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FeatureSettingsRows, {
+							toggles: [{
+								key: "titleBarStripPx",
+								type: "number",
+								title: () => t("settingsTitleBarStripTitle"),
+								desc: () => t("settingsTitleBarStripDesc"),
+								min: 0,
+								max: 120,
+								unit: "px"
+							}],
+							prefs,
+							onToggle: onToggleSetting,
+							onCommit: onCommitSetting
+						})
+					}),
+					addPluginsOpen !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(AddPluginModal, {
+						service,
+						onClose: () => {
+							setAddPluginsOpen(null);
+						},
+						kind: addPluginsOpen
 					}),
 					error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: SideCardSection_module_css_default.error,
@@ -7847,8 +9887,8 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/menghuan/Code/DSH-better-sidebar/src/client/layout.css.mjs
-		const css = "/**\n * Layout push: when a panel is open it OCCUPIES the layout instead of\n * floating over it — the app shell (#root, the AppFrame three-column grid)\n * gives up space. Only the center column is flexible (1fr), so the right\n * panel's width squeeze (margin-right on #root) lands exactly on the\n * conversation output and the input bar, like a VSCode sidebar.\n *\n * The bottom panel squeezes ONLY the center column — it must not cover the\n * app's own left sidebar or the right panel. DSH 0.1.x wraps slot hosts in\n * [data-slot] containers, so the AppFrame grid lives one level deeper:\n * #root > div[data-slot=\"root\"] > div (the frame). Its grid items are\n * (frame > div:nth-child(1..3)): sidebarCol, centerCol, detailsCol, so the\n * vertical push lands on the center column alone. The fixed panels cover\n * the vacated strips, which looks seamless because #root's background is\n * the theme base.\n *\n * The sizes ride CSS variables updated by the Sidebar shell (0 while\n * collapsed); expand/collapse animates both the margins and the panel\n * slides on the same theme duration. Drags disable the transition so the\n * layout tracks the pointer.\n */\n#root {\n  margin-right: var(--dsh-sidebar-width, 0px);\n  transition: margin-right var(--ds-transition-duration-slow) var(--ds-ease-in-out);\n}\n\n/* The AppFrame's grid items are sidebarCol, centerCol, detailsCol (children\n   1-3 of #root > div[data-slot=\"root\"] > div) — nth-child(2) is the center\n   column. A stretched grid item shrinks by its margins, so the conversation\n   content (output + input bar) lifts without touching the sidebars. */\n#root > div[data-slot=\"root\"] > div > div:nth-child(2) {\n  margin-bottom: var(--dsh-sidebar-height, 0px);\n  transition: margin-bottom var(--ds-transition-duration-slow) var(--ds-ease-in-out);\n}\n\n/* When the sidebar is collapsed, the toggle cluster reclaims the top-right\n   corner. Push the DSH session header's right padding out so its right-aligned\n   utilities (the \"Session log\" download capsule) yield the corner instead of\n   hiding under the cluster. The header default right-pads 28px; the 2-button\n   cluster spans right 10→70px, so 78px clears it with an 8px gap. Anchor on\n   the header's slot host wrapper ([data-slot=\"conversation.session.header\"])\n   rather than a positional path: DSH 0.1.x nests the header several levels\n   under the center column. The Sidebar shell toggles the body attribute with\n   the panel open state. */\nbody[data-dsh-sidebar-collapsed] [data-slot=\"conversation.session.header\"] > header {\n  padding-right: 78px;\n}\n\nbody[data-dsh-sidebar-dragging] #root,\nbody[data-dsh-sidebar-dragging] #root > div[data-slot=\"root\"] > div > div:nth-child(2) {\n  transition: none;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  #root,\n  #root > div[data-slot=\"root\"] > div > div:nth-child(2) {\n    transition: none;\n  }\n}\n";
+		//#region \0dsh-css:/home/runner/work/DSH-better-sidebar/DSH-better-sidebar/src/client/layout.css.mjs
+		const css = "/**\n * Layout push: when a panel is open it OCCUPIES the layout instead of\n * floating over it — the app shell (#root, the AppFrame three-column grid)\n * gives up space. Only the center column is flexible (1fr), so the right\n * panel's width squeeze (margin-right on #root) lands exactly on the\n * conversation output and the input bar, like a VSCode sidebar.\n *\n * The width rides `calc(100% - var(...))` instead of a bare margin on a\n * full-width box: some desktop shells (DSH Desktop, #208) set #root to\n * width:100%, where a margin would overflow the viewport additively —\n * the calc keeps the box at exactly 100% minus the push in every shell.\n * Width and margin transition in lockstep (same variable, same duration\n * and easing), so expand/collapse animates the content width exactly as\n * the bare-margin version did.\n *\n * The bottom panel squeezes ONLY the center column — it must not cover the\n * app's own left sidebar or the right panel. The anchor is the frame's\n * center grid item via its stable data attribute ([data-pane=\"conversation\"]\n * on the centerCol inside [data-dsh-frame]), not a positional path: the\n * frame's child order also contains an overlay layer and drag handles\n * (verified against a live DSH 0.1.x page), so nth-child is brittle. A\n * stretched grid item shrinks by its margins, so the conversation content\n * (output + input bar) lifts without touching the sidebars.\n *\n * The sizes ride CSS variables updated by the Sidebar shell (0 while\n * collapsed); expand/collapse animates both the margins and the panel\n * slides on the same theme duration. Drags disable the transition so the\n * layout tracks the pointer.\n */\n#root {\n  margin-right: var(--dsh-sidebar-width, 0px);\n  width: calc(100% - var(--dsh-sidebar-width, 0px));\n  transition:\n    margin-right var(--ds-transition-duration-slow) var(--ds-ease-in-out),\n    width var(--ds-transition-duration-slow) var(--ds-ease-in-out);\n}\n\n/* The AppFrame's center column, anchored by data attributes (see above). */\n#root [data-dsh-frame] > [data-pane=\"conversation\"] {\n  margin-bottom: var(--dsh-sidebar-height, 0px);\n  transition: margin-bottom var(--ds-transition-duration-slow) var(--ds-ease-in-out);\n}\n\n/* When the sidebar is collapsed, the toggle cluster reclaims the top-right\n   corner. Push the DSH session header's right padding out so its right-aligned\n   utilities (the \"Session log\" download capsule) yield the corner instead of\n   hiding under the cluster. The header default right-pads 28px; the 2-button\n   cluster spans right 10→70px, so 78px clears it with an 8px gap. Anchor on\n   the header's slot host wrapper ([data-slot=\"conversation.session.header\"])\n   rather than a positional path: DSH 0.1.x nests the header several levels\n   under the center column. The Sidebar shell toggles the body attribute with\n   the panel open state. */\nbody[data-dsh-sidebar-collapsed] [data-slot=\"conversation.session.header\"] > header {\n  padding-right: 78px;\n}\n\nbody[data-dsh-sidebar-dragging] #root,\nbody[data-dsh-sidebar-dragging] #root [data-dsh-frame] > [data-pane=\"conversation\"] {\n  transition: none;\n}\n\n/* DSH 0.1.x gives external settings sections a generic gear and exposes no\n   icon field in the settings.section contract. settings-nav-icon.ts marks\n   only this plugin's localized row; render the requested Lucide\n   gallery-horizontal-end SVG as a currentColor mask so it follows the native\n   nav hover/active colors without changing the shell's 16px icon rhythm. */\n[data-dsh-better-sidebar-settings-nav] > svg:first-child {\n  display: none;\n}\n\n[data-dsh-better-sidebar-settings-nav]::before {\n  content: '';\n  flex: none;\n  width: 16px;\n  height: 16px;\n  background: currentColor;\n  -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 7v10'/%3E%3Cpath d='M6 5v14'/%3E%3Crect width='12' height='18' x='10' y='3' rx='2'/%3E%3C/svg%3E\") center / contain no-repeat;\n  mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 7v10'/%3E%3Cpath d='M6 5v14'/%3E%3Crect width='12' height='18' x='10' y='3' rx='2'/%3E%3C/svg%3E\") center / contain no-repeat;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  #root,\n  #root [data-dsh-frame] > [data-pane=\"conversation\"] {\n    transition: none;\n  }\n}\n";
 		const tagId = "dsh-better-sidebar/layout.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -7870,42 +9910,24 @@ window.__ModuleLoader__.load({
 		* xterm, all provided or inlined).
 		*/
 		/** Services required before mounting (provided by the client runtime; the
-		*  locale service backs the sidebar's copy — see locales.ts). */
+		*  locale service backs the sidebar's copy — see locales.ts). `modules`
+		*  (rc.8+) is the client module system the chunk loader resolves its
+		*  externals through — Cordis guards service access without inject. */
 		const inject = [
 			"slots",
 			"sessions",
 			"connection",
 			"workspaces",
-			"locale"
+			"locale",
+			"modules"
 		];
 		/**
-		* Error boundary over the sidebar tree: a render error must never blank the
-		* whole panel silently — it shows a dismissible error strip and logs the
-		* stack for diagnosis.
+		* Error boundary over the sidebar tree (root scope): a render error in the
+		* sidebar SHELL itself must never blank the page silently — the shared
+		* RenderBoundary shows a dismissible error strip and logs the stack. The
+		* per-tab scope (Sidebar.tsx) catches viewer/editor crashes first; this root
+		* boundary stays as the last resort for Workbench/shell errors.
 		*/
-		var SidebarBoundary = class extends react.Component {
-			state = { error: null };
-			static getDerivedStateFromError(error) {
-				return { error: error instanceof Error ? error.message : String(error) };
-			}
-			componentDidCatch(error, info) {
-				console.error("[dsh-better-sidebar] render error:", error, info.componentStack);
-			}
-			render() {
-				if (this.state.error !== null) return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: sidebar_module_css_default.boundaryError,
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: ["dsh-better-sidebar: ", this.state.error] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: sidebar_module_css_default.terminalRetry,
-						onClick: () => {
-							this.setState({ error: null });
-						},
-						children: t("terminalRetry")
-					})]
-				});
-				return this.props.children;
-			}
-		};
 		/**
 		* Client plugin body.
 		* @param ctx - the client cordis context (slots, sessions).
@@ -7923,7 +9945,16 @@ window.__ModuleLoader__.load({
 			const sidebarStore = createSidebarStore();
 			const service = createBetterSidebarService(sidebarStore);
 			ctx.provide("betterSidebar", service);
-			ctx.effect(() => registerBuiltins(ctx, service), "dsh-better-sidebar: register built-in tabs and viewers");
+			const fallbackTitle = t("terminal");
+			let terminalTitle = fallbackTitle;
+			api.shellGet().then(({ name }) => {
+				terminalTitle = name;
+				const snapshot = service.getSnapshot();
+				if (snapshot.state === void 0) return;
+				const tabs = allLeaves(snapshot.state.splits).concat(allLeaves(snapshot.state.bottomSplits)).flatMap((leaf) => leaf.tabs);
+				for (const tab of tabs) if (tab.type === "terminal" && !isAgentTabId(tab.id) && tab.title === fallbackTitle) service.updateTab(tab.id, { title: name });
+			}).catch(() => {});
+			ctx.effect(() => registerBuiltins(ctx, service, { terminalTitle: () => terminalTitle }), "dsh-better-sidebar: register built-in tabs and viewers");
 			const fail = (phase, error) => {
 				console.error(`[dsh-better-sidebar] ${phase} error:`, error);
 				try {
@@ -7934,34 +9965,123 @@ window.__ModuleLoader__.load({
 				} catch {}
 			};
 			try {
-				resetChunks();
+				setChunkModuleSystem(ctx.modules);
+				revalidateChunksOnReactivate();
 				ctx.effect(() => {
 					let disposed = false;
 					let root;
 					let host;
-					(async () => {
-						const prefs = await Promise.race([loadPrefs(api), new Promise((resolve) => {
-							window.setTimeout(() => resolve(null), 2e3);
-						})]);
-						if (prefs !== null) sidebarStore.setPrefs(prefs);
-						if (disposed) return;
+					let mounted = false;
+					let bodyObserver;
+					let hostCheckFrame = null;
+					const unmount = () => {
+						if (!mounted) return;
+						mounted = false;
+						bodyObserver?.disconnect();
+						bodyObserver = void 0;
+						if (hostCheckFrame !== null) {
+							cancelAnimationFrame(hostCheckFrame);
+							hostCheckFrame = null;
+						}
+						root?.unmount();
+						root = void 0;
+						host?.remove();
+						host = void 0;
+					};
+					/** Re-attach the host if the page (a desktop shell wrapper, SPA
+					*  navigation, …) ever removes it from <body>. Cheap: childList only,
+					*  no subtree, no attribute filtering. */
+					const guardAnchor = () => {
+						if (bodyObserver !== void 0) return;
+						bodyObserver = new MutationObserver(() => {
+							if (host !== void 0 && !document.body.contains(host)) document.body.appendChild(host);
+						});
+						bodyObserver.observe(document.body, { childList: true });
+					};
+					/** One-shot geometry self-check: if the host page transforms
+					*  <html>/<body> itself (exotic shells), a fixed panel host would
+					*  track the transformed box instead of the viewport. Flip the
+					*  degraded mode and pin the host to the viewport every frame until
+					*  the ancestor transform is actually gone. The normal path (no
+					*  page-level transform) never runs the sync loop. */
+					const scheduleHostCheck = () => {
+						hostCheckFrame ??= requestAnimationFrame(() => {
+							hostCheckFrame = null;
+							const layer = host?.querySelector("[data-dsh-panel-host]");
+							if (layer === null || layer === void 0) return;
+							const rect = layer.getBoundingClientRect();
+							if (!(Math.abs(rect.left) > 8 || Math.abs(rect.top) > 8 || Math.abs(rect.width - window.innerWidth) > 8 || Math.abs(rect.height - window.innerHeight) > 8)) {
+								layer.removeAttribute("data-dsh-panel-host-degraded");
+								layer.style.transform = "";
+								return;
+							}
+							layer.setAttribute("data-dsh-panel-host-degraded", "");
+							console.warn("[dsh-better-sidebar] panel host geometry mismatch — a page-level transform was detected; using degraded viewport sync");
+							let applied = {
+								x: 0,
+								y: 0
+							};
+							const sync = () => {
+								const r = layer.getBoundingClientRect();
+								const rawLeft = r.left - applied.x;
+								const rawTop = r.top - applied.y;
+								if (Math.abs(rawLeft) <= 1 && Math.abs(rawTop) <= 1 && Math.abs(r.width - window.innerWidth) <= 1 && Math.abs(r.height - window.innerHeight) <= 1) {
+									layer.removeAttribute("data-dsh-panel-host-degraded");
+									layer.style.transform = "";
+									return;
+								}
+								const next = {
+									x: -rawLeft,
+									y: -rawTop
+								};
+								if (next.x !== applied.x || next.y !== applied.y) {
+									applied = next;
+									layer.style.transform = `translate(${applied.x}px, ${applied.y}px)`;
+								}
+								hostCheckFrame = requestAnimationFrame(sync);
+							};
+							hostCheckFrame = requestAnimationFrame(sync);
+						});
+					};
+					const mount = () => {
+						if (mounted || disposed) return;
 						try {
 							host = document.createElement("div");
 							host.setAttribute("data-dsh-better-sidebar", "");
 							document.body.appendChild(host);
 							root = (0, react_dom_client.createRoot)(host);
-							root.render((0, react.createElement)(SidebarBoundary, null, (0, react.createElement)(Sidebar, {
+							root.render((0, react.createElement)(RenderBoundary, { className: sidebar_module_css_default.boundaryError }, (0, react.createElement)(Sidebar, {
 								ctx,
 								store: sidebarStore
 							})));
+							mounted = true;
+							guardAnchor();
+							scheduleHostCheck();
 						} catch (error) {
 							fail("mount", error);
 						}
-					})();
+					};
+					const sync = async () => {
+						if (disposed) return;
+						const prefs = await Promise.race([loadPrefs(api), new Promise((resolve) => {
+							window.setTimeout(() => resolve(null), 2e3);
+						})]);
+						if (prefs !== null) sidebarStore.setPrefs(prefs);
+						if (disposed) return;
+						const suspended = await loadExternalDisable(api);
+						if (disposed) return;
+						sidebarStore.setSuspended(suspended);
+						if (suspended) unmount();
+						else mount();
+					};
+					sync();
+					const offRemote = ctx.get("remote")?.$on?.("settings/document-updated", () => {
+						sync();
+					});
 					return () => {
 						disposed = true;
-						root?.unmount();
-						host?.remove();
+						offRemote?.();
+						unmount();
 					};
 				}, "dsh-better-sidebar: sidebar mount");
 				ctx.effect(() => {
@@ -7982,15 +10102,26 @@ window.__ModuleLoader__.load({
 				}, "dsh-better-sidebar: open-path interception");
 				ctx.effect(() => {
 					try {
+						const urlTargetOf = (url) => {
+							const prefs = sidebarStore.getPrefs();
+							return matchUrlTarget(service.getTabs().filter((tab) => prefs.tabsEnabled[tab.id] !== false), url)?.id;
+						};
 						return registerLinkInterception({
-							takeoverEnabled: () => sidebarStore.getPrefs().browserInterceptLinks !== false && sidebarStore.getPrefs().tabsEnabled["browser"] !== false,
+							takeoverEnabled: (url) => {
+								if (sidebarStore.getSuspended()) return false;
+								const prefs = sidebarStore.getPrefs();
+								if (prefs.browserInterceptLinks === false) return false;
+								if (!(url.protocol === "https:" ? prefs.browserInterceptHttps !== false : prefs.browserInterceptHttp !== false)) return false;
+								return urlTargetOf(url) !== void 0 || prefs.tabsEnabled["browser"] !== false;
+							},
 							openInSidebar: (url) => {
 								let title;
 								try {
 									title = new URL(url).hostname;
 								} catch {}
+								const type = urlTargetOf(new URL(url)) ?? "browser";
 								ctx.betterSidebar?.openTab({
-									type: "browser",
+									type,
 									url,
 									title
 								});
@@ -8010,6 +10141,7 @@ window.__ModuleLoader__.load({
 						return;
 					}
 				}, "dsh-better-sidebar: IME composition guard");
+				ctx.effect(() => registerSettingsNavIcon(() => t("settingsNav")), "dsh-better-sidebar: settings navigation icon");
 				ctx.slots.inject("settings.section", () => ctx.slots.register({
 					name: "settings.section",
 					id: "better-sidebar",

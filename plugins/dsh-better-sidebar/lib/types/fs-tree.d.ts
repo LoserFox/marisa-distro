@@ -4,6 +4,10 @@ export interface SidebarFsEntry {
     path: string;
     isDir: boolean;
     hidden: boolean;
+    /** Whether the row is a symlink; `isDir` then describes the link's target. */
+    isSymlink: boolean;
+    /** For symlinks: the target is missing or unreadable (stat failed). */
+    broken: boolean;
 }
 /** One listed level. */
 export interface SidebarFsListing {
@@ -25,7 +29,13 @@ export declare function listDirectory(path: string, maxEntries?: number): Promis
 export declare function rootLabel(path: string): string;
 /** Parent of a path, or undefined at the filesystem root (the explorer's "up" target). */
 export declare function parentOf(path: string): string | undefined;
-/** Normalize a caller-supplied path to an absolute, resolved path or throw fs-error. */
+/**
+ * Normalize a caller-supplied path to an absolute, resolved path or throw
+ * fs-error. `path.isAbsolute()` is the OS's own notion of absolute: POSIX
+ * roots (`/...`), Windows drive letters (`C:\...`) and — on win32 — UNC
+ * network shares (`\\server\share\...`); drive-relative forms (`C:foo`)
+ * stay rejected.
+ */
 export declare function requireAbsolute(path: string): string;
 /**
  * Whether `target` lies under `base` (or equals it), tolerant of separator

@@ -3863,6 +3863,25 @@ function isUiSkillName(value) {
 	return typeof value === "string" && UI_SKILL_NAME_SET.has(value);
 }
 //#endregion
+//#region src/browser-comments-context.ts
+/** Select the user-relevant presentation fields from one validated browser snapshot. */
+function browserCommentsPresentationOf(snapshot) {
+	return {
+		page: { ...snapshot.page },
+		comments: snapshot.comments.map((comment) => ({
+			id: comment.id,
+			comment: comment.comment,
+			tagName: comment.tagName,
+			role: comment.role,
+			label: comment.label,
+			textContent: comment.textContent,
+			anchor: comment.anchor === null ? null : { ...comment.anchor },
+			changes: comment.changes.map((change) => ({ ...change })),
+			textChange: comment.textChange === null ? null : { ...comment.textChange }
+		}))
+	};
+}
+//#endregion
 //#region src/annotation-context.ts
 /** Plugin provenance recorded on every injected context message. */
 const ANNOTATION_SOURCE = {
@@ -4139,6 +4158,7 @@ function storeAnnotationSnapshot(agents, state, snapshot) {
 	const pending = {
 		snapshotId: AnnotationSnapshotId(randomUUID()),
 		context,
+		presentation: browserCommentsPresentationOf(snapshot),
 		selectedSkills: [...snapshot.selectedSkills]
 	};
 	state.set(agent.id, pending);
@@ -4240,7 +4260,9 @@ async function attachPendingAnnotationContext(state, agent, skills, signal, clai
 	const annotation = createUserMessage({
 		source: {
 			...ANNOTATION_SOURCE,
-			snapshotId: pending.snapshotId
+			form: "browser-comments",
+			snapshotId: pending.snapshotId,
+			presentation: pending.presentation
 		},
 		content: [{
 			type: "text",

@@ -15,7 +15,7 @@
  *
  * @module @huanlin/dsh-plugin-interpreters/client
  */
-import { bindSnapshotSelector } from '@deepseek-ai/dsh-client-web-react';
+import { bindSnapshotSelector } from "./bindSnapshotSelector.js";
 import { InterpretersCard } from "./InterpretersCard.js";
 import { InterpretersCardController, refreshIfLoaded } from "./store.js";
 import { en, NS, zh } from "./locales.js";
@@ -63,8 +63,7 @@ export function apply(ctx) {
     ctx.slots.inject('settings.plugin.item', function* () {
         yield ctx.slots.register({
             name: 'settings.plugin.item',
-            id: 'dsh-interpreters',
-            order: 50, // bash 0 / agent-loop 10 / web-search 20 / advisor 30 / interpreters 50
+            key: NS,
             locale: NS,
             inject: () => ({ controller, useSnapshot }),
         }, InterpretersCard);

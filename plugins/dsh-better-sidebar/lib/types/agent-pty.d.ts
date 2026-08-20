@@ -1,4 +1,5 @@
-import * as nodePty from 'node-pty';
+import type { IPty } from 'node-pty';
+import { type NodePtyModule } from './pty-deps.ts';
 /** POSIX signals the registry forwards to a live pty. */
 export declare const ALLOWED_SIGNALS: readonly ["SIGINT", "SIGTERM", "SIGKILL", "SIGHUP", "SIGTSTP"];
 /** Signal name accepted by `signal()`. */
@@ -49,7 +50,7 @@ export interface AgentTerminalHandle {
     /** The working directory the process was spawned with. */
     cwd: string;
     /** The live pty process. */
-    pty: nodePty.IPty;
+    pty: IPty;
     /** Output accumulated since spawn (bounded; head dropped when over the limit). */
     transcript: string;
     /** Whether the top-level process exited (transcript stays replayable). */
@@ -111,9 +112,14 @@ export declare function snapshotOf(handle: AgentTerminalHandle): AgentTerminalSn
  */
 export declare class AgentPtyRegistry {
     private readonly shell;
+    private readonly shellArgs;
+    /** The loaded node-pty module (injected so a broken install degrades instead of crashing the plugin). */
+    private readonly nodePty;
     private readonly sessions;
     private readonly changeListeners;
-    constructor(shell: string);
+    constructor(shell: string, shellArgs?: string[], 
+    /** The loaded node-pty module (injected so a broken install degrades instead of crashing the plugin). */
+    nodePty?: NodePtyModule);
     /**
      * Spawn one agent terminal: start the shell in `cwd`, then write
      * `command + '\n'` to stdin so the command runs in the fresh shell. The
@@ -122,7 +128,7 @@ export declare class AgentPtyRegistry {
      * user closes the sidebar tab. An empty `command` spawns a bare shell.
      * @returns the new handle's uuid (the model-facing opaque id).
      */
-    create(sessionId: string, title: string, command: string, cwd: string, cols?: number, rows?: number): string;
+    create(sessionId: string, title: string, command: string, cwd: string, cols?: number, rows?: number, shell?: string, shellArgs?: string[]): string;
     /** All live agent terminals belonging to one conversation. */
     list(sessionId: string): AgentTerminalSnapshot[];
     /** Resolve a live handle by uuid, or throw `not-found`. */

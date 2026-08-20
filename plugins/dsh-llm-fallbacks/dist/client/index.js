@@ -5,1026 +5,170 @@ window.__ModuleLoader__.load({
 		var exports = module.exports;
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		//#region \0rolldown/runtime.js
-		var __create = Object.create;
-		var __defProp = Object.defineProperty;
-		var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-		var __getOwnPropNames = Object.getOwnPropertyNames;
-		var __getProtoOf = Object.getPrototypeOf;
-		var __hasOwnProp = Object.prototype.hasOwnProperty;
 		var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
-		var __copyProps = (to, from, except, desc) => {
-			if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-				key = keys[i];
-				if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
-					get: ((k) => from[k]).bind(null, key),
-					enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
-				});
-			}
-			return to;
-		};
-		var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
-			value: mod,
-			enumerable: true
-		}) : target, mod));
 		//#endregion
-		let _deepseek_ai_dsh_client_web_react = require("@deepseek-ai/dsh-client-web-react");
 		let react = require("react");
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
 		let _deepseek_ai_dsh_client_runtime_client = require("@deepseek-ai/dsh-client-runtime/client");
 		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region node_modules/cosmokit/lib/index.cjs
-		var require_lib$1 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
-			var __defProp = Object.defineProperty;
-			var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-			var __getOwnPropNames = Object.getOwnPropertyNames;
-			var __hasOwnProp = Object.prototype.hasOwnProperty;
-			var __export = (target, all) => {
-				for (var name in all) __defProp(target, name, {
-					get: all[name],
-					enumerable: true
-				});
-			};
-			var __copyProps = (to, from, except, desc) => {
-				if (from && typeof from === "object" || typeof from === "function") {
-					for (let key of __getOwnPropNames(from)) if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
-						get: () => from[key],
-						enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
-					});
-				}
-				return to;
-			};
-			var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-			var index_exports = {};
-			__export(index_exports, {
-				Binary: () => Binary,
-				Time: () => Time,
-				arrayBufferToBase64: () => arrayBufferToBase64,
-				arrayBufferToHex: () => arrayBufferToHex,
-				base64ToArrayBuffer: () => base64ToArrayBuffer,
-				camelCase: () => camelCase,
-				camelize: () => camelize,
-				capitalize: () => capitalize,
-				clone: () => clone,
-				contain: () => contain,
-				deduplicate: () => deduplicate,
-				deepEqual: () => deepEqual,
-				defineProperty: () => defineProperty,
-				difference: () => difference,
-				filterKeys: () => filterKeys,
-				formatProperty: () => formatProperty,
-				hexToArrayBuffer: () => hexToArrayBuffer,
-				hyphenate: () => hyphenate,
-				intersection: () => intersection,
-				is: () => is,
-				isNonNullable: () => isNonNullable,
-				isNullable: () => isNullable,
-				isPlainObject: () => isPlainObject,
-				makeArray: () => makeArray,
-				mapValues: () => mapValues,
-				noop: () => noop,
-				omit: () => omit,
-				paramCase: () => paramCase,
-				pick: () => pick,
-				remove: () => remove,
-				sanitize: () => sanitize,
-				snakeCase: () => snakeCase,
-				trimSlash: () => trimSlash,
-				uncapitalize: () => uncapitalize,
-				union: () => union,
-				valueMap: () => mapValues
-			});
-			module.exports = __toCommonJS(index_exports);
-			function noop() {}
-			function isNullable(value) {
-				return value === null || value === void 0;
+		//#region node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js
+		/**
+		* @license React
+		* use-sync-external-store-shim.production.js
+		*
+		* Copyright (c) Meta Platforms, Inc. and affiliates.
+		*
+		* This source code is licensed under the MIT license found in the
+		* LICENSE file in the root directory of this source tree.
+		*/
+		var require_use_sync_external_store_shim_production = /* @__PURE__ */ __commonJSMin(((exports) => {
+			var React$1 = require("react");
+			function is(x, y) {
+				return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
 			}
-			function isNonNullable(value) {
-				return !isNullable(value);
-			}
-			function isPlainObject(data) {
-				return data && typeof data === "object" && !Array.isArray(data);
-			}
-			function filterKeys(object, filter) {
-				return Object.fromEntries(Object.entries(object).filter(([key, value]) => filter(key, value)));
-			}
-			function mapValues(object, transform) {
-				return Object.fromEntries(Object.entries(object).map(([key, value]) => [key, transform(value, key)]));
-			}
-			function pick(source, keys, forced) {
-				if (!keys) return { ...source };
-				const result = {};
-				for (const key of keys) if (forced || source[key] !== void 0) result[key] = source[key];
-				return result;
-			}
-			function omit(source, keys) {
-				if (!keys) return { ...source };
-				const result = { ...source };
-				for (const key of keys) Reflect.deleteProperty(result, key);
-				return result;
-			}
-			function defineProperty(object, key, value) {
-				return Object.defineProperty(object, key, {
-					writable: true,
+			var objectIs = "function" === typeof Object.is ? Object.is : is;
+			var useState = React$1.useState;
+			var useEffect = React$1.useEffect;
+			var useLayoutEffect = React$1.useLayoutEffect;
+			var useDebugValue = React$1.useDebugValue;
+			function useSyncExternalStore$2(subscribe, getSnapshot) {
+				var value = getSnapshot(), _useState = useState({ inst: {
 					value,
-					enumerable: false
-				});
-			}
-			function contain(array1, array2) {
-				return array2.every((item) => array1.includes(item));
-			}
-			function intersection(array1, array2) {
-				return array1.filter((item) => array2.includes(item));
-			}
-			function difference(array1, array2) {
-				return array1.filter((item) => !array2.includes(item));
-			}
-			function union(array1, array2) {
-				return Array.from(/* @__PURE__ */ new Set([...array1, ...array2]));
-			}
-			function deduplicate(array) {
-				return [...new Set(array)];
-			}
-			function remove(list, item) {
-				const index = list?.indexOf(item);
-				if (index >= 0) {
-					list.splice(index, 1);
-					return true;
-				} else return false;
-			}
-			function makeArray(source) {
-				return Array.isArray(source) ? source : isNullable(source) ? [] : [source];
-			}
-			function is(type, value) {
-				if (arguments.length === 1) return (value2) => is(type, value2);
-				return type in globalThis && value instanceof globalThis[type] || Object.prototype.toString.call(value).slice(8, -1) === type;
-			}
-			function isArrayBufferLike(value) {
-				return is("ArrayBuffer", value) || is("SharedArrayBuffer", value);
-			}
-			function isArrayBufferSource(value) {
-				return isArrayBufferLike(value) || ArrayBuffer.isView(value);
-			}
-			var Binary;
-			((Binary2) => {
-				Binary2.is = isArrayBufferLike;
-				Binary2.isSource = isArrayBufferSource;
-				function fromSource(source) {
-					if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-					else return source;
-				}
-				Binary2.fromSource = fromSource;
-				function toBase64(source) {
-					source = fromSource(source);
-					if (typeof Buffer !== "undefined") return Buffer.from(source).toString("base64");
-					let binary = "";
-					const bytes = new Uint8Array(source);
-					for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-					return btoa(binary);
-				}
-				Binary2.toBase64 = toBase64;
-				function fromBase64(source) {
-					if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "base64"));
-					return Uint8Array.from(atob(source), (c) => c.charCodeAt(0));
-				}
-				Binary2.fromBase64 = fromBase64;
-				function toHex(source) {
-					source = fromSource(source);
-					if (typeof Buffer !== "undefined") return Buffer.from(source).toString("hex");
-					return Array.from(new Uint8Array(source), (byte) => byte.toString(16).padStart(2, "0")).join("");
-				}
-				Binary2.toHex = toHex;
-				function fromHex(source) {
-					if (typeof Buffer !== "undefined") return fromSource(Buffer.from(source, "hex"));
-					const hex = source.length % 2 === 0 ? source : source.slice(0, source.length - 1);
-					const buffer = [];
-					for (let i = 0; i < hex.length; i += 2) buffer.push(parseInt(`${hex[i]}${hex[i + 1]}`, 16));
-					return Uint8Array.from(buffer).buffer;
-				}
-				Binary2.fromHex = fromHex;
-			})(Binary || (Binary = {}));
-			var base64ToArrayBuffer = Binary.fromBase64;
-			var arrayBufferToBase64 = Binary.toBase64;
-			var hexToArrayBuffer = Binary.fromHex;
-			var arrayBufferToHex = Binary.toHex;
-			function clone(source, refs = /* @__PURE__ */ new Map()) {
-				if (!source || typeof source !== "object") return source;
-				if (is("Date", source)) return new Date(source.valueOf());
-				if (is("RegExp", source)) return new RegExp(source.source, source.flags);
-				if (isArrayBufferLike(source)) return source.slice(0);
-				if (ArrayBuffer.isView(source)) return source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength);
-				const cached = refs.get(source);
-				if (cached) return cached;
-				if (Array.isArray(source)) {
-					const result2 = [];
-					refs.set(source, result2);
-					source.forEach((value, index) => {
-						result2[index] = Reflect.apply(clone, null, [value, refs]);
+					getSnapshot
+				} }), inst = _useState[0].inst, forceUpdate = _useState[1];
+				useLayoutEffect(function() {
+					inst.value = value;
+					inst.getSnapshot = getSnapshot;
+					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+				}, [
+					subscribe,
+					value,
+					getSnapshot
+				]);
+				useEffect(function() {
+					checkIfSnapshotChanged(inst) && forceUpdate({ inst });
+					return subscribe(function() {
+						checkIfSnapshotChanged(inst) && forceUpdate({ inst });
 					});
-					return result2;
-				}
-				const result = Object.create(Object.getPrototypeOf(source));
-				refs.set(source, result);
-				for (const key of Reflect.ownKeys(source)) {
-					const descriptor = { ...Reflect.getOwnPropertyDescriptor(source, key) };
-					if ("value" in descriptor) descriptor.value = Reflect.apply(clone, null, [descriptor.value, refs]);
-					Reflect.defineProperty(result, key, descriptor);
-				}
-				return result;
+				}, [subscribe]);
+				useDebugValue(value);
+				return value;
 			}
-			function deepEqual(a, b, strict) {
-				if (a === b) return true;
-				if (!strict && isNullable(a) && isNullable(b)) return true;
-				if (typeof a !== typeof b) return false;
-				if (typeof a !== "object") return false;
-				if (!a || !b) return false;
-				function check(test, then) {
-					return test(a) ? test(b) ? then(a, b) : false : test(b) ? false : void 0;
+			function checkIfSnapshotChanged(inst) {
+				var latestGetSnapshot = inst.getSnapshot;
+				inst = inst.value;
+				try {
+					var nextValue = latestGetSnapshot();
+					return !objectIs(inst, nextValue);
+				} catch (error) {
+					return !0;
 				}
-				return check(Array.isArray, (a2, b2) => a2.length === b2.length && a2.every((item, index) => deepEqual(item, b2[index]))) ?? check(is("Date"), (a2, b2) => a2.valueOf() === b2.valueOf()) ?? check(is("RegExp"), (a2, b2) => a2.source === b2.source && a2.flags === b2.flags) ?? check(isArrayBufferLike, (a2, b2) => {
-					if (a2.byteLength !== b2.byteLength) return false;
-					const viewA = new Uint8Array(a2);
-					const viewB = new Uint8Array(b2);
-					for (let i = 0; i < viewA.length; i++) if (viewA[i] !== viewB[i]) return false;
-					return true;
-				}) ?? Object.keys({
-					...a,
-					...b
-				}).every((key) => deepEqual(a[key], b[key], strict));
 			}
-			function capitalize(source) {
-				return source.charAt(0).toUpperCase() + source.slice(1);
+			function useSyncExternalStore$1(subscribe, getSnapshot) {
+				return getSnapshot();
 			}
-			function uncapitalize(source) {
-				return source.charAt(0).toLowerCase() + source.slice(1);
-			}
-			function camelCase(source) {
-				return source.replace(/[_-][a-z]/g, (str) => str.slice(1).toUpperCase());
-			}
-			function tokenize(source, delimiters, delimiter) {
-				const output = [];
-				let state = 0;
-				for (let i = 0; i < source.length; i++) {
-					const code = source.charCodeAt(i);
-					if (code >= 65 && code <= 90) {
-						if (state === 1) {
-							const next = source.charCodeAt(i + 1);
-							if (next >= 97 && next <= 122) output.push(delimiter);
-							output.push(code + 32);
-						} else {
-							if (state !== 0) output.push(delimiter);
-							output.push(code + 32);
-						}
-						state = 1;
-					} else if (code >= 97 && code <= 122) {
-						output.push(code);
-						state = 2;
-					} else if (delimiters.includes(code)) {
-						if (state !== 0) output.push(delimiter);
-						state = 0;
-					} else output.push(code);
-				}
-				return String.fromCharCode(...output);
-			}
-			function paramCase(source) {
-				return tokenize(source, [45, 95], 45);
-			}
-			function snakeCase(source) {
-				return tokenize(source, [45, 95], 95);
-			}
-			var camelize = camelCase;
-			var hyphenate = paramCase;
-			function formatProperty(key) {
-				if (typeof key !== "string") return `[${key.toString()}]`;
-				return /^[a-z_$][\w$]*$/i.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
-			}
-			function trimSlash(source) {
-				return source.replace(/\/$/, "");
-			}
-			function sanitize(source) {
-				if (!source.startsWith("/")) source = "/" + source;
-				return trimSlash(source);
-			}
-			var Time;
-			((Time2) => {
-				Time2.millisecond = 1;
-				Time2.second = 1e3;
-				Time2.minute = Time2.second * 60;
-				Time2.hour = Time2.minute * 60;
-				Time2.day = Time2.hour * 24;
-				Time2.week = Time2.day * 7;
-				let timezoneOffset = (/* @__PURE__ */ new Date()).getTimezoneOffset();
-				function setTimezoneOffset(offset) {
-					timezoneOffset = offset;
-				}
-				Time2.setTimezoneOffset = setTimezoneOffset;
-				function getTimezoneOffset() {
-					return timezoneOffset;
-				}
-				Time2.getTimezoneOffset = getTimezoneOffset;
-				function getDateNumber(date = /* @__PURE__ */ new Date(), offset) {
-					if (typeof date === "number") date = new Date(date);
-					if (offset === void 0) offset = timezoneOffset;
-					return Math.floor((date.valueOf() / Time2.minute - offset) / 1440);
-				}
-				Time2.getDateNumber = getDateNumber;
-				function fromDateNumber(value, offset) {
-					const date = new Date(value * Time2.day);
-					if (offset === void 0) offset = timezoneOffset;
-					return new Date(+date + offset * Time2.minute);
-				}
-				Time2.fromDateNumber = fromDateNumber;
-				const numeric = /\d+(?:\.\d+)?/.source;
-				const timeRegExp = new RegExp(`^${[
-					"w(?:eek(?:s)?)?",
-					"d(?:ay(?:s)?)?",
-					"h(?:our(?:s)?)?",
-					"m(?:in(?:ute)?(?:s)?)?",
-					"s(?:ec(?:ond)?(?:s)?)?"
-				].map((unit) => `(${numeric}${unit})?`).join("")}$`);
-				function parseTime(source) {
-					const capture = timeRegExp.exec(source);
-					if (!capture) return 0;
-					return (parseFloat(capture[1]) * Time2.week || 0) + (parseFloat(capture[2]) * Time2.day || 0) + (parseFloat(capture[3]) * Time2.hour || 0) + (parseFloat(capture[4]) * Time2.minute || 0) + (parseFloat(capture[5]) * Time2.second || 0);
-				}
-				Time2.parseTime = parseTime;
-				function parseDate(date) {
-					const parsed = parseTime(date);
-					if (parsed) date = Date.now() + parsed;
-					else if (/^\d{1,2}(:\d{1,2}){1,2}$/.test(date)) date = `${(/* @__PURE__ */ new Date()).toLocaleDateString()}-${date}`;
-					else if (/^\d{1,2}-\d{1,2}-\d{1,2}(:\d{1,2}){1,2}$/.test(date)) date = `${(/* @__PURE__ */ new Date()).getFullYear()}-${date}`;
-					return date ? new Date(date) : /* @__PURE__ */ new Date();
-				}
-				Time2.parseDate = parseDate;
-				function format(ms) {
-					const abs = Math.abs(ms);
-					if (abs >= Time2.day - Time2.hour / 2) return Math.round(ms / Time2.day) + "d";
-					else if (abs >= Time2.hour - Time2.minute / 2) return Math.round(ms / Time2.hour) + "h";
-					else if (abs >= Time2.minute - Time2.second / 2) return Math.round(ms / Time2.minute) + "m";
-					else if (abs >= Time2.second) return Math.round(ms / Time2.second) + "s";
-					return ms + "ms";
-				}
-				Time2.format = format;
-				function toDigits(source, length = 2) {
-					return source.toString().padStart(length, "0");
-				}
-				Time2.toDigits = toDigits;
-				function template(template2, time = /* @__PURE__ */ new Date()) {
-					return template2.replace("yyyy", time.getFullYear().toString()).replace("yy", time.getFullYear().toString().slice(2)).replace("MM", toDigits(time.getMonth() + 1)).replace("dd", toDigits(time.getDate())).replace("hh", toDigits(time.getHours())).replace("mm", toDigits(time.getMinutes())).replace("ss", toDigits(time.getSeconds())).replace("SSS", toDigits(time.getMilliseconds(), 3));
-				}
-				Time2.template = template;
-			})(Time || (Time = {}));
-			0 && (module.exports = {
-				Binary,
-				Time,
-				arrayBufferToBase64,
-				arrayBufferToHex,
-				base64ToArrayBuffer,
-				camelCase,
-				camelize,
-				capitalize,
-				clone,
-				contain,
-				deduplicate,
-				deepEqual,
-				defineProperty,
-				difference,
-				filterKeys,
-				formatProperty,
-				hexToArrayBuffer,
-				hyphenate,
-				intersection,
-				is,
-				isNonNullable,
-				isNullable,
-				isPlainObject,
-				makeArray,
-				mapValues,
-				noop,
-				omit,
-				paramCase,
-				pick,
-				remove,
-				sanitize,
-				snakeCase,
-				trimSlash,
-				uncapitalize,
-				union,
-				valueMap
-			});
+			var shim = "undefined" === typeof window || "undefined" === typeof window.document || "undefined" === typeof window.document.createElement ? useSyncExternalStore$1 : useSyncExternalStore$2;
+			exports.useSyncExternalStore = void 0 !== React$1.useSyncExternalStore ? React$1.useSyncExternalStore : shim;
 		}));
 		//#endregion
-		//#region src/selectors.ts
-		var import_lib = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
-			var __defProp = Object.defineProperty;
-			var __name = (target, value) => __defProp(target, "name", {
-				value,
-				configurable: true
-			});
-			var import_cosmokit = require_lib$1();
-			var kSchema = Symbol.for("schemastery");
-			var kValidationError = Symbol.for("ValidationError");
-			globalThis.__schemastery_index__ ??= 0;
-			globalThis.__schemastery_refs__ = void 0;
-			var ValidationError = class extends TypeError {
-				constructor(message, options) {
-					let prefix = "$";
-					for (const segment of options.path || []) if (typeof segment === "string") prefix += "." + segment;
-					else if (typeof segment === "number") prefix += "[" + segment + "]";
-					else if (typeof segment === "symbol") prefix += `[Symbol(${segment.toString()})]`;
-					if (prefix.startsWith(".")) prefix = prefix.slice(1);
-					super((prefix === "$" ? "" : `${prefix} `) + message);
-					this.options = options;
-				}
-				static {
-					__name(this, "ValidationError");
-				}
-				name = "ValidationError";
-				static is(error) {
-					return !!error?.[kValidationError];
-				}
-			};
-			Object.defineProperty(ValidationError.prototype, kValidationError, { value: true });
-			var Schema = /* @__PURE__ */ __name(function(options) {
-				const schema = /* @__PURE__ */ __name(function(data, options2 = {}) {
-					return Schema.resolve(data, schema, options2)[0];
-				}, "schema");
-				if (options.refs) {
-					const refs = (0, import_cosmokit.valueMap)(options.refs, (options2) => new Schema(options2));
-					const getRef = /* @__PURE__ */ __name((uid) => refs[uid], "getRef");
-					for (const key in refs) {
-						const options2 = refs[key];
-						options2.sKey = getRef(options2.sKey);
-						options2.inner = getRef(options2.inner);
-						options2.list = options2.list && options2.list.map(getRef);
-						options2.dict = options2.dict && (0, import_cosmokit.valueMap)(options2.dict, getRef);
-					}
-					return refs[options.uid];
-				}
-				Object.assign(schema, options);
-				if (typeof schema.callback === "string") try {
-					schema.callback = new Function("return " + schema.callback)();
-				} catch {}
-				Object.defineProperty(schema, "uid", { value: globalThis.__schemastery_index__++ });
-				Object.setPrototypeOf(schema, Schema.prototype);
-				schema.meta ||= {};
-				schema.toString = schema.toString.bind(schema);
-				return schema;
-			}, "Schema");
-			Schema.prototype = Object.create(Function.prototype);
-			Schema.prototype[kSchema] = true;
-			Object.defineProperty(Schema.prototype, "~standard", { get() {
-				return {
-					version: 1,
-					vendor: "schemastery",
-					validate: /* @__PURE__ */ __name((value) => {
-						try {
-							return { value: Schema.resolve(value, this, {})[0] };
-						} catch (error) {
-							if (ValidationError.is(error)) return { issues: [{
-								message: error.message,
-								path: error.options.path
-							}] };
-							throw error;
-						}
-					}, "validate")
-				};
-			} });
-			Schema.ValidationError = ValidationError;
-			Schema.prototype.toJSON = /* @__PURE__ */ __name(function toJSON() {
-				if (globalThis.__schemastery_refs__) {
-					globalThis.__schemastery_refs__[this.uid] ??= JSON.parse(JSON.stringify({ ...this }));
-					return this.uid;
-				}
-				globalThis.__schemastery_refs__ = { [this.uid]: { ...this } };
-				globalThis.__schemastery_refs__[this.uid] = JSON.parse(JSON.stringify({ ...this }));
-				const result = {
-					uid: this.uid,
-					refs: globalThis.__schemastery_refs__
-				};
-				globalThis.__schemastery_refs__ = void 0;
-				return result;
-			}, "toJSON");
-			Schema.prototype.set = /* @__PURE__ */ __name(function set(key, value) {
-				this.dict[key] = value;
-				return this;
-			}, "set");
-			Schema.prototype.push = /* @__PURE__ */ __name(function push(value) {
-				this.list.push(value);
-				return this;
-			}, "push");
-			function mergeDesc(original, messages) {
-				const result = typeof original === "string" ? { "": original } : { ...original };
-				for (const locale in messages) {
-					const value = messages[locale];
-					if (value?.$description || value?.$desc) result[locale] = value.$description || value.$desc;
-					else if (typeof value === "string") result[locale] = value;
-				}
-				return result;
+		//#region node_modules/use-sync-external-store/shim/index.js
+		var require_shim = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+			module.exports = require_use_sync_external_store_shim_production();
+		}));
+		//#endregion
+		//#region node_modules/use-sync-external-store/cjs/use-sync-external-store-shim/with-selector.production.js
+		/**
+		* @license React
+		* use-sync-external-store-shim/with-selector.production.js
+		*
+		* Copyright (c) Meta Platforms, Inc. and affiliates.
+		*
+		* This source code is licensed under the MIT license found in the
+		* LICENSE file in the root directory of this source tree.
+		*/
+		var require_with_selector_production = /* @__PURE__ */ __commonJSMin(((exports) => {
+			var React = require("react");
+			var shim = require_shim();
+			function is(x, y) {
+				return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
 			}
-			__name(mergeDesc, "mergeDesc");
-			function getInner(value) {
-				return value?.$value ?? value?.$inner;
-			}
-			__name(getInner, "getInner");
-			function extractKeys(data) {
-				return (0, import_cosmokit.filterKeys)(data ?? {}, (key) => !key.startsWith("$"));
-			}
-			__name(extractKeys, "extractKeys");
-			Schema.prototype.i18n = /* @__PURE__ */ __name(function i18n(messages) {
-				const schema = Schema(this);
-				const desc = mergeDesc(schema.meta.description, messages);
-				if (Object.keys(desc).length) schema.meta.description = desc;
-				if (schema.dict) schema.dict = (0, import_cosmokit.valueMap)(schema.dict, (inner, key) => {
-					return inner.i18n((0, import_cosmokit.valueMap)(messages, (data) => getInner(data)?.[key] ?? data?.[key]));
-				});
-				if (schema.list) schema.list = schema.list.map((inner, index) => {
-					return inner.i18n((0, import_cosmokit.valueMap)(messages, (data = {}) => {
-						if (Array.isArray(getInner(data))) return getInner(data)[index];
-						if (Array.isArray(data)) return data[index];
-						return extractKeys(data);
-					}));
-				});
-				if (schema.inner) schema.inner = schema.inner.i18n((0, import_cosmokit.valueMap)(messages, (data) => {
-					if (getInner(data)) return getInner(data);
-					return extractKeys(data);
-				}));
-				if (schema.sKey) schema.sKey = schema.sKey.i18n((0, import_cosmokit.valueMap)(messages, (data) => data?.$key));
-				return schema;
-			}, "i18n");
-			Schema.prototype.extra = /* @__PURE__ */ __name(function extra(key, value) {
-				const schema = Schema(this);
-				schema.meta = {
-					...schema.meta,
-					[key]: value
-				};
-				return schema;
-			}, "extra");
-			for (const key of [
-				"required",
-				"disabled",
-				"collapse",
-				"hidden",
-				"loose"
-			]) Object.assign(Schema.prototype, { [key](value = true) {
-				const schema = Schema(this);
-				schema.meta = {
-					...schema.meta,
-					[key]: value
-				};
-				return schema;
-			} });
-			Schema.prototype.deprecated = /* @__PURE__ */ __name(function deprecated() {
-				const schema = Schema(this);
-				schema.meta.badges ||= [];
-				schema.meta.badges.push({
-					text: "deprecated",
-					type: "danger"
-				});
-				return schema;
-			}, "deprecated");
-			Schema.prototype.experimental = /* @__PURE__ */ __name(function experimental() {
-				const schema = Schema(this);
-				schema.meta.badges ||= [];
-				schema.meta.badges.push({
-					text: "experimental",
-					type: "warning"
-				});
-				return schema;
-			}, "experimental");
-			Schema.prototype.pattern = /* @__PURE__ */ __name(function pattern(regexp) {
-				const schema = Schema(this);
-				const pattern2 = (0, import_cosmokit.pick)(regexp, ["source", "flags"]);
-				schema.meta = {
-					...schema.meta,
-					pattern: pattern2
-				};
-				return schema;
-			}, "pattern");
-			Schema.prototype.simplify = /* @__PURE__ */ __name(function simplify(value) {
-				if ((0, import_cosmokit.deepEqual)(value, this.meta.default, this.type === "dict")) return null;
-				if ((0, import_cosmokit.isNullable)(value)) return value;
-				if (this.type === "object" || this.type === "dict") {
-					const result = {};
-					for (const key in value) {
-						const item = (this.type === "object" ? this.dict[key] : this.inner)?.simplify(value[key]);
-						if (this.type === "dict" || !(0, import_cosmokit.isNullable)(item)) result[key] = item;
-					}
-					if ((0, import_cosmokit.deepEqual)(result, this.meta.default, this.type === "dict")) return null;
-					return result;
-				} else if (this.type === "array" || this.type === "tuple") {
-					const result = [];
-					value.forEach((value2, index) => {
-						const schema = this.type === "array" ? this.inner : this.list[index];
-						const item = schema ? schema.simplify(value2) : value2;
-						result.push(item);
-					});
-					return result;
-				} else if (this.type === "intersect") {
-					const result = {};
-					for (const item of this.list) Object.assign(result, item.simplify(value));
-					return result;
-				} else if (this.type === "union") for (const schema of this.list) try {
-					Schema.resolve(value, schema, {});
-					return schema.simplify(value);
-				} catch {}
-				return value;
-			}, "simplify");
-			Schema.prototype.toString = /* @__PURE__ */ __name(function toString(inline) {
-				return formatters[this.type]?.(this, inline) ?? `Schema<${this.type}>`;
-			}, "toString");
-			Schema.prototype.role = /* @__PURE__ */ __name(function role(role, extra2) {
-				const schema = Schema(this);
-				schema.meta = {
-					...schema.meta,
-					role,
-					extra: extra2
-				};
-				return schema;
-			}, "role");
-			for (const key of [
-				"default",
-				"link",
-				"comment",
-				"description",
-				"max",
-				"min",
-				"step"
-			]) Object.assign(Schema.prototype, { [key](value) {
-				const schema = Schema(this);
-				schema.meta = {
-					...schema.meta,
-					[key]: value
-				};
-				return schema;
-			} });
-			var resolvers = {};
-			Schema.extend = /* @__PURE__ */ __name(function extend(type, resolve2) {
-				resolvers[type] = resolve2;
-			}, "extend");
-			Schema.resolve = /* @__PURE__ */ __name(function resolve(data, schema, options = {}, strict = false) {
-				if (!schema) return [data];
-				if (options.ignore?.(data, schema)) return [data];
-				if ((0, import_cosmokit.isNullable)(data) && schema.type !== "lazy") {
-					if (schema.meta.required) throw new ValidationError(`missing required value`, options);
-					let current = schema;
-					let fallback = schema.meta.default;
-					while (current?.type === "intersect" && (0, import_cosmokit.isNullable)(fallback)) {
-						current = current.list[0];
-						fallback = current?.meta.default;
-					}
-					if ((0, import_cosmokit.isNullable)(fallback)) return [data];
-					data = (0, import_cosmokit.clone)(fallback);
-				}
-				const callback = resolvers[schema.type];
-				if (!callback) throw new ValidationError(`unsupported type "${schema.type}"`, options);
-				try {
-					return callback(data, schema, options, strict);
-				} catch (error) {
-					if (!schema.meta.loose) throw error;
-					return [schema.meta.default];
-				}
-			}, "resolve");
-			Schema.from = /* @__PURE__ */ __name(function from(source) {
-				if ((0, import_cosmokit.isNullable)(source)) return Schema.any();
-				else if ([
-					"string",
-					"number",
-					"boolean"
-				].includes(typeof source)) return Schema.const(source).required();
-				else if (source[kSchema]) return source;
-				else if (typeof source === "function") switch (source) {
-					case String: return Schema.string().required();
-					case Number: return Schema.number().required();
-					case Boolean: return Schema.boolean().required();
-					case Function: return Schema.function().required();
-					default: return Schema.is(source).required();
-				}
-				else throw new TypeError(`cannot infer schema from ${source}`);
-			}, "from");
-			Schema.lazy = /* @__PURE__ */ __name(function lazy(builder) {
-				const schema = new Schema({
-					type: "lazy",
-					builder,
-					inner: { toJSON: /* @__PURE__ */ __name(() => {
-						if (!schema.inner[kSchema]) {
-							schema.inner = schema.builder();
-							schema.inner.meta = {
-								...schema.meta,
-								...schema.inner.meta
-							};
-						}
-						return schema.inner.toJSON();
-					}, "toJSON") }
-				});
-				return schema;
-			}, "lazy");
-			Schema.natural = /* @__PURE__ */ __name(function natural() {
-				return Schema.number().step(1).min(0);
-			}, "natural");
-			Schema.percent = /* @__PURE__ */ __name(function percent() {
-				return Schema.number().step(.01).min(0).max(1).role("slider");
-			}, "percent");
-			Schema.date = /* @__PURE__ */ __name(function date() {
-				return Schema.union([Schema.is(Date), Schema.transform(Schema.string().role("datetime"), (value, options) => {
-					const date2 = new Date(value);
-					if (isNaN(+date2)) throw new ValidationError(`invalid date "${value}"`, options);
-					return date2;
-				}, true)]);
-			}, "date");
-			Schema.regExp = /* @__PURE__ */ __name(function regExp(flag = "") {
-				return Schema.union([Schema.is(RegExp), Schema.transform(Schema.string().role("regexp", { flag }), (value, options) => {
-					try {
-						return new RegExp(value, flag);
-					} catch (e) {
-						throw new ValidationError(e.message, options);
-					}
-				}, true)]);
-			}, "regExp");
-			Schema.arrayBuffer = /* @__PURE__ */ __name(function arrayBuffer(encoding) {
-				return Schema.union([
-					Schema.is(ArrayBuffer),
-					Schema.is(SharedArrayBuffer),
-					Schema.transform(Schema.any(), (value, options) => {
-						if (import_cosmokit.Binary.isSource(value)) return import_cosmokit.Binary.fromSource(value);
-						throw new ValidationError(`expected ArrayBufferSource but got ${value}`, options);
-					}, true),
-					...encoding ? [Schema.transform(Schema.string(), (value, options) => {
-						try {
-							return encoding === "base64" ? import_cosmokit.Binary.fromBase64(value) : import_cosmokit.Binary.fromHex(value);
-						} catch (e) {
-							throw new ValidationError(e.message, options);
-						}
-					}, true)] : []
-				]);
-			}, "arrayBuffer");
-			Schema.extend("lazy", (data, schema, options, strict) => {
-				if (!schema.inner[kSchema]) {
-					schema.inner = schema.builder();
-					schema.inner.meta = {
-						...schema.meta,
-						...schema.inner.meta
+			var objectIs = "function" === typeof Object.is ? Object.is : is;
+			var useSyncExternalStore = shim.useSyncExternalStore;
+			var useRef = React.useRef;
+			var useEffect = React.useEffect;
+			var useMemo = React.useMemo;
+			var useDebugValue = React.useDebugValue;
+			exports.useSyncExternalStoreWithSelector = function(subscribe, getSnapshot, getServerSnapshot, selector, isEqual) {
+				var instRef = useRef(null);
+				if (null === instRef.current) {
+					var inst = {
+						hasValue: !1,
+						value: null
 					};
-				}
-				return Schema.resolve(data, schema.inner, options, strict);
-			});
-			Schema.extend("any", (data) => {
-				return [data];
-			});
-			Schema.extend("never", (data, _, options) => {
-				throw new ValidationError(`expected nullable but got ${data}`, options);
-			});
-			Schema.extend("const", (data, { value }, options) => {
-				if ((0, import_cosmokit.deepEqual)(data, value)) return [value];
-				throw new ValidationError(`expected ${value} but got ${data}`, options);
-			});
-			function checkWithinRange(data, meta, description, options, skipMin = false) {
-				const { max = Infinity, min = -Infinity } = meta;
-				if (data > max) throw new ValidationError(`expected ${description} <= ${max} but got ${data}`, options);
-				if (data < min && !skipMin) throw new ValidationError(`expected ${description} >= ${min} but got ${data}`, options);
-			}
-			__name(checkWithinRange, "checkWithinRange");
-			Schema.extend("string", (data, { meta }, options) => {
-				if (typeof data !== "string") throw new ValidationError(`expected string but got ${data}`, options);
-				if (meta.pattern) {
-					const regexp = new RegExp(meta.pattern.source, meta.pattern.flags);
-					if (!regexp.test(data)) throw new ValidationError(`expect string to match regexp ${regexp}`, options);
-				}
-				checkWithinRange(data.length, meta, "string length", options);
-				return [data];
-			});
-			function decimalShift(data, digits) {
-				const str = data.toString();
-				if (str.includes("e")) return data * Math.pow(10, digits);
-				const index = str.indexOf(".");
-				if (index === -1) return data * Math.pow(10, digits);
-				const frac = str.slice(index + 1);
-				const integer = str.slice(0, index);
-				if (frac.length <= digits) return +(integer + frac.padEnd(digits, "0"));
-				return +(integer + frac.slice(0, digits) + "." + frac.slice(digits));
-			}
-			__name(decimalShift, "decimalShift");
-			function isMultipleOf(data, min, step) {
-				step = Math.abs(step);
-				if (!/^\d+\.\d+$/.test(step.toString())) return (data - min) % step === 0;
-				const index = step.toString().indexOf(".");
-				const digits = step.toString().slice(index + 1).length;
-				return Math.abs(decimalShift(data, digits) - decimalShift(min, digits)) % decimalShift(step, digits) === 0;
-			}
-			__name(isMultipleOf, "isMultipleOf");
-			Schema.extend("number", (data, { meta }, options) => {
-				if (typeof data !== "number") throw new ValidationError(`expected number but got ${data}`, options);
-				checkWithinRange(data, meta, "number", options);
-				const { step } = meta;
-				if (step && !isMultipleOf(data, meta.min ?? 0, step)) throw new ValidationError(`expected number multiple of ${step} but got ${data}`, options);
-				return [data];
-			});
-			Schema.extend("boolean", (data, _, options) => {
-				if (typeof data === "boolean") return [data];
-				throw new ValidationError(`expected boolean but got ${data}`, options);
-			});
-			Schema.extend("bitset", (data, { bits, meta }, options) => {
-				let value = 0, keys = [];
-				if (typeof data === "number") {
-					value = data;
-					for (const key in bits) if (data & bits[key]) keys.push(key);
-				} else if (Array.isArray(data)) {
-					keys = data;
-					for (const key of keys) {
-						if (typeof key !== "string") throw new ValidationError(`expected string but got ${key}`, options);
-						if (key in bits) value |= bits[key];
-					}
-				} else throw new ValidationError(`expected number or array but got ${data}`, options);
-				if (value === meta.default) return [value];
-				return [value, keys];
-			});
-			Schema.extend("function", (data, _, options) => {
-				if (typeof data === "function") return [data];
-				throw new ValidationError(`expected function but got ${data}`, options);
-			});
-			Schema.extend("is", (data, { constructor }, options) => {
-				if (typeof constructor === "function") {
-					if (data instanceof constructor) return [data];
-					throw new ValidationError(`expected ${constructor.name} but got ${data}`, options);
-				} else {
-					if ((0, import_cosmokit.isNullable)(data)) throw new ValidationError(`expected ${constructor} but got ${data}`, options);
-					let prototype = Object.getPrototypeOf(data);
-					while (prototype) {
-						if (prototype.constructor?.name === constructor) return [data];
-						prototype = Object.getPrototypeOf(prototype);
-					}
-					throw new ValidationError(`expected ${constructor} but got ${data}`, options);
-				}
-			});
-			function property(data, key, schema, options) {
-				try {
-					const [value, adapted] = Schema.resolve(data[key], schema, {
-						...options,
-						path: [...options.path || [], key]
-					});
-					if (adapted !== void 0) data[key] = adapted;
-					return value;
-				} catch (e) {
-					if (!options?.autofix) throw e;
-					delete data[key];
-					return schema.meta.default;
-				}
-			}
-			__name(property, "property");
-			Schema.extend("array", (data, { inner, meta }, options) => {
-				if (!Array.isArray(data)) throw new ValidationError(`expected array but got ${data}`, options);
-				checkWithinRange(data.length, meta, "array length", options, !(0, import_cosmokit.isNullable)(inner.meta.default));
-				return [data.map((_, index) => property(data, index, inner, options))];
-			});
-			Schema.extend("dict", (data, { inner, sKey }, options, strict) => {
-				if (!(0, import_cosmokit.isPlainObject)(data)) throw new ValidationError(`expected object but got ${data}`, options);
-				const result = {};
-				for (const key in data) {
-					let rKey;
-					try {
-						rKey = Schema.resolve(key, sKey, options)[0];
-					} catch (error) {
-						if (strict) continue;
-						throw error;
-					}
-					result[rKey] = property(data, key, inner, options);
-					data[rKey] = data[key];
-					if (key !== rKey) delete data[key];
-				}
-				return [result];
-			});
-			Schema.extend("tuple", (data, { list }, options, strict) => {
-				if (!Array.isArray(data)) throw new ValidationError(`expected array but got ${data}`, options);
-				const result = list.map((inner, index) => property(data, index, inner, options));
-				if (strict) return [result];
-				result.push(...data.slice(list.length));
-				return [result];
-			});
-			function merge(result, data) {
-				for (const key in data) {
-					if (key in result) continue;
-					result[key] = data[key];
-				}
-			}
-			__name(merge, "merge");
-			Schema.extend("object", (data, { dict }, options, strict) => {
-				if (!(0, import_cosmokit.isPlainObject)(data)) throw new ValidationError(`expected object but got ${data}`, options);
-				const result = {};
-				for (const key in dict) {
-					const value = property(data, key, dict[key], options);
-					if (!(0, import_cosmokit.isNullable)(value) || key in data) result[key] = value;
-				}
-				if (!strict) merge(result, data);
-				return [result];
-			});
-			Schema.extend("union", (data, { list, toString: toString2 }, options, strict) => {
-				const messages = [];
-				for (const inner of list) try {
-					return Schema.resolve(data, inner, options, strict);
-				} catch (error) {
-					messages.push(error);
-				}
-				throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
-			});
-			Schema.extend("intersect", (data, { list, toString: toString2 }, options, strict) => {
-				if (!list.length) return [data];
-				let result;
-				for (const inner of list) {
-					const value = Schema.resolve(data, inner, options, true)[0];
-					if ((0, import_cosmokit.isNullable)(value)) continue;
-					if ((0, import_cosmokit.isNullable)(result)) result = value;
-					else if (typeof result !== typeof value) throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
-					else if (typeof value === "object") merge(result ??= {}, value);
-					else if (result !== value) throw new ValidationError(`expected ${toString2()} but got ${JSON.stringify(data)}`, options);
-				}
-				if (!strict && (0, import_cosmokit.isPlainObject)(data)) merge(result, data);
-				return [result];
-			});
-			Schema.extend("transform", (data, { inner, callback, preserve }, options) => {
-				const [result, adapted = data] = Schema.resolve(data, inner, options, true);
-				if (preserve) return [callback(result)];
-				else return [callback(result), callback(adapted)];
-			});
-			var formatters = {};
-			function defineMethod(name, keys, format) {
-				formatters[name] = format;
-				Object.assign(Schema, { [name](...args) {
-					const schema = new Schema({ type: name });
-					keys.forEach((key, index) => {
-						switch (key) {
-							case "sKey":
-								schema.sKey = args[index] ?? Schema.string();
-								break;
-							case "inner":
-								schema.inner = Schema.from(args[index]);
-								break;
-							case "list":
-								schema.list = args[index].map(Schema.from);
-								break;
-							case "dict":
-								schema.dict = (0, import_cosmokit.valueMap)(args[index], Schema.from);
-								break;
-							case "bits":
-								schema.bits = {};
-								for (const key2 in args[index]) {
-									if (typeof args[index][key2] !== "number") continue;
-									schema.bits[key2] = args[index][key2];
-								}
-								break;
-							case "callback": {
-								const callback = schema.callback = args[index];
-								callback["toJSON"] ||= () => callback.toString();
-								break;
+					instRef.current = inst;
+				} else inst = instRef.current;
+				instRef = useMemo(function() {
+					function memoizedSelector(nextSnapshot) {
+						if (!hasMemo) {
+							hasMemo = !0;
+							memoizedSnapshot = nextSnapshot;
+							nextSnapshot = selector(nextSnapshot);
+							if (void 0 !== isEqual && inst.hasValue) {
+								var currentSelection = inst.value;
+								if (isEqual(currentSelection, nextSnapshot)) return memoizedSelection = currentSelection;
 							}
-							case "constructor": {
-								const constructor = schema.constructor = args[index];
-								if (typeof constructor === "function") constructor["toJSON"] ||= () => constructor["name"];
-								break;
-							}
-							default: schema[key] = args[index];
+							return memoizedSelection = nextSnapshot;
 						}
-					});
-					if (name === "object" || name === "dict") schema.meta.default = {};
-					else if (name === "array" || name === "tuple") schema.meta.default = [];
-					else if (name === "bitset") schema.meta.default = 0;
-					return schema;
-				} });
-			}
-			__name(defineMethod, "defineMethod");
-			defineMethod("is", ["constructor"], ({ constructor }) => {
-				if (typeof constructor === "function") return constructor.name;
-				else return constructor;
-			});
-			defineMethod("any", [], () => "any");
-			defineMethod("never", [], () => "never");
-			defineMethod("const", ["value"], ({ value }) => typeof value === "string" ? JSON.stringify(value) : value);
-			defineMethod("string", [], () => "string");
-			defineMethod("number", [], () => "number");
-			defineMethod("boolean", [], () => "boolean");
-			defineMethod("bitset", ["bits"], () => "bitset");
-			defineMethod("function", [], () => "function");
-			defineMethod("array", ["inner"], ({ inner }) => `${inner.toString(true)}[]`);
-			defineMethod("dict", ["inner", "sKey"], ({ inner, sKey }) => `{ [key: ${sKey.toString()}]: ${inner.toString()} }`);
-			defineMethod("tuple", ["list"], ({ list }) => `[${list.map((inner) => inner.toString()).join(", ")}]`);
-			defineMethod("object", ["dict"], ({ dict }) => {
-				if (Object.keys(dict).length === 0) return "{}";
-				return `{ ${Object.entries(dict).map(([key, inner]) => {
-					return `${key}${inner.meta.required ? "" : "?"}: ${inner.toString()}`;
-				}).join(", ")} }`;
-			});
-			defineMethod("union", ["list"], ({ list }, inline) => {
-				const result = list.map(({ toString: format }) => format()).join(" | ");
-				return inline ? `(${result})` : result;
-			});
-			defineMethod("intersect", ["list"], ({ list }) => {
-				return `${list.map((inner) => inner.toString(true)).join(" & ")}`;
-			});
-			defineMethod("transform", [
-				"inner",
-				"callback",
-				"preserve"
-			], ({ inner }, isInner) => inner.toString(isInner));
-			module.exports = Schema;
-		})))(), 1);
+						currentSelection = memoizedSelection;
+						if (objectIs(memoizedSnapshot, nextSnapshot)) return currentSelection;
+						var nextSelection = selector(nextSnapshot);
+						if (void 0 !== isEqual && isEqual(currentSelection, nextSelection)) return memoizedSnapshot = nextSnapshot, currentSelection;
+						memoizedSnapshot = nextSnapshot;
+						return memoizedSelection = nextSelection;
+					}
+					var hasMemo = !1, memoizedSnapshot, memoizedSelection, maybeGetServerSnapshot = void 0 === getServerSnapshot ? null : getServerSnapshot;
+					return [function() {
+						return memoizedSelector(getSnapshot());
+					}, null === maybeGetServerSnapshot ? void 0 : function() {
+						return memoizedSelector(maybeGetServerSnapshot());
+					}];
+				}, [
+					getSnapshot,
+					getServerSnapshot,
+					selector,
+					isEqual
+				]);
+				var value = useSyncExternalStore(subscribe, instRef[0], instRef[1]);
+				useEffect(function() {
+					inst.hasValue = !0;
+					inst.value = value;
+				}, [value]);
+				useDebugValue(value);
+				return value;
+			};
+		}));
+		//#endregion
+		//#region src/client/use-snapshot.ts
+		var import_with_selector = (/* @__PURE__ */ __commonJSMin(((exports, module) => {
+			module.exports = require_with_selector_production();
+		})))();
+		/**
+		* Bind a bare observable source to a typed uSES selector hook.
+		* subscribe/getSnapshot are captured once per source into stable closures
+		* (also re-binds `this` for method-based sources), so components never
+		* resubscribe across renders. Equality defaults to Object.is.
+		* @param w - snapshot source (engine store, Session object, store instance).
+		* @returns the selector hook.
+		*/
+		function bindSnapshotSelector(w) {
+			const subscribe = (fn) => w.subscribe(fn);
+			const getSnapshot = () => w.getSnapshot();
+			return function useSelector(sel, eq) {
+				return (0, import_with_selector.useSyncExternalStoreWithSelector)(subscribe, getSnapshot, void 0, sel, eq);
+			};
+		}
+		//#endregion
+		//#region src/selectors.ts
 		/** Catchable error for illegal/unknown selectors (config-warning path). */
 		var SelectorError = class extends Error {
 			constructor(message) {
@@ -1036,7 +180,8 @@ window.__ModuleLoader__.load({
 		* Parse a chain key or entry selector.
 		*
 		* Accepts `provider/model` and `provider/*`; throws {@link SelectorError}
-		* on anything else (missing separator, empty parts, extra separators).
+		* on anything else (missing separator, empty parts, wildcard inside the
+		* model segment).
 		*/
 		function parseSelector(input) {
 			if (typeof input !== "string") throw new SelectorError(`invalid selector ${String(input)}: expected "provider/model" or "provider/*"`);
@@ -1046,41 +191,247 @@ window.__ModuleLoader__.load({
 			const provider = trimmed.slice(0, slash).trim();
 			const modelPart = trimmed.slice(slash + 1).trim();
 			if (!provider || !modelPart) throw new SelectorError(`invalid selector "${input}": empty provider or model`);
-			if (modelPart.includes("/")) throw new SelectorError(`invalid selector "${input}": unexpected extra separator`);
+			if (modelPart !== "*" && modelPart.includes("*")) throw new SelectorError(`invalid selector "${input}": unexpected wildcard in model`);
 			return {
 				provider,
 				model: modelPart === "*" ? void 0 : modelPart,
 				raw: trimmed
 			};
 		}
+		/**
+		* Frozen preset windows (UTC+8). `liang-*` presets have NO day mask (they
+		* apply every day, weekends included); `glm-peak` is Monday–Friday only.
+		* The two valleys are `complement: true` of their peak.
+		*/
+		const PRESETS = {
+			"liang-peak": {
+				windows: [{
+					start: "09:00",
+					end: "12:00"
+				}, {
+					start: "14:00",
+					end: "18:00"
+				}],
+				complement: false,
+				label: "Liang Peak"
+			},
+			"liang-valley": {
+				windows: [{
+					start: "09:00",
+					end: "12:00"
+				}, {
+					start: "14:00",
+					end: "18:00"
+				}],
+				complement: true,
+				label: "Liang Valley"
+			},
+			"glm-peak": {
+				windows: [{
+					start: "14:00",
+					end: "18:00",
+					days: [
+						1,
+						2,
+						3,
+						4,
+						5
+					]
+				}],
+				complement: false,
+				label: "GLM Peak"
+			},
+			"glm-valley": {
+				windows: [{
+					start: "14:00",
+					end: "18:00",
+					days: [
+						1,
+						2,
+						3,
+						4,
+						5
+					]
+				}],
+				complement: true,
+				label: "GLM Valley"
+			}
+		};
+		const HHMM_RE$1 = /^([01]\d|2[0-3]):[0-5]\d$/;
+		const WEEKDAY_INDEX = {
+			Sun: 0,
+			Mon: 1,
+			Tue: 2,
+			Wed: 3,
+			Thu: 4,
+			Fri: 5,
+			Sat: 6
+		};
+		/** Malformed rows warn once per row INSTANCE (config snapshots are stable
+		* across requests — this is what keeps "warn once" from becoming spam). */
+		const warnedMalformedRows = /* @__PURE__ */ new WeakSet();
+		/** Invalid `tz` values warn once per distinct value. */
+		const warnedTimeZones = /* @__PURE__ */ new Set();
+		function warnMalformed(row, reason) {
+			if (typeof row !== "object" || row === null) {
+				console.warn(`llm-fallbacks: skipping malformed time-slot row (${reason})`);
+				return;
+			}
+			if (warnedMalformedRows.has(row)) return;
+			warnedMalformedRows.add(row);
+			console.warn(`llm-fallbacks: skipping malformed time-slot row (${reason}): ${JSON.stringify(row)}`);
+		}
+		/** Wall-clock weekday (0=Sunday) + minutes-since-midnight of `now` in `tz`
+		* (standard `Intl` timezone rules, DST-safe). */
+		function wallClock(now, tz) {
+			try {
+				const parts = new Intl.DateTimeFormat("en-US", {
+					timeZone: tz,
+					weekday: "short",
+					hour: "2-digit",
+					minute: "2-digit",
+					hourCycle: "h23"
+				}).formatToParts(now);
+				let weekday = 0;
+				let minutes = 0;
+				for (const part of parts) if (part.type === "weekday") weekday = WEEKDAY_INDEX[part.value] ?? 0;
+				else if (part.type === "hour") minutes += Number(part.value) * 60;
+				else if (part.type === "minute") minutes += Number(part.value);
+				return {
+					weekday,
+					minutes
+				};
+			} catch (error) {
+				if (!warnedTimeZones.has(tz)) {
+					warnedTimeZones.add(tz);
+					console.warn(`llm-fallbacks: invalid timezone "${tz}" (${error.message}) — slot matching falls back to UTC`);
+				}
+				return {
+					weekday: now.getUTCDay(),
+					minutes: now.getUTCHours() * 60 + now.getUTCMinutes()
+				};
+			}
+		}
+		/** `HH:mm` → minutes-since-midnight (inputs are regex-validated or frozen
+		* constants — this never sees garbage). */
+		function minutesOf(hhmm) {
+			const [hour, minute] = hhmm.split(":").map(Number);
+			return hour * 60 + minute;
+		}
+		/** P4 containment rule: day mask matches AND the window contains `t`
+		* (`end` exclusive; `start > end` wraps midnight — custom rows only). */
+		function containsWindow(window, clock) {
+			if (!(window.days === void 0 || window.days.length === 0 || window.days.includes(clock.weekday))) return false;
+			const start = minutesOf(window.start);
+			const end = minutesOf(window.end);
+			return start <= end ? start <= clock.minutes && clock.minutes < end : start <= clock.minutes || clock.minutes < end;
+		}
+		function matchesAnyWindow(windows, clock) {
+			return windows.some((window) => containsWindow(window, clock));
+		}
+		/** Validate one stored row → frozen windows, or `undefined` (warn once +
+		* skip). Preset rows reject stored windows/day masks (P4); custom rows
+		* require strict `HH:mm` bounds; chains must be non-empty. */
+		function describeRow(row) {
+			if (!Array.isArray(row.chain) || row.chain.length === 0) {
+				warnMalformed(row, "empty chain");
+				return;
+			}
+			if (row.kind === "preset") {
+				const preset = row.preset;
+				if (typeof preset !== "string" || !Object.hasOwn(PRESETS, preset)) {
+					warnMalformed(row, `unknown preset ${JSON.stringify(preset)}`);
+					return;
+				}
+				if (row.start !== void 0 || row.end !== void 0 || row.days !== void 0 && row.days.length > 0) {
+					warnMalformed(row, `preset windows are fixed — row "${preset}" cannot carry start/end/days`);
+					return;
+				}
+				return PRESETS[preset];
+			}
+			if (row.kind === "custom") {
+				const { start, end } = row;
+				if (typeof start !== "string" || typeof end !== "string" || !HHMM_RE$1.test(start) || !HHMM_RE$1.test(end)) {
+					warnMalformed(row, `invalid custom window ${JSON.stringify(start)}-${JSON.stringify(end)} (expected HH:mm)`);
+					return;
+				}
+				return {
+					windows: [{
+						start,
+						end,
+						days: row.days
+					}],
+					complement: false
+				};
+			}
+			warnMalformed(row, `unknown kind ${JSON.stringify(row.kind)}`);
+		}
+		/** Display label for a winning row (preset rows use the frozen label;
+		* custom rows prefer their display name, falling back to the window). */
+		function labelOf(row) {
+			if (row.kind === "preset" && typeof row.preset === "string" && Object.hasOwn(PRESETS, row.preset)) return PRESETS[row.preset].label;
+			return row.name !== void 0 && row.name.trim() !== "" ? row.name : `custom ${row.start}-${row.end}`;
+		}
+		/**
+		* All-day conformance (P6): the all-day chain is conforming when its LAST
+		* entry (the tail — the card's 默认模型 panel) is exactly one official V4
+		* model — Flash XOR Pro. Leading entries (the card's 默认降级链 block) are
+		* the ordered walk before that last-resort fallback. An empty chain or a
+		* chain whose tail is not an official V4 model keeps slot rows inert and
+		* refuses the virtual-row override/delegate; the v0.2.2 failure walk over
+		* the raw chain stays verbatim.
+		*/
+		function isAllDayConforming(chain) {
+			if (chain.length < 1) return false;
+			const tail = chain[chain.length - 1];
+			return tail === "deepseek-official/deepseek-v4-flash" || tail === "deepseek-official/deepseek-v4-pro";
+		}
+		/**
+		* Slot winner + display label (P5): drives 分时切换 detection (per-root-agent
+		* last-winner marker, in-process only) and the card / `/fallbacks` status
+		* strip. `winner` is the matching row or `'all-day'`; `label` names the
+		* slot (frozen preset label or `custom HH:mm-HH:mm`).
+		*
+		* P6 gate (qc1 F-001): without a conforming all-day
+		* (`isAllDayConforming(config.rootChain)`) the winner is ALWAYS `'all-day'`
+		* — a legacy multi-model (or empty) chain earns no slot rows, so every
+		* surface fed by this resolver reports the inert state and routing stays on
+		* the raw `rootChain` (the v0.2.2 walk verbatim).
+		*/
+		function resolveSlotState(config, now, tz) {
+			if (!isAllDayConforming(config.rootChain)) return {
+				winner: "all-day",
+				label: "all-day"
+			};
+			const clock = wallClock(now, tz);
+			const seenPresets = /* @__PURE__ */ new Set();
+			const rows = Array.isArray(config.timeSlots) ? config.timeSlots : [];
+			for (const row of rows) {
+				if (typeof row !== "object" || row === null) {
+					warnMalformed(row, "row is not an object");
+					continue;
+				}
+				if (row.kind === "preset" && typeof row.preset === "string") {
+					if (seenPresets.has(row.preset)) {
+						warnMalformed(row, `duplicate preset "${row.preset}" — only the first row takes effect`);
+						continue;
+					}
+					seenPresets.add(row.preset);
+				}
+				const descriptor = describeRow(row);
+				if (descriptor === void 0) continue;
+				if (descriptor.complement ? !matchesAnyWindow(descriptor.windows, clock) : matchesAnyWindow(descriptor.windows, clock)) return {
+					winner: row,
+					label: labelOf(row)
+				};
+			}
+			return {
+				winner: "all-day",
+				label: "all-day"
+			};
+		}
 		//#endregion
 		//#region src/config.ts
-		/**
-		* The `fallbacks` settings namespace: plugin config schema + defaults.
-		*
-		* Two-block config model (plan fallbacks-role-config-model): block 1
-		* `rootChain` — the root agent's single fallback chain (empty = no
-		* degradation) — plus block 2 declared role entities: `roles.list`
-		* (id/label/description/prompt?/permissions?/chain?/fallback) and
-		* `roles.rules` enum references into the declared ids (or the built-in
-		* `'inherit'` role). The legacy `chains` / `roles.default` keys are gone
-		* from the schema and type (zero residual, migration table excepted); the
-		* runtime consumes the new shape directly and flags surviving legacy keys
-		* at startup via `detectLegacyKeys` (see `src/index.ts` apply()).
-		*
-		* Spec §4 is authoritative for field names and default values — notably
-		* `triggerCodes` defaults to dsh's stable failure codes `['AUTH', 'QUOTA',
-		* 'RATE_LIMIT']` (there is no `QUOTA_EXCEEDED` code in dsh), and an
-		* unconfigured install (`enabled: false`, empty `rootChain`, empty roles)
-		* is a no-op pass-through exactly like an uninstalled plugin (AC-8).
-		*
-		* This module is pure logic: it must not import any `@deepseek-ai/*` package
-		* (types included) — `FallbacksConfig` is the plugin's own type. Task 3
-		* registers this schema with `installSettingsSection` under the `fallbacks`
-		* settings namespace.
-		*
-		* @module dsh-llm-fallbacks/config
-		*/
 		/**
 		* Spec §4 defaults — `Config({})` must equal this (no-op install).
 		* `enabled` defaults to `false` (readme-settings spec §1.2): the feature
@@ -1103,7 +454,11 @@ window.__ModuleLoader__.load({
 			cooldownMs: 3e5,
 			revertPolicy: "cooldown-expiry",
 			maxSwitchesPerStep: 8,
-			alwaysModeRetryCap: 5
+			alwaysModeRetryCap: 5,
+			presets: "bundled",
+			roleAutoMatch: true,
+			timeSlots: [],
+			tz: "Asia/Shanghai"
 		};
 		/**
 		* Reserved role id: legal as a rule target (`roles.rules[].role`) and as
@@ -1112,42 +467,6 @@ window.__ModuleLoader__.load({
 		const INHERIT_ROLE_ID = "inherit";
 		/** Role id format (aligned with yet-another-subagent `isValidProfileId`). */
 		const ROLE_ID_PATTERN = /^[a-z0-9-]{1,32}$/;
-		import_lib.default.object({
-			enabled: import_lib.default.boolean().default(false),
-			triggerCodes: import_lib.default.array(import_lib.default.string()).default([
-				"AUTH",
-				"QUOTA",
-				"RATE_LIMIT"
-			]),
-			rootChain: import_lib.default.array(import_lib.default.string()).default([]),
-			roles: import_lib.default.object({
-				list: import_lib.default.array(import_lib.default.object({
-					id: import_lib.default.string().required(),
-					label: import_lib.default.string().default(""),
-					description: import_lib.default.string().default(""),
-					prompt: import_lib.default.string(),
-					permissions: import_lib.default.object({
-						allow: import_lib.default.array(import_lib.default.string()),
-						deny: import_lib.default.array(import_lib.default.string())
-					}),
-					chain: import_lib.default.array(import_lib.default.string()),
-					fallback: import_lib.default.union([import_lib.default.const("inherit-root"), import_lib.default.const("none")]).default("inherit-root")
-				})).default([]),
-				rules: import_lib.default.array(import_lib.default.object({
-					origin: import_lib.default.union([import_lib.default.const("root"), import_lib.default.const("subagent")]),
-					provider: import_lib.default.string(),
-					model: import_lib.default.string(),
-					role: import_lib.default.string().required()
-				})).default([])
-			}).default({
-				list: [],
-				rules: []
-			}),
-			cooldownMs: import_lib.default.number().default(3e5),
-			revertPolicy: import_lib.default.union([import_lib.default.const("cooldown-expiry"), import_lib.default.const("never")]).default("cooldown-expiry"),
-			maxSwitchesPerStep: import_lib.default.number().default(8),
-			alwaysModeRetryCap: import_lib.default.number().default(5)
-		});
 		//#endregion
 		//#region src/client/fallbacks-store.ts
 		/** The plugin's settings namespace on the host wire (settings/document-updated ns filter). */
@@ -1159,7 +478,7 @@ window.__ModuleLoader__.load({
 			return typeof value === "object" && value !== null && !Array.isArray(value);
 		}
 		/**
-		* Read a nested value by path — the `@deepseek-ai/dsh-client-schema-form`
+		* Read a nested value by path — the upstream `dsh-client-schema-form`
 		* `getPath` semantics, copied locally so the provider-configured join needs no
 		* new dependency (array indexes as numeric keys, `undefined` along a missing
 		* branch).
@@ -1175,6 +494,29 @@ window.__ModuleLoader__.load({
 				current = current[key];
 			}
 			return current;
+		}
+		/**
+		* Shape-guard the wire `seeds` badge field (spec §9.4): only `{ id,
+		* overridden }` entries survive — the `legacyKeys` element-filter
+		* precedent. A non-array value resolves to `[]`; malformed entries are
+		* dropped, so an all-bad array also lands `[]`. The store never trusts a
+		* misshapen badge field.
+		*/
+		function parseSeedsWire(value) {
+			if (!Array.isArray(value)) return [];
+			return value.filter((entry) => {
+				if (!isRecord(entry)) return false;
+				return typeof entry.id === "string" && typeof entry.overridden === "boolean";
+			});
+		}
+		/** Seed-default persona from a revert-seed wire body (issue #59). */
+		function revertOutcomePersona(value) {
+			if (value === null || typeof value !== "object" || !("outcome" in value)) return void 0;
+			const outcome = value.outcome;
+			if (outcome === null || typeof outcome !== "object") return void 0;
+			if (!("reverted" in outcome) || outcome.reverted !== true) return void 0;
+			if (!("persona" in outcome) || typeof outcome.persona !== "string") return void 0;
+			return outcome.persona;
 		}
 		/**
 		* The provider dropdown's offer set (spec §2.5 D-4): catalog providers whose
@@ -1206,10 +548,8 @@ window.__ModuleLoader__.load({
 			const roles = isRecord(value.roles) ? value.roles : {};
 			const parsedList = (Array.isArray(roles.list) ? roles.list : []).map((role, index) => {
 				if (!isRecord(role) || typeof role.id !== "string") throw new TypeError(`fallbacks descriptor roles.list[${String(index)}] must have a string id`);
-				const label = role.label;
-				if (label !== void 0 && typeof label !== "string") throw new TypeError(`fallbacks descriptor roles.list[${String(index)}].label must be a string`);
-				const description = role.description;
-				if (description !== void 0 && typeof description !== "string") throw new TypeError(`fallbacks descriptor roles.list[${String(index)}].description must be a string`);
+				const persona = role.persona;
+				if (persona !== void 0 && typeof persona !== "string") throw new TypeError(`fallbacks descriptor roles.list[${String(index)}].persona must be a string`);
 				const prompt = role.prompt;
 				if (prompt !== void 0 && typeof prompt !== "string") throw new TypeError(`fallbacks descriptor roles.list[${String(index)}].prompt must be a string`);
 				const permissions = role.permissions;
@@ -1220,8 +560,7 @@ window.__ModuleLoader__.load({
 				if (fallback !== void 0 && fallback !== "inherit-root" && fallback !== "none") throw new TypeError(`fallbacks descriptor roles.list[${String(index)}].fallback must be inherit-root|none`);
 				return {
 					id: role.id,
-					label: label ?? "",
-					description: description ?? "",
+					persona: persona ?? "",
 					...prompt === void 0 ? {} : { prompt },
 					...permissions === void 0 ? {} : { permissions },
 					chain: chain ?? [],
@@ -1253,8 +592,29 @@ window.__ModuleLoader__.load({
 			]) if (raw !== void 0 && typeof raw !== "number") throw new TypeError(`fallbacks descriptor ${field} must be a number`);
 			const revertPolicy = value.revertPolicy;
 			if (revertPolicy !== void 0 && revertPolicy !== "cooldown-expiry" && revertPolicy !== "never") throw new TypeError("fallbacks descriptor revertPolicy must be cooldown-expiry|never");
+			const presets = value.presets;
+			if (presets !== void 0 && presets !== "bundled" && presets !== "none") throw new TypeError("fallbacks descriptor presets must be bundled|none");
 			const enabled = value.enabled;
 			if (enabled !== void 0 && typeof enabled !== "boolean") throw new TypeError("fallbacks descriptor enabled must be a boolean");
+			const roleAutoMatch = value.roleAutoMatch;
+			if (roleAutoMatch !== void 0 && typeof roleAutoMatch !== "boolean") throw new TypeError("fallbacks descriptor roleAutoMatch must be a boolean");
+			const timeSlots = value.timeSlots;
+			if (timeSlots !== void 0 && (!Array.isArray(timeSlots) || timeSlots.some((row) => {
+				if (!isRecord(row)) return true;
+				for (const field of [
+					"kind",
+					"preset",
+					"start",
+					"end"
+				]) if (row[field] !== void 0 && typeof row[field] !== "string") return true;
+				const chain = row.chain;
+				if (chain !== void 0 && (!Array.isArray(chain) || chain.some((entry) => typeof entry !== "string"))) return true;
+				const days = row.days;
+				if (days !== void 0 && (!Array.isArray(days) || days.some((day) => typeof day !== "number"))) return true;
+				return false;
+			}))) throw new TypeError("fallbacks descriptor timeSlots must be an array of slot rows (kind/preset/start/end strings, chain string array, days number array)");
+			const tz = value.tz;
+			if (tz !== void 0 && typeof tz !== "string") throw new TypeError("fallbacks descriptor tz must be a string");
 			return {
 				enabled: enabled ?? defaultFallbacksConfig.enabled,
 				triggerCodes: triggerCodes ?? [...defaultFallbacksConfig.triggerCodes],
@@ -1266,7 +626,11 @@ window.__ModuleLoader__.load({
 				cooldownMs: cooldownMs ?? defaultFallbacksConfig.cooldownMs,
 				revertPolicy: revertPolicy ?? defaultFallbacksConfig.revertPolicy,
 				maxSwitchesPerStep: maxSwitchesPerStep ?? defaultFallbacksConfig.maxSwitchesPerStep,
-				alwaysModeRetryCap: alwaysModeRetryCap ?? defaultFallbacksConfig.alwaysModeRetryCap
+				alwaysModeRetryCap: alwaysModeRetryCap ?? defaultFallbacksConfig.alwaysModeRetryCap,
+				presets: presets ?? defaultFallbacksConfig.presets,
+				roleAutoMatch: roleAutoMatch ?? defaultFallbacksConfig.roleAutoMatch,
+				timeSlots: timeSlots ?? [...defaultFallbacksConfig.timeSlots ?? []],
+				tz: tz ?? defaultFallbacksConfig.tz
 			};
 		}
 		/** The raw selector string a selection serializes to ('' when empty). */
@@ -1324,46 +688,6 @@ window.__ModuleLoader__.load({
 			switches.sort((a, b) => b.seq - a.seq);
 			return switches.slice(0, limit);
 		}
-		/** The config's primary target: the rootChain's first entry (D-6 ③). */
-		function configPrimaryTarget(config) {
-			const firstEntry = config.rootChain[0];
-			if (firstEntry === void 0) return null;
-			try {
-				const selector = parseSelector(firstEntry);
-				return {
-					provider: selector.provider,
-					model: selector.model ?? "*"
-				};
-			} catch {
-				return {
-					provider: firstEntry,
-					model: "*"
-				};
-			}
-		}
-		/**
-		* Derive the status block's "current effective model" (spec §2.5 D-6): ①
-		* disabled / empty rootChain → unavailable; ② a recent switch exists → the
-		* latest one's `to`; ③ otherwise → the config's primary target. A **display
-		* value** — never a live route probe (the section appends the non-probing
-		* note inline right after the derived value, available case only; the
-		* unavailable 空态 renders its own copy without the note).
-		*/
-		function deriveEffectiveModel(config, switches) {
-			if (!config.enabled || config.rootChain.length === 0) return { kind: "unavailable" };
-			const latest = switches[0];
-			if (latest !== void 0) return {
-				kind: "switched",
-				provider: latest.to.provider,
-				model: latest.to.model
-			};
-			const target = configPrimaryTarget(config);
-			if (target === null) return { kind: "unavailable" };
-			return {
-				kind: "config",
-				...target
-			};
-		}
 		/** Serialize one selector row to its wire string (`provider/model` | `provider/*`). */
 		function selectorRowToRaw(row) {
 			const provider = selectionToRaw(row.provider);
@@ -1408,22 +732,61 @@ window.__ModuleLoader__.load({
 			}
 			return entries;
 		}
+		/** Project the time-slot rows into editable rows (chain selectors classified). */
+		function timeSlotsToRows(timeSlots, catalog) {
+			return timeSlots.map((row) => ({
+				kind: row.kind,
+				...row.preset === void 0 ? {} : { preset: row.preset },
+				start: row.start ?? "",
+				end: row.end ?? "",
+				days: [...row.days ?? []],
+				name: row.name ?? "",
+				collapsed: true,
+				selectors: (row.chain ?? []).map((entry) => entryToSelectorRow(entry, catalog))
+			}));
+		}
+		/** Rebuild the time-slot rows from edited rows; blank selectors drop out.
+		* `kind` rides verbatim (a hand-written unknown kind reads back unchanged;
+		* save validation rejects it) — the cast asserts the trusted editor shape.
+		* `days` is ALWAYS serialized ([] included): schemastery composes absent
+		* array fields as `[]`, so the composed config every card load accepts
+		* carries `days` on every row — the draft must too, or a clean card would
+		* read back dirty. */
+		function rowsToTimeSlots(rows) {
+			return rows.map((row) => {
+				const chain = row.selectors.map(selectorRowToRaw).filter((entry) => entry !== "");
+				if (row.kind === "preset") return {
+					kind: "preset",
+					preset: row.preset,
+					days: row.days,
+					chain
+				};
+				return {
+					kind: row.kind,
+					...row.preset === void 0 ? {} : { preset: row.preset },
+					start: row.start,
+					end: row.end,
+					days: row.days,
+					...row.name === "" ? {} : { name: row.name },
+					chain
+				};
+			});
+		}
 		/** Project the declared roles into editable rows (chain selectors classified). */
 		function rolesToRows(roles, catalog) {
 			return roles.map((role) => ({
 				id: role.id,
-				label: role.label,
-				description: role.description,
+				persona: role.persona,
 				selectors: (role.chain ?? []).map((entry) => entryToSelectorRow(entry, catalog)),
-				fallback: role.fallback ?? "inherit-root"
+				fallback: role.fallback ?? "inherit-root",
+				collapsed: true
 			}));
 		}
 		/** Rebuild the declared roles from edited rows; empty selectors drop out. */
 		function rowsToRoles(rows) {
 			return rows.map((row) => ({
 				id: row.id.trim(),
-				label: row.label,
-				description: row.description,
+				persona: row.persona,
 				chain: row.selectors.map(selectorRowToRaw).filter((entry) => entry !== ""),
 				fallback: row.fallback
 			}));
@@ -1445,8 +808,7 @@ window.__ModuleLoader__.load({
 				if (original === void 0) return role;
 				return {
 					id: role.id,
-					label: role.label,
-					description: role.description,
+					persona: role.persona,
 					...original.prompt === void 0 ? {} : { prompt: original.prompt },
 					...original.permissions === void 0 ? {} : { permissions: original.permissions },
 					chain: role.chain,
@@ -1466,16 +828,14 @@ window.__ModuleLoader__.load({
 		/** Project the role rules into editable rows (provider/model classified). */
 		function rulesToRows(rules, catalog) {
 			return rules.map((rule) => ({
-				origin: rule.origin ?? "",
 				provider: classifyProvider(rule.provider ?? "", catalog),
 				model: classifyModel(rule.provider ?? "", rule.model ?? "", catalog),
 				role: rule.role
 			}));
 		}
-		/** Rebuild the role rules from edited rows; empty origin/provider/model drop out. */
+		/** Rebuild the role rules from edited rows; empty provider/model drop out. */
 		function rowsToRules(rows) {
 			return rows.map((row) => ({
-				...row.origin === "" ? {} : { origin: row.origin },
 				...row.provider === null ? {} : { provider: selectionToRaw(row.provider) },
 				...row.model === null ? {} : { model: selectionToRaw(row.model) },
 				role: row.role.trim()
@@ -1493,6 +853,7 @@ window.__ModuleLoader__.load({
 				config: defaultFallbacksConfig,
 				present: false,
 				legacyKeys: [],
+				seeds: [],
 				catalogStatus: "idle",
 				catalogError: null,
 				providers: [],
@@ -1503,7 +864,14 @@ window.__ModuleLoader__.load({
 				switchesError: null,
 				switches: []
 			});
-			generation = 0;
+			/** Read guard: a newer load() supersedes an older one's publish. */
+			readGeneration = 0;
+			/**
+			* Write guard: save()/resetToDefaults() completions ALWAYS publish unless
+			* dispose() invalidated them — an overlapping read must never discard a
+			* successful write's accept() (audit F1).
+			*/
+			writeGeneration = 0;
 			catalogGeneration = 0;
 			switchesGeneration = 0;
 			/** Every settings namespace from the last describe, keyed by ns — the configured-provider join's other input. */
@@ -1534,29 +902,34 @@ window.__ModuleLoader__.load({
 			* @returns nothing; {@link store} carries success or failure.
 			*/
 			async load() {
-				const generation = ++this.generation;
+				const generation = ++this.readGeneration;
+				const writeGenerationAtStart = this.writeGeneration;
 				this.store.update((state) => {
 					state.status = "loading";
 					state.error = null;
 				});
 				try {
 					const [describeResult, getResult] = await Promise.all([this.api.settings.describe({}), this.rpc.call("/api", "fallbacks/get", { args: {} }).catch(() => void 0)]);
-					if (generation !== this.generation) return;
+					if (generation !== this.readGeneration) return;
+					if (writeGenerationAtStart !== this.writeGeneration) return;
 					if (!describeResult.result.ok) throw describeResult.result.error;
 					this.namespaces = new Map(describeResult.result.value.namespaces.map((entry) => [entry.ns, entry]));
 					const writable = describeResult.result.value.writable;
 					let config;
 					let legacyKeys = [];
+					let seeds = [];
 					if (getResult !== void 0 && getResult.ok && getResult.value !== null && typeof getResult.value === "object") {
 						if ("config" in getResult.value) config = getResult.value.config;
 						if ("legacyKeys" in getResult.value) {
 							const wireLegacyKeys = getResult.value.legacyKeys;
 							if (Array.isArray(wireLegacyKeys)) legacyKeys = wireLegacyKeys.filter((key) => typeof key === "string");
 						}
+						if ("seeds" in getResult.value) seeds = parseSeedsWire(getResult.value.seeds);
 					}
-					this.accept(config, writable, legacyKeys);
+					this.accept(config, writable, legacyKeys, seeds);
 				} catch (error) {
-					if (generation !== this.generation) return;
+					if (generation !== this.readGeneration) return;
+					if (writeGenerationAtStart !== this.writeGeneration) return;
 					this.fail(error);
 				}
 			}
@@ -1673,14 +1046,14 @@ window.__ModuleLoader__.load({
 			async save(next) {
 				const state = this.store.getSnapshot();
 				if (!state.writable || state.status === "saving") return;
-				const generation = ++this.generation;
+				const generation = ++this.writeGeneration;
 				this.store.update((draft) => {
 					draft.status = "saving";
 					draft.error = null;
 				});
 				try {
 					const result = await this.rpc.call("/api", "fallbacks/set", { args: { patch: next } });
-					if (generation !== this.generation) return;
+					if (generation !== this.writeGeneration) return;
 					if (!result.ok) throw result.error;
 					const value = result.value;
 					const config = value !== null && typeof value === "object" && "config" in value ? value.config : void 0;
@@ -1689,9 +1062,14 @@ window.__ModuleLoader__.load({
 						const wireLegacyKeys = value.legacyKeys;
 						if (Array.isArray(wireLegacyKeys)) legacyKeys = wireLegacyKeys.filter((key) => typeof key === "string");
 					}
-					this.accept(config, true, legacyKeys);
+					let seeds = this.store.getSnapshot().seeds;
+					if (value !== null && typeof value === "object" && "seeds" in value) {
+						const wireSeeds = value.seeds;
+						if (Array.isArray(wireSeeds)) seeds = parseSeedsWire(wireSeeds);
+					}
+					this.accept(config, true, legacyKeys, seeds);
 				} catch (error) {
-					if (generation !== this.generation) return;
+					if (generation !== this.writeGeneration) return;
 					this.fail(error);
 				}
 			}
@@ -1704,14 +1082,14 @@ window.__ModuleLoader__.load({
 			async resetToDefaults() {
 				const state = this.store.getSnapshot();
 				if (!state.writable || state.status === "saving") return;
-				const generation = ++this.generation;
+				const generation = ++this.writeGeneration;
 				this.store.update((draft) => {
 					draft.status = "saving";
 					draft.error = null;
 				});
 				try {
 					const result = await this.rpc.call("/api", "fallbacks/reset", { args: {} });
-					if (generation !== this.generation) return;
+					if (generation !== this.writeGeneration) return;
 					if (!result.ok) throw result.error;
 					const value = result.value;
 					const config = value !== null && typeof value === "object" && "config" in value ? value.config : void 0;
@@ -1720,15 +1098,71 @@ window.__ModuleLoader__.load({
 						const wireLegacyKeys = value.legacyKeys;
 						if (Array.isArray(wireLegacyKeys)) legacyKeys = wireLegacyKeys.filter((key) => typeof key === "string");
 					}
-					this.accept(config, true, legacyKeys);
+					let seeds = this.store.getSnapshot().seeds;
+					if (value !== null && typeof value === "object" && "seeds" in value) {
+						const wireSeeds = value.seeds;
+						if (Array.isArray(wireSeeds)) seeds = parseSeedsWire(wireSeeds);
+					}
+					this.accept(config, true, legacyKeys, seeds);
 				} catch (error) {
-					if (generation !== this.generation) return;
+					if (generation !== this.writeGeneration) return;
 					this.fail(error);
+				}
+			}
+			/**
+			* Revert one seeded role to its CURRENT declared seed default (spec §9.4,
+			* AC-3) through the gateway channel (`/api/fallbacks/revert-seed`). Same
+			* write guards as {@link save} — writable / saving / write-generation —
+			* and the same KD-G3 error handling: any business rejection or transport
+			* failure surfaces its message in `state.error` for the error banner and
+			* the form stays editable for retry. A business `{ reverted: false,
+			* reason }` outcome is still a successful RPC — the post-write read
+			* result (config / legacyKeys / seeds) lands either way, and the revert
+			* button stays disabled while the write is in flight.
+			*
+			* Returns the seed-default persona when the outcome is `{ reverted:
+			* true, persona }` — including the persist no-op (persisted already
+			* equals the seed). The card applies that string to the row's **draft**
+			* so an unsaved persona edit still snaps back (issue #59).
+			* @param id - the seeded role id; the host matches it by trimmed id
+			*   against the seed registry (spec §9.3).
+			*/
+			async revertSeed(id) {
+				const state = this.store.getSnapshot();
+				if (!state.writable || state.status === "saving") return void 0;
+				const generation = ++this.writeGeneration;
+				this.store.update((draft) => {
+					draft.status = "saving";
+					draft.error = null;
+				});
+				try {
+					const result = await this.rpc.call("/api", "fallbacks/revert-seed", { args: { id } });
+					if (generation !== this.writeGeneration) return void 0;
+					if (!result.ok) throw result.error;
+					const value = result.value;
+					const config = value !== null && typeof value === "object" && "config" in value ? value.config : void 0;
+					let legacyKeys = this.store.getSnapshot().legacyKeys;
+					if (value !== null && typeof value === "object" && "legacyKeys" in value) {
+						const wireLegacyKeys = value.legacyKeys;
+						if (Array.isArray(wireLegacyKeys)) legacyKeys = wireLegacyKeys.filter((key) => typeof key === "string");
+					}
+					let seeds = this.store.getSnapshot().seeds;
+					if (value !== null && typeof value === "object" && "seeds" in value) {
+						const wireSeeds = value.seeds;
+						if (Array.isArray(wireSeeds)) seeds = parseSeedsWire(wireSeeds);
+					}
+					this.accept(config, true, legacyKeys, seeds);
+					return revertOutcomePersona(value);
+				} catch (error) {
+					if (generation !== this.writeGeneration) return void 0;
+					this.fail(error);
+					return;
 				}
 			}
 			/** Stop in-flight responses from publishing after plugin disposal. */
 			dispose() {
-				this.generation += 1;
+				this.readGeneration += 1;
+				this.writeGeneration += 1;
 				this.catalogGeneration += 1;
 				this.switchesGeneration += 1;
 				this.namespaces = /* @__PURE__ */ new Map();
@@ -1744,9 +1178,12 @@ window.__ModuleLoader__.load({
 			* same publish: the wire field drives the migration banner. save/reset
 			* pass the POST-WRITE value (W-1/F-1) — or the previous value when the
 			* response omits the field, so a write can never clear the banner
-			* against server truth; only a real `get` may.
+			* against server truth; only a real `get` may. `seeds` (spec §9.4)
+			* follows the same honest rule: the wire badge field is authoritative
+			* only when a real config resolved — a transient channel-down keeps the
+			* last accepted badge state.
 			*/
-			accept(config, writable, legacyKeys) {
+			accept(config, writable, legacyKeys, seeds) {
 				const parsed = config === void 0 ? void 0 : parseFallbacksConfig(config);
 				this.store.update((state) => {
 					state.status = "ready";
@@ -1754,6 +1191,7 @@ window.__ModuleLoader__.load({
 					state.writable = writable;
 					state.present = parsed !== void 0;
 					state.legacyKeys = parsed === void 0 ? state.legacyKeys : legacyKeys;
+					state.seeds = parsed === void 0 ? state.seeds : seeds;
 					if (parsed !== void 0) state.config = parsed;
 					state.configuredProviders = configuredProvidersOf(state.providers, this.namespaces);
 				});
@@ -1841,36 +1279,91 @@ window.__ModuleLoader__.load({
 			"alwaysModeRetryCap.label": "always 模式重试上限",
 			"alwaysModeRetryCap.hint": "达到上限次数后切换；0 表示禁用",
 			"alwaysModeRetryCap.tooltip": "retryPolicy 为 always 的模型在同一请求内重试达到该次数后切换；0 表示禁用。",
-			"rootChain.label": "root 主代理降级链",
-			"rootChain.hint": "未配置 = root 不降级",
-			"rootChain.tooltip": "root 主代理失败时按此有序选择器列表依次降级；未配置时行为与未安装插件一致。",
-			"rootChain.selector.add": "添加选择器",
+			"advanced.label": "高级选项",
+			"advanced.expand": "展开高级选项",
+			"advanced.collapse": "收起高级选项",
+			"roleAutoMatch.label": "启用角色自动匹配",
+			"roleAutoMatch.hint": "规则未命中时，由模型自选最贴近的已声明角色",
+			"roleAutoMatch.tooltip": "规则未命中时，模型会自动从已声明角色（id + persona）中选择最匹配者并注入该角色的链；关闭后未命中规则时按现状回落（inherit / rootChain）。",
+			"rootChain.label": "默认降级链",
+			"rootChain.tooltip": "未命中任何分时槽时先走这条降级链；全部失败后落到下面的默认模型。",
+			"defaultModel.label": "默认模型",
 			"chains.selector.remove": "删除该选择器",
 			"chains.selector.providerPlaceholder": "选择 provider",
 			"chains.selector.modelPlaceholder": "选择 model",
-			"chains.selector.wildcard": "通配该 provider（provider/*）",
-			"chains.selector.noModels": "该 provider 暂无可用模型（目录查询失败），请使用通配或改选。",
+			"chains.selector.wildcardLegacy": "该条目为通配（provider/*）：选择具体模型后将转为精确条目",
+			"chains.selector.noModelsStrict": "该 provider 暂无可用模型（目录查询失败），请改选其他 provider。",
+			"mainAgent.label": "主代理",
+			"subagents.label": "子代理",
+			"timeSlots.label": "分时槽设置",
+			"timeSlots.hint": "自上而下第一条命中生效；全时段行固定最后",
+			"timeSlots.tz.label": "时区（UTC±）",
+			"timeSlots.drag": "拖拽排序（或使用上下按钮）",
+			"timeSlots.name": "名称",
+			"timeSlots.expand": "展开该行",
+			"timeSlots.collapse": "收起该行",
+			"timeSlots.tooltip": "命中行的模型链成为 root 生效链（取代全时段链）；未命中任何行时使用全时段链。分时切换是路由种子而非失败决策：不消耗冷却、不计入单步切换上限。",
+			"timeSlots.addPreset": "添加预设",
+			"timeSlots.addCustom": "添加自定义时段",
+			"timeSlots.presetPlaceholder": "选择预设",
+			"timeSlots.remove": "删除该时段行",
+			"timeSlots.moveUp": "上移该时段行",
+			"timeSlots.moveDown": "下移该时段行",
+			"timeSlots.start": "开始（HH:mm）",
+			"timeSlots.end": "结束（HH:mm）",
+			"timeSlots.days": "星期",
+			"timeSlots.days.hint": "不勾选 = 每天；可跨午夜",
+			"timeSlots.preset.name": "预设",
+			"timeSlots.preset.windowLabel": "时段（只读）",
+			"timeSlots.preset.chainsOnly": "预设窗口已锁定：仅可编辑模型链",
+			"timeSlots.preset.liang-peak.label": "梁文峰",
+			"timeSlots.preset.liang-peak.window": "09:00–12:00 与 14:00–18:00（每天，UTC+8）",
+			"timeSlots.preset.liang-valley.label": "梁文谷",
+			"timeSlots.preset.liang-valley.window": "Liang Peak 之外的所有时间（每天，UTC+8）",
+			"timeSlots.preset.glm-peak.label": "GLM峰",
+			"timeSlots.preset.glm-peak.window": "周一至周五 14:00–18:00（UTC+8）",
+			"timeSlots.preset.glm-valley.label": "GLM谷",
+			"timeSlots.preset.glm-valley.window": "GLM Peak 之外的所有时间（UTC+8）",
+			"timeSlots.preset.glm.note": "仅配置了 zai-coding-cn 时有效",
+			"timeSlots.preset.highCost": "高消耗",
+			"timeSlots.preset.multiplier": "x{n}",
+			"timeSlots.active": "激活",
+			"timeSlots.preset.glm.unconfigured": "（需配置 zai-coding-cn）",
+			"timeSlots.day.sun": "日",
+			"timeSlots.day.mon": "一",
+			"timeSlots.day.tue": "二",
+			"timeSlots.day.wed": "三",
+			"timeSlots.day.thu": "四",
+			"timeSlots.day.fri": "五",
+			"timeSlots.day.sat": "六",
+			"timeSlots.selector.add": "添加选择器",
+			"allDay.hint": "全天链的最后一档兜底：官方 V4 Flash 或 V4 Pro 二选一",
+			"allDay.flash": "官方 V4 Flash（deepseek-official/deepseek-v4-flash）",
+			"allDay.pro": "官方 V4 Pro（deepseek-official/deepseek-v4-pro）",
+			"allDay.nonconforming": "当前默认模型不合法：请选择官方 V4 Flash 或 V4 Pro 后保存",
 			"roles.list.label": "角色实体",
 			"roles.list.hint": "先声明角色，规则才能引用",
 			"roles.list.tooltip": "角色 id 须匹配 /^[a-z0-9-]{1,32}$/ 且唯一；\"inherit\" 为保留字，不能用作角色 id。",
 			"roles.id": "id",
 			"roles.id.hint": "小写字母/数字/连字符，1–32 字符",
 			"roles.idPlaceholder": "例如 reviewer",
-			"roles.label": "名称",
-			"roles.description": "描述",
+			"roles.persona": "人格提示",
+			"roles.personaPlaceholder": "例如：你是资深代码审查员",
+			"roles.seedDefault": "seed 默认",
+			"roles.seedOverride": "seed 覆盖",
+			"roles.revertPersona": "还原 Seed 默认",
+			"roles.seedChainOptional": "角色 \"{id}\" 为 seed 角色：链可留空，保存不会被拦截",
 			"roles.fallback": "链拼接策略",
 			"roles.fallback.inherit-root": "继承 root（角色链后追加 rootChain）",
 			"roles.fallback.none": "仅角色链（不追加 rootChain）",
 			"roles.add": "添加角色",
 			"roles.remove": "删除该角色",
+			"roles.expand": "展开该角色",
+			"roles.collapse": "收起该角色",
 			"roles.selector.add": "添加选择器",
 			"roles.rules": "角色规则",
-			"roles.rules.hint": "顺序匹配 origin/provider/model，未命中 → inherit（root 链）",
-			"roles.rules.tooltip": "规则命中后走对应角色的链；未命中走内置 inherit（rootChain）。",
-			"roles.rule.origin": "来源",
-			"roles.rule.origin.any": "任意",
-			"roles.rule.origin.root": "root",
-			"roles.rule.origin.subagent": "subagent",
+			"roles.rules.hint": "仅对子代理生效：顺序匹配 provider/model，未命中 → inherit（root 链）",
+			"roles.rules.tooltip": "规则仅对子代理生效（root 请求不匹配规则）：命中后走对应角色的链；未命中走内置 inherit（rootChain）。",
 			"roles.rule.provider": "provider",
 			"roles.rule.provider.any": "任意",
 			"roles.rule.model": "model",
@@ -1887,6 +1380,15 @@ window.__ModuleLoader__.load({
 			"validation.roleIdDuplicate": "角色 id \"{id}\" 重复",
 			"validation.ruleRoleUndeclared": "规则引用了未声明的角色 \"{role}\"",
 			"validation.ruleRoleRequired": "规则未选择角色：请选择目标角色，或删除该行",
+			"validation.roleChainRequired": "角色 \"{id}\" 未配置模型：请至少添加一条链选择器（模型配置）",
+			"validation.allDayRequired": "默认模型必须二选一：官方 V4 Flash 或 V4 Pro",
+			"validation.slotChainRequired": "分时槽未配置模型：请至少添加一条链选择器",
+			"validation.slotWindow": "分时槽开始/结束时间须为 HH:mm 格式",
+			"validation.slotDays": "星期取值须为 0–6 的整数",
+			"validation.slotKind": "分时槽 kind 须为 \"preset\" 或 \"custom\"",
+			"validation.slotPresetUnknown": "未知的分时槽预设 \"{preset}\"",
+			"validation.slotPresetDuplicate": "预设 \"{preset}\" 已存在：每个预设只能添加一行",
+			"validation.slotPresetFrozen": "预设窗口是冻结代码常量：预设行不能携带 start/end/days",
 			"validation.selector": "选择器 \"{entry}\" 非法：{message}",
 			"legacy.banner": "检测到旧格式配置字段（{keys}）：已按新模型展示，请按 docs/configuration.md 迁移表手工改写；插件不会自动改写配置。",
 			"catalog.empty": "暂无可用模型：请先在模型页添加模型，添加后此处将自动可选。",
@@ -1897,37 +1399,32 @@ window.__ModuleLoader__.load({
 			"catalog.outside.short": " （目录外）",
 			"catalog.unconfigured.short": " （未配置）",
 			"status.title": "运行状态（只读）",
-			"status.effectiveModel.label": "当前生效模型：",
-			"status.effectiveModel.unavailable": "fallbacks 未启用（或 rootChain 未配置）",
-			"status.effectiveModel.note": "配置 + 最近切换推导，非实时路由探测",
 			"status.switches.label": "最近切换：",
 			"status.switches.empty": "本会话暂无 fallback 切换。",
 			"status.switches.error": "切换历史读取失败：{message}",
 			"status.switches.compact": "最近 {count} 次 · {from} → {to}（{role} · {reason}）",
+			"status.switches.compact.roleInject": "最近 {count} 次 · {role} → {to}（{reason}）",
 			"status.switches.reason.trigger-code": "触发失败码",
 			"status.switches.reason.always-cap": "always 模式上限",
-			"status.selectionNote": "说明：web 前端手动选择的模型可能在切换后重新套用（标记载体已随本地 patch 移除）。",
+			"status.switches.reason.role-inject": "角色注入",
 			"general.title": "模型故障降级",
 			"general.enabled": "已启用",
 			"general.disabled": "未启用",
 			"general.unknown": "未知",
 			"general.unavailable": "状态通道暂不可达",
 			"general.switch": "最近切换：{from} → {to}（{role} · {reason}）",
+			"general.switch.roleInject": "最近切换：{role} → {to}（{reason}）",
 			"general.switch.empty": "本会话暂无切换",
 			"general.error": "状态读取失败：{message}",
-			"chat.switch.title": "模型切换",
-			"chat.switch.summary": "{from} → {to}（{role} · {reason}）",
+			"chat.switch.title": "模型已降级",
+			"chat.switch.summary": "{from} → {to}（{reason}）",
+			"chat.switch.summary.roleInject": "（{reason}）",
+			"chat.switch.roleMap": "{role} → {model}",
 			"defaults.prefix": "默认值",
 			"save": "保存",
 			"save.saving": "保存中…",
 			"save.error": "保存失败：{message}",
 			"close": "关闭",
-			"reset": "恢复默认",
-			"reset.confirmTitle": "恢复默认配置",
-			"reset.confirm": "恢复后 fallbacks 配置将回到插件默认值，当前编辑内容会丢失。",
-			"reset.confirm.cancel": "取消",
-			"reset.confirm.action": "恢复默认",
-			"reset.saving": "恢复中…",
 			"loading": "加载中…",
 			"unavailable": "fallbacks 配置通道暂不可达：以下显示默认配置（或上次读取值），可尝试保存；保存失败会在此处如实提示。",
 			"error.generic": "出错：{message}"
@@ -1967,36 +1464,91 @@ window.__ModuleLoader__.load({
 			"alwaysModeRetryCap.label": "Always-mode retry cap",
 			"alwaysModeRetryCap.hint": "Switches after the cap; 0 disables",
 			"alwaysModeRetryCap.tooltip": "Models whose retryPolicy is always switch after this many retries within one request; 0 disables.",
-			"rootChain.label": "Root agent fallback chain",
-			"rootChain.hint": "Unset = root does not fall back",
-			"rootChain.tooltip": "When the root agent fails it falls back down this ordered selector list; unset behaves like an uninstalled plugin.",
-			"rootChain.selector.add": "Add selector",
+			"advanced.label": "Advanced options",
+			"advanced.expand": "Show advanced options",
+			"advanced.collapse": "Hide advanced options",
+			"roleAutoMatch.label": "Enable role auto-match",
+			"roleAutoMatch.hint": "On rules-miss, the model picks the closest declared role",
+			"roleAutoMatch.tooltip": "When no rule matches, the model auto-selects the best-fit declared role (id + persona) and uses its chain; turn off to keep today's fallback (inherit / rootChain) on a rules-miss.",
+			"rootChain.label": "Default fallback chain",
+			"rootChain.tooltip": "Walked first whenever no time slot matches; if every entry fails, the default model below is the last fallback.",
+			"defaultModel.label": "Default model",
 			"chains.selector.remove": "Remove this selector",
 			"chains.selector.providerPlaceholder": "Select provider",
 			"chains.selector.modelPlaceholder": "Select model",
-			"chains.selector.wildcard": "Wildcard this provider (provider/*)",
-			"chains.selector.noModels": "No models available for this provider (catalog lookup failed); use the wildcard or pick another provider.",
+			"chains.selector.wildcardLegacy": "This entry is a wildcard (provider/*): picking a model converts it to an exact entry",
+			"chains.selector.noModelsStrict": "No models available for this provider (catalog lookup failed); pick another provider.",
+			"mainAgent.label": "Main agent",
+			"subagents.label": "Subagents",
+			"timeSlots.label": "Time slots",
+			"timeSlots.hint": "First match from top to bottom wins; the all-day row is always last",
+			"timeSlots.tz.label": "Timezone (UTC±)",
+			"timeSlots.drag": "Drag to reorder (or use the up/down buttons)",
+			"timeSlots.name": "Name",
+			"timeSlots.expand": "Expand this row",
+			"timeSlots.collapse": "Collapse this row",
+			"timeSlots.tooltip": "A matched row's model chain becomes the effective root chain (replacing the all-day chain); no match uses the all-day chain. A time-slot switch is a routing seed, not a failure decision: it consumes no cooldown and does not count against the per-step switch cap.",
+			"timeSlots.addPreset": "Add preset",
+			"timeSlots.addCustom": "Add custom time slot",
+			"timeSlots.presetPlaceholder": "Select a preset",
+			"timeSlots.remove": "Remove this time-slot row",
+			"timeSlots.moveUp": "Move this time-slot row up",
+			"timeSlots.moveDown": "Move this time-slot row down",
+			"timeSlots.start": "Start (HH:mm)",
+			"timeSlots.end": "End (HH:mm)",
+			"timeSlots.days": "Days",
+			"timeSlots.days.hint": "None selected = every day; may wrap midnight",
+			"timeSlots.preset.name": "Preset",
+			"timeSlots.preset.windowLabel": "Window (read-only)",
+			"timeSlots.preset.chainsOnly": "Preset windows are frozen: only the model chain is editable",
+			"timeSlots.preset.liang-peak.label": "Liang Peak",
+			"timeSlots.preset.liang-peak.window": "09:00–12:00 & 14:00–18:00 (every day, UTC+8)",
+			"timeSlots.preset.liang-valley.label": "Liang Valley",
+			"timeSlots.preset.liang-valley.window": "All times outside Liang Peak (every day, UTC+8)",
+			"timeSlots.preset.glm-peak.label": "GLM Peak",
+			"timeSlots.preset.glm-peak.window": "Monday–Friday 14:00–18:00 (UTC+8)",
+			"timeSlots.preset.glm-valley.label": "GLM Valley",
+			"timeSlots.preset.glm-valley.window": "All times outside GLM Peak (UTC+8)",
+			"timeSlots.preset.glm.note": "Only effective when zai-coding-cn is configured",
+			"timeSlots.preset.highCost": "High Cost",
+			"timeSlots.preset.multiplier": "x{n}",
+			"timeSlots.active": "Active",
+			"timeSlots.preset.glm.unconfigured": " (requires zai-coding-cn)",
+			"timeSlots.day.sun": "Sun",
+			"timeSlots.day.mon": "Mon",
+			"timeSlots.day.tue": "Tue",
+			"timeSlots.day.wed": "Wed",
+			"timeSlots.day.thu": "Thu",
+			"timeSlots.day.fri": "Fri",
+			"timeSlots.day.sat": "Sat",
+			"timeSlots.selector.add": "Add selector",
+			"allDay.hint": "Last-resort fallback of the all-day chain: official V4 Flash or Pro (pick exactly one)",
+			"allDay.flash": "Official V4 Flash (deepseek-official/deepseek-v4-flash)",
+			"allDay.pro": "Official V4 Pro (deepseek-official/deepseek-v4-pro)",
+			"allDay.nonconforming": "The current default model is not valid: pick official V4 Flash or Pro before saving",
 			"roles.list.label": "Declared roles",
 			"roles.list.hint": "Declare roles before rules can reference them",
 			"roles.list.tooltip": "Role ids must match /^[a-z0-9-]{1,32}$/ and be unique; \"inherit\" is reserved and cannot be used as a role id.",
 			"roles.id": "ID",
 			"roles.id.hint": "lowercase letters, digits, hyphens; 1–32 chars",
 			"roles.idPlaceholder": "e.g. reviewer",
-			"roles.label": "Label",
-			"roles.description": "Description",
+			"roles.persona": "Persona",
+			"roles.personaPlaceholder": "e.g. you are a senior code reviewer",
+			"roles.seedDefault": "Seed default",
+			"roles.seedOverride": "Seed override",
+			"roles.revertPersona": "Revert to seed default",
+			"roles.seedChainOptional": "Role \"{id}\" is a seed role: the chain may stay empty",
 			"roles.fallback": "Chain append",
 			"roles.fallback.inherit-root": "Inherit root (append rootChain after the role chain)",
 			"roles.fallback.none": "Role chain only (no rootChain)",
 			"roles.add": "Add role",
 			"roles.remove": "Remove this role",
+			"roles.expand": "Expand this role",
+			"roles.collapse": "Collapse this role",
 			"roles.selector.add": "Add selector",
 			"roles.rules": "Role rules",
-			"roles.rules.hint": "Matches origin/provider/model in order; no match → inherit (root chain)",
-			"roles.rules.tooltip": "A matched rule uses that role's chain; no match uses the built-in inherit (rootChain).",
-			"roles.rule.origin": "Origin",
-			"roles.rule.origin.any": "Any",
-			"roles.rule.origin.root": "root",
-			"roles.rule.origin.subagent": "subagent",
+			"roles.rules.hint": "Subagents only: matches provider/model in order; no match → inherit (root chain)",
+			"roles.rules.tooltip": "Rules apply to subagents only (root requests never match): a matched rule uses that role's chain; no match uses the built-in inherit (rootChain).",
 			"roles.rule.provider": "provider",
 			"roles.rule.provider.any": "Any",
 			"roles.rule.model": "model",
@@ -2013,6 +1565,15 @@ window.__ModuleLoader__.load({
 			"validation.roleIdDuplicate": "Duplicate role id \"{id}\"",
 			"validation.ruleRoleUndeclared": "Rule references undeclared role \"{role}\"",
 			"validation.ruleRoleRequired": "Rule has no role selected: pick a target role, or remove the row",
+			"validation.roleChainRequired": "Role \"{id}\" has no model config: add at least one chain entry",
+			"validation.allDayRequired": "The default model must be exactly one official V4 model (V4 Flash or V4 Pro)",
+			"validation.slotChainRequired": "Time-slot row has no models: add at least one chain entry",
+			"validation.slotWindow": "Time-slot start/end must use HH:mm format",
+			"validation.slotDays": "Days must be integers 0–6",
+			"validation.slotKind": "Time-slot kind must be \"preset\" or \"custom\"",
+			"validation.slotPresetUnknown": "Unknown time-slot preset \"{preset}\"",
+			"validation.slotPresetDuplicate": "Preset \"{preset}\" already exists: at most one row per preset",
+			"validation.slotPresetFrozen": "Preset windows are frozen code constants: a preset row cannot carry start/end/days",
 			"validation.selector": "Invalid selector \"{entry}\": {message}",
 			"legacy.banner": "Legacy config fields detected ({keys}): now shown in the new model — rewrite them manually following the migration table in docs/configuration.md (the plugin will not rewrite them automatically).",
 			"catalog.empty": "No models yet: add a model on the Models page first; options will appear here automatically.",
@@ -2023,37 +1584,32 @@ window.__ModuleLoader__.load({
 			"catalog.outside.short": " (outside catalog)",
 			"catalog.unconfigured.short": " (not configured)",
 			"status.title": "Runtime status (read-only)",
-			"status.effectiveModel.label": "Current effective model: ",
-			"status.effectiveModel.unavailable": "Fallbacks disabled (or rootChain not configured)",
-			"status.effectiveModel.note": "Derived from configuration and recent switches; not real-time route probing",
 			"status.switches.label": "Recent switches: ",
 			"status.switches.empty": "No fallback switches in this session yet.",
 			"status.switches.error": "Switch history read failed: {message}",
 			"status.switches.compact": "last {count} · {from} → {to} ({role} · {reason})",
+			"status.switches.compact.roleInject": "last {count} · {role} → {to} ({reason})",
 			"status.switches.reason.trigger-code": "trigger code",
 			"status.switches.reason.always-cap": "always-mode cap",
-			"status.selectionNote": "Note: a model manually selected in the web front end may be re-applied after a switch (the marker coordination shipped with the local patch has been removed).",
+			"status.switches.reason.role-inject": "role inject",
 			"general.title": "Model failover",
 			"general.enabled": "Enabled",
 			"general.disabled": "Disabled",
 			"general.unknown": "Unknown",
 			"general.unavailable": "Status channel unavailable",
 			"general.switch": "Last switch: {from} → {to} ({role} · {reason})",
+			"general.switch.roleInject": "Last switch: {role} → {to} ({reason})",
 			"general.switch.empty": "No switches this session",
 			"general.error": "Status read failed: {message}",
-			"chat.switch.title": "Model switch",
-			"chat.switch.summary": "{from} → {to} ({role} · {reason})",
+			"chat.switch.title": "Model downgraded",
+			"chat.switch.summary": "{from} → {to} ({reason})",
+			"chat.switch.summary.roleInject": "({reason})",
+			"chat.switch.roleMap": "{role} → {model}",
 			"defaults.prefix": "Default",
 			"save": "Save",
 			"save.saving": "Saving…",
 			"save.error": "Save failed: {message}",
 			"close": "Close",
-			"reset": "Reset to defaults",
-			"reset.confirmTitle": "Reset to defaults",
-			"reset.confirm": "Resetting restores the fallbacks configuration to plugin defaults; your current edits will be lost.",
-			"reset.confirm.cancel": "Cancel",
-			"reset.confirm.action": "Reset",
-			"reset.saving": "Resetting…",
 			"loading": "Loading…",
 			"unavailable": "The fallbacks config channel is unreachable: showing the default configuration (or the last read value). You can try to save; failures will be reported here.",
 			"error.generic": "Error: {message}"
@@ -2062,13 +1618,17 @@ window.__ModuleLoader__.load({
 		const NS = "fallbacks";
 		/**
 		* Reason → locale key map for switch summaries (S-c; shared by the card's
-		* status block and the General page status row). The session log is durable
-		* and forward-compatible: a reason value outside the current union (a newer
-		* plugin wrote it) renders raw instead of falling into a binary else branch.
+		* status block, the General page status row, and the conversation node). All
+		* reasons resolve from ONE key family (`status.switches.reason.*`) — the
+		* shared reason vocabulary must not mix dictionary families (qc1 F-004). The
+		* session log is durable and forward-compatible: a reason value outside the
+		* current union (a newer plugin wrote it) renders raw instead of falling
+		* into a binary else branch.
 		*/
 		const SWITCH_REASON_KEYS = {
 			"trigger-code": "status.switches.reason.trigger-code",
-			"always-cap": "status.switches.reason.always-cap"
+			"always-cap": "status.switches.reason.always-cap",
+			"role-inject": "status.switches.reason.role-inject"
 		};
 		/** Human-readable trigger-code labels (spec §4 用户直观性). */
 		const TRIGGER_CODE_LABELS = {
@@ -2091,8 +1651,8 @@ window.__ModuleLoader__.load({
 			return [...next];
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/bibi/workspace/ai/deepseek/dsh-llm-fallbacks/src/client/FallbacksCard.module.css.mjs
-		const css$2 = "\n\n\n._8827595f_card {\n  list-style: none;\n  border: 1px solid var(--dsw-alias-border-l2);\n  border-radius: 12px;\n  background: var(--dsw-alias-bg-layer-3);\n  transition: border-color .16s, background .16s;\n}\n\n._8827595f_card:hover {\n  border-color: var(--dsw-alias-label-dimmed);\n}\n\n\n._06704203_cardOpen {\n  background: var(--dsw-alias-bg-layer-2);\n  border-color: var(--dsw-alias-label-dimmed);\n}\n\n\n._e488d460_header {\n  width: 100%;\n  appearance: none;\n  border: 0;\n  background: none;\n  font: inherit;\n  color: inherit;\n  text-align: left;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  padding: 14px 16px;\n  border-radius: 12px;\n}\n\n._e488d460_header:focus-visible {\n  outline: 2px solid var(--dsw-alias-brand-primary);\n  outline-offset: -2px;\n}\n\n\n._f5dfe084_headText {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n}\n\n._8d39bde6_name {\n  font-size: 15px;\n  font-weight: 600;\n  line-height: 1.4;\n  color: var(--dsw-alias-label-primary);\n}\n\n._346f3b69_description {\n  font-size: 13px;\n  line-height: 1.5;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n._631094a0_chevron {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  transition: transform .16s;\n}\n\n._44836ce8_chevronOpen {\n  transform: rotate(180deg);\n}\n\n\n._dbaa7975_body {\n  border-top: 1px solid var(--dsw-alias-border-l2);\n  margin: 0 16px;\n  padding-bottom: 8px;\n}\n\n._4e39cf17_readOnly {\n  margin: 12px 0 0;\n  font-size: 12px;\n  line-height: 1.5;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n\n._99bf7f3c_pending {\n  flex: none;\n  border-radius: 999px;\n  padding: 1px 8px;\n  font-size: 11px;\n  line-height: 17px;\n  font-weight: 500;\n  white-space: nowrap;\n  background: var(--dsw-alias-bg-module-platform);\n  color: var(--dsw-alias-label-secondary);\n}\n\n._114985b2_footer {\n  display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 8px;\n  padding: 12px 0 4px;\n  border-top: 1px solid var(--dsw-alias-border-l2);\n}\n\n\n._9860a5b1_notice {\n  margin: 12px 0 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-state-business-primary);\n}\n\n\n._5006d43e_legacyNotice {\n  margin: 12px 0 0;\n  padding: 10px 12px;\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-module-platform);\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-state-business-primary);\n}\n\n._21918751_error {\n  margin: 12px 0 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-state-error-primary);\n}\n\n\n._7cea4b2f_noticeRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 12px 0 0;\n}\n\n._7cea4b2f_noticeRow ._21918751_error {\n  flex: 1;\n  min-width: 0;\n  margin: 0;\n}\n\n\n._4058c747_form {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n  padding: 12px 0 0;\n}\n\n\n._9998065c_checkboxRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n._02c2f6df_checkLabel {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  font-size: 14px;\n  line-height: 22px;\n  font-weight: 400;\n  color: var(--dsw-alias-label-primary);\n  cursor: pointer;\n}\n\n._f2d47237_checkLabelTitle {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-weight: 400;\n}\n\n._c1bed8ea_checkLabelDesc {\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 400;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n\n._06389b18_checkbox {\n  flex: none;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  accent-color: var(--dsw-alias-brand-primary);\n  cursor: pointer;\n}\n\n._06389b18_checkbox:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n\n._94c91bfd_fieldset {\n  margin: 0;\n  padding: 0;\n  border: none;\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n}\n\n\n._67826267_field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin: 0;\n  padding: 0;\n  border: none;\n  min-width: 0;\n}\n\n._13e68c3f_fieldLabel {\n  \n  display: inline-flex;\n  align-items: center;\n  gap: 10px;\n  padding: 0;\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 500;\n  color: var(--dsw-alias-label-secondary);\n}\n\n._4bc809b8_hint {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n._579f813a_defaultNote {\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 400;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n\n._a6244318_infoHint {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  flex: none;\n  width: 16px;\n  height: 16px;\n  border-radius: 50%;\n  font-size: 14px;\n  line-height: 1;\n  color: var(--dsw-alias-label-tertiary);\n  background: var(--dsw-alias-interactive-bg-hover);\n  cursor: help;\n  user-select: none;\n}\n\n._a6244318_infoHint:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n\n._e655c840_infoHintDisabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n\n._a2521bb0_optionRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n  border-radius: 6px;\n  font-size: 14px;\n  line-height: 22px;\n  color: var(--dsw-alias-label-primary);\n  cursor: pointer;\n}\n\n._a2521bb0_optionRow:hover:has(input:not(:disabled)) {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n\n._06389b18_checkbox,\n._a2521bb0_optionRow input,\n._929f3ef3_wildcardCell input {\n  flex: none;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  accent-color: var(--dsw-alias-brand-primary);\n  cursor: pointer;\n}\n\n._06389b18_checkbox:focus-visible,\n._a2521bb0_optionRow input:focus-visible,\n._929f3ef3_wildcardCell input:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n._a2521bb0_optionRow input:disabled,\n._929f3ef3_wildcardCell input:disabled {\n  cursor: default;\n}\n\n\n._f9d86f7b_input {\n  box-sizing: border-box;\n  width: 100%;\n  height: 32px;\n  padding: 0 10px;\n  border: 1px solid var(--dsw-alias-border-l2);\n  border-radius: 8px;\n  font: inherit;\n  font-size: 14px;\n  line-height: 22px;\n  background: var(--dsw-alias-bg-layer-1);\n  color: var(--dsw-alias-label-primary);\n}\n\n._f9d86f7b_input:focus {\n  outline: none;\n  border-color: var(--dsw-alias-brand-primary);\n}\n\n._f9d86f7b_input::placeholder {\n  color: var(--dsw-alias-label-dimmed);\n}\n\n._f9d86f7b_input:disabled {\n  opacity: 0.6;\n  cursor: default;\n}\n\n\n._7b60337a_inputInvalid,\n._7b60337a_inputInvalid:focus {\n  border-color: var(--dsw-alias-state-error-primary);\n}\n\n\nselect._f9d86f7b_input {\n  max-width: 240px;\n  cursor: pointer;\n}\n\n\n._16eb7153_selectInput {\n  appearance: none;\n  padding-right: 32px;\n  \n  background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");\n  background-repeat: no-repeat;\n  background-position: right 12px center;\n  background-size: 12px 12px;\n}\n\n\n._3e95886d_numberFields {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));\n  gap: 8px;\n}\n\n._0cfb5881_list {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  margin-top: 4px;\n}\n\n\n._f5c620d6_editorCard {\n  display: flex;\n  flex-direction: column;\n  gap: 14px;\n  padding: 14px 16px;\n  border-radius: 12px;\n  background: var(--dsw-alias-bg-module-platform);\n}\n\n._224b1387_cardFoot {\n  display: flex;\n  justify-content: flex-end;\n}\n\n._8e220e07_ruleGrid {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n\n._24a12a2f_ruleCell {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  min-width: 120px;\n  flex: 1;\n}\n\n._1014c097_ruleCellLabel {\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n._15a12620_chainSelectors {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n}\n\n._240cbbf8_selectorRow {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n\n._929f3ef3_wildcardCell {\n  flex-direction: row;\n  align-items: center;\n  gap: 8px;\n  min-width: 200px;\n  align-self: center;\n  padding: 6px 8px;\n  border-radius: 6px;\n  cursor: pointer;\n}\n\n._929f3ef3_wildcardCell:hover:has(input:not(:disabled)) {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n\n._70effa64_iconButton {\n  position: relative;\n  box-sizing: border-box;\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  border: 0;\n  border-radius: 6px;\n  background: none;\n  color: var(--dsw-alias-label-tertiary);\n  cursor: pointer;\n}\n\n._70effa64_iconButton:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n._70effa64_iconButton:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover);\n  color: var(--dsw-alias-label-primary);\n}\n\n._70effa64_iconButton:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n._70effa64_iconButton::after {\n  content: attr(data-tip);\n  position: absolute;\n  bottom: calc(100% + 6px);\n  left: 50%;\n  transform: translateX(-50%);\n  padding: 3px 8px;\n  border-radius: 6px;\n  background: var(--dsw-alias-label-primary);\n  color: var(--dsw-alias-bg-layer-3);\n  font-size: 11px;\n  line-height: 17px;\n  white-space: nowrap;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity .12s;\n}\n\n._70effa64_iconButton:hover::after,\n._70effa64_iconButton:focus-visible::after {\n  opacity: 1;\n}\n\n\n._a0968257_iconButtonDanger:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover-danger);\n  color: var(--dsw-alias-state-error-primary);\n}\n\n\n._28202c90_addButton {\n  align-self: flex-start;\n}\n\n\n._747fd56d_primaryButton,\n._7e855445_secondaryButton {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 4px;\n  height: 36px;\n  padding: 0 14px;\n  border: none;\n  border-radius: 18px;\n  font: inherit;\n  font-size: 14px;\n  line-height: 22px;\n  cursor: pointer;\n}\n\n._747fd56d_primaryButton {\n  background: var(--dsw-alias-button-primary-fill);\n  color: var(--dsw-alias-label-primary-foreground);\n}\n\n._747fd56d_primaryButton:hover:not(:disabled) {\n  background: var(--dsw-alias-button-primary-hover);\n}\n\n._7e855445_secondaryButton {\n  border: 1px solid var(--dsw-alias-border-l2);\n  background: transparent;\n  color: var(--dsw-alias-label-primary);\n}\n\n._7e855445_secondaryButton:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover-solid);\n}\n\n._747fd56d_primaryButton:disabled,\n._7e855445_secondaryButton:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n._747fd56d_primaryButton:focus-visible,\n._7e855445_secondaryButton:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n\n._fbd045e0_statusBlock {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n  padding: 12px 14px;\n  margin-top: 12px;\n  border: 1px solid var(--dsw-alias-border-l2);\n  border-radius: 12px;\n}\n\n._d4f70367_statusTitle {\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 500;\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n._8ab300ed_statusLine {\n  margin: 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n._e8cedbf5_statusLineLabel {\n  font-weight: 500;\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n._b48dfcba_offNotice {\n  margin: 0;\n  padding: 12px;\n  border: 1px dashed var(--dsw-alias-border-l3);\n  border-radius: 8px;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-tertiary);\n  text-align: center;\n}\n\n\n._ec8bd970_resetDialog {\n  width: min(480px, 100%);\n}\n\n._8677165c_confirmDanger:not(:disabled) {\n  border-color: var(--dsw-alias-state-error-primary);\n  color: var(--dsw-alias-state-error-primary);\n}\n\n._8677165c_confirmDanger:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover-danger);\n}\n\n@media (prefers-reduced-motion: reduce) {\n  ._70effa64_iconButton::after {\n    transition: none;\n  }\n}\n";
+		//#region \0dsh-css:/home/runner/work/dsh-llm-fallbacks/dsh-llm-fallbacks/src/client/FallbacksCard.module.css.mjs
+		const css$2 = "\n\n\n._8827595f_card {\n  list-style: none;\n  border: 1px solid var(--dsw-alias-border-l2);\n  border-radius: 12px;\n  background: var(--dsw-alias-bg-layer-3);\n  transition: border-color .16s, background .16s;\n}\n\n._8827595f_card:hover {\n  border-color: var(--dsw-alias-label-dimmed);\n}\n\n\n._06704203_cardOpen {\n  background: var(--dsw-alias-bg-layer-2);\n  border-color: var(--dsw-alias-label-dimmed);\n}\n\n\n._e488d460_header {\n  width: 100%;\n  appearance: none;\n  border: 0;\n  background: none;\n  font: inherit;\n  color: inherit;\n  text-align: left;\n  cursor: pointer;\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  padding: 14px 16px;\n  border-radius: 12px;\n}\n\n._e488d460_header:focus-visible {\n  outline: 2px solid var(--dsw-alias-brand-primary);\n  outline-offset: -2px;\n}\n\n\n._f5dfe084_headText {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n}\n\n._8d39bde6_name {\n  font-size: 15px;\n  font-weight: 600;\n  line-height: 1.4;\n  color: var(--dsw-alias-label-primary);\n}\n\n._346f3b69_description {\n  font-size: 13px;\n  line-height: 1.5;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n._631094a0_chevron {\n  flex: none;\n  color: var(--dsw-alias-label-tertiary);\n  transition: transform .16s;\n}\n\n._44836ce8_chevronOpen {\n  transform: rotate(180deg);\n}\n\n\n._dbaa7975_body {\n  border-top: 1px solid var(--dsw-alias-border-l2);\n  margin: 0 16px;\n  padding-bottom: 8px;\n}\n\n._4e39cf17_readOnly {\n  margin: 12px 0 0;\n  font-size: 12px;\n  line-height: 1.5;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n\n._99bf7f3c_pending {\n  flex: none;\n  border-radius: 999px;\n  padding: 1px 8px;\n  font-size: 11px;\n  line-height: 17px;\n  font-weight: 500;\n  white-space: nowrap;\n  background: var(--dsw-alias-bg-module-platform);\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n\n\n._9860a5b1_notice {\n  margin: 12px 0 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-state-business-primary);\n}\n\n\n._5006d43e_legacyNotice {\n  margin: 12px 0 0;\n  padding: 10px 12px;\n  border-radius: 8px;\n  background: var(--dsw-alias-bg-module-platform);\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-state-business-primary);\n}\n\n._21918751_error {\n  margin: 12px 0 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-state-error-primary);\n}\n\n\n._7cea4b2f_noticeRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin: 12px 0 0;\n}\n\n._7cea4b2f_noticeRow ._21918751_error {\n  flex: 1;\n  min-width: 0;\n  margin: 0;\n}\n\n\n._4058c747_form {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n  padding: 12px 0 0;\n}\n\n\n._9998065c_checkboxRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n._02c2f6df_checkLabel {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  font-size: 14px;\n  line-height: 22px;\n  font-weight: 400;\n  color: var(--dsw-alias-label-primary);\n  cursor: pointer;\n}\n\n._f2d47237_checkLabelTitle {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-weight: 400;\n}\n\n._c1bed8ea_checkLabelDesc {\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 400;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n\n._06389b18_checkbox {\n  flex: none;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  accent-color: var(--dsw-alias-brand-primary);\n  cursor: pointer;\n}\n\n._06389b18_checkbox:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n\n._94c91bfd_fieldset {\n  margin: 0;\n  padding: 0;\n  border: none;\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n}\n\n\n._67826267_field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin: 0;\n  padding: 0;\n  border: none;\n  min-width: 0;\n}\n\n._13e68c3f_fieldLabel {\n  \n  display: inline-flex;\n  align-items: center;\n  gap: 10px;\n  padding: 0;\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 500;\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n._ba240d82_sectionHeading {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 4px 0;\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 600;\n  color: var(--dsw-alias-label-primary);\n}\n\n._ddbc1b49_sectionHeadingText {\n  flex: 1;\n  min-width: 0;\n}\n\n\n._c41f9db7_sectionActions {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-left: auto;\n}\n\n\n._b116c758_sectionToggle {\n  width: 100%;\n  appearance: none;\n  border: 0;\n  background: none;\n  font: inherit;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 4px 0;\n  cursor: pointer;\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 500;\n  color: var(--dsw-alias-label-secondary);\n}\n\n._b116c758_sectionToggle:hover:not(:disabled) {\n  color: var(--dsw-alias-label-primary);\n}\n\n._b116c758_sectionToggle:disabled {\n  cursor: default;\n}\n\n._b116c758_sectionToggle:focus-visible {\n  outline: 2px solid var(--dsw-alias-brand-primary);\n  outline-offset: 2px;\n  border-radius: 6px;\n}\n\n._a5313fdf_sectionToggleText {\n  flex: 1;\n  min-width: 0;\n  text-align: left;\n}\n\n._4bc809b8_hint {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  flex-wrap: wrap;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n._579f813a_defaultNote {\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 400;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n\n._b1962759_slotPresetName {\n  font-size: 14px;\n  line-height: 22px;\n  font-weight: 500;\n  color: var(--dsw-alias-label-primary);\n}\n\n\n._a6244318_infoHint {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  flex: none;\n  width: 16px;\n  height: 16px;\n  border-radius: 50%;\n  font-size: 14px;\n  line-height: 1;\n  color: var(--dsw-alias-label-tertiary);\n  background: var(--dsw-alias-interactive-bg-hover);\n  cursor: help;\n  user-select: none;\n}\n\n._a6244318_infoHint:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n\n._e655c840_infoHintDisabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n\n._a2521bb0_optionRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 6px 8px;\n  border-radius: 6px;\n  font-size: 14px;\n  line-height: 22px;\n  color: var(--dsw-alias-label-primary);\n  cursor: pointer;\n}\n\n._a2521bb0_optionRow:hover:has(input:not(:disabled)) {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n\n._06389b18_checkbox,\n._a2521bb0_optionRow input {\n  flex: none;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  accent-color: var(--dsw-alias-brand-primary);\n  cursor: pointer;\n}\n\n._06389b18_checkbox:focus-visible,\n._a2521bb0_optionRow input:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n._a2521bb0_optionRow input:disabled {\n  cursor: default;\n}\n\n\n._c4ecbdf3_dayRow {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 4px;\n}\n\n._0330c1ed_dayCell {\n  display: inline-flex;\n  align-items: center;\n  gap: 4px;\n  padding: 2px 6px;\n  border-radius: 6px;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n  cursor: pointer;\n}\n\n._0330c1ed_dayCell:hover:has(input:not(:disabled)) {\n  background: var(--dsw-alias-interactive-bg-hover);\n}\n\n._0330c1ed_dayCell input {\n  flex: none;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  accent-color: var(--dsw-alias-brand-primary);\n  cursor: pointer;\n}\n\n._0330c1ed_dayCell input:disabled {\n  cursor: default;\n}\n\n._0330c1ed_dayCell input:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n\n._f9d86f7b_input {\n  box-sizing: border-box;\n  width: 100%;\n  height: 32px;\n  padding: 0 10px;\n  border: 1px solid var(--dsw-alias-border-l2);\n  border-radius: 8px;\n  font: inherit;\n  font-size: 14px;\n  line-height: 22px;\n  background: var(--dsw-alias-bg-layer-1);\n  color: var(--dsw-alias-label-primary);\n}\n\n._f9d86f7b_input:focus {\n  outline: none;\n  border-color: var(--dsw-alias-brand-primary);\n}\n\n._f9d86f7b_input::placeholder {\n  color: var(--dsw-alias-label-dimmed);\n}\n\n._f9d86f7b_input:disabled {\n  opacity: 0.6;\n  cursor: default;\n}\n\n\n._3a9b42fd_inputTextarea {\n  height: auto;\n  min-height: 72px;\n  padding: 6px 10px;\n  resize: vertical;\n  line-height: 20px;\n}\n\n\n._7b60337a_inputInvalid,\n._7b60337a_inputInvalid:focus {\n  border-color: var(--dsw-alias-state-error-primary);\n}\n\n\nselect._f9d86f7b_input {\n  max-width: 240px;\n  cursor: pointer;\n}\n\n\n._16eb7153_selectInput {\n  appearance: none;\n  padding-right: 32px;\n  \n  background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\");\n  background-repeat: no-repeat;\n  background-position: right 12px center;\n  background-size: 12px 12px;\n}\n\n\n._3e95886d_numberFields {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));\n  gap: 8px;\n}\n\n._0cfb5881_list {\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  margin-top: 4px;\n}\n\n\n._f5c620d6_editorCard {\n  display: flex;\n  flex-direction: column;\n  gap: 14px;\n  padding: 14px 16px;\n  border-radius: 12px;\n  background: var(--dsw-alias-bg-module-platform);\n}\n\n._224b1387_cardFoot {\n  display: flex;\n  justify-content: flex-end;\n}\n\n._8e220e07_ruleGrid {\n  display: flex;\n  flex-wrap: wrap;\n  gap: 8px;\n}\n\n._24a12a2f_ruleCell {\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  min-width: 120px;\n  flex: 1;\n}\n\n\n._86bc52d2_collapseRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n._a73efcc6_collapseToggle {\n  appearance: none;\n  border: 0;\n  background: none;\n  padding: 0;\n  cursor: pointer;\n  color: var(--dsw-alias-label-secondary);\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  flex: 1;\n  min-width: 0;\n  font: inherit;\n  text-align: left;\n}\n\n._a73efcc6_collapseToggle:disabled {\n  cursor: default;\n}\n\n._af017718_collapseTitle {\n  \n  flex: none;\n  max-width: 55%;\n  min-width: 0;\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 500;\n  color: var(--dsw-alias-label-primary);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n._2cabe603_collapseMeta {\n  \n  flex: none;\n  margin-left: auto;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n\n._7b04f727_slotTag {\n  flex: none;\n  display: inline-flex;\n  align-items: center;\n  border-radius: 999px;\n  padding: 0 6px;\n  font-size: 11px;\n  line-height: 17px;\n  font-weight: 500;\n  white-space: nowrap;\n  border: 1px solid;\n}\n\n._c381e792_slotTagHighCost {\n  color: var(--dsw-alias-state-error-primary);\n  border-color: var(--dsw-alias-state-error-primary);\n  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);\n}\n\n._23bdb6fc_slotTagMultiplier {\n  color: var(--dsw-alias-state-warn-primary);\n  border-color: var(--dsw-alias-state-warn-primary);\n  background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 10%, transparent);\n}\n\n._f000eed9_slotTagActive {\n  color: var(--dsw-alias-state-success-primary);\n  border-color: var(--dsw-alias-state-success-primary);\n  background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 10%, transparent);\n}\n\n\n._cd905ce5_dragHandle {\n  appearance: none;\n  border: 0;\n  background: none;\n  padding: 0;\n  cursor: grab;\n  color: var(--dsw-alias-label-tertiary);\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 20px;\n  height: 20px;\n  border-radius: 6px;\n  flex: none;\n}\n\n._cd905ce5_dragHandle:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover);\n  color: var(--dsw-alias-label-primary);\n}\n\n._cd905ce5_dragHandle:active {\n  cursor: grabbing;\n}\n\n._cd905ce5_dragHandle:disabled {\n  cursor: default;\n  opacity: 0.4;\n}\n\n._cd905ce5_dragHandle:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n._49f0c4f0_dragHandleIcon {\n  transform: rotate(90deg);\n}\n\n\n._fee63b7e_slotCardDragging {\n  opacity: 0.45;\n}\n\n._6f108491_slotCardOver {\n  outline: 1px dashed var(--dsw-alias-brand-primary);\n  outline-offset: 2px;\n}\n\n._1014c097_ruleCellLabel {\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n._15a12620_chainSelectors {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n}\n\n._240cbbf8_selectorRow {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n}\n\n\n._70effa64_iconButton {\n  position: relative;\n  box-sizing: border-box;\n  appearance: none;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  border: 0;\n  border-radius: 6px;\n  background: none;\n  color: var(--dsw-alias-label-tertiary);\n  cursor: pointer;\n}\n\n._70effa64_iconButton:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n._70effa64_iconButton:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover);\n  color: var(--dsw-alias-label-primary);\n}\n\n._70effa64_iconButton:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n._70effa64_iconButton::after {\n  content: attr(data-tip);\n  position: absolute;\n  bottom: calc(100% + 6px);\n  left: 50%;\n  transform: translateX(-50%);\n  padding: 3px 8px;\n  border-radius: 6px;\n  background: var(--dsw-alias-label-primary);\n  color: var(--dsw-alias-bg-layer-3);\n  font-size: 11px;\n  line-height: 17px;\n  white-space: nowrap;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity .12s;\n}\n\n._70effa64_iconButton:hover::after,\n._70effa64_iconButton:focus-visible::after {\n  opacity: 1;\n}\n\n\n._a0968257_iconButtonDanger:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover-danger);\n  color: var(--dsw-alias-state-error-primary);\n}\n\n\n._28202c90_addButton {\n  align-self: flex-start;\n}\n\n\n._6a2bd54c_slotAddRow {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  margin-top: 4px;\n  flex-wrap: wrap;\n}\n\n\n._4e77523e_rowActions {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n\n\n._747fd56d_primaryButton,\n._7e855445_secondaryButton {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 4px;\n  height: 36px;\n  padding: 0 14px;\n  border: none;\n  border-radius: 18px;\n  font: inherit;\n  font-size: 14px;\n  line-height: 22px;\n  cursor: pointer;\n}\n\n._747fd56d_primaryButton {\n  background: var(--dsw-alias-button-primary-fill);\n  color: var(--dsw-alias-label-primary-foreground);\n}\n\n._747fd56d_primaryButton:hover:not(:disabled) {\n  background: var(--dsw-alias-button-primary-hover);\n}\n\n._7e855445_secondaryButton {\n  border: 1px solid var(--dsw-alias-border-l2);\n  background: transparent;\n  color: var(--dsw-alias-label-primary);\n}\n\n._7e855445_secondaryButton:hover:not(:disabled) {\n  background: var(--dsw-alias-interactive-bg-hover-solid);\n}\n\n._747fd56d_primaryButton:disabled,\n._7e855445_secondaryButton:disabled {\n  opacity: 0.4;\n  cursor: default;\n}\n\n._747fd56d_primaryButton:focus-visible,\n._7e855445_secondaryButton:focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);\n}\n\n\n._238d19be_sectionAction {\n  height: 28px;\n  padding: 0 12px;\n  border-radius: 14px;\n  font-size: 12px;\n  line-height: 18px;\n}\n\n\n._fbd045e0_statusBlock {\n  display: flex;\n  flex-direction: column;\n  gap: 12px;\n  padding: 12px 14px;\n  margin-top: 12px;\n  border: 1px solid var(--dsw-alias-border-l2);\n  border-radius: 12px;\n}\n\n._d4f70367_statusTitle {\n  font-size: 12px;\n  line-height: 18px;\n  font-weight: 500;\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n._8ab300ed_statusLine {\n  margin: 0;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-secondary);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n._e8cedbf5_statusLineLabel {\n  font-weight: 500;\n  color: var(--dsw-alias-label-secondary);\n}\n\n\n._b48dfcba_offNotice {\n  margin: 0;\n  padding: 12px;\n  border: 1px dashed var(--dsw-alias-border-l3);\n  border-radius: 8px;\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-tertiary);\n  text-align: center;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  ._70effa64_iconButton::after {\n    transition: none;\n  }\n}\n";
 		const tagId$2 = "dsh-llm-fallbacks/FallbacksCard.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$2) + "]") === null) {
 			const tag = document.createElement("style");
@@ -2113,7 +1673,6 @@ window.__ModuleLoader__.load({
 			"body": "_dbaa7975_body",
 			"readOnly": "_4e39cf17_readOnly",
 			"pending": "_99bf7f3c_pending",
-			"footer": "_114985b2_footer",
 			"notice": "_9860a5b1_notice",
 			"legacyNotice": "_5006d43e_legacyNotice",
 			"error": "_21918751_error",
@@ -2127,13 +1686,21 @@ window.__ModuleLoader__.load({
 			"fieldset": "_94c91bfd_fieldset",
 			"field": "_67826267_field",
 			"fieldLabel": "_13e68c3f_fieldLabel",
+			"sectionHeading": "_ba240d82_sectionHeading",
+			"sectionHeadingText": "_ddbc1b49_sectionHeadingText",
+			"sectionActions": "_c41f9db7_sectionActions",
+			"sectionToggle": "_b116c758_sectionToggle",
+			"sectionToggleText": "_a5313fdf_sectionToggleText",
 			"hint": "_4bc809b8_hint",
 			"defaultNote": "_579f813a_defaultNote",
+			"slotPresetName": "_b1962759_slotPresetName",
 			"infoHint": "_a6244318_infoHint",
 			"infoHintDisabled": "_e655c840_infoHintDisabled",
 			"optionRow": "_a2521bb0_optionRow",
-			"wildcardCell": "_929f3ef3_wildcardCell",
+			"dayRow": "_c4ecbdf3_dayRow",
+			"dayCell": "_0330c1ed_dayCell",
 			"input": "_f9d86f7b_input",
+			"inputTextarea": "_3a9b42fd_inputTextarea",
 			"inputInvalid": "_7b60337a_inputInvalid",
 			"selectInput": "_16eb7153_selectInput",
 			"numberFields": "_3e95886d_numberFields",
@@ -2142,29 +1709,43 @@ window.__ModuleLoader__.load({
 			"cardFoot": "_224b1387_cardFoot",
 			"ruleGrid": "_8e220e07_ruleGrid",
 			"ruleCell": "_24a12a2f_ruleCell",
+			"collapseRow": "_86bc52d2_collapseRow",
+			"collapseToggle": "_a73efcc6_collapseToggle",
+			"collapseTitle": "_af017718_collapseTitle",
+			"collapseMeta": "_2cabe603_collapseMeta",
+			"slotTag": "_7b04f727_slotTag",
+			"slotTagHighCost": "_c381e792_slotTagHighCost",
+			"slotTagMultiplier": "_23bdb6fc_slotTagMultiplier",
+			"slotTagActive": "_f000eed9_slotTagActive",
+			"dragHandle": "_cd905ce5_dragHandle",
+			"dragHandleIcon": "_49f0c4f0_dragHandleIcon",
+			"slotCardDragging": "_fee63b7e_slotCardDragging",
+			"slotCardOver": "_6f108491_slotCardOver",
 			"ruleCellLabel": "_1014c097_ruleCellLabel",
 			"chainSelectors": "_15a12620_chainSelectors",
 			"selectorRow": "_240cbbf8_selectorRow",
 			"iconButton": "_70effa64_iconButton",
 			"iconButtonDanger": "_a0968257_iconButtonDanger",
 			"addButton": "_28202c90_addButton",
+			"slotAddRow": "_6a2bd54c_slotAddRow",
+			"rowActions": "_4e77523e_rowActions",
 			"primaryButton": "_747fd56d_primaryButton",
 			"secondaryButton": "_7e855445_secondaryButton",
+			"sectionAction": "_238d19be_sectionAction",
 			"statusBlock": "_fbd045e0_statusBlock",
 			"statusTitle": "_d4f70367_statusTitle",
 			"statusLine": "_8ab300ed_statusLine",
 			"statusLineLabel": "_e8cedbf5_statusLineLabel",
-			"offNotice": "_b48dfcba_offNotice",
-			"resetDialog": "_ec8bd970_resetDialog",
-			"confirmDanger": "_8677165c_confirmDanger"
+			"offNotice": "_b48dfcba_offNotice"
 		};
 		//#endregion
 		//#region src/client/FallbacksCard.tsx
 		/**
 		* Fallbacks settings card — the `fallbacks` plugin card on the web settings
-		* "插件配置" page (spec §4). Registered into the `settings.plugin.item` slot
-		* (id `fallbacks`, order 30, alongside the upstream bash/agent-loop/web-search
-		* cards and the advisor card); owner props are empty and all data flows
+		* "插件配置" page (spec §4). Registered into the `settings.plugin.item` keyed
+		* slot (key `fallbacks`, the settings namespace the card edits, alongside
+		* the upstream bash/agent-loop/web-search cards and the advisor card, in
+		* registration order); owner props are empty and all data flows
 		* through {@link FallbacksSettingsController}.
 		*
 		* The card chrome replicates the upstream `PluginCard` contract (self-drawn:
@@ -2173,12 +1754,22 @@ window.__ModuleLoader__.load({
 		* description, with a dirty "unsaved" pill and a rotating chevron
 		* (`IconChevronDownOutline14` from ui-primitives — a CLIENT_EXTERNALS value
 		* import), `aria-expanded`/`aria-label` like the upstream header; a divider
-		* under the header; then the form content; then a footer with
-		* Discard / Reset / Save carrying the upstream disabled semantics — save =
-		* `!dirty || saving || !writable`, discard = `!dirty || saving` (KD-U1).
-		* Disclosure is card-local state: which card a user has open is a reading
-		* gesture, and staged edits outlive collapsing — the pill rides the header
-		* (upstream rationale).
+		* under the header; then the form content. PR #62 UX round 2: the card
+		* footer is gone — each big section (主代理 / 子代理 / 高级选项) carries its
+		* own Save/Discard actions beside its heading (高级选项: inside the expanded
+		* body) and its own validation / save-error surface. PR #62 UX round 3:
+		* each section's Save writes ONLY that section's fields — 主代理 owns
+		* rootChain / timeSlots / tz (+ the card-level `enabled`), 子代理 owns
+		* roles, 高级选项 owns the advanced scalars; the patch spreads the last
+		* ACCEPTED config for every other section, so a 主代理 Save can never
+		* ride along an unsaved 子代理 edit (and vice versa) — and validation /
+		* the dirty gate apply per section too (a bad role id never blocks 主代理,
+		* and only the saved section's Discard reverts that section's edits).
+		* Save/discard disabled terms: save = `!sectionDirty || saving ||
+		* !writable`, discard = `!sectionDirty || saving` (KD-U1). Disclosure is
+		* card-local state:
+		* which card a user has open is a reading gesture, and staged edits outlive
+		* collapsing — the pill rides the header (upstream rationale).
 		*
 		* The form body is the two-block editing surface (spec §8): the `enabled`
 		* checkbox row, the 6 top-level scalar fields (trigger codes / revert
@@ -2188,18 +1779,20 @@ window.__ModuleLoader__.load({
 		* `roles.rules`, whose role field is a dropdown bound to the declared ids
 		* + the built-in `inherit`, same-page live). Saving runs `validateDraft`
 		* first — id format/reserved word/duplicates, undeclared rule role
-		* references, and illegal selectors block the write with a validation
-		* banner + inline red borders (never touching the store error path); a
+		* references, illegal selectors, and a role with no chain entries (no
+		* model config) block the write with a validation banner + inline red
+		* borders / hints (never touching the store error path); a
 		* non-empty `state.legacyKeys` renders the migration banner at the top of
 		* the card body. The row editors keep their filled editorCard surface
 		* inside the card, with `--dsw-alias-*` tokens throughout. The reset-
-		* to-defaults confirmation stays a `Modal` (the delete-confirm pattern of
-		* the Models page) — no `window.confirm`.
+		* to-defaults affordance is GONE from the card (PR #62 UX round 3) — the
+		* gateway RPC `fallbacks/reset` and the store `resetToDefaults()` stay as
+		* host APIs (store/gateway tests unchanged), only the card UI was removed.
 		*
 		* The page-only chrome is gone (720px column wrapper, title/intro banners,
 		* page-bottom status block): the AC-7 read-only status (derived effective
-		* model + recent-switch summary) is folded into the card body above the
-		* footer, and the plugin-config section owns the column width.
+		* model + recent-switch summary) is folded into the card body, and the
+		* plugin-config section owns the column width.
 		*
 		* Degraded/error/loading states keep the same card chrome (KD-U3): the
 		* header always renders title+description+chevron, and the body carries the
@@ -2213,8 +1806,11 @@ window.__ModuleLoader__.load({
 		* 'error'`) also forces the body open with an error notice and — when the
 		* form is inert (`!writable`, i.e. the load never landed) — a Retry button;
 		* a save failure keeps the editable form so the Save action itself is the
-		* retry (the single `state.error` surface covers both, unlike the advisor's
-		* separate apply-failure hints).
+		* retry. PR #62 UX round 2: the single `state.error` surface is split by
+		* origin — a LOAD failure keeps the card-top notice (with Retry when
+		* inert), while a WRITE failure renders under the section whose Save was
+		* last clicked (`lastSaveSection`), unlike the advisor's separate
+		* apply-failure hints.
 		*
 		* The degraded derivation is latched in the card (the store stays untouched):
 		* `present` only ever changes inside the store's `accept()`, so the settled
@@ -2224,6 +1820,77 @@ window.__ModuleLoader__.load({
 		* implemented without a store change); on a first mount the latch is false,
 		* so the healthy card starts (and stays) collapsed through its first load.
 		*/
+		const ALL_DAY_FLASH = "deepseek-official/deepseek-v4-flash";
+		const ALL_DAY_PRO = "deepseek-official/deepseek-v4-pro";
+		const SLOT_PRESET_IDS = [
+			"liang-peak",
+			"liang-valley",
+			"glm-peak",
+			"glm-valley"
+		];
+		/** Custom-row day toggle order (index = weekday, 0=Sunday); display copy lives in the dictionaries. */
+		const SLOT_WEEKDAYS = [
+			"sun",
+			"mon",
+			"tue",
+			"wed",
+			"thu",
+			"fri",
+			"sat"
+		];
+		/** IANA timezone of this renderer (browser / host). */
+		function hostTimeZone() {
+			try {
+				const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+				return typeof tz === "string" && tz !== "" ? tz : "UTC";
+			} catch {
+				return "UTC";
+			}
+		}
+		/** `UTC+8` / `UTC-4` for an IANA id (current offset, DST-honest). */
+		function tzUtcOffset(tz) {
+			try {
+				const name = new Intl.DateTimeFormat("en-US", {
+					timeZone: tz,
+					timeZoneName: "shortOffset"
+				}).formatToParts(/* @__PURE__ */ new Date()).find((part) => part.type === "timeZoneName")?.value;
+				if (name === void 0 || name === "") return "";
+				return name.replace(/^GMT/, "UTC");
+			} catch {
+				return "";
+			}
+		}
+		/** Read-only custom-row copy: `Asia/Shanghai (UTC+8)`. */
+		function tzDisplayLabel(tz) {
+			const offset = tzUtcOffset(tz);
+			return offset === "" ? tz : `${tz} (${offset})`;
+		}
+		/** Persist tz: presets lock UTC+8; custom-only uses the host zone; else keep the accepted value. */
+		function resolvedSlotTz(rows, fallback) {
+			if (rows.some((row) => row.kind === "preset")) return "Asia/Shanghai";
+			if (rows.some((row) => row.kind === "custom")) return hostTimeZone();
+			return fallback === "" ? "Asia/Shanghai" : fallback;
+		}
+		/** Strict 24h `HH:mm` — the resolver's HHMM_RE twin (drift-guarded by the gateway reject-on-save). */
+		const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+		/**
+		* The 默认模型 value for a chain: the official V4 id when the chain TAIL
+		* is that model (Flash XOR Pro — leading 默认降级链 entries allowed);
+		* `''` for an empty chain or a chain whose last entry is not official
+		* (the panel reads back unselected and save validation blocks the value).
+		*/
+		function allDayModelOf(chain) {
+			const tail = chain.length >= 1 ? chain[chain.length - 1] : void 0;
+			return tail === ALL_DAY_FLASH || tail === ALL_DAY_PRO ? tail : "";
+		}
+		/**
+		* The 默认降级链 editor row: the leading entries BEFORE the official-V4
+		* tail, or the whole chain while the tail is not official (the draft
+		* rides the accepted value until a 默认模型 pick).
+		*/
+		function allDayChainRowOf(chain, catalog) {
+			return rootChainToRows(allDayModelOf(chain) === "" ? chain : chain.slice(0, -1), catalog)[0];
+		}
 		/** Split scalars from the row editors (rootChain / role entities / role rules). */
 		function scalarsOf(config) {
 			return {
@@ -2232,7 +1899,9 @@ window.__ModuleLoader__.load({
 				cooldownMs: config.cooldownMs,
 				revertPolicy: config.revertPolicy,
 				maxSwitchesPerStep: config.maxSwitchesPerStep,
-				alwaysModeRetryCap: config.alwaysModeRetryCap
+				alwaysModeRetryCap: config.alwaysModeRetryCap,
+				roleAutoMatch: config.roleAutoMatch,
+				tz: config.tz ?? "Asia/Shanghai"
 			};
 		}
 		/**
@@ -2240,14 +1909,32 @@ window.__ModuleLoader__.load({
 		* `roles.list` comes from the rows, with the schema-reserved
 		* `prompt`/`permissions` merged back from the last accepted config by role
 		* id (see {@link mergeRoleExtras}) so a save never silently drops them
-		* (T2 reviewer minor #2).
+		* (T2 reviewer minor #2). `presets` (spec §9.4) follows the same rule at
+		* the top level: no presets UI this iteration (R-001 re-defer), so the
+		* draft carries the accepted value through untouched — a clean draft stays
+		* equal to the accepted config and a save never drops the key.
+		* `roleAutoMatch` follows the same rule (config-model mirror of `presets`):
+		* the draft carries the scalar's value through untouched. The scalar is
+		* ALWAYS defined — the gateway composition resolves the schema default
+		* `true` even for a legacy config that never declared the key — so the
+		* toggle always renders (default on) and a save persists the resolved value
+		* (AC-7 re-scope, PM decision 2026-08-17 Option A).
+		*
+		* All-day: rootChain is composed from the 默认降级链 editor's leading
+		* selectors plus the 默认模型 tail (exactly one official V4 — Flash XOR
+		* Pro). While no tail is selected the ACCEPTED chain rides through
+		* untouched. `timeSlots` is rebuilt from the slot rows every render. `tz`
+		* is a card scalar: preset rows lock it to Asia/Shanghai; custom rows
+		* follow the selected timezone.
 		*/
-		function assembleConfig(scalars, rootChainRows, roleRows, ruleRows, originalRoles) {
+		function assembleConfig(scalars, allDayModel, acceptedRootChain, allDayChainRow, roleRows, ruleRows, originalRoles, presets, roleAutoMatch, timeSlotRows) {
 			const list = mergeRoleExtras(roleRows, originalRoles);
+			const trailingChain = rowsToRootChain([allDayChainRow]);
+			const tz = resolvedSlotTz(timeSlotRows, scalars.tz);
 			return {
 				enabled: scalars.enabled,
 				triggerCodes: [...scalars.triggerCodes],
-				rootChain: rowsToRootChain(rootChainRows),
+				rootChain: allDayModel === "" ? [...acceptedRootChain] : [...trailingChain, allDayModel],
 				roles: {
 					list,
 					rules: rowsToRules(ruleRows)
@@ -2255,7 +1942,19 @@ window.__ModuleLoader__.load({
 				cooldownMs: scalars.cooldownMs,
 				revertPolicy: scalars.revertPolicy,
 				maxSwitchesPerStep: scalars.maxSwitchesPerStep,
-				alwaysModeRetryCap: scalars.alwaysModeRetryCap
+				alwaysModeRetryCap: scalars.alwaysModeRetryCap,
+				...presets === void 0 ? {} : { presets },
+				roleAutoMatch,
+				timeSlots: rowsToTimeSlots(timeSlotRows),
+				tz
+			};
+		}
+		/** An empty per-section validation-error record (the clean-draft shape). */
+		function emptyValidationErrors() {
+			return {
+				main: [],
+				sub: [],
+				advanced: []
 			};
 		}
 		/**
@@ -2263,37 +1962,73 @@ window.__ModuleLoader__.load({
 		* role id format/reserved word/duplicates, undeclared rule role references
 		* (only reachable through the synthetic outside option — the dropdown
 		* itself constrains normal edits), and illegal selector entries in
-		* rootChain and role chains. Returns one localized message per violation;
-		* a non-empty result blocks {@link save} — the draft is never written.
-		* `label`/`description` are free text and never validated.
+		* rootChain and role chains. Returns one localized message per violation,
+		* bucketed by the section that owns the offending field (PR #62 UX round
+		* 2 — 主代理: allDay / timeSlots / slot* / tz / default model / default
+		* chain; 子代理: role* / rule*; 高级选项: trigger / cooldown / revert /
+		* always / roleAutoMatch — the scalars are never validated, so the
+		* advanced bucket stays empty today). A non-empty result blocks
+		* {@link save} — the draft is never written. `persona` is free text and
+		* never validated.
+		*
+		* `seededIds` is the live trimmed-id → overridden map derived from
+		* `state.seeds` (spec §9.4): the empty-chain block relaxes for seeded ids
+		* only (spec §9.6 / AC-3 — a seeded role's chain is legitimately empty by
+		* design, R4, and its persona edits must stay persistable); non-seeded
+		* behavior is byte-identical.
 		*/
-		function validateDraft(draft, t) {
-			const errors = [];
+		function validateDraft(draft, t, seededIds) {
+			const errors = emptyValidationErrors();
 			const declaredIds = /* @__PURE__ */ new Set();
 			for (const role of draft.roles.list) {
-				if (!ROLE_ID_PATTERN.test(role.id)) errors.push(t("validation.roleIdFormat", { id: role.id }));
-				if (role.id === "inherit") errors.push(t("validation.roleIdReserved"));
-				if (declaredIds.has(role.id)) errors.push(t("validation.roleIdDuplicate", { id: role.id }));
+				if (!ROLE_ID_PATTERN.test(role.id)) errors.sub.push(t("validation.roleIdFormat", { id: role.id }));
+				if (role.id === "inherit") errors.sub.push(t("validation.roleIdReserved"));
+				if (declaredIds.has(role.id)) errors.sub.push(t("validation.roleIdDuplicate", { id: role.id }));
 				declaredIds.add(role.id);
 				for (const entry of role.chain ?? []) try {
 					parseSelector(entry);
 				} catch (error) {
-					errors.push(t("validation.selector", {
+					errors.sub.push(t("validation.selector", {
 						entry,
 						message: error.message
 					}));
 				}
+				if ((role.chain ?? []).length === 0 && !seededIds.has(role.id.trim())) errors.sub.push(t("validation.roleChainRequired", { id: role.id }));
 			}
+			const allDayTail = draft.rootChain.length >= 1 ? draft.rootChain[draft.rootChain.length - 1] : void 0;
+			if (allDayTail !== ALL_DAY_FLASH && allDayTail !== ALL_DAY_PRO) errors.main.push(t("validation.allDayRequired"));
 			for (const entry of draft.rootChain) try {
 				parseSelector(entry);
 			} catch (error) {
-				errors.push(t("validation.selector", {
+				errors.main.push(t("validation.selector", {
 					entry,
 					message: error.message
 				}));
 			}
+			const seenSlotPresets = /* @__PURE__ */ new Set();
+			for (const row of draft.timeSlots ?? []) {
+				if (row.kind !== "preset" && row.kind !== "custom") errors.main.push(t("validation.slotKind"));
+				if (row.kind === "preset") {
+					if (typeof row.preset !== "string" || !SLOT_PRESET_IDS.includes(row.preset)) errors.main.push(t("validation.slotPresetUnknown", { preset: row.preset }));
+					else if (seenSlotPresets.has(row.preset)) errors.main.push(t("validation.slotPresetDuplicate", { preset: row.preset }));
+					else seenSlotPresets.add(row.preset);
+					if (row.start !== void 0 || row.end !== void 0 || row.days !== void 0 && row.days.length > 0) errors.main.push(t("validation.slotPresetFrozen"));
+				} else if (row.kind === "custom") {
+					if (typeof row.start !== "string" || typeof row.end !== "string" || !HHMM_RE.test(row.start) || !HHMM_RE.test(row.end)) errors.main.push(t("validation.slotWindow"));
+					if (row.days !== void 0 && row.days.some((day) => !Number.isInteger(day) || day < 0 || day > 6)) errors.main.push(t("validation.slotDays"));
+				}
+				for (const entry of row.chain) try {
+					parseSelector(entry);
+				} catch (error) {
+					errors.main.push(t("validation.selector", {
+						entry,
+						message: error.message
+					}));
+				}
+				if (row.chain.length === 0) errors.main.push(t("validation.slotChainRequired"));
+			}
 			const validTargets = /* @__PURE__ */ new Set([...declaredIds, INHERIT_ROLE_ID]);
-			for (const rule of draft.roles.rules) if (!validTargets.has(rule.role)) errors.push(t("validation.ruleRoleUndeclared", { role: rule.role }));
+			for (const rule of draft.roles.rules) if (!validTargets.has(rule.role)) errors.sub.push(t("validation.ruleRoleUndeclared", { role: rule.role }));
 			return errors;
 		}
 		/**
@@ -2321,6 +2056,20 @@ window.__ModuleLoader__.load({
 		function parseCount(raw) {
 			const parsed = Number.parseInt(raw, 10);
 			return Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+		}
+		/**
+		* Custom time-slot rows whose window is not valid `HH:mm` — drives the
+		* inline red border after a blocked save attempt (same derivation pattern
+		* as {@link collectInvalidRoleIds}: one pass per render, index lookup per
+		* row).
+		*/
+		function collectInvalidSlotRows(rows) {
+			const invalid = /* @__PURE__ */ new Set();
+			rows.forEach((row, index) => {
+				if (row.kind === "preset") return;
+				if (!HHMM_RE.test(row.start) || !HHMM_RE.test(row.end)) invalid.add(index);
+			});
+			return invalid;
 		}
 		/** The catalog faces the dropdowns classify against; undefined while unready. */
 		function catalogOf(state) {
@@ -2363,11 +2112,16 @@ window.__ModuleLoader__.load({
 			});
 		}
 		/**
-		* One chain entry selector row: provider select + model select (cascade) +
-		* wildcard checkbox (spec §2.5 D-3). The provider options are the catalog
-		* providers **configured on the Models page** (`configuredProviders`, the
-		* Models-page `configured` join) — unconfigured directory providers never
-		* become offerable. Out-of-catalog values read back from the server render as
+		* One chain entry selector row: provider select + model select (cascade).
+		* The GUI never offers a `provider/*` wildcard (root agent and role chains
+		* alike; provider-any matching lives in the role rules) — but `provider/*`
+		* stays a legal YAML entry, so a wildcard row read back from the server
+		* renders with the legacy-conversion hint and an enabled model select:
+		* picking a model converts the row to an exact entry (the patch carries
+		* `wildcard: false`). The provider options are the catalog providers
+		* **configured on the Models page** (`configuredProviders`, the Models-page
+		* `configured` join) — unconfigured directory providers never become
+		* offerable. Out-of-catalog values read back from the server render as
 		* a synthetic option with the short "outside catalog" annotation and stay
 		* selected — keeping them saves verbatim; picking a catalog option is an
 		* intentional change. A directory provider that is not configured is offered
@@ -2382,100 +2136,86 @@ window.__ModuleLoader__.load({
 			const modelRaw = selectionToRaw(selector.model);
 			const modelOutside = selector.model?.kind === "outside";
 			const group = catalog?.groups.find((entry) => entry.id === providerRaw);
-			const groupMissing = providerRaw !== "" && !providerOutside && !selector.wildcard && group === void 0;
-			const modelDisabled = disabled || selector.wildcard || providerRaw === "" || groupMissing || providerOutside && modelRaw === "";
+			const groupMissing = providerRaw !== "" && !providerOutside && group === void 0;
+			const modelDisabled = disabled || providerRaw === "" || groupMissing || providerOutside && modelRaw === "";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: FallbacksCard_module_css_default.selectorRow,
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: FallbacksCard_module_css_default.ruleGrid,
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: FallbacksCard_module_css_default.ruleCell,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+							className: FallbacksCard_module_css_default.ruleCell,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: FallbacksCard_module_css_default.ruleCellLabel,
+								children: t("roles.rule.provider")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+								className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
+								value: providerRaw,
+								disabled,
+								onChange: (event) => {
+									if (event.target.value === providerRaw) return;
+									onChange({
+										provider: classifyProvider(event.target.value, catalog),
+										model: null
+									});
+								},
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										value: "",
+										children: t("chains.selector.providerPlaceholder")
+									}),
+									configuredProviders.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										value: entry.provider,
+										children: entry.displayName
+									}, entry.provider)),
+									providerUnconfigured && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										value: providerRaw,
+										children: `${providerRaw}${t("catalog.unconfigured.short")}`
+									}),
+									providerOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										value: providerRaw,
+										children: `${providerRaw}${t("catalog.outside.short")}`
+									})
+								]
+							})]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+							className: FallbacksCard_module_css_default.ruleCell,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 									className: FallbacksCard_module_css_default.ruleCellLabel,
-									children: t("roles.rule.provider")
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+									children: t("roles.rule.model")
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
 									className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
-									value: providerRaw,
-									disabled,
+									value: modelRaw,
+									disabled: modelDisabled,
 									onChange: (event) => {
-										if (event.target.value === providerRaw) return;
 										onChange({
-											provider: classifyProvider(event.target.value, catalog),
-											model: null
+											model: classifyModel(providerRaw, event.target.value, catalog),
+											...selector.wildcard ? { wildcard: false } : {}
 										});
 									},
 									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										modelRaw === "" && !providerOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 											value: "",
-											children: t("chains.selector.providerPlaceholder")
+											children: t("chains.selector.modelPlaceholder")
 										}),
-										configuredProviders.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: entry.provider,
-											children: entry.displayName
-										}, entry.provider)),
-										providerUnconfigured && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: providerRaw,
-											children: `${providerRaw}${t("catalog.unconfigured.short")}`
-										}),
-										providerOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: providerRaw,
-											children: `${providerRaw}${t("catalog.outside.short")}`
+										(group?.models ?? []).map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: model.id,
+											children: model.name
+										}, model.id)),
+										modelOutside && !selector.wildcard && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: modelRaw,
+											children: `${modelRaw}${t("catalog.outside.short")}`
 										})
 									]
-								})]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: FallbacksCard_module_css_default.ruleCell,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: FallbacksCard_module_css_default.ruleCellLabel,
-										children: t("roles.rule.model")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-										className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
-										value: selector.wildcard ? "" : modelRaw,
-										disabled: modelDisabled,
-										onChange: (event) => {
-											onChange({ model: classifyModel(providerRaw, event.target.value, catalog) });
-										},
-										children: [
-											modelRaw === "" && !providerOutside && !selector.wildcard && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-												value: "",
-												children: t("chains.selector.modelPlaceholder")
-											}),
-											(group?.models ?? []).map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-												value: model.id,
-												children: model.name
-											}, model.id)),
-											modelOutside && !selector.wildcard && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-												value: modelRaw,
-												children: `${modelRaw}${t("catalog.outside.short")}`
-											})
-										]
-									}),
-									groupMissing && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: FallbacksCard_module_css_default.hint,
-										children: t("chains.selector.noModels")
-									})
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: `${FallbacksCard_module_css_default.ruleCell} ${FallbacksCard_module_css_default.wildcardCell}`,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									type: "checkbox",
-									checked: selector.wildcard,
-									disabled: disabled || providerRaw === "",
-									onChange: (event) => {
-										onChange({
-											wildcard: event.target.checked,
-											...event.target.checked ? { model: null } : {}
-										});
-									}
-								}), t("chains.selector.wildcard")]
-							})
-						]
+								}),
+								groupMissing && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: FallbacksCard_module_css_default.hint,
+									children: t("chains.selector.noModelsStrict")
+								})
+							]
+						})]
 					}),
 					(providerOutside || modelOutside) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 						className: FallbacksCard_module_css_default.hint,
@@ -2483,6 +2223,10 @@ window.__ModuleLoader__.load({
 							label: t("catalog.outside.tooltip"),
 							disabled
 						})]
+					}),
+					selector.wildcard && !modelDisabled && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: FallbacksCard_module_css_default.hint,
+						children: t("chains.selector.wildcardLegacy")
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: FallbacksCard_module_css_default.cardFoot,
@@ -2515,24 +2259,79 @@ window.__ModuleLoader__.load({
 				if (snapshot.switchesStatus === "idle") controller.loadSwitches();
 			}, [controller]);
 			const [scalars, setScalars] = (0, react.useState)(() => scalarsOf(defaultFallbacksConfig));
-			const [rootChainRows, setRootChainRows] = (0, react.useState)(() => rootChainToRows(defaultFallbacksConfig.rootChain));
+			const [allDayModel, setAllDayModel] = (0, react.useState)(() => allDayModelOf(defaultFallbacksConfig.rootChain));
+			const [allDayChainRow, setAllDayChainRow] = (0, react.useState)(() => allDayChainRowOf(defaultFallbacksConfig.rootChain, void 0));
+			const [timeSlotRows, setTimeSlotRows] = (0, react.useState)(() => timeSlotsToRows(defaultFallbacksConfig.timeSlots ?? []));
 			const [roleRows, setRoleRows] = (0, react.useState)(() => rolesToRows(defaultFallbacksConfig.roles.list));
 			const [ruleRows, setRuleRows] = (0, react.useState)(() => rulesToRows(defaultFallbacksConfig.roles.rules));
-			const [validationErrors, setValidationErrors] = (0, react.useState)([]);
+			const [presetToAdd, setPresetToAdd] = (0, react.useState)("");
+			const [validationErrors, setValidationErrors] = (0, react.useState)(emptyValidationErrors);
 			const [validationAttempted, setValidationAttempted] = (0, react.useState)(false);
+			const [lastSaveSection, setLastSaveSection] = (0, react.useState)(null);
 			const seededConfigKey = (0, react.useRef)(null);
+			const draft = assembleConfig(scalars, allDayModel, state.config.rootChain, allDayChainRow, roleRows, ruleRows, state.config.roles.list, state.config.presets, scalars.roleAutoMatch, timeSlotRows);
+			const hasEmptyRuleRows = ruleRows.some((row) => row.role === "");
+			const enabledDirty = scalars.enabled !== state.config.enabled;
+			const mainDirty = enabledDirty || JSON.stringify([...draft.rootChain, draft.timeSlots]) !== JSON.stringify([...state.config.rootChain, state.config.timeSlots ?? []]);
+			const subDirty = hasEmptyRuleRows || JSON.stringify(draft.roles) !== JSON.stringify(state.config.roles);
+			const advancedDirty = JSON.stringify([
+				draft.triggerCodes,
+				draft.cooldownMs,
+				draft.revertPolicy,
+				draft.maxSwitchesPerStep,
+				draft.alwaysModeRetryCap,
+				draft.roleAutoMatch
+			]) !== JSON.stringify([
+				state.config.triggerCodes,
+				state.config.cooldownMs,
+				state.config.revertPolicy,
+				state.config.maxSwitchesPerStep,
+				state.config.alwaysModeRetryCap,
+				state.config.roleAutoMatch
+			]);
+			const dirty = mainDirty || subDirty || advancedDirty;
+			const firstSeedDone = (0, react.useRef)(false);
+			const forceReseed = (0, react.useRef)(false);
 			(0, react.useEffect)(() => {
 				if (state.status !== "ready") return;
 				const key = JSON.stringify(state.config);
 				if (seededConfigKey.current === key) return;
 				seededConfigKey.current = key;
-				setScalars(scalarsOf(state.config));
-				setRootChainRows(rootChainToRows(state.config.rootChain, catalogOf(state)));
-				setRoleRows(rolesToRows(state.config.roles.list, catalogOf(state)));
-				setRuleRows(rulesToRows(state.config.roles.rules, catalogOf(state)));
-			}, [state.status, state.config]);
-			const [confirmingReset, setConfirmingReset] = (0, react.useState)(false);
-			const [resetting, setResetting] = (0, react.useState)(false);
+				const firstSeed = !firstSeedDone.current;
+				firstSeedDone.current = true;
+				const force = forceReseed.current;
+				forceReseed.current = false;
+				const catalog = catalogOf(state);
+				if (firstSeed || force || !mainDirty) {
+					setAllDayModel(allDayModelOf(state.config.rootChain));
+					setAllDayChainRow(allDayChainRowOf(state.config.rootChain, catalog));
+					setTimeSlotRows(timeSlotsToRows(state.config.timeSlots ?? [], catalog));
+					setScalars((prev) => ({
+						...prev,
+						enabled: state.config.enabled,
+						tz: state.config.tz ?? "Asia/Shanghai"
+					}));
+				}
+				if (firstSeed || force || !subDirty) {
+					setRoleRows(rolesToRows(state.config.roles.list, catalog));
+					setRuleRows(rulesToRows(state.config.roles.rules, catalog));
+				}
+				if (firstSeed || force || !advancedDirty) setScalars((prev) => ({
+					...prev,
+					triggerCodes: [...state.config.triggerCodes],
+					cooldownMs: state.config.cooldownMs,
+					revertPolicy: state.config.revertPolicy,
+					maxSwitchesPerStep: state.config.maxSwitchesPerStep,
+					alwaysModeRetryCap: state.config.alwaysModeRetryCap,
+					roleAutoMatch: state.config.roleAutoMatch
+				}));
+			}, [
+				state.status,
+				state.config,
+				mainDirty,
+				subDirty,
+				advancedDirty
+			]);
 			const updateScalars = (mutator) => {
 				setScalars((prev) => {
 					const next = {
@@ -2543,17 +2342,32 @@ window.__ModuleLoader__.load({
 					return next;
 				});
 			};
-			const updateRootChainSelector = (selectorIndex, patch) => {
-				setRootChainRows((rows) => rows.map((row, index) => index === 0 ? {
-					...row,
-					selectors: row.selectors.map((selector, sIndex) => sIndex === selectorIndex ? {
-						...selector,
+			const updateTimeSlotRow = (index, patch) => {
+				setTimeSlotRows((rows) => {
+					const next = rows.map((row) => ({ ...row }));
+					next[index] = {
+						...next[index],
 						...patch
-					} : selector)
-				} : row));
+					};
+					return next;
+				});
 			};
-			const addRootChainSelector = () => {
-				setRootChainRows((rows) => rows.map((row, index) => index === 0 ? {
+			const updateTimeSlotSelector = (rowIndex, selectorIndex, patch) => {
+				setTimeSlotRows((rows) => {
+					const next = rows.map((row) => ({
+						...row,
+						selectors: row.selectors.map((selector) => ({ ...selector }))
+					}));
+					const selectors = next[rowIndex].selectors;
+					selectors[selectorIndex] = {
+						...selectors[selectorIndex],
+						...patch
+					};
+					return next;
+				});
+			};
+			const addTimeSlotSelector = (rowIndex) => {
+				setTimeSlotRows((rows) => rows.map((row, index) => index === rowIndex ? {
 					...row,
 					selectors: [...row.selectors, {
 						wildcard: false,
@@ -2562,11 +2376,87 @@ window.__ModuleLoader__.load({
 					}]
 				} : row));
 			};
-			const removeRootChainSelector = (selectorIndex) => {
-				setRootChainRows((rows) => rows.map((row, index) => index === 0 ? {
+			const removeTimeSlotSelector = (rowIndex, selectorIndex) => {
+				setTimeSlotRows((rows) => rows.map((row, index) => index === rowIndex ? {
 					...row,
 					selectors: row.selectors.filter((_, sIndex) => sIndex !== selectorIndex)
 				} : row));
+			};
+			const addPresetSlotRow = () => {
+				if (presetToAdd === "") return;
+				if ((presetToAdd === "glm-peak" || presetToAdd === "glm-valley") && !glmConfigured) return;
+				setTimeSlotRows((rows) => [...rows, {
+					kind: "preset",
+					preset: presetToAdd,
+					start: "",
+					end: "",
+					days: [],
+					name: "",
+					collapsed: false,
+					selectors: []
+				}]);
+				setPresetToAdd("");
+			};
+			const addCustomSlotRow = () => {
+				setTimeSlotRows((rows) => [...rows, {
+					kind: "custom",
+					start: "",
+					end: "",
+					days: [],
+					name: "",
+					collapsed: false,
+					selectors: []
+				}]);
+			};
+			const removeTimeSlotRow = (index) => {
+				setTimeSlotRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
+			};
+			const moveTimeSlotRow = (index, delta) => {
+				setTimeSlotRows((rows) => {
+					const target = index + delta;
+					if (target < 0 || target >= rows.length) return rows;
+					const next = rows.map((row) => ({ ...row }));
+					const moved = next[index];
+					next[index] = next[target];
+					next[target] = moved;
+					return next;
+				});
+			};
+			const [draggedSlotIndex, setDraggedSlotIndex] = (0, react.useState)(null);
+			const [overSlotIndex, setOverSlotIndex] = (0, react.useState)(null);
+			const reorderTimeSlotRow = (from, to) => {
+				setTimeSlotRows((rows) => {
+					if (from === to || from < 0 || to < 0 || from >= rows.length || to >= rows.length) return rows;
+					const next = rows.map((row) => ({ ...row }));
+					const [moved] = next.splice(from, 1);
+					next.splice(to, 0, moved);
+					return next;
+				});
+			};
+			const updateAllDayChainSelector = (selectorIndex, patch) => {
+				setAllDayChainRow((row) => ({
+					...row,
+					selectors: row.selectors.map((selector, index) => index === selectorIndex ? {
+						...selector,
+						...patch
+					} : selector)
+				}));
+			};
+			const addAllDayChainSelector = () => {
+				setAllDayChainRow((row) => ({
+					...row,
+					selectors: [...row.selectors, {
+						wildcard: false,
+						provider: null,
+						model: null
+					}]
+				}));
+			};
+			const removeAllDayChainSelector = (selectorIndex) => {
+				setAllDayChainRow((row) => ({
+					...row,
+					selectors: row.selectors.filter((_, index) => index !== selectorIndex)
+				}));
 			};
 			const updateRoleRow = (index, patch) => {
 				setRoleRows((rows) => {
@@ -2611,10 +2501,10 @@ window.__ModuleLoader__.load({
 			const addRole = () => {
 				setRoleRows((rows) => [...rows, {
 					id: "",
-					label: "",
-					description: "",
+					persona: "",
 					selectors: [],
-					fallback: "inherit-root"
+					fallback: "inherit-root",
+					collapsed: true
 				}]);
 			};
 			const removeRole = (index) => {
@@ -2630,16 +2520,23 @@ window.__ModuleLoader__.load({
 					return next;
 				});
 			};
-			const draft = assembleConfig(scalars, rootChainRows, roleRows, ruleRows, state.config.roles.list);
-			const hasEmptyRuleRows = ruleRows.some((row) => row.role === "");
-			const dirty = JSON.stringify(draft) !== JSON.stringify(state.config) || hasEmptyRuleRows;
+			const allValidationErrors = [
+				...validationErrors.main,
+				...validationErrors.sub,
+				...validationErrors.advanced
+			];
 			const saving = state.status === "saving";
 			const writable = state.writable;
 			const unknownCodes = scalars.triggerCodes.filter((code) => !KNOWN_TRIGGER_CODES.includes(code));
+			const presetsPresent = timeSlotRows.some((row) => row.kind === "preset");
+			const glmConfigured = state.configuredProviders.some((entry) => entry.provider === "zai-coding-cn");
+			const slotState = resolveSlotState(state.config, /* @__PURE__ */ new Date(), scalars.tz);
+			const activeSlotIndex = slotState.winner === "all-day" ? -1 : state.config.timeSlots?.indexOf(slotState.winner) ?? -1;
 			const roleOptions = ruleRoleOptions({ list: roleRows });
 			const invalidRoleIds = validationAttempted ? collectInvalidRoleIds(roleRows) : null;
-			const effectiveModel = deriveEffectiveModel(state.config, state.switches);
-			const effectiveModelLine = effectiveModel.kind === "unavailable" ? t("status.effectiveModel.unavailable") : `${effectiveModel.provider}/${effectiveModel.model} · ${t("status.effectiveModel.note")}`;
+			const invalidSlotRows = validationAttempted ? collectInvalidSlotRows(timeSlotRows) : null;
+			const seededIds = /* @__PURE__ */ new Map();
+			for (const seed of state.seeds) seededIds.set(seed.id.trim(), seed.overridden);
 			const latestSwitch = state.switches[0];
 			let switchesLine;
 			if (state.switchesStatus === "error") switchesLine = t("status.switches.error", { message: state.switchesError });
@@ -2647,53 +2544,138 @@ window.__ModuleLoader__.load({
 			else if (latestSwitch === void 0) switchesLine = t("status.switches.empty");
 			else {
 				const reasonKey = SWITCH_REASON_KEYS[latestSwitch.reason];
-				switchesLine = t("status.switches.compact", {
+				const params = {
 					count: String(state.switches.length),
 					from: `${latestSwitch.from.provider}/${latestSwitch.from.model}`,
 					to: `${latestSwitch.to.provider}/${latestSwitch.to.model}`,
 					role: latestSwitch.role,
 					reason: reasonKey === void 0 ? latestSwitch.reason : t(reasonKey)
-				});
+				};
+				switchesLine = latestSwitch.reason === "role-inject" ? t("status.switches.compact.roleInject", params) : t("status.switches.compact", params);
 			}
-			const catalogSeededEpoch = (0, react.useRef)(null);
+			const catalogSeededSections = (0, react.useRef)({
+				epoch: null,
+				main: false,
+				sub: false
+			});
 			(0, react.useEffect)(() => {
 				if (state.catalogStatus !== "ready") return;
-				if (catalogSeededEpoch.current === state.catalogEpoch) return;
-				if (dirty) return;
-				catalogSeededEpoch.current = state.catalogEpoch;
-				setRootChainRows(rootChainToRows(state.config.rootChain, catalogOf(state)));
-				setRoleRows(rolesToRows(state.config.roles.list, catalogOf(state)));
-				setRuleRows(rulesToRows(state.config.roles.rules, catalogOf(state)));
+				const seed = catalogSeededSections.current;
+				if (seed.epoch !== state.catalogEpoch) {
+					seed.epoch = state.catalogEpoch;
+					seed.main = false;
+					seed.sub = false;
+				}
+				const catalog = catalogOf(state);
+				if (!mainDirty && !seed.main) {
+					seed.main = true;
+					setAllDayModel(allDayModelOf(state.config.rootChain));
+					setAllDayChainRow(allDayChainRowOf(state.config.rootChain, catalog));
+					setTimeSlotRows(timeSlotsToRows(state.config.timeSlots ?? [], catalog));
+				}
+				if (!subDirty && !seed.sub) {
+					seed.sub = true;
+					setRoleRows(rolesToRows(state.config.roles.list, catalog));
+					setRuleRows(rulesToRows(state.config.roles.rules, catalog));
+				}
 			}, [
 				state.catalogStatus,
 				state.catalogEpoch,
 				state.config,
-				dirty
+				mainDirty,
+				subDirty
 			]);
-			const save = () => {
-				const errors = validateDraft(draft, t);
-				if (hasEmptyRuleRows) errors.push(t("validation.ruleRoleRequired"));
-				if (errors.length > 0) {
+			const sectionPatch = (section) => {
+				const base = {
+					...state.config,
+					enabled: scalars.enabled
+				};
+				switch (section) {
+					case "main": return {
+						...base,
+						rootChain: draft.rootChain,
+						timeSlots: draft.timeSlots,
+						tz: draft.tz
+					};
+					case "sub": return {
+						...base,
+						roles: draft.roles
+					};
+					case "advanced": return {
+						...base,
+						triggerCodes: draft.triggerCodes,
+						cooldownMs: draft.cooldownMs,
+						revertPolicy: draft.revertPolicy,
+						maxSwitchesPerStep: draft.maxSwitchesPerStep,
+						alwaysModeRetryCap: draft.alwaysModeRetryCap,
+						roleAutoMatch: draft.roleAutoMatch
+					};
+				}
+			};
+			const save = (section) => {
+				setLastSaveSection(section);
+				const errors = validateDraft(draft, t, seededIds);
+				if (section === "sub" && hasEmptyRuleRows) errors.sub.push(t("validation.ruleRoleRequired"));
+				if (errors[section].length > 0) {
 					setValidationErrors(errors);
 					setValidationAttempted(true);
 					return;
 				}
-				setValidationErrors([]);
+				setValidationErrors(emptyValidationErrors());
 				setValidationAttempted(false);
-				controller.save(draft);
+				controller.save(sectionPatch(section));
 			};
-			const discard = () => {
-				setScalars(scalarsOf(state.config));
-				setRootChainRows(rootChainToRows(state.config.rootChain, catalogOf(state)));
-				setRoleRows(rolesToRows(state.config.roles.list, catalogOf(state)));
-				setRuleRows(rulesToRows(state.config.roles.rules, catalogOf(state)));
-				setValidationErrors([]);
+			const saveEnabled = () => {
+				setLastSaveSection("main");
+				setValidationErrors(emptyValidationErrors());
+				setValidationAttempted(false);
+				controller.save({
+					...state.config,
+					enabled: scalars.enabled
+				});
+			};
+			const discardSection = (section) => {
+				switch (section) {
+					case "main":
+						setAllDayModel(allDayModelOf(state.config.rootChain));
+						setAllDayChainRow(allDayChainRowOf(state.config.rootChain, catalogOf(state)));
+						setTimeSlotRows(timeSlotsToRows(state.config.timeSlots ?? [], catalogOf(state)));
+						setScalars((prev) => ({
+							...prev,
+							enabled: state.config.enabled,
+							tz: state.config.tz ?? "Asia/Shanghai"
+						}));
+						break;
+					case "sub":
+						setRoleRows(rolesToRows(state.config.roles.list, catalogOf(state)));
+						setRuleRows(rulesToRows(state.config.roles.rules, catalogOf(state)));
+						break;
+					case "advanced": setScalars((prev) => ({
+						...prev,
+						triggerCodes: [...state.config.triggerCodes],
+						cooldownMs: state.config.cooldownMs,
+						revertPolicy: state.config.revertPolicy,
+						maxSwitchesPerStep: state.config.maxSwitchesPerStep,
+						alwaysModeRetryCap: state.config.alwaysModeRetryCap,
+						roleAutoMatch: state.config.roleAutoMatch
+					}));
+				}
+				setValidationErrors(emptyValidationErrors());
+				setValidationAttempted(false);
+			};
+			const discardEnabled = () => {
+				setScalars((prev) => ({
+					...prev,
+					enabled: state.config.enabled
+				}));
+				setValidationErrors(emptyValidationErrors());
 				setValidationAttempted(false);
 			};
 			(0, react.useEffect)(() => {
 				if (!validationAttempted) return;
-				if (validateDraft(draft, t).length === 0 && !ruleRows.some((row) => row.role === "")) {
-					setValidationErrors([]);
+				const errors = validateDraft(draft, t, seededIds);
+				if (errors.main.length === 0 && errors.sub.length === 0 && errors.advanced.length === 0 && !ruleRows.some((row) => row.role === "")) {
+					setValidationErrors(emptyValidationErrors());
 					setValidationAttempted(false);
 				}
 			}, [
@@ -2702,14 +2684,12 @@ window.__ModuleLoader__.load({
 				ruleRows,
 				t
 			]);
-			const confirmReset = () => {
-				setResetting(true);
-				controller.resetToDefaults().finally(() => {
-					setResetting(false);
-					setConfirmingReset(false);
-				});
-			};
+			(0, react.useEffect)(() => {
+				if (state.status === "ready") setLastSaveSection(null);
+				if (state.status === "error") forceReseed.current = false;
+			}, [state.status]);
 			const [userOpen, setUserOpen] = (0, react.useState)(false);
+			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
 			const degradedLatch = (0, react.useRef)(false);
 			const errorLatch = (0, react.useRef)(false);
 			if (state.status === "ready") {
@@ -2718,6 +2698,7 @@ window.__ModuleLoader__.load({
 			} else if (state.status === "error") errorLatch.current = true;
 			const degraded = state.status === "ready" ? !state.present : degradedLatch.current;
 			const open = userOpen || errorLatch.current || degraded;
+			const advancedVisible = advancedOpen || !writable;
 			const title = t("title");
 			const header = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 				type: "button",
@@ -2747,820 +2728,1327 @@ window.__ModuleLoader__.load({
 			});
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
 				className: open ? `${FallbacksCard_module_css_default.card} ${FallbacksCard_module_css_default.cardOpen}` : FallbacksCard_module_css_default.card,
-				children: [
-					header,
-					open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: FallbacksCard_module_css_default.body,
-						children: [
-							state.legacyKeys.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: FallbacksCard_module_css_default.legacyNotice,
-								role: "status",
-								children: t("legacy.banner", { keys: state.legacyKeys.join(", ") })
-							}),
-							state.status === "error" && state.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: FallbacksCard_module_css_default.noticeRow,
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-									className: FallbacksCard_module_css_default.error,
-									role: "alert",
-									children: t("error.generic", { message: state.error })
-								}), !state.writable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-									variant: "outline",
-									size: "sm",
-									onClick: () => {
-										controller.load();
-									},
-									children: t("retry")
-								})]
-							}),
-							validationErrors.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				children: [header, open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: FallbacksCard_module_css_default.body,
+					children: [
+						state.legacyKeys.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							className: FallbacksCard_module_css_default.legacyNotice,
+							role: "status",
+							children: t("legacy.banner", { keys: state.legacyKeys.join(", ") })
+						}),
+						state.status === "error" && state.error !== null && lastSaveSection === null && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: FallbacksCard_module_css_default.noticeRow,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 								className: FallbacksCard_module_css_default.error,
 								role: "alert",
-								children: `${t("validation.blocked")}${validationErrors.join("; ")}`
-							}),
-							degraded && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: FallbacksCard_module_css_default.notice,
-								role: "status",
-								children: t("unavailable")
-							}),
-							state.status === "ready" && !state.writable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: FallbacksCard_module_css_default.readOnly,
-								role: "status",
-								children: t("readOnly")
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: FallbacksCard_module_css_default.form,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: FallbacksCard_module_css_default.checkboxRow,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-											className: FallbacksCard_module_css_default.checkLabel,
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-												className: FallbacksCard_module_css_default.checkLabelTitle,
-												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
-													htmlFor: "fallbacks-enabled",
-													children: t("enabled.label")
-												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-													label: t("enabled.tooltip"),
-													disabled: !writable
-												})]
-											}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: FallbacksCard_module_css_default.checkLabelDesc,
-												children: t("enabled.hint")
+								children: t("error.generic", { message: state.error })
+							}), !state.writable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+								variant: "outline",
+								size: "sm",
+								onClick: () => {
+									controller.load();
+								},
+								children: t("retry")
+							})]
+						}),
+						degraded && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							className: FallbacksCard_module_css_default.notice,
+							role: "status",
+							children: t("unavailable")
+						}),
+						state.status === "ready" && !state.writable && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							className: FallbacksCard_module_css_default.readOnly,
+							role: "status",
+							children: t("readOnly")
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: FallbacksCard_module_css_default.form,
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: FallbacksCard_module_css_default.checkboxRow,
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: FallbacksCard_module_css_default.checkLabel,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: FallbacksCard_module_css_default.checkLabelTitle,
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
+												htmlFor: "fallbacks-enabled",
+												children: t("enabled.label")
+											}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+												label: t("enabled.tooltip"),
+												disabled: !writable
 											})]
-										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-											id: "fallbacks-enabled",
-											type: "checkbox",
-											className: FallbacksCard_module_css_default.checkbox,
-											checked: scalars.enabled,
-											disabled: !writable,
-											onChange: (event) => {
-												updateScalars((draft) => {
-													draft.enabled = event.target.checked;
-												});
-											}
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: FallbacksCard_module_css_default.checkLabelDesc,
+											children: t("enabled.hint")
 										})]
-									}),
-									!scalars.enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+										id: "fallbacks-enabled",
+										type: "checkbox",
+										className: FallbacksCard_module_css_default.checkbox,
+										checked: scalars.enabled,
+										disabled: !writable,
+										onChange: (event) => {
+											updateScalars((draft) => {
+												draft.enabled = event.target.checked;
+											});
+										}
+									})]
+								}),
+								!scalars.enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 										className: FallbacksCard_module_css_default.offNotice,
 										children: t("enabled.off")
 									}),
-									scalars.enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("fieldset", {
-										className: FallbacksCard_module_css_default.fieldset,
-										disabled: !writable,
-										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: FallbacksCard_module_css_default.field,
-												role: "group",
-												"aria-labelledby": "fallbacks-trigger-codes",
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														className: FallbacksCard_module_css_default.fieldLabel,
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-															id: "fallbacks-trigger-codes",
-															children: t("triggerCodes.label")
-														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-															label: t("triggerCodes.tooltip"),
-															disabled: !writable
-														})]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("triggerCodes.hint")
-													}),
-													KNOWN_TRIGGER_CODES.map((code) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-														className: FallbacksCard_module_css_default.optionRow,
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-															type: "checkbox",
-															checked: scalars.triggerCodes.includes(code),
-															onChange: (event) => {
-																updateScalars((draft) => {
-																	draft.triggerCodes = withTriggerCode(draft.triggerCodes, code, event.target.checked);
-																});
-															}
-														}), t(TRIGGER_CODE_LABELS[code])]
-													}, code)),
-													unknownCodes.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("triggerCodes.extra", { codes: unknownCodes.join(", ") })
-													})
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: FallbacksCard_module_css_default.field,
-												role: "group",
-												"aria-labelledby": "fallbacks-revert-policy",
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														className: FallbacksCard_module_css_default.fieldLabel,
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-															id: "fallbacks-revert-policy",
-															children: t("revertPolicy.label")
-														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-															label: t("revertPolicy.tooltip"),
-															disabled: !writable
-														})]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("revertPolicy.hint")
-													}),
-													["cooldown-expiry", "never"].map((policy) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-														className: FallbacksCard_module_css_default.optionRow,
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-															type: "radio",
-															name: "fallbacks-revert-policy",
-															checked: scalars.revertPolicy === policy,
-															onChange: () => {
-																updateScalars((draft) => {
-																	draft.revertPolicy = policy;
-																});
-															}
-														}), t(`revertPolicy.${policy}`)]
-													}, policy))
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: FallbacksCard_module_css_default.numberFields,
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-														className: FallbacksCard_module_css_default.field,
-														children: [
-															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-																className: FallbacksCard_module_css_default.fieldLabel,
-																children: [
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
-																		htmlFor: "fallbacks-cooldown-ms",
-																		children: t("cooldownMs.label")
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-																		label: t("cooldownMs.tooltip"),
-																		disabled: !writable
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-																		className: FallbacksCard_module_css_default.defaultNote,
-																		children: [
-																			t("defaults.prefix"),
-																			": ",
-																			state.config.cooldownMs
-																		]
-																	})
-																]
-															}),
-															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-																id: "fallbacks-cooldown-ms",
-																className: FallbacksCard_module_css_default.input,
-																type: "number",
-																min: 0,
-																value: String(scalars.cooldownMs),
-																disabled: !writable,
-																onChange: (event) => {
-																	updateScalars((draft) => {
-																		draft.cooldownMs = parseCount(event.target.value);
-																	});
-																}
-															}),
-															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																className: FallbacksCard_module_css_default.hint,
-																children: t("cooldownMs.hint")
-															})
-														]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-														className: FallbacksCard_module_css_default.field,
-														children: [
-															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-																className: FallbacksCard_module_css_default.fieldLabel,
-																children: [
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
-																		htmlFor: "fallbacks-max-switches",
-																		children: t("maxSwitchesPerStep.label")
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-																		label: t("maxSwitchesPerStep.tooltip"),
-																		disabled: !writable
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-																		className: FallbacksCard_module_css_default.defaultNote,
-																		children: [
-																			t("defaults.prefix"),
-																			": ",
-																			state.config.maxSwitchesPerStep
-																		]
-																	})
-																]
-															}),
-															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-																id: "fallbacks-max-switches",
-																className: FallbacksCard_module_css_default.input,
-																type: "number",
-																min: 0,
-																value: String(scalars.maxSwitchesPerStep),
-																disabled: !writable,
-																onChange: (event) => {
-																	updateScalars((draft) => {
-																		draft.maxSwitchesPerStep = parseCount(event.target.value);
-																	});
-																}
-															}),
-															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																className: FallbacksCard_module_css_default.hint,
-																children: t("maxSwitchesPerStep.hint")
-															})
-														]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-														className: FallbacksCard_module_css_default.field,
-														children: [
-															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-																className: FallbacksCard_module_css_default.fieldLabel,
-																children: [
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
-																		htmlFor: "fallbacks-always-cap",
-																		children: t("alwaysModeRetryCap.label")
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-																		label: t("alwaysModeRetryCap.tooltip"),
-																		disabled: !writable
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-																		className: FallbacksCard_module_css_default.defaultNote,
-																		children: [
-																			t("defaults.prefix"),
-																			": ",
-																			state.config.alwaysModeRetryCap
-																		]
-																	})
-																]
-															}),
-															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-																id: "fallbacks-always-cap",
-																className: FallbacksCard_module_css_default.input,
-																type: "number",
-																min: 0,
-																value: String(scalars.alwaysModeRetryCap),
-																disabled: !writable,
-																onChange: (event) => {
-																	updateScalars((draft) => {
-																		draft.alwaysModeRetryCap = parseCount(event.target.value);
-																	});
-																}
-															}),
-															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																className: FallbacksCard_module_css_default.hint,
-																children: t("alwaysModeRetryCap.hint")
-															})
-														]
-													})
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: FallbacksCard_module_css_default.field,
-												role: "group",
-												"aria-labelledby": "fallbacks-root-chain",
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														className: FallbacksCard_module_css_default.fieldLabel,
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-															id: "fallbacks-root-chain",
-															children: t("rootChain.label")
-														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-															label: t("rootChain.tooltip"),
-															disabled: !writable
-														})]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("rootChain.hint")
-													}),
-													state.catalogStatus === "error" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("catalog.error", { message: state.catalogError })
-													}),
-													state.catalogStatus === "ready" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("catalog.partial", { message: state.catalogError })
-													}),
-													state.catalogStatus === "ready" && (state.groups.length === 0 || state.configuredProviders.length === 0) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("catalog.empty")
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-														className: FallbacksCard_module_css_default.list,
-														children: rootChainRows.map((row, rowIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-															className: FallbacksCard_module_css_default.editorCard,
-															children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-																className: FallbacksCard_module_css_default.chainSelectors,
-																children: row.selectors.map((selector, selectorIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChainSelectorEditor, {
-																	selector,
-																	catalog: catalogOf(state),
-																	configuredProviders: state.configuredProviders,
+									allValidationErrors.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+										className: FallbacksCard_module_css_default.error,
+										role: "alert",
+										children: `${t("validation.blocked")}${allValidationErrors.join("; ")}`
+									}),
+									lastSaveSection === "main" && state.status === "error" && state.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+										className: FallbacksCard_module_css_default.error,
+										role: "alert",
+										children: t("error.generic", { message: state.error })
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: FallbacksCard_module_css_default.sectionActions,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: `${FallbacksCard_module_css_default.secondaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+											disabled: !enabledDirty || saving,
+											onClick: discardEnabled,
+											children: t("discard")
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: `${FallbacksCard_module_css_default.primaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+											disabled: !writable || saving || !enabledDirty,
+											onClick: saveEnabled,
+											children: saving ? t("save.saving") : t("save")
+										})]
+									})
+								] }),
+								scalars.enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("fieldset", {
+									className: FallbacksCard_module_css_default.fieldset,
+									disabled: !writable,
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.sectionHeading,
+											id: "fallbacks-main-agent",
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: FallbacksCard_module_css_default.sectionHeadingText,
+												children: t("mainAgent.label")
+											}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: FallbacksCard_module_css_default.sectionActions,
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													type: "button",
+													className: `${FallbacksCard_module_css_default.secondaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+													disabled: !mainDirty || saving,
+													onClick: () => {
+														discardSection("main");
+													},
+													children: t("discard")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													type: "button",
+													className: `${FallbacksCard_module_css_default.primaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+													disabled: !writable || saving || !mainDirty,
+													onClick: () => {
+														save("main");
+													},
+													children: saving ? t("save.saving") : t("save")
+												})]
+											})]
+										}),
+										validationErrors.main.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+											className: FallbacksCard_module_css_default.error,
+											role: "alert",
+											children: `${t("validation.blocked")}${validationErrors.main.join("; ")}`
+										}),
+										lastSaveSection === "main" && state.status === "error" && state.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+											className: FallbacksCard_module_css_default.error,
+											role: "alert",
+											children: t("error.generic", { message: state.error })
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.field,
+											role: "group",
+											"aria-labelledby": "fallbacks-time-slots",
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: FallbacksCard_module_css_default.fieldLabel,
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														id: "fallbacks-time-slots",
+														children: t("timeSlots.label")
+													}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+														label: t("timeSlots.tooltip"),
+														disabled: !writable
+													})]
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("timeSlots.hint")
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+													className: FallbacksCard_module_css_default.list,
+													children: timeSlotRows.map((row, index) => {
+														const invalidWindow = invalidSlotRows?.has(index) ?? false;
+														const chainEmpty = row.selectors.every((selector) => selectorRowToRaw(selector) === "");
+														const firstModel = row.selectors.map(selectorRowToRaw).find((entry) => entry !== "");
+														const slotExpanded = !row.collapsed || !writable;
+														return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+															className: `${FallbacksCard_module_css_default.editorCard} ${draggedSlotIndex === index ? FallbacksCard_module_css_default.slotCardDragging : ""} ${overSlotIndex === index && draggedSlotIndex !== null && draggedSlotIndex !== index ? FallbacksCard_module_css_default.slotCardOver : ""}`,
+															onDragOver: (event) => {
+																if (draggedSlotIndex === null) return;
+																event.preventDefault();
+																if (overSlotIndex !== index) setOverSlotIndex(index);
+															},
+															onDrop: (event) => {
+																event.preventDefault();
+																const from = draggedSlotIndex;
+																setDraggedSlotIndex(null);
+																setOverSlotIndex(null);
+																if (from !== null && from !== index) reorderTimeSlotRow(from, index);
+															},
+															children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																className: FallbacksCard_module_css_default.collapseRow,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+																	type: "button",
+																	className: FallbacksCard_module_css_default.collapseToggle,
+																	"aria-expanded": slotExpanded,
+																	"aria-label": t(slotExpanded ? "timeSlots.collapse" : "timeSlots.expand"),
 																	disabled: !writable,
-																	t,
-																	onChange: (patch) => {
-																		updateRootChainSelector(selectorIndex, patch);
+																	onClick: () => {
+																		updateTimeSlotRow(index, { collapsed: !row.collapsed });
 																	},
-																	onRemove: () => {
-																		removeRootChainSelector(selectorIndex);
-																	}
-																}, selectorIndex))
-															}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-																variant: "outline",
-																size: "sm",
-																icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
-																className: FallbacksCard_module_css_default.addButton,
-																onClick: addRootChainSelector,
-																children: t("rootChain.selector.add")
-															})]
-														}, rowIndex))
-													})
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: FallbacksCard_module_css_default.field,
-												role: "group",
-												"aria-labelledby": "fallbacks-roles-list",
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														className: FallbacksCard_module_css_default.fieldLabel,
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-															id: "fallbacks-roles-list",
-															children: t("roles.list.label")
-														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-															label: t("roles.list.tooltip"),
-															disabled: !writable
-														})]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("roles.list.hint")
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-														className: FallbacksCard_module_css_default.list,
-														children: roleRows.map((row, index) => {
-															const invalid = invalidRoleIds?.has(row.id.trim()) ?? false;
-															return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-																className: FallbacksCard_module_css_default.editorCard,
-																children: [
+																	children: [
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: slotExpanded ? `${FallbacksCard_module_css_default.chevron} ${FallbacksCard_module_css_default.chevronOpen}` : FallbacksCard_module_css_default.chevron }),
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.collapseTitle,
+																			children: row.kind === "preset" ? t(`timeSlots.preset.${row.preset}.label`) : row.name !== "" ? row.name : `custom ${row.start}-${row.end}`
+																		}),
+																		row.kind === "preset" && (row.preset === "liang-peak" || row.preset === "glm-peak") && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: `${FallbacksCard_module_css_default.slotTag} ${FallbacksCard_module_css_default.slotTagHighCost}`,
+																			children: t("timeSlots.preset.highCost")
+																		}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: `${FallbacksCard_module_css_default.slotTag} ${FallbacksCard_module_css_default.slotTagMultiplier}`,
+																			children: t("timeSlots.preset.multiplier", { n: row.preset === "liang-peak" ? "2" : "3" })
+																		})] }),
+																		activeSlotIndex === index && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: `${FallbacksCard_module_css_default.slotTag} ${FallbacksCard_module_css_default.slotTagActive}`,
+																			children: t("timeSlots.active")
+																		}),
+																		firstModel !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.collapseMeta,
+																			children: firstModel
+																		})
+																	]
+																}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+																	type: "button",
+																	className: FallbacksCard_module_css_default.dragHandle,
+																	draggable: writable,
+																	"data-tip": t("timeSlots.drag"),
+																	"aria-label": t("timeSlots.drag"),
+																	disabled: !writable,
+																	onDragStart: () => {
+																		if (!writable) return;
+																		setDraggedSlotIndex(index);
+																		setOverSlotIndex(index);
+																	},
+																	onDragEnd: () => {
+																		setDraggedSlotIndex(null);
+																		setOverSlotIndex(null);
+																	},
+																	children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconEllipsisOutline16, { className: FallbacksCard_module_css_default.dragHandleIcon })
+																})]
+															}), slotExpanded && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+																row.kind === "preset" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 																		className: FallbacksCard_module_css_default.ruleGrid,
-																		children: [
-																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-																				className: FallbacksCard_module_css_default.ruleCell,
-																				children: [
-																					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																						className: FallbacksCard_module_css_default.ruleCellLabel,
-																						children: t("roles.id")
-																					}),
-																					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-																						className: `${FallbacksCard_module_css_default.input} ${invalid ? FallbacksCard_module_css_default.inputInvalid : ""}`,
-																						value: row.id,
-																						placeholder: t("roles.idPlaceholder"),
-																						"aria-label": t("roles.id"),
-																						"aria-invalid": invalid ? true : void 0,
-																						disabled: !writable,
-																						onChange: (event) => {
-																							updateRoleRow(index, { id: event.target.value });
-																						}
-																					}),
-																					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																						className: FallbacksCard_module_css_default.hint,
-																						children: t("roles.id.hint")
-																					})
-																				]
-																			}),
-																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-																				className: FallbacksCard_module_css_default.ruleCell,
-																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																					className: FallbacksCard_module_css_default.ruleCellLabel,
-																					children: t("roles.label")
-																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-																					className: FallbacksCard_module_css_default.input,
-																					value: row.label,
-																					"aria-label": t("roles.label"),
-																					disabled: !writable,
-																					onChange: (event) => {
-																						updateRoleRow(index, { label: event.target.value });
-																					}
-																				})]
-																			}),
-																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-																				className: FallbacksCard_module_css_default.ruleCell,
-																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																					className: FallbacksCard_module_css_default.ruleCellLabel,
-																					children: t("roles.description")
-																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-																					className: FallbacksCard_module_css_default.input,
-																					value: row.description,
-																					"aria-label": t("roles.description"),
-																					disabled: !writable,
-																					onChange: (event) => {
-																						updateRoleRow(index, { description: event.target.value });
-																					}
-																				})]
-																			})
-																		]
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-																		className: FallbacksCard_module_css_default.chainSelectors,
-																		children: row.selectors.map((selector, selectorIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChainSelectorEditor, {
-																			selector,
-																			catalog: catalogOf(state),
-																			configuredProviders: state.configuredProviders,
-																			disabled: !writable,
-																			t,
-																			onChange: (patch) => {
-																				updateRoleSelector(index, selectorIndex, patch);
-																			},
-																			onRemove: () => {
-																				removeRoleSelector(index, selectorIndex);
-																			}
-																		}, selectorIndex))
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-																		className: FallbacksCard_module_css_default.ruleGrid,
-																		children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 																			className: FallbacksCard_module_css_default.ruleCell,
 																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 																				className: FallbacksCard_module_css_default.ruleCellLabel,
-																				children: t("roles.fallback")
-																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-																				className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
-																				value: row.fallback,
-																				"aria-label": t("roles.fallback"),
-																				disabled: !writable,
-																				onChange: (event) => {
-																					updateRoleRow(index, { fallback: event.target.value });
-																				},
-																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																					value: "inherit-root",
-																					children: t("roles.fallback.inherit-root")
-																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																					value: "none",
-																					children: t("roles.fallback.none")
-																				})]
+																				children: t("timeSlots.preset.name")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.slotPresetName,
+																				children: t(`timeSlots.preset.${row.preset}.label`)
 																			})]
-																		})
+																		}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																			className: FallbacksCard_module_css_default.ruleCell,
+																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("timeSlots.preset.windowLabel")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.hint,
+																				children: t(`timeSlots.preset.${row.preset}.window`)
+																			})]
+																		})]
 																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-																		variant: "outline",
-																		size: "sm",
-																		icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
-																		className: FallbacksCard_module_css_default.addButton,
-																		onClick: () => {
-																			addRoleSelector(index);
-																		},
-																		children: t("roles.selector.add")
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																		className: FallbacksCard_module_css_default.hint,
+																		children: t("timeSlots.preset.chainsOnly")
 																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-																		className: FallbacksCard_module_css_default.cardFoot,
-																		children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-																			type: "button",
-																			className: `${FallbacksCard_module_css_default.iconButton} ${FallbacksCard_module_css_default.iconButtonDanger}`,
-																			"data-tip": t("roles.remove"),
-																			"aria-label": t("roles.remove"),
-																			onClick: () => {
-																				removeRole(index);
-																			},
-																			children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, {})
-																		})
+																	(row.preset === "glm-peak" || row.preset === "glm-valley") && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																		className: FallbacksCard_module_css_default.hint,
+																		children: t("timeSlots.preset.glm.note")
 																	})
-																]
-															}, index);
-														})
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-														variant: "outline",
-														size: "sm",
-														icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
-														className: FallbacksCard_module_css_default.addButton,
-														onClick: addRole,
-														children: t("roles.add")
-													})
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: FallbacksCard_module_css_default.field,
-												role: "group",
-												"aria-labelledby": "fallbacks-roles-rules",
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														className: FallbacksCard_module_css_default.fieldLabel,
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-															id: "fallbacks-roles-rules",
-															children: t("roles.rules")
-														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-															label: t("roles.rules.tooltip"),
-															disabled: !writable
-														})]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("roles.rules.hint")
-													}),
-													state.catalogStatus === "error" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("catalog.error", { message: state.catalogError })
-													}),
-													state.catalogStatus === "ready" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("catalog.partial", { message: state.catalogError })
-													}),
-													state.catalogStatus === "ready" && (state.groups.length === 0 || state.configuredProviders.length === 0) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-														className: FallbacksCard_module_css_default.hint,
-														children: t("catalog.empty")
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-														className: FallbacksCard_module_css_default.list,
-														children: ruleRows.map((row, index) => {
-															const catalog = catalogOf(state);
-															const providerRaw = selectionToRaw(row.provider);
-															const group = catalog?.groups.find((entry) => entry.id === providerRaw);
-															const providerOutside = row.provider?.kind === "outside";
-															const providerUnconfigured = !providerOutside && providerRaw !== "" && (catalog?.providers.some((entry) => entry.provider === providerRaw) ?? false) && !state.configuredProviders.some((entry) => entry.provider === providerRaw);
-															const modelOutside = row.model?.kind === "outside";
-															const roleOutside = row.role !== "" && !roleOptions.includes(row.role);
-															return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-																className: FallbacksCard_module_css_default.editorCard,
-																children: [
+																] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		className: FallbacksCard_module_css_default.field,
+																		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.ruleCellLabel,
+																			children: t("timeSlots.name")
+																		}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																			className: FallbacksCard_module_css_default.input,
+																			value: row.name,
+																			placeholder: t("timeSlots.name"),
+																			"aria-label": t("timeSlots.name"),
+																			disabled: !writable,
+																			onChange: (event) => {
+																				updateTimeSlotRow(index, { name: event.target.value });
+																			}
+																		})]
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		className: FallbacksCard_module_css_default.field,
+																		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.ruleCellLabel,
+																			children: t("timeSlots.tz.label")
+																		}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.hint,
+																			"aria-label": t("timeSlots.tz.label"),
+																			children: tzDisplayLabel(presetsPresent ? "Asia/Shanghai" : hostTimeZone())
+																		})]
+																	}),
 																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 																		className: FallbacksCard_module_css_default.ruleGrid,
+																		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																			className: FallbacksCard_module_css_default.ruleCell,
+																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("timeSlots.start")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																				className: `${FallbacksCard_module_css_default.input} ${invalidWindow ? FallbacksCard_module_css_default.inputInvalid : ""}`,
+																				value: row.start,
+																				placeholder: "09:00",
+																				"aria-label": t("timeSlots.start"),
+																				disabled: !writable,
+																				onChange: (event) => {
+																					updateTimeSlotRow(index, { start: event.target.value });
+																				}
+																			})]
+																		}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																			className: FallbacksCard_module_css_default.ruleCell,
+																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("timeSlots.end")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																				className: `${FallbacksCard_module_css_default.input} ${invalidWindow ? FallbacksCard_module_css_default.inputInvalid : ""}`,
+																				value: row.end,
+																				placeholder: "18:00",
+																				"aria-label": t("timeSlots.end"),
+																				disabled: !writable,
+																				onChange: (event) => {
+																					updateTimeSlotRow(index, { end: event.target.value });
+																				}
+																			})]
+																		})]
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		className: FallbacksCard_module_css_default.field,
 																		children: [
-																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-																				className: FallbacksCard_module_css_default.ruleCell,
-																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																					className: FallbacksCard_module_css_default.ruleCellLabel,
-																					children: t("roles.rule.origin")
-																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-																					className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
-																					value: row.origin,
-																					onChange: (event) => {
-																						updateRuleRow(index, { origin: event.target.value });
-																					},
-																					children: [
-																						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: "",
-																							children: t("roles.rule.origin.any")
-																						}),
-																						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: "root",
-																							children: t("roles.rule.origin.root")
-																						}),
-																						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: "subagent",
-																							children: t("roles.rule.origin.subagent")
-																						})
-																					]
-																				})]
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("timeSlots.days")
 																			}),
-																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-																				className: FallbacksCard_module_css_default.ruleCell,
-																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																					className: FallbacksCard_module_css_default.ruleCellLabel,
-																					children: t("roles.rule.provider")
-																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-																					className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
-																					value: providerRaw,
-																					onChange: (event) => {
-																						if (event.target.value === providerRaw) return;
-																						updateRuleRow(index, {
-																							provider: classifyProvider(event.target.value, catalog),
-																							model: null
-																						});
-																					},
-																					children: [
-																						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: "",
-																							children: t("roles.rule.provider.any")
-																						}),
-																						state.configuredProviders.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: entry.provider,
-																							children: entry.displayName
-																						}, entry.provider)),
-																						providerUnconfigured && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: providerRaw,
-																							children: `${providerRaw}${t("catalog.unconfigured.short")}`
-																						}),
-																						providerOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: providerRaw,
-																							children: `${providerRaw}${t("catalog.outside.short")}`
-																						})
-																					]
-																				})]
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																				className: FallbacksCard_module_css_default.dayRow,
+																				children: SLOT_WEEKDAYS.map((day, dayIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																					className: FallbacksCard_module_css_default.dayCell,
+																					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																						type: "checkbox",
+																						checked: row.days.includes(dayIndex),
+																						disabled: !writable,
+																						onChange: () => {
+																							updateTimeSlotRow(index, { days: row.days.includes(dayIndex) ? row.days.filter((existing) => existing !== dayIndex) : [...row.days, dayIndex] });
+																						}
+																					}), t(`timeSlots.day.${day}`)]
+																				}, day))
 																			}),
-																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-																				className: FallbacksCard_module_css_default.ruleCell,
-																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																					className: FallbacksCard_module_css_default.ruleCellLabel,
-																					children: t("roles.rule.model")
-																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-																					className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
-																					value: selectionToRaw(row.model),
-																					onChange: (event) => {
-																						updateRuleRow(index, { model: classifyModel(providerRaw, event.target.value, catalog) });
-																					},
-																					children: [
-																						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: "",
-																							children: t("roles.rule.model.any")
-																						}),
-																						(group?.models ?? []).map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: model.id,
-																							children: model.name
-																						}, model.id)),
-																						modelOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: selectionToRaw(row.model),
-																							children: `${selectionToRaw(row.model)}${t("catalog.outside.short")}`
-																						})
-																					]
-																				})]
-																			}),
-																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-																				className: FallbacksCard_module_css_default.ruleCell,
-																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																					className: FallbacksCard_module_css_default.ruleCellLabel,
-																					children: t("roles.rule.role")
-																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-																					className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
-																					value: row.role,
-																					disabled: !writable,
-																					onChange: (event) => {
-																						updateRuleRow(index, { role: event.target.value });
-																					},
-																					children: [
-																						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: "",
-																							children: t("roles.rule.roleSelectPlaceholder")
-																						}),
-																						roleOptions.map((id) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: id,
-																							children: id === "inherit" ? t("roles.rule.role.inherit") : id
-																						}, id)),
-																						roleOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-																							value: row.role,
-																							children: `${row.role}${t("roles.rule.roleUndeclared.short")}`
-																						})
-																					]
-																				})]
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.hint,
+																				children: t("timeSlots.days.hint")
 																			})
 																		]
 																	}),
-																	(providerOutside || modelOutside) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																	(row.start !== "" || row.end !== "") && !(HHMM_RE.test(row.start) && HHMM_RE.test(row.end)) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 																		className: FallbacksCard_module_css_default.hint,
-																		children: [t("catalog.outside.hint"), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
-																			label: t("catalog.outside.tooltip"),
-																			disabled: !writable
-																		})]
-																	}),
-																	row.role === "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-																		className: FallbacksCard_module_css_default.hint,
-																		children: t("validation.ruleRoleRequired")
-																	}),
-																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-																		className: FallbacksCard_module_css_default.cardFoot,
-																		children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-																			type: "button",
-																			className: `${FallbacksCard_module_css_default.iconButton} ${FallbacksCard_module_css_default.iconButtonDanger}`,
-																			"data-tip": t("roles.removeRule"),
-																			"aria-label": t("roles.removeRule"),
-																			onClick: () => {
-																				setRuleRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
-																			},
-																			children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, {})
+																		children: t("validation.slotWindow")
+																	})
+																] }),
+																chainEmpty && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																	className: FallbacksCard_module_css_default.hint,
+																	children: t("validation.slotChainRequired")
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																	className: FallbacksCard_module_css_default.chainSelectors,
+																	children: row.selectors.map((selector, selectorIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChainSelectorEditor, {
+																		selector,
+																		catalog: catalogOf(state),
+																		configuredProviders: state.configuredProviders,
+																		disabled: !writable,
+																		t,
+																		onChange: (patch) => {
+																			updateTimeSlotSelector(index, selectorIndex, patch);
+																		},
+																		onRemove: () => {
+																			removeTimeSlotSelector(index, selectorIndex);
+																		}
+																	}, selectorIndex))
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+																	variant: "outline",
+																	size: "sm",
+																	icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
+																	className: FallbacksCard_module_css_default.addButton,
+																	onClick: () => {
+																		addTimeSlotSelector(index);
+																	},
+																	children: t("timeSlots.selector.add")
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																	className: FallbacksCard_module_css_default.cardFoot,
+																	children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		className: FallbacksCard_module_css_default.rowActions,
+																		children: [
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+																				type: "button",
+																				className: FallbacksCard_module_css_default.iconButton,
+																				"data-tip": t("timeSlots.moveUp"),
+																				"aria-label": t("timeSlots.moveUp"),
+																				disabled: !writable || index === 0,
+																				onClick: () => {
+																					moveTimeSlotRow(index, -1);
+																				},
+																				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutline14, {})
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+																				type: "button",
+																				className: FallbacksCard_module_css_default.iconButton,
+																				"data-tip": t("timeSlots.moveDown"),
+																				"aria-label": t("timeSlots.moveDown"),
+																				disabled: !writable || index === timeSlotRows.length - 1,
+																				onClick: () => {
+																					moveTimeSlotRow(index, 1);
+																				},
+																				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, {})
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+																				type: "button",
+																				className: `${FallbacksCard_module_css_default.iconButton} ${FallbacksCard_module_css_default.iconButtonDanger}`,
+																				"data-tip": t("timeSlots.remove"),
+																				"aria-label": t("timeSlots.remove"),
+																				onClick: () => {
+																					removeTimeSlotRow(index);
+																				},
+																				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, {})
+																			})
+																		]
+																	})
+																})
+															] })]
+														}, index);
+													})
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+													className: FallbacksCard_module_css_default.slotAddRow,
+													children: [
+														/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+															className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
+															value: presetToAdd,
+															"aria-label": t("timeSlots.presetPlaceholder"),
+															disabled: !writable,
+															onChange: (event) => {
+																setPresetToAdd(event.target.value);
+															},
+															children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																value: "",
+																children: t("timeSlots.presetPlaceholder")
+															}), SLOT_PRESET_IDS.filter((id) => !timeSlotRows.some((row) => row.kind === "preset" && row.preset === id)).map((id) => {
+																const glmUnconfigured = !glmConfigured && (id === "glm-peak" || id === "glm-valley");
+																return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("option", {
+																	value: id,
+																	disabled: glmUnconfigured,
+																	children: [t(`timeSlots.preset.${id}.label`), glmUnconfigured ? t("timeSlots.preset.glm.unconfigured") : null]
+																}, id);
+															})]
+														}),
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+															variant: "outline",
+															size: "sm",
+															icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
+															disabled: !writable || presetToAdd === "",
+															onClick: addPresetSlotRow,
+															children: t("timeSlots.addPreset")
+														}),
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+															variant: "outline",
+															size: "sm",
+															icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
+															disabled: !writable,
+															onClick: addCustomSlotRow,
+															children: t("timeSlots.addCustom")
+														})
+													]
+												})
+											]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.field,
+											role: "group",
+											"aria-labelledby": "fallbacks-root-chain",
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: FallbacksCard_module_css_default.fieldLabel,
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														id: "fallbacks-root-chain",
+														children: t("rootChain.label")
+													}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+														label: t("rootChain.tooltip"),
+														disabled: !writable
+													})]
+												}),
+												state.catalogStatus === "error" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("catalog.error", { message: state.catalogError })
+												}),
+												state.catalogStatus === "ready" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("catalog.partial", { message: state.catalogError })
+												}),
+												state.catalogStatus === "ready" && (state.groups.length === 0 || state.configuredProviders.length === 0) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("catalog.empty")
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+													className: FallbacksCard_module_css_default.list,
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: FallbacksCard_module_css_default.editorCard,
+														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+															className: FallbacksCard_module_css_default.chainSelectors,
+															children: allDayChainRow.selectors.map((selector, selectorIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChainSelectorEditor, {
+																selector,
+																catalog: catalogOf(state),
+																configuredProviders: state.configuredProviders,
+																disabled: !writable,
+																t,
+																onChange: (patch) => {
+																	updateAllDayChainSelector(selectorIndex, patch);
+																},
+																onRemove: () => {
+																	removeAllDayChainSelector(selectorIndex);
+																}
+															}, selectorIndex))
+														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+															variant: "outline",
+															size: "sm",
+															icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
+															className: FallbacksCard_module_css_default.addButton,
+															onClick: addAllDayChainSelector,
+															children: t("timeSlots.selector.add")
+														})]
+													})
+												})
+											]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.field,
+											role: "group",
+											"aria-labelledby": "fallbacks-default-model",
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.fieldLabel,
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														id: "fallbacks-default-model",
+														children: t("defaultModel.label")
+													})
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("allDay.hint")
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+													className: FallbacksCard_module_css_default.list,
+													children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: FallbacksCard_module_css_default.editorCard,
+														children: [
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																className: FallbacksCard_module_css_default.optionRow,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																	type: "radio",
+																	name: "fallbacks-all-day",
+																	checked: allDayModel === ALL_DAY_FLASH,
+																	disabled: !writable,
+																	onChange: () => {
+																		setAllDayModel(ALL_DAY_FLASH);
+																	}
+																}), t("allDay.flash")]
+															}),
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																className: FallbacksCard_module_css_default.optionRow,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																	type: "radio",
+																	name: "fallbacks-all-day",
+																	checked: allDayModel === ALL_DAY_PRO,
+																	disabled: !writable,
+																	onChange: () => {
+																		setAllDayModel(ALL_DAY_PRO);
+																	}
+																}), t("allDay.pro")]
+															}),
+															allDayModel === "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																className: FallbacksCard_module_css_default.hint,
+																children: t("allDay.nonconforming")
+															})
+														]
+													})
+												})
+											]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.sectionHeading,
+											id: "fallbacks-subagents",
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: FallbacksCard_module_css_default.sectionHeadingText,
+												children: t("subagents.label")
+											}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: FallbacksCard_module_css_default.sectionActions,
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													type: "button",
+													className: `${FallbacksCard_module_css_default.secondaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+													disabled: !subDirty || saving,
+													onClick: () => {
+														discardSection("sub");
+													},
+													children: t("discard")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+													type: "button",
+													className: `${FallbacksCard_module_css_default.primaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+													disabled: !writable || saving || !subDirty,
+													onClick: () => {
+														save("sub");
+													},
+													children: saving ? t("save.saving") : t("save")
+												})]
+											})]
+										}),
+										validationErrors.sub.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+											className: FallbacksCard_module_css_default.error,
+											role: "alert",
+											children: `${t("validation.blocked")}${validationErrors.sub.join("; ")}`
+										}),
+										lastSaveSection === "sub" && state.status === "error" && state.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+											className: FallbacksCard_module_css_default.error,
+											role: "alert",
+											children: t("error.generic", { message: state.error })
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.field,
+											role: "group",
+											"aria-labelledby": "fallbacks-roles-list",
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: FallbacksCard_module_css_default.fieldLabel,
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														id: "fallbacks-roles-list",
+														children: t("roles.list.label")
+													}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+														label: t("roles.list.tooltip"),
+														disabled: !writable
+													})]
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("roles.list.hint")
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+													className: FallbacksCard_module_css_default.list,
+													children: roleRows.map((row, index) => {
+														const invalid = invalidRoleIds?.has(row.id.trim()) ?? false;
+														const seed = seededIds.get(row.id.trim());
+														const roleSummary = row.selectors.map(selectorRowToRaw).find((entry) => entry !== "") ?? row.fallback;
+														const roleExpanded = !row.collapsed || !writable;
+														return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+															className: FallbacksCard_module_css_default.editorCard,
+															children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																className: FallbacksCard_module_css_default.collapseRow,
+																children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+																	type: "button",
+																	className: FallbacksCard_module_css_default.collapseToggle,
+																	"aria-expanded": roleExpanded,
+																	"aria-label": t(roleExpanded ? "roles.collapse" : "roles.expand"),
+																	disabled: !writable,
+																	onClick: () => {
+																		updateRoleRow(index, { collapsed: !row.collapsed });
+																	},
+																	children: [
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: roleExpanded ? `${FallbacksCard_module_css_default.chevron} ${FallbacksCard_module_css_default.chevronOpen}` : FallbacksCard_module_css_default.chevron }),
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.collapseTitle,
+																			children: row.id
+																		}),
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.collapseMeta,
+																			children: roleSummary
 																		})
+																	]
+																})
+															}), roleExpanded && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																	className: FallbacksCard_module_css_default.ruleGrid,
+																	children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		className: FallbacksCard_module_css_default.ruleCell,
+																		children: [
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("roles.id")
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																				className: `${FallbacksCard_module_css_default.input} ${invalid ? FallbacksCard_module_css_default.inputInvalid : ""}`,
+																				value: row.id,
+																				placeholder: t("roles.idPlaceholder"),
+																				"aria-label": t("roles.id"),
+																				"aria-invalid": invalid ? true : void 0,
+																				disabled: !writable || seed !== void 0,
+																				onChange: (event) => {
+																					updateRoleRow(index, { id: event.target.value });
+																				}
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.hint,
+																				children: t("roles.id.hint")
+																			})
+																		]
+																	})
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																	className: FallbacksCard_module_css_default.ruleGrid,
+																	children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		className: FallbacksCard_module_css_default.ruleCell,
+																		children: [
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("roles.persona")
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("textarea", {
+																				rows: 3,
+																				className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.inputTextarea}`,
+																				value: row.persona,
+																				placeholder: t("roles.personaPlaceholder"),
+																				"aria-label": t("roles.persona"),
+																				disabled: !writable,
+																				onChange: (event) => {
+																					updateRoleRow(index, { persona: event.target.value });
+																				}
+																			}),
+																			seed !== void 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																				className: FallbacksCard_module_css_default.hint,
+																				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																					className: FallbacksCard_module_css_default.pending,
+																					children: t(seed ? "roles.seedOverride" : "roles.seedDefault")
+																				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+																					variant: "outline",
+																					size: "sm",
+																					disabled: !writable || saving,
+																					onClick: () => {
+																						forceReseed.current = true;
+																						controller.revertSeed(row.id.trim()).then((persona) => {
+																							if (persona === void 0) return;
+																							updateRoleRow(index, { persona });
+																						});
+																					},
+																					children: t("roles.revertPersona")
+																				})]
+																			})
+																		]
+																	})
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																	className: FallbacksCard_module_css_default.chainSelectors,
+																	children: [row.selectors.map((selector, selectorIndex) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChainSelectorEditor, {
+																		selector,
+																		catalog: catalogOf(state),
+																		configuredProviders: state.configuredProviders,
+																		disabled: !writable,
+																		t,
+																		onChange: (patch) => {
+																			updateRoleSelector(index, selectorIndex, patch);
+																		},
+																		onRemove: () => {
+																			removeRoleSelector(index, selectorIndex);
+																		}
+																	}, selectorIndex)), row.selectors.every((selector) => selectorRowToRaw(selector) === "") && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																		className: FallbacksCard_module_css_default.hint,
+																		children: seed !== void 0 ? t("roles.seedChainOptional", { id: row.id }) : t("validation.roleChainRequired", { id: row.id })
+																	})]
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																	className: FallbacksCard_module_css_default.ruleGrid,
+																	children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																		className: FallbacksCard_module_css_default.ruleCell,
+																		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																			className: FallbacksCard_module_css_default.ruleCellLabel,
+																			children: t("roles.fallback")
+																		}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+																			className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
+																			value: row.fallback,
+																			"aria-label": t("roles.fallback"),
+																			disabled: !writable,
+																			onChange: (event) => {
+																				updateRoleRow(index, { fallback: event.target.value });
+																			},
+																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																				value: "inherit-root",
+																				children: t("roles.fallback.inherit-root")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																				value: "none",
+																				children: t("roles.fallback.none")
+																			})]
+																		})]
+																	})
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+																	variant: "outline",
+																	size: "sm",
+																	icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
+																	className: FallbacksCard_module_css_default.addButton,
+																	onClick: () => {
+																		addRoleSelector(index);
+																	},
+																	children: t("roles.selector.add")
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																	className: FallbacksCard_module_css_default.cardFoot,
+																	children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+																		type: "button",
+																		className: `${FallbacksCard_module_css_default.iconButton} ${FallbacksCard_module_css_default.iconButtonDanger}`,
+																		"data-tip": t("roles.remove"),
+																		"aria-label": t("roles.remove"),
+																		onClick: () => {
+																			removeRole(index);
+																		},
+																		children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, {})
+																	})
+																})
+															] })]
+														}, index);
+													})
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+													variant: "outline",
+													size: "sm",
+													icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
+													className: FallbacksCard_module_css_default.addButton,
+													onClick: addRole,
+													children: t("roles.add")
+												})
+											]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.field,
+											role: "group",
+											"aria-labelledby": "fallbacks-roles-rules",
+											children: [
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: FallbacksCard_module_css_default.fieldLabel,
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														id: "fallbacks-roles-rules",
+														children: t("roles.rules")
+													}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+														label: t("roles.rules.tooltip"),
+														disabled: !writable
+													})]
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("roles.rules.hint")
+												}),
+												state.catalogStatus === "error" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("catalog.error", { message: state.catalogError })
+												}),
+												state.catalogStatus === "ready" && state.catalogError !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("catalog.partial", { message: state.catalogError })
+												}),
+												state.catalogStatus === "ready" && (state.groups.length === 0 || state.configuredProviders.length === 0) && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													className: FallbacksCard_module_css_default.hint,
+													children: t("catalog.empty")
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+													className: FallbacksCard_module_css_default.list,
+													children: ruleRows.map((row, index) => {
+														const catalog = catalogOf(state);
+														const providerRaw = selectionToRaw(row.provider);
+														const group = catalog?.groups.find((entry) => entry.id === providerRaw);
+														const providerOutside = row.provider?.kind === "outside";
+														const providerUnconfigured = !providerOutside && providerRaw !== "" && (catalog?.providers.some((entry) => entry.provider === providerRaw) ?? false) && !state.configuredProviders.some((entry) => entry.provider === providerRaw);
+														const modelOutside = row.model?.kind === "outside";
+														const roleOutside = row.role !== "" && !roleOptions.includes(row.role);
+														return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+															className: FallbacksCard_module_css_default.editorCard,
+															children: [
+																/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																	className: FallbacksCard_module_css_default.ruleGrid,
+																	children: [
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																			className: FallbacksCard_module_css_default.ruleCell,
+																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("roles.rule.provider")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+																				className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
+																				value: providerRaw,
+																				onChange: (event) => {
+																					if (event.target.value === providerRaw) return;
+																					updateRuleRow(index, {
+																						provider: classifyProvider(event.target.value, catalog),
+																						model: null
+																					});
+																				},
+																				children: [
+																					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: "",
+																						children: t("roles.rule.provider.any")
+																					}),
+																					state.configuredProviders.map((entry) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: entry.provider,
+																						children: entry.displayName
+																					}, entry.provider)),
+																					providerUnconfigured && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: providerRaw,
+																						children: `${providerRaw}${t("catalog.unconfigured.short")}`
+																					}),
+																					providerOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: providerRaw,
+																						children: `${providerRaw}${t("catalog.outside.short")}`
+																					})
+																				]
+																			})]
+																		}),
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																			className: FallbacksCard_module_css_default.ruleCell,
+																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("roles.rule.model")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+																				className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
+																				value: selectionToRaw(row.model),
+																				onChange: (event) => {
+																					updateRuleRow(index, { model: classifyModel(providerRaw, event.target.value, catalog) });
+																				},
+																				children: [
+																					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: "",
+																						children: t("roles.rule.model.any")
+																					}),
+																					(group?.models ?? []).map((model) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: model.id,
+																						children: model.name
+																					}, model.id)),
+																					modelOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: selectionToRaw(row.model),
+																						children: `${selectionToRaw(row.model)}${t("catalog.outside.short")}`
+																					})
+																				]
+																			})]
+																		}),
+																		/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																			className: FallbacksCard_module_css_default.ruleCell,
+																			children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																				className: FallbacksCard_module_css_default.ruleCellLabel,
+																				children: t("roles.rule.role")
+																			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+																				className: `${FallbacksCard_module_css_default.input} ${FallbacksCard_module_css_default.selectInput}`,
+																				value: row.role,
+																				disabled: !writable,
+																				onChange: (event) => {
+																					updateRuleRow(index, { role: event.target.value });
+																				},
+																				children: [
+																					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: "",
+																						children: t("roles.rule.roleSelectPlaceholder")
+																					}),
+																					roleOptions.map((id) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: id,
+																						children: id === "inherit" ? t("roles.rule.role.inherit") : id
+																					}, id)),
+																					roleOutside && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+																						value: row.role,
+																						children: `${row.role}${t("roles.rule.roleUndeclared.short")}`
+																					})
+																				]
+																			})]
+																		})
+																	]
+																}),
+																(providerOutside || modelOutside) && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																	className: FallbacksCard_module_css_default.hint,
+																	children: [t("catalog.outside.hint"), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+																		label: t("catalog.outside.tooltip"),
+																		disabled: !writable
+																	})]
+																}),
+																row.role === "" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																	className: FallbacksCard_module_css_default.hint,
+																	children: t("validation.ruleRoleRequired")
+																}),
+																/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+																	className: FallbacksCard_module_css_default.cardFoot,
+																	children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+																		type: "button",
+																		className: `${FallbacksCard_module_css_default.iconButton} ${FallbacksCard_module_css_default.iconButtonDanger}`,
+																		"data-tip": t("roles.removeRule"),
+																		"aria-label": t("roles.removeRule"),
+																		onClick: () => {
+																			setRuleRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
+																		},
+																		children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconTrashOutline16, {})
+																	})
+																})
+															]
+														}, index);
+													})
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+													variant: "outline",
+													size: "sm",
+													icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
+													className: FallbacksCard_module_css_default.addButton,
+													onClick: () => {
+														setRuleRows((rows) => [...rows, {
+															provider: null,
+															model: null,
+															role: ""
+														}]);
+													},
+													children: t("roles.addRule")
+												})
+											]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: FallbacksCard_module_css_default.field,
+											role: "group",
+											"aria-labelledby": "fallbacks-advanced",
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+												type: "button",
+												className: FallbacksCard_module_css_default.sectionToggle,
+												disabled: !writable,
+												"aria-expanded": advancedVisible,
+												"aria-controls": advancedVisible ? "fallbacks-advanced-body" : void 0,
+												"aria-label": t(advancedVisible ? "advanced.collapse" : "advanced.expand"),
+												onClick: () => {
+													if (writable) setAdvancedOpen(!advancedOpen);
+												},
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+													id: "fallbacks-advanced",
+													className: FallbacksCard_module_css_default.sectionToggleText,
+													children: t("advanced.label")
+												}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: advancedVisible ? `${FallbacksCard_module_css_default.chevron} ${FallbacksCard_module_css_default.chevronOpen}` : FallbacksCard_module_css_default.chevron })]
+											}), advancedVisible && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												id: "fallbacks-advanced-body",
+												children: [
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: FallbacksCard_module_css_default.checkboxRow,
+														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+															className: FallbacksCard_module_css_default.checkLabel,
+															children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																className: FallbacksCard_module_css_default.checkLabelTitle,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
+																	htmlFor: "fallbacks-role-automatch",
+																	children: t("roleAutoMatch.label")
+																}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+																	label: t("roleAutoMatch.tooltip"),
+																	disabled: !writable
+																})]
+															}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																className: FallbacksCard_module_css_default.checkLabelDesc,
+																children: t("roleAutoMatch.hint")
+															})]
+														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+															id: "fallbacks-role-automatch",
+															type: "checkbox",
+															className: FallbacksCard_module_css_default.checkbox,
+															checked: scalars.roleAutoMatch,
+															disabled: !writable,
+															onChange: (event) => {
+																updateScalars((draft) => {
+																	draft.roleAutoMatch = event.target.checked;
+																});
+															}
+														})]
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: FallbacksCard_module_css_default.field,
+														role: "group",
+														"aria-labelledby": "fallbacks-trigger-codes",
+														children: [
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																className: FallbacksCard_module_css_default.fieldLabel,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																	id: "fallbacks-trigger-codes",
+																	children: t("triggerCodes.label")
+																}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+																	label: t("triggerCodes.tooltip"),
+																	disabled: !writable
+																})]
+															}),
+															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																className: FallbacksCard_module_css_default.hint,
+																children: t("triggerCodes.hint")
+															}),
+															KNOWN_TRIGGER_CODES.map((code) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																className: FallbacksCard_module_css_default.optionRow,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																	type: "checkbox",
+																	checked: scalars.triggerCodes.includes(code),
+																	onChange: (event) => {
+																		updateScalars((draft) => {
+																			draft.triggerCodes = withTriggerCode(draft.triggerCodes, code, event.target.checked);
+																		});
+																	}
+																}), t(TRIGGER_CODE_LABELS[code])]
+															}, code)),
+															unknownCodes.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																className: FallbacksCard_module_css_default.hint,
+																children: t("triggerCodes.extra", { codes: unknownCodes.join(", ") })
+															})
+														]
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: FallbacksCard_module_css_default.field,
+														role: "group",
+														"aria-labelledby": "fallbacks-revert-policy",
+														children: [
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																className: FallbacksCard_module_css_default.fieldLabel,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																	id: "fallbacks-revert-policy",
+																	children: t("revertPolicy.label")
+																}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+																	label: t("revertPolicy.tooltip"),
+																	disabled: !writable
+																})]
+															}),
+															/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																className: FallbacksCard_module_css_default.hint,
+																children: t("revertPolicy.hint")
+															}),
+															["cooldown-expiry", "never"].map((policy) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+																className: FallbacksCard_module_css_default.optionRow,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																	type: "radio",
+																	name: "fallbacks-revert-policy",
+																	checked: scalars.revertPolicy === policy,
+																	onChange: () => {
+																		updateScalars((draft) => {
+																			draft.revertPolicy = policy;
+																		});
+																	}
+																}), t(`revertPolicy.${policy}`)]
+															}, policy))
+														]
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: FallbacksCard_module_css_default.numberFields,
+														children: [
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																className: FallbacksCard_module_css_default.field,
+																children: [
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																		className: FallbacksCard_module_css_default.fieldLabel,
+																		children: [
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
+																				htmlFor: "fallbacks-cooldown-ms",
+																				children: t("cooldownMs.label")
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+																				label: t("cooldownMs.tooltip"),
+																				disabled: !writable
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																				className: FallbacksCard_module_css_default.defaultNote,
+																				children: [
+																					t("defaults.prefix"),
+																					": ",
+																					state.config.cooldownMs
+																				]
+																			})
+																		]
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																		id: "fallbacks-cooldown-ms",
+																		className: FallbacksCard_module_css_default.input,
+																		type: "number",
+																		min: 0,
+																		value: String(scalars.cooldownMs),
+																		disabled: !writable,
+																		onChange: (event) => {
+																			updateScalars((draft) => {
+																				draft.cooldownMs = parseCount(event.target.value);
+																			});
+																		}
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																		className: FallbacksCard_module_css_default.hint,
+																		children: t("cooldownMs.hint")
 																	})
 																]
-															}, index);
-														})
+															}),
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																className: FallbacksCard_module_css_default.field,
+																children: [
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																		className: FallbacksCard_module_css_default.fieldLabel,
+																		children: [
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
+																				htmlFor: "fallbacks-max-switches",
+																				children: t("maxSwitchesPerStep.label")
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+																				label: t("maxSwitchesPerStep.tooltip"),
+																				disabled: !writable
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																				className: FallbacksCard_module_css_default.defaultNote,
+																				children: [
+																					t("defaults.prefix"),
+																					": ",
+																					state.config.maxSwitchesPerStep
+																				]
+																			})
+																		]
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																		id: "fallbacks-max-switches",
+																		className: FallbacksCard_module_css_default.input,
+																		type: "number",
+																		min: 0,
+																		value: String(scalars.maxSwitchesPerStep),
+																		disabled: !writable,
+																		onChange: (event) => {
+																			updateScalars((draft) => {
+																				draft.maxSwitchesPerStep = parseCount(event.target.value);
+																			});
+																		}
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																		className: FallbacksCard_module_css_default.hint,
+																		children: t("maxSwitchesPerStep.hint")
+																	})
+																]
+															}),
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																className: FallbacksCard_module_css_default.field,
+																children: [
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																		className: FallbacksCard_module_css_default.fieldLabel,
+																		children: [
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
+																				htmlFor: "fallbacks-always-cap",
+																				children: t("alwaysModeRetryCap.label")
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsx)(InfoHint, {
+																				label: t("alwaysModeRetryCap.tooltip"),
+																				disabled: !writable
+																			}),
+																			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+																				className: FallbacksCard_module_css_default.defaultNote,
+																				children: [
+																					t("defaults.prefix"),
+																					": ",
+																					state.config.alwaysModeRetryCap
+																				]
+																			})
+																		]
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+																		id: "fallbacks-always-cap",
+																		className: FallbacksCard_module_css_default.input,
+																		type: "number",
+																		min: 0,
+																		value: String(scalars.alwaysModeRetryCap),
+																		disabled: !writable,
+																		onChange: (event) => {
+																			updateScalars((draft) => {
+																				draft.alwaysModeRetryCap = parseCount(event.target.value);
+																			});
+																		}
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																		className: FallbacksCard_module_css_default.hint,
+																		children: t("alwaysModeRetryCap.hint")
+																	})
+																]
+															})
+														]
 													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-														variant: "outline",
-														size: "sm",
-														icon: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }),
-														className: FallbacksCard_module_css_default.addButton,
-														onClick: () => {
-															setRuleRows((rows) => [...rows, {
-																origin: "",
-																provider: null,
-																model: null,
-																role: ""
-															}]);
-														},
-														children: t("roles.addRule")
+													validationErrors.advanced.length > 0 && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+														className: FallbacksCard_module_css_default.error,
+														role: "alert",
+														children: `${t("validation.blocked")}${validationErrors.advanced.join("; ")}`
+													}),
+													lastSaveSection === "advanced" && state.status === "error" && state.error !== null && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+														className: FallbacksCard_module_css_default.error,
+														role: "alert",
+														children: t("error.generic", { message: state.error })
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: FallbacksCard_module_css_default.sectionActions,
+														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+															type: "button",
+															className: `${FallbacksCard_module_css_default.secondaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+															disabled: !advancedDirty || saving,
+															onClick: () => {
+																discardSection("advanced");
+															},
+															children: t("discard")
+														}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+															type: "button",
+															className: `${FallbacksCard_module_css_default.primaryButton} ${FallbacksCard_module_css_default.sectionAction}`,
+															disabled: !writable || saving || !advancedDirty,
+															onClick: () => {
+																save("advanced");
+															},
+															children: saving ? t("save.saving") : t("save")
+														})]
 													})
 												]
-											})
-										]
-									})
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: FallbacksCard_module_css_default.statusBlock,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: FallbacksCard_module_css_default.statusTitle,
-										children: t("status.title")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-										className: FallbacksCard_module_css_default.statusLine,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: FallbacksCard_module_css_default.statusLineLabel,
-											children: t("status.effectiveModel.label")
-										}), effectiveModelLine]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-										className: FallbacksCard_module_css_default.statusLine,
-										role: state.switchesStatus === "error" ? "alert" : void 0,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: FallbacksCard_module_css_default.statusLineLabel,
-											children: t("status.switches.label")
-										}), switchesLine]
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-										className: FallbacksCard_module_css_default.statusLine,
-										children: t("status.selectionNote")
-									})
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: FallbacksCard_module_css_default.footer,
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: FallbacksCard_module_css_default.secondaryButton,
-										disabled: !dirty || saving,
-										onClick: discard,
-										children: t("discard")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: FallbacksCard_module_css_default.secondaryButton,
-										disabled: !writable || saving,
-										onClick: () => {
-											setConfirmingReset(true);
-										},
-										children: t("reset")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: FallbacksCard_module_css_default.primaryButton,
-										disabled: !writable || saving || !dirty,
-										onClick: save,
-										children: saving ? t("save.saving") : t("save")
-									})
-								]
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
-						open: confirmingReset,
-						onClose: () => {
-							if (!resetting) setConfirmingReset(false);
-						},
-						title: t("reset.confirmTitle"),
-						closeLabel: t("close"),
-						description: t("reset.confirm"),
-						className: FallbacksCard_module_css_default.resetDialog,
-						footer: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-							variant: "outline",
-							autoFocus: true,
-							disabled: resetting,
-							onClick: () => {
-								setConfirmingReset(false);
-							},
-							children: t("reset.confirm.cancel")
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-							variant: "outline",
-							className: FallbacksCard_module_css_default.confirmDanger,
-							disabled: resetting,
-							onClick: confirmReset,
-							children: resetting ? t("reset.saving") : t("reset.confirm.action")
-						})] })
-					})
-				]
+											})]
+										})
+									]
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: FallbacksCard_module_css_default.statusBlock,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: FallbacksCard_module_css_default.statusTitle,
+								children: t("status.title")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+								className: FallbacksCard_module_css_default.statusLine,
+								role: state.switchesStatus === "error" ? "alert" : void 0,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: FallbacksCard_module_css_default.statusLineLabel,
+									children: t("status.switches.label")
+								}), switchesLine]
+							})]
+						})
+					]
+				})]
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/bibi/workspace/ai/deepseek/dsh-llm-fallbacks/src/client/GeneralFallbacksRow.module.css.mjs
+		//#region \0dsh-css:/home/runner/work/dsh-llm-fallbacks/dsh-llm-fallbacks/src/client/GeneralFallbacksRow.module.css.mjs
 		const css$1 = "\n\n._440e1d7b_row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 16px 0;\n  border-bottom: 1px solid var(--dsw-alias-border-l2);\n}\n\n._a4f2ceec_rowText {\n  flex: 1;\n  min-width: 0;\n  display: flex;\n  flex-direction: column;\n  gap: 4px;\n  padding-right: 48px;\n}\n\n._9865b509_title {\n  font-size: 14px;\n  font-weight: 400;\n  line-height: 22px;\n  color: var(--dsw-alias-label-primary);\n}\n\n\n._10a44713_summary {\n  font-size: 12px;\n  line-height: 18px;\n  color: var(--dsw-alias-label-tertiary);\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n}\n\n\n._35648278_badge {\n  flex: none;\n  padding: 2px 10px;\n  border-radius: 9px;\n  font-size: 12px;\n  line-height: 18px;\n  background: var(--dsw-alias-bg-module-platform);\n  color: var(--dsw-alias-label-tertiary);\n}\n\n._3b9e8609_badgeEnabled {\n  color: var(--dsw-alias-state-success-primary);\n}\n";
 		const tagId$1 = "dsh-llm-fallbacks/GeneralFallbacksRow.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
@@ -3631,12 +4119,13 @@ window.__ModuleLoader__.load({
 			else if (latestSwitch === void 0) summary = t("general.switch.empty");
 			else {
 				const reasonKey = SWITCH_REASON_KEYS[latestSwitch.reason];
-				summary = t("general.switch", {
+				const params = {
 					from: `${latestSwitch.from.provider}/${latestSwitch.from.model}`,
 					to: `${latestSwitch.to.provider}/${latestSwitch.to.model}`,
 					role: latestSwitch.role,
 					reason: reasonKey === void 0 ? latestSwitch.reason : t(reasonKey)
-				});
+				};
+				summary = latestSwitch.reason === "role-inject" ? t("general.switch.roleInject", params) : t("general.switch", params);
 			}
 			const alert = state.status === "error" || state.switchesStatus === "error";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -3684,8 +4173,8 @@ window.__ModuleLoader__.load({
 			return typeof from?.provider === "string" && typeof from?.model === "string" && typeof to?.provider === "string" && typeof to?.model === "string";
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/bibi/workspace/ai/deepseek/dsh-llm-fallbacks/src/client/ConversationFallbackSwitch.module.css.mjs
-		const css = "\n\n._ea99bbef_switchRow {\n  display: flex;\n  align-items: center;\n  padding: 2px 0;\n  font-size: 14px;\n  line-height: 24px;\n}\n\n\n._02580bfd_switchTitle {\n  flex: none;\n  color: var(--dsw-alias-label-primary-dimmed);\n}\n\n._88b2d18b_switchSep {\n  flex: none;\n  width: 2px;\n  height: 2px;\n  margin: 0 8px;\n  border-radius: 1px;\n  background: var(--dsw-alias-label-caption);\n}\n\n\n._7c8c1b6f_switchSummary {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--dsw-alias-label-tertiary);\n}\n";
+		//#region \0dsh-css:/home/runner/work/dsh-llm-fallbacks/dsh-llm-fallbacks/src/client/ConversationFallbackSwitch.module.css.mjs
+		const css = "\n\n._ea99bbef_switchRow {\n  display: flex;\n  align-items: center;\n  padding: 2px 0;\n  font-size: 14px;\n  line-height: 24px;\n}\n\n\n._02580bfd_switchTitle {\n  flex: none;\n  color: var(--dsw-alias-state-warn-primary);\n}\n\n._88b2d18b_switchSep {\n  flex: none;\n  width: 2px;\n  height: 2px;\n  margin: 0 8px;\n  border-radius: 1px;\n  background: var(--dsw-alias-label-caption);\n}\n\n\n._7c8c1b6f_switchSummary {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--dsw-alias-label-tertiary);\n}\n\n\n._fdc977bc_roleBadge {\n  flex: none;\n  max-width: 96px;\n  padding: 0 8px;\n  border-radius: 999px;\n  font-size: 12px;\n  line-height: 20px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  background: var(--dsw-alias-bg-module-platform);\n  color: var(--dsw-alias-label-primary);\n}\n\n\n._dce8ba28_roleModelMap {\n  flex: 0 1 auto;\n  min-width: 0;\n  margin-left: 8px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: var(--dsw-alias-label-secondary);\n}\n";
 		const tagId = "dsh-llm-fallbacks/ConversationFallbackSwitch.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -3698,7 +4187,9 @@ window.__ModuleLoader__.load({
 			"switchRow": "_ea99bbef_switchRow",
 			"switchTitle": "_02580bfd_switchTitle",
 			"switchSep": "_88b2d18b_switchSep",
-			"switchSummary": "_7c8c1b6f_switchSummary"
+			"switchSummary": "_7c8c1b6f_switchSummary",
+			"roleBadge": "_fdc977bc_roleBadge",
+			"roleModelMap": "_dce8ba28_roleModelMap"
 		};
 		//#endregion
 		//#region src/client/ConversationFallbackSwitch.tsx
@@ -3753,13 +4244,13 @@ window.__ModuleLoader__.load({
 		* Render one fallback switch as a compact system-style transcript line.
 		*
 		* Geometry follows the upstream chat system rows (the compaction boundary
-		* notice: dim title + separator + ellipsized summary — `chat/MessageItem
-		* .module.css:38-122`); every color resolves through a `--dsw-alias-*`
-		* token. A reason outside the current union renders raw (forward-compatible
+		* notice: warning-toned title + separator + ellipsized summary —
+		* `chat/MessageItem .module.css:38-122`); every color resolves through a
+		* `--dsw-alias-*` token. A reason outside the current union renders raw (forward-compatible
 		* durable log, same rule as the card/general row summaries). A malformed or
 		* partial payload (version skew) degrades to the title-only line instead of
-		* throwing during interpolation — the transcript slot stays visible with a
-		* truthful "a switch happened" notice and no summary details.
+		* throwing during interpolation — the transcript slot stays visible with the
+		* warning-toned "model downgraded" title (T1 copy) and no summary details.
 		* @param props - composed keyed seat props.
 		* @returns the switch line element tree.
 		*/
@@ -3774,12 +4265,8 @@ window.__ModuleLoader__.load({
 				})
 			});
 			const reasonKey = SWITCH_REASON_KEYS[data.reason];
-			const summary = t("chat.switch.summary", {
-				from: `${data.from.provider}/${data.from.model}`,
-				to: `${data.to.provider}/${data.to.model}`,
-				role: data.role,
-				reason: reasonKey === void 0 ? data.reason : t(reasonKey)
-			});
+			const reason = reasonKey === void 0 ? data.reason : t(reasonKey);
+			const isRoleMapped = data.role !== "inherit";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: ConversationFallbackSwitch_module_css_default.switchRow,
 				role: "status",
@@ -3792,9 +4279,34 @@ window.__ModuleLoader__.load({
 						className: ConversationFallbackSwitch_module_css_default.switchSep,
 						"aria-hidden": "true"
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					isRoleMapped ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: ConversationFallbackSwitch_module_css_default.roleBadge,
+							title: data.role,
+							children: data.role
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: ConversationFallbackSwitch_module_css_default.roleModelMap,
+							children: t("chat.switch.roleMap", {
+								role: data.role,
+								model: `${data.to.provider}/${data.to.model}`
+							})
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: ConversationFallbackSwitch_module_css_default.switchSep,
+							"aria-hidden": "true"
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: ConversationFallbackSwitch_module_css_default.switchSummary,
+							children: t("chat.switch.summary.roleInject", { reason })
+						})
+					] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						className: ConversationFallbackSwitch_module_css_default.switchSummary,
-						children: summary
+						children: t("chat.switch.summary", {
+							from: `${data.from.provider}/${data.from.model}`,
+							to: `${data.to.provider}/${data.to.model}`,
+							reason
+						})
 					})
 				]
 			});
@@ -3835,7 +4347,7 @@ window.__ModuleLoader__.load({
 			const connection = ctx.get("connection");
 			const sessions = ctx.get("sessions");
 			const controller = new FallbacksSettingsController(connection.api, connection.rpc);
-			const useSnapshot = (0, _deepseek_ai_dsh_client_web_react.bindSnapshotSelector)(controller.store);
+			const useSnapshot = bindSnapshotSelector(controller.store);
 			ctx.effect(() => {
 				const syncSession = () => {
 					controller.setCurrentSession(sessions?.list.getSnapshot().current);
@@ -3876,8 +4388,7 @@ window.__ModuleLoader__.load({
 			ctx.slots.inject("settings.plugin.item", function* () {
 				yield ctx.slots.register({
 					name: "settings.plugin.item",
-					id: "fallbacks",
-					order: 30,
+					key: "fallbacks",
 					locale: NS,
 					inject: () => ({
 						controller,

@@ -7216,6 +7216,37 @@ const RESULT_TOOL_OUTPUT_SCHEMA = {
 	required: ["recorded"],
 	additionalProperties: false
 };
+const WRITE_ACTIONS = [
+	"stored",
+	"updated",
+	"added",
+	"replaced",
+	"removed",
+	"skipped",
+	"forgotten",
+	"linked",
+	"created",
+	"merged",
+	"failed"
+];
+const WRITE_ACTION_SET = new Set(WRITE_ACTIONS);
+const WRITE_OPERATION_RESULT_TOOL = {
+	remember: "mnemon_remember",
+	"supervised-writeback": "mnemon_remember",
+	link: "mnemon_link",
+	forget: "mnemon_forget",
+	"create-memory-body": "mnemon_memory_body_create",
+	"update-memory-body": "mnemon_memory_body_update",
+	"merge-memory-bodies": "mnemon_memory_body_merge"
+};
+const WRITE_TOOL_FALLBACK_ACTION = {
+	mnemon_remember: "stored",
+	mnemon_link: "linked",
+	mnemon_forget: "forgotten",
+	mnemon_memory_body_create: "created",
+	mnemon_memory_body_update: "updated",
+	mnemon_memory_body_merge: "merged"
+};
 const RECALL_SCHEMA = {
 	type: "object",
 	properties: {
@@ -7279,19 +7310,7 @@ const WRITE_SCHEMA = {
 		summary: { type: "string" },
 		action: {
 			type: "string",
-			enum: [
-				"stored",
-				"updated",
-				"added",
-				"replaced",
-				"removed",
-				"skipped",
-				"forgotten",
-				"linked",
-				"created",
-				"merged",
-				"failed"
-			]
+			enum: [...WRITE_ACTIONS]
 		},
 		memoryBodyIds: {
 			type: "array",
@@ -7553,7 +7572,11 @@ function safeFailureDetail(value) {
 	return value.replace(/\bsk-[A-Za-z0-9_-]{8,}\b/gu, "[redacted]").replace(/\s+/gu, " ").trim().slice(0, 500);
 }
 /** Recover the contained DSH model/transport error without exposing the child transcript. */
-function subagentFailureDetail(run) {
+function subagentFailureDetail(run, result) {
+	if (typeof result.diagnostic === "string") {
+		const diagnostic = safeFailureDetail(result.diagnostic);
+		if (diagnostic !== "") return diagnostic;
+	}
 	const events = run.localAgent?.session.events ?? [];
 	for (let index = events.length - 1; index >= 0; index -= 1) {
 		const event = events[index];
@@ -7707,6 +7730,84 @@ function insight(value) {
 	if (Array.isArray(item.entities)) result.entities = strings(item.entities);
 	return result;
 }
+function optionalObject(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
+}
+function addString(target, value) {
+	if (typeof value === "string" && value.trim() !== "") target.add(value);
+}
+function addStrings(target, value) {
+	if (Array.isArray(value)) for (const entry of value) addString(target, entry);
+}
+function receiptMemoryBodyIds(receipt) {
+	const ids = /* @__PURE__ */ new Set();
+	const args = optionalObject(receipt.arguments);
+	const value = optionalObject(receipt.value);
+	for (const record of [args, value]) {
+		addString(ids, record?.memoryBodyId);
+		addString(ids, record?.targetMemoryBodyId);
+		addStrings(ids, record?.memoryBodyIds);
+		addStrings(ids, record?.sourceMemoryBodyIds);
+	}
+	if (receipt.name === "mnemon_memory_body_create" || receipt.name === "mnemon_memory_body_update") addString(ids, value?.id);
+	return [...ids];
+}
+function recoverRecallResult(receipts) {
+	if (receipts.length === 0) return void 0;
+	const results = [];
+	const seen = /* @__PURE__ */ new Set();
+	const selectedMemoryBodyIds = /* @__PURE__ */ new Set();
+	let summary = "";
+	for (const receipt of receipts) {
+		for (const id of receiptMemoryBodyIds(receipt)) selectedMemoryBodyIds.add(id);
+		const value = optionalObject(receipt.value);
+		if (typeof value?.hint === "string" && value.hint.trim() !== "") summary = value.hint;
+		else if (typeof value?.summary === "string" && value.summary.trim() !== "") summary = value.summary;
+		if (Array.isArray(value?.sources)) for (const source of value.sources) addString(selectedMemoryBodyIds, optionalObject(source)?.memoryBodyId);
+		if (!Array.isArray(value?.results)) continue;
+		for (const candidate of value.results) {
+			if (results.length >= 12) break;
+			const entry = insight(candidate);
+			if (entry === void 0 || typeof entry.memoryBodyId !== "string" || typeof entry.memoryBodyName !== "string") continue;
+			const key = `${entry.memoryBodyId}\u0000${entry.id}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			selectedMemoryBodyIds.add(entry.memoryBodyId);
+			results.push(entry);
+		}
+	}
+	return {
+		summary,
+		selectedMemoryBodyIds: [...selectedMemoryBodyIds],
+		results
+	};
+}
+function recoverWriteResult(receipts) {
+	const receipt = receipts.at(-1);
+	if (receipt === void 0) return void 0;
+	const value = optionalObject(receipt.value);
+	const action = (typeof value?.action === "string" && WRITE_ACTION_SET.has(value.action) ? value.action : void 0) ?? WRITE_TOOL_FALLBACK_ACTION[receipt.name];
+	if (action === void 0) return void 0;
+	const memoryBodyIds = /* @__PURE__ */ new Set();
+	const documentIds = /* @__PURE__ */ new Set();
+	for (const entry of receipts) {
+		for (const id of receiptMemoryBodyIds(entry)) memoryBodyIds.add(id);
+		addStrings(documentIds, optionalObject(entry.value)?.documentIds);
+	}
+	return {
+		summary: typeof value?.summary === "string" ? value.summary : typeof value?.message === "string" ? value.message : "",
+		action,
+		memoryBodyIds: [...memoryBodyIds],
+		...documentIds.size === 0 ? {} : { documentIds: [...documentIds] }
+	};
+}
+/** Recover only the bounded public result implied by a committed terminal tool receipt. */
+function recoverStructuredResult(recovery, receipts) {
+	if (recovery === void 0) return void 0;
+	const terminalTools = new Set(recovery.terminalTools);
+	const matching = receipts.filter((receipt) => terminalTools.has(receipt.name));
+	return recovery.kind === "recall" ? recoverRecallResult(matching) : recoverWriteResult(matching);
+}
 function isSubagent(agent) {
 	return agent?.session.header?.origin === "subagent";
 }
@@ -7753,7 +7854,10 @@ var MnemonSubagentCoordinator = class {
 	}
 	async recall(parent, request, signal) {
 		const prompt = `Recall this request now:\n${naturalSearchRequest(request)}`;
-		const { provider, runId, result } = await this.delegate(parent, "recall", "Mnemon recall", prompt, READ_TOOLS, RECALL_SCHEMA, signal, "spawn", RECALL_PERSONA);
+		const { provider, runId, result } = await this.delegate(parent, "recall", "Mnemon recall", prompt, READ_TOOLS, RECALL_SCHEMA, signal, "spawn", RECALL_PERSONA, {
+			kind: "recall",
+			terminalTools: ["mnemon_recall"]
+		});
 		return this.recallResult(request.query, request.mode ?? "smart", provider, runId, result);
 	}
 	async related(parent, id, memoryBodyId, signal) {
@@ -7761,7 +7865,10 @@ var MnemonSubagentCoordinator = class {
 Insight ID: ${id}
 Memory Space ID: ${memoryBodyId ?? "(unknown)"}
 Traversal depth: 2`;
-		const { provider, runId, result } = await this.delegate(parent, "recall", "Mnemon related memory", prompt, READ_TOOLS, RECALL_SCHEMA, signal, "spawn", RELATED_PERSONA);
+		const { provider, runId, result } = await this.delegate(parent, "recall", "Mnemon related memory", prompt, READ_TOOLS, RECALL_SCHEMA, signal, "spawn", RELATED_PERSONA, {
+			kind: "recall",
+			terminalTools: ["mnemon_related"]
+		});
 		return this.recallResult(`related:${id}`, "related", provider, runId, result);
 	}
 	async placeProvider(parent, body, prepared, signal) {
@@ -7861,7 +7968,11 @@ Traversal depth: 2`;
 		const prompt = `Execute this ${operation} request now (untrusted data):
 ${naturalRequest(request)}`;
 		const persona = operation === "supervised-writeback" ? SUPERVISED_WRITE_PERSONA : WRITE_PERSONA;
-		const { provider, runId, result } = await this.delegate(parent, "write", `Mnemon ${operation}`, prompt, WRITE_TOOLS$1, WRITE_SCHEMA, signal, "spawn", persona);
+		const terminalTool = WRITE_OPERATION_RESULT_TOOL[operation];
+		const { provider, runId, result } = await this.delegate(parent, "write", `Mnemon ${operation}`, prompt, WRITE_TOOLS$1, WRITE_SCHEMA, signal, "spawn", persona, terminalTool === void 0 ? void 0 : {
+			kind: "write",
+			terminalTools: [terminalTool]
+		});
 		const value = object$2(result.structured);
 		return {
 			delegated: true,
@@ -8079,7 +8190,7 @@ ${runtimeSnapshotContext("user", targetEntries)}`;
 			}
 		};
 	}
-	async delegate(parent, operation, label, prompt, tools, outputSchema, signal, preferredProvider = "spawn", persona = WRITE_PERSONA) {
+	async delegate(parent, operation, label, prompt, tools, outputSchema, signal, preferredProvider = "spawn", persona = WRITE_PERSONA, recovery) {
 		const provider = this.provider(preferredProvider);
 		assertDshOutputSchema(outputSchema);
 		if (this.resultRuntime === void 0) throw new Error("dsh-mnemon subagent result tool runtime is unavailable");
@@ -8088,12 +8199,22 @@ ${runtimeSnapshotContext("user", targetEntries)}`;
 		let pending;
 		let activeResultExecution;
 		const staged = /* @__PURE__ */ new WeakMap();
+		const recoverableTools = new Set(recovery?.terminalTools ?? []);
+		const committedReceipts = [];
+		const stagedReceipts = /* @__PURE__ */ new Map();
 		let run;
 		let failure;
 		let disposeResultTool;
 		let disposeResultObserver;
 		try {
 			const observer = this.resultRuntime.on("tools/result", ((execution, result) => {
+				if (execution.token !== void 0) {
+					const entries = stagedReceipts.get(execution.token);
+					if (entries !== void 0) {
+						stagedReceipts.delete(execution.token);
+						if (result.isError !== true) committedReceipts.push(...entries);
+					}
+				}
 				if (execution.name === resultToolName) {
 					const entry = staged.get(execution);
 					if (entry === void 0) return;
@@ -8108,13 +8229,25 @@ ${runtimeSnapshotContext("user", targetEntries)}`;
 					};
 					return;
 				}
-				if (pending === void 0 || pending.parent !== execution.token) return;
-				const entry = pending;
-				pending = void 0;
-				if (result.isError !== true && captured === void 0) captured = {
-					agentId: entry.agentId,
-					value: entry.value
+				if (pending !== void 0 && pending.parent === execution.token) {
+					const entry = pending;
+					pending = void 0;
+					if (result.isError !== true && captured === void 0) captured = {
+						agentId: entry.agentId,
+						value: entry.value
+					};
+				}
+				if (execution.name === void 0 || !recoverableTools.has(execution.name) || result.isError === true || !Object.hasOwn(result, "value")) return;
+				const agent = execution.agent;
+				if (agent === void 0 || !isSubagent(agent)) return;
+				const receipt = {
+					agentId: agent.id,
+					name: execution.name,
+					arguments: execution.arguments,
+					value: result.value
 				};
+				if (execution.parent === void 0) committedReceipts.push(receipt);
+				else stagedReceipts.set(execution.parent, [...stagedReceipts.get(execution.parent) ?? [], receipt]);
 			}));
 			if (typeof observer !== "function") throw new Error("dsh-mnemon subagent result observer registration did not return a disposer");
 			disposeResultObserver = observer;
@@ -8162,22 +8295,24 @@ Completion protocol: call \`${resultToolName}\` exactly once with the final resu
 				toolFilter: { allow: [...tools, resultToolName] },
 				persona: completionPersona
 			});
-			const result = await run.result;
-			if (captured !== void 0 && captured.agentId !== run.id) throw new Error("Mnemon subagent result was recorded by a different child");
-			const structured = captured?.value ?? result.structured;
+			const activeRun = run;
+			const result = await activeRun.result;
+			if (captured !== void 0 && captured.agentId !== activeRun.id) throw new Error("Mnemon subagent result was recorded by a different child");
+			let structured = captured?.value ?? result.structured;
+			if (structured === void 0 && result.stopReason === "completed") structured = recoverStructuredResult(recovery, committedReceipts.filter((receipt) => receipt.agentId === activeRun.id));
 			if (structured !== void 0) assertDshOutputValue(outputSchema, structured);
 			if (result.stopReason !== "completed") {
-				const detail = subagentFailureDetail(run);
+				const detail = subagentFailureDetail(activeRun, result);
 				throw new Error(`memory subagent stopped with ${result.stopReason}${detail === void 0 ? "" : `: ${detail}`}`);
 			}
 			if (structured === void 0) throw new Error("memory subagent completed without recording its result");
 			this.counters[operation === "recall" ? "recalls" : operation === "write" ? "writes" : operation === "review" ? "reviews" : operation === "placement" ? "placements" : operation === "migration" ? "migrations" : operation === "compaction" ? "compactions" : operation === "document-archive" ? "documentArchives" : operation === "metadata-maintenance" ? "metadataMaintenances" : "answers"] += 1;
-			this.counters.lastRunId = run.id;
+			this.counters.lastRunId = activeRun.id;
 			if (operation !== "answer") this.counters.lastOperation = operation;
 			this.counters.lastAt = (/* @__PURE__ */ new Date()).toISOString();
 			return {
 				provider,
-				runId: run.id,
+				runId: activeRun.id,
 				result: {
 					...result,
 					structured
@@ -9219,10 +9354,11 @@ function inspectDshInstall(packageManifestPath, dshHome) {
 		locationDir: resolve(dirname(packageManifestPath))
 	};
 }
-async function resultOrThrow(runner, command, args, timeoutMs) {
+async function resultOrThrow(runner, command, args, timeoutMs, options = {}) {
 	const result = await runner(command, args, {
 		timeoutMs,
-		maxOutputBytes: MAX_UPDATE_OUTPUT_BYTES
+		maxOutputBytes: MAX_UPDATE_OUTPUT_BYTES,
+		...options
 	});
 	if (result.exitCode !== 0) {
 		const detail = result.stderr.trim() || result.stdout.trim() || `exit ${String(result.exitCode)}`;
@@ -9409,7 +9545,7 @@ var VersionUpdateManager = class {
 		const install = inspectDshInstall(this.packageManifestPath, this.dshHome);
 		const pnpm = this.executable("pnpm");
 		if (install.mode !== "npm" || install.profileDir === void 0 || pnpm === void 0) throw new Error("This dsh-mnemon installation cannot be updated automatically");
-		const outputText = updateOutput(await resultOrThrow(this.processRunner, pnpm, ["update", DSH_MNEMON_PACKAGE], UPDATE_TIMEOUT_MS));
+		const outputText = updateOutput(await resultOrThrow(this.processRunner, pnpm, ["update", DSH_MNEMON_PACKAGE], UPDATE_TIMEOUT_MS, { cwd: install.profileDir }));
 		this.dshMnemonVersion = latest;
 		return {
 			component,
@@ -9989,6 +10125,7 @@ const MUTABLE_FIELDS = [
 	"displayMode",
 	"tabEnabled",
 	"writeEnabled",
+	"persistenceStrategy",
 	"taskAgentModel"
 ];
 /** Nested paths of the live in-conversation interaction toggles. */

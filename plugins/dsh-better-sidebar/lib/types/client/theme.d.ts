@@ -19,6 +19,23 @@
 export declare function isDarkScheme(): boolean;
 /** One token's computed value on <body> ('' while the theme has not applied). */
 export declare function tokenValue(name: string): string;
+/** The alpha channel of a computed CSS color, or null when the format is
+ *  not parseable (named colors, `color()`… — treated as opaque). Handles
+ *  the shapes getComputedStyle actually returns: the rgb()/rgba() and
+ *  hsl()/hsla() function forms (comma or space syntax, with or without the
+ *  `/ alpha` slot) and the #rgb/#rgba/#rrggbb/#rrggbbaa hex family. */
+export declare function colorAlpha(color: string): number | null;
+/**
+ * A token value that actually PAINTS something — the guard for text
+ * surfaces (issue #90). Skin systems routinely set global tokens to
+ * `transparent` (glass skins) or translucent glass values (`rgba(…,0.16–0.7)`,
+ * e.g. the dsh-web-ui skins) — both are truthy strings, so callers using
+ * `|| fallback` never fire and the terminal/editor goes see-through over
+ * the skin's backdrop. This returns '' for visually inert values (unset
+ * keywords, transparent, and any color below the opacity floor) so the
+ * caller's fallback chain engages; effectively opaque values pass through.
+ */
+export declare function effectiveTokenValue(name: string): string;
 /**
  * Subscribe to color-scheme flips (the presenter toggles the body
  * attribute). The callback fires after the attribute changed; re-read the

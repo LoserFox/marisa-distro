@@ -1,11 +1,3 @@
-/**
- * Pure derivation of one turn's produced files from finalized conversation
- * nodes — a structural replica of ui-deliverables' `producedForClosing`
- * (the mutation tools' follow-along `locations`, by render intent: a diff
- * card or a generic edit card; reads/deletes/failures produce nothing).
- * Kept dependency-free so the takeover logic is unit-testable and the
- * replica is easy to diff against upstream when it drifts.
- */
 /** Paths a tool-result view reports as produced, by render intent. */
 export declare function producedPaths(view: unknown): readonly string[];
 /**
@@ -23,5 +15,9 @@ export declare function producedForClosing(nodes: readonly unknown[], seq: numbe
  * @returns produced paths as the matched value, or null to decline.
  */
 export declare function selectProducedFiles(owner: unknown): readonly string[] | null;
-/** Resolve a (possibly relative) path against the session cwd for the sidebar. */
+/**
+ * Resolve a (possibly relative) path against the session cwd for the sidebar.
+ * Absolute detection mirrors the host (see client/paths.isAbsolutePath):
+ * POSIX roots, drive letters and UNC shares must not be joined onto the cwd.
+ */
 export declare function resolveSidebarPath(cwd: string | undefined, path: string): string;

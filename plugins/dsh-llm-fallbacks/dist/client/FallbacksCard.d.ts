@@ -1,8 +1,9 @@
 /**
  * Fallbacks settings card — the `fallbacks` plugin card on the web settings
- * "插件配置" page (spec §4). Registered into the `settings.plugin.item` slot
- * (id `fallbacks`, order 30, alongside the upstream bash/agent-loop/web-search
- * cards and the advisor card); owner props are empty and all data flows
+ * "插件配置" page (spec §4). Registered into the `settings.plugin.item` keyed
+ * slot (key `fallbacks`, the settings namespace the card edits, alongside
+ * the upstream bash/agent-loop/web-search cards and the advisor card, in
+ * registration order); owner props are empty and all data flows
  * through {@link FallbacksSettingsController}.
  *
  * The card chrome replicates the upstream `PluginCard` contract (self-drawn:
@@ -11,12 +12,22 @@
  * description, with a dirty "unsaved" pill and a rotating chevron
  * (`IconChevronDownOutline14` from ui-primitives — a CLIENT_EXTERNALS value
  * import), `aria-expanded`/`aria-label` like the upstream header; a divider
- * under the header; then the form content; then a footer with
- * Discard / Reset / Save carrying the upstream disabled semantics — save =
- * `!dirty || saving || !writable`, discard = `!dirty || saving` (KD-U1).
- * Disclosure is card-local state: which card a user has open is a reading
- * gesture, and staged edits outlive collapsing — the pill rides the header
- * (upstream rationale).
+ * under the header; then the form content. PR #62 UX round 2: the card
+ * footer is gone — each big section (主代理 / 子代理 / 高级选项) carries its
+ * own Save/Discard actions beside its heading (高级选项: inside the expanded
+ * body) and its own validation / save-error surface. PR #62 UX round 3:
+ * each section's Save writes ONLY that section's fields — 主代理 owns
+ * rootChain / timeSlots / tz (+ the card-level `enabled`), 子代理 owns
+ * roles, 高级选项 owns the advanced scalars; the patch spreads the last
+ * ACCEPTED config for every other section, so a 主代理 Save can never
+ * ride along an unsaved 子代理 edit (and vice versa) — and validation /
+ * the dirty gate apply per section too (a bad role id never blocks 主代理,
+ * and only the saved section's Discard reverts that section's edits).
+ * Save/discard disabled terms: save = `!sectionDirty || saving ||
+ * !writable`, discard = `!sectionDirty || saving` (KD-U1). Disclosure is
+ * card-local state:
+ * which card a user has open is a reading gesture, and staged edits outlive
+ * collapsing — the pill rides the header (upstream rationale).
  *
  * The form body is the two-block editing surface (spec §8): the `enabled`
  * checkbox row, the 6 top-level scalar fields (trigger codes / revert
@@ -26,18 +37,20 @@
  * `roles.rules`, whose role field is a dropdown bound to the declared ids
  * + the built-in `inherit`, same-page live). Saving runs `validateDraft`
  * first — id format/reserved word/duplicates, undeclared rule role
- * references, and illegal selectors block the write with a validation
- * banner + inline red borders (never touching the store error path); a
+ * references, illegal selectors, and a role with no chain entries (no
+ * model config) block the write with a validation banner + inline red
+ * borders / hints (never touching the store error path); a
  * non-empty `state.legacyKeys` renders the migration banner at the top of
  * the card body. The row editors keep their filled editorCard surface
  * inside the card, with `--dsw-alias-*` tokens throughout. The reset-
- * to-defaults confirmation stays a `Modal` (the delete-confirm pattern of
- * the Models page) — no `window.confirm`.
+ * to-defaults affordance is GONE from the card (PR #62 UX round 3) — the
+ * gateway RPC `fallbacks/reset` and the store `resetToDefaults()` stay as
+ * host APIs (store/gateway tests unchanged), only the card UI was removed.
  *
  * The page-only chrome is gone (720px column wrapper, title/intro banners,
  * page-bottom status block): the AC-7 read-only status (derived effective
- * model + recent-switch summary) is folded into the card body above the
- * footer, and the plugin-config section owns the column width.
+ * model + recent-switch summary) is folded into the card body, and the
+ * plugin-config section owns the column width.
  *
  * Degraded/error/loading states keep the same card chrome (KD-U3): the
  * header always renders title+description+chevron, and the body carries the
@@ -51,8 +64,11 @@
  * 'error'`) also forces the body open with an error notice and — when the
  * form is inert (`!writable`, i.e. the load never landed) — a Retry button;
  * a save failure keeps the editable form so the Save action itself is the
- * retry (the single `state.error` surface covers both, unlike the advisor's
- * separate apply-failure hints).
+ * retry. PR #62 UX round 2: the single `state.error` surface is split by
+ * origin — a LOAD failure keeps the card-top notice (with Retry when
+ * inert), while a WRITE failure renders under the section whose Save was
+ * last clicked (`lastSaveSection`), unlike the advisor's separate
+ * apply-failure hints.
  *
  * The degraded derivation is latched in the card (the store stays untouched):
  * `present` only ever changes inside the store's `accept()`, so the settled
@@ -64,7 +80,7 @@
  */
 import type { ReactNode } from 'react';
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-web-react';
+import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots';
 import { FallbacksSettingsController, type FallbacksSettingsState } from './fallbacks-store.ts';
 /** Injected dependencies of {@link FallbacksCard} (slot `inject`). */
 export interface FallbacksCardInjected {

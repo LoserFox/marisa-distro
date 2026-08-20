@@ -6,6 +6,8 @@
 - 基线提交：`a4344e441b3786ce45868608a17383317ce63c9e`（v0.1.32，2026-08-19 同步自 8d35621）
 - 维护模式：`fork`（authMode 匿名模式 + Zen/GLM 预设是 vendored 上游源码的本地差异；组合默认值在 marisa-bundle patch）
 
+> **2026-08-20 评估：0.1.36（a79d5405）同步推迟**。0.1.36 上游代码的类型面引用 rc8 事件词汇（`skill-invocation`、`tool/code-dispatch` 等），在 rc7 harness 下 `tsc -p tsconfig.json` 不通过（TS2367/TS2339）。保持 0.1.32 作为 rc7 兼容基线；**随 rc8 harness 换树时再同步 0.1.36+**（届时 authMode none + Zen/GLM/custom 预设补丁按 2026-08-20 研究文档附录 B.1 的方式重放）。
+
 ## 分叉动机
 
 Marisa 面向普通桌面用户，需要一个安装后无需注册、无需 API Key 即可尝试的视觉入口，同时保留国内正式服务的可恢复路径。上游配置只支持 Credential 鉴权，不能表达匿名 OpenAI-compatible 服务，也没有面向普通用户的服务预设和开户引导。

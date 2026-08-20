@@ -1,8 +1,9 @@
 /**
  * dsh-llm-fallbacks client half: registers the Fallbacks card into the
- * plugin-config page's `settings.plugin.item` slot (the official "插件配置"
- * settings page — id `fallbacks`, order 30, alongside the upstream bash /
- * agent-loop / web-search cards and the advisor card).
+ * plugin-config page's `settings.plugin.item` keyed slot (the official
+ * "插件配置" settings page — key `fallbacks`, the settings namespace the card
+ * edits, appearing after the upstream bash / agent-loop / web-search cards
+ * and the advisor card in registration order).
  *
  * Wiring (mirrors dsh-advisor):
  * - Registers the `fallbacks` locale dictionaries (zh/en).
@@ -11,10 +12,11 @@
  *   `/api/fallbacks/get|set|reset`), while `settings.describe` (writable +
  *   namespace directory) and the provider/model catalog stay on
  *   `connection.api` (see `fallbacks-store.ts`).
- * - Registers the `settings.plugin.item` card `id: 'fallbacks'` (order 30)
- *   with a business-only inject face ({@link FallbacksSettingsController} +
- *   the snapshot-selector hook); the old Settings-nav section registration
- *   is removed — deleting the section registration deletes the nav entry.
+ * - Registers the `settings.plugin.item` card `key: 'fallbacks'` (the rc.7
+ *   keyed slot — no `id`/`order`) with a business-only inject face
+ *   ({@link FallbacksSettingsController} + the snapshot-selector hook); the
+ *   old Settings-nav section registration is removed — deleting the section
+ *   registration deletes the nav entry.
  * - Refreshes the store on pushed invalidations — the forwarded remote
  *   events `settings/document-updated` (ns-filtered to the fallbacks
  *   namespace; refetches the descriptor + recent-switch summary) and

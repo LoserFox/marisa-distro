@@ -35,6 +35,8 @@ export interface ToolExecution {
     signal: AbortSignal;
     agent?: HostAgent;
     name?: string;
+    /** Parsed tool arguments, available on the authoritative tools/result event. */
+    arguments?: unknown;
     parent?: symbol;
     token?: symbol;
     /** End the current model turn after an authoritative terminal tool call. */
@@ -172,6 +174,8 @@ export interface HostSubagentResult {
         [key: string]: unknown;
     }>;
     structured?: unknown;
+    /** DSH rc.8 provider-authored failure detail, including for remote children. */
+    diagnostic?: string;
     stopReason: string;
 }
 export interface HostSubagentRun {
