@@ -1,6 +1,0 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
-#   pnpm run verify-translation-pairing --write dsh-vision-toolkit/docs/groq-qwen3.6-vision.md
-groq-qwen3.6-vision.md: 04907539da37edae3d9866007221403e8239516c
-groq-qwen3.6-vision.zh.md: 6fe5a22695efc3d90b937510b293c2e717cc6fd7
