@@ -17,6 +17,10 @@ Marisa DSH desktop shell
 
 Windows 需要 WebView2。较新的 Windows 11 通常已经包含它；Windows 10 可能需要安装 [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)。
 
+### 输入法候选框定位
+
+使用 TSF 输入法（微软拼音等）时，候选框可能固定在屏幕左上角而不是跟随光标。这是 TSF 的回退位：WebView2 把光标的屏幕坐标上报给输入法，当父窗口位置或缩放因子过期（托盘 hide/show、窗口恢复或 DPI 变化之后）时坐标换算失效。桌面壳会在窗口显示、恢复、取消最小化和 DPI 变化后重新向 WebView2 断言父窗口位置，并在 `marisa-desktop.log` 中记录以 `webview ime keepalive` 开头的显示器缩放因子日志。若候选框仍停在左上角，请更新 Evergreen WebView2 Runtime，并与 100% 显示缩放对照，以隔离宿主层原因。
+
 ## Windows Release
 
 请从 [Marisa DSH Releases 页面](https://github.com/LoserFox/marisa-distro/releases) 下载带 tag 的版本。Release 只能由维护者在确认真实窗口已渲染、MSI 已完成安装、启动和卸载验收后，手动启动带门禁的工作流生成。普通 push、PR 和定时检查都不会发布面向用户的二进制文件。

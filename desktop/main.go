@@ -316,6 +316,9 @@ func main() {
 	// 首次导航完成信号：必须在 app.Run() 之前订阅（启动页导航在应用启动后
 	// 数秒内完成，后端就绪前早已发出；事件流无回放，晚订阅会错过）。
 	ready := subscribeWebviewReady(win)
+	// IME 候选框定位补偿：hide→show 恢复、最小化恢复与 DPI 变化后重发
+	// WebView2 的父窗口位置通知（wails 只在 WM_MOVE 时发送）。
+	registerWebviewImeKeepalive(win)
 
 	// 守护后端：启动、就绪、重启都由 supervise 负责。退出时先 cancel 让
 	// supervise 终止后端进程组，再等它收口（done）——main 不能抢先返回，

@@ -26,6 +26,20 @@ tray also provides show/hide and login-autostart controls.
 Windows requires WebView2. It is included with current Windows 11 systems;
 Windows 10 systems may need the [Evergreen WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/).
 
+### IME candidate window placement
+
+With a TSF input method (Microsoft Pinyin etc.), the candidate window can
+stick to the top-left corner of the screen instead of following the caret.
+This is the TSF fallback position: WebView2 reports the caret's screen
+coordinates to the input method, and a stale parent-window position or scale
+factor (after tray hide/show, restore, or a DPI change) invalidates the
+conversion. The shell re-asserts the WebView2 parent-window position after
+window show, restore, un-minimise, and DPI changes, and logs the display
+scale factor in `marisa-desktop.log` lines prefixed `webview ime keepalive`.
+If the candidate window still lands at the top-left, update the Evergreen
+WebView2 Runtime and compare against 100% display scaling to isolate a
+host-layer cause.
+
 ## Windows releases
 
 Download a tagged build from the [Marisa DSH Releases page](https://github.com/LoserFox/marisa-distro/releases).
