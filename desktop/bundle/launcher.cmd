@@ -9,12 +9,18 @@ rem the {port} placeholder the shell substitutes is intentionally unused.
 rem
 rem Runs the BUILT CLI (apps/cli/lib/bin.js) - no tsx, no dev toolchain in
 rem the bundle (the production install is pruned with pnpm install --prod).
+rem
+rem MARISA_BOOT_PROFILE (set by the shell in minimal/rescue fallback): which
+rem profile to boot. Default marisa (full composition); "web" boots the
+rem harness-shipped template (base + web-app, no marisa plugins).
 setlocal
 set "BUNDLE=%~dp0"
 set "DSH_HOME=%BUNDLE%.dsh"
 set "DSH_ROOT=%BUNDLE%marisa-distro"
+set "BOOT_PROFILE=%MARISA_BOOT_PROFILE%"
+if "%BOOT_PROFILE%"=="" set "BOOT_PROFILE=marisa"
 rem Plugins may spawn `node`; make the bundled node the first on PATH.
 set "PATH=%BUNDLE%;%PATH%"
 cd /d "%DSH_ROOT%\harness"
-"%BUNDLE%node.exe" "%DSH_ROOT%\harness\apps\cli\lib\bin.js" --profile marisa --patch "%DSH_HOME%\profiles\marisa\desktop.overlay.yml" --patch "%DSH_HOME%\profiles\marisa\standalone.overlay.yml"
+"%BUNDLE%node.exe" "%DSH_ROOT%\harness\apps\cli\lib\bin.js" --profile %BOOT_PROFILE% --patch "%DSH_HOME%\profiles\marisa\desktop.overlay.yml" --patch "%DSH_HOME%\profiles\marisa\standalone.overlay.yml"
 exit /b %ERRORLEVEL%

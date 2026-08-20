@@ -98,6 +98,17 @@ func setupTray(app *application.App, win *application.WebviewWindow) {
 		log.Printf("backend restart requested; supervise will relaunch it")
 	})
 
+	// 重试完整模式：极简模式（降级）下请求回到完整 marisa 组合。
+	// 置位标志后杀后端，supervise 下一轮迭代读到标志即拉回 normal。
+	retryItem := menu.Add("重试完整模式")
+	retryItem.OnClick(func(*application.Context) {
+		retryFullMode.Store(true)
+		if !backendMgr.restart() {
+			log.Printf("retry full mode requested but no backend is running (ignored in rescue)")
+		}
+		log.Printf("retry full mode requested; supervise will relaunch the full profile")
+	})
+
 	// DevTools 调试入口：生产构建隐藏（devToolsAvailable=false，wails 的
 	// openDevTools 为 no-op）；MARISA_DEVTOOLS=1 可在启动时自动打开。
 	if devToolsAvailable {
