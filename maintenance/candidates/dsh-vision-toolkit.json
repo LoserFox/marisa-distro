@@ -1,0 +1,11 @@
+{
+  "component": "dsh-vision-toolkit",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "a4344e441b3786ce45868608a17383317ce63c9e",
+  "available": "4c6f70dfead1e9b47b0ba5d2a73d4f8be620dabe",
+  "repository": "https://github.com/Anionex/dsh-vision-toolkit.git",
+  "diffDocument": "docs/plugins/dsh-vision-toolkit.md",
+  "checkedAt": "2026-08-20T04:02:09.957Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
