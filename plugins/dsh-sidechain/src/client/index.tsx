@@ -16,6 +16,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import { SideCommandCard } from './SideCommandCard.tsx'
 import { SidechainPanel, SidechainPanelToggle, type SidechainPanelInjected } from './SidechainPanel.tsx'
 import { installSidechainStyle } from './panel-style.ts'
+import { MUTEX_SIDECHAIN_CLOSE, closeSidechainPanel } from './panel-state.ts'
 import { fetchActivity, fetchTranscript, sendPrompt } from './sidechain-view.ts'
 import { NS, en, zh } from './locales.ts'
 
@@ -32,6 +33,16 @@ export function apply(ctx: ClientContext): void {
   // One shared keyframe stylesheet (shimmer sweep); the effect's disposer
   // removes it with the fiber — hot unload leaves no stray <style> tags.
   ctx.effect(installSidechainStyle, 'dsh-sidechain: panel stylesheet')
+  // Marisa fork (2026-08-22): panel mutex with dsh-better-sidebar — close
+  // when the sidebar broadcasts its expansion request.
+  if (typeof window !== 'undefined') {
+    const onSidechainCloseRequest = (): void => { closeSidechainPanel() }
+    window.addEventListener(MUTEX_SIDECHAIN_CLOSE, onSidechainCloseRequest)
+    ctx.effect(
+      () => () => { window.removeEventListener(MUTEX_SIDECHAIN_CLOSE, onSidechainCloseRequest) },
+      'dsh-sidechain: panel-mutex listener',
+    )
+  }
   // Wait for the chat view's declaration instead of registering into an
   // undeclared slot: entry application order is loader-driven, and a direct
   // register racing the declaration fails boot with "slot ... is not declared".

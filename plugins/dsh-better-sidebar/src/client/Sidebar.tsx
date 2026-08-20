@@ -202,6 +202,19 @@ export function Sidebar(props: { ctx: Context; store: SidebarStore }) {
     return () => { document.body.removeAttribute('data-dsh-sidebar-collapsed') }
   }, [collapsed])
 
+  // Marisa fork (2026-08-22): panel mutex with dsh-sidechain. Expanding this
+  // panel asks the sidechain panel to close; a sidechain request collapses
+  // this panel. Plain window CustomEvents — both plugins are vendored and
+  // share no package.
+  useEffect(() => {
+    if (!collapsed) window.dispatchEvent(new CustomEvent('dsh:sidechain:close'))
+  }, [collapsed])
+  useEffect(() => {
+    const collapse = (): void => { store.reduce((s) => (s.panelOpen ? togglePanel(s) : s)) }
+    window.addEventListener('dsh:better-sidebar:collapse', collapse)
+    return () => { window.removeEventListener('dsh:better-sidebar:collapse', collapse) }
+  }, [store])
+
   // Position compatibility mode (titleBarCompat pref): Windows frameless
   // windows draw the native title bar (minimize/maximize/close) at the
   // window's top-right corner, OVER the web content. When enabled, the body

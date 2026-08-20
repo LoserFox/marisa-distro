@@ -21,15 +21,20 @@
   ```
 
   DSH 页面本身从不定义 `--ds-*` 命名，`:root` 映射实际只有 sidechain 面板消费；浅色模式值与上游 fallback 一致，深色模式自动跟随 DSH 主题。
+- **与 dsh-better-sidebar 面板互斥**（panel mutex）：两个面板同时打开会互相挤压布局（better-sidebar 挤 `#root` 宽度、sidechain 是 360px fixed 右栏）。协议 = 一对 window CustomEvent：
+  - sidechain 打开（`openSidechainPanel` / `revealChild` 首次打开）→ `dsh:better-sidebar:collapse`，better-sidebar 收起；
+  - better-sidebar 展开 → `dsh:sidechain:close`，sidechain 关闭。
+  - 实现：`panel-state.ts` 广播 + `index.tsx` 监听（`typeof window` 守卫，node 测试环境跳过）；`tests/panel-state.spec.ts` 新增 5 例互斥用例。
 - `lib/client.js` 由修补后的 `src/` 重建（tsdown）。
 
 ## 验证
 
 - `pnpm --dir plugins/dsh-sidechain run build`：通过（lib/index.js 12.8 kB + client bundle）。
-- `pnpm --dir plugins/dsh-sidechain test`：8 文件 107 测试全过。
-- 深色模式实机效果待构建发行版后确认（面板背景/文字/边框/主色跟随主题）。
+- `pnpm --dir plugins/dsh-sidechain test`：8 文件 112 测试全过（含 5 例互斥用例）。
+- better-sidebar 侧互斥补丁见 `docs/plugins/dsh-better-sidebar.md`；其 0.14.0 发布包不带 tsconfig/vitest 配置，src 与 lib/client.js 双处同步补丁，lib 经 `node --check` 语法验证。
+- 深色模式与互斥的实机效果待构建发行版后确认。
 
 ## 同步动作
 
 1. 上游若改用 DSH 语义 token（或提供自身变量定义），删除本映射补丁。
-2. 同步上游新版本时重放映射段（panel-style.ts 的 `SIDECHAIN_STYLE_CSS` 头部）。
+2. 同步上游新版本时重放映射段与互斥段（panel-style.ts 头部 / panel-state.ts / index.tsx / 对应测试）。

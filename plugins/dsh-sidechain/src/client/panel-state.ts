@@ -20,6 +20,23 @@ let open = false
 let selected: SessionId | undefined
 const listeners = new Set<SidechainPanelListener>()
 
+/**
+ * Marisa fork (2026-08-22): panel mutex with dsh-better-sidebar. Opening the
+ * sidechain panel broadcasts this event so the sidebar collapses; the sidebar
+ * broadcasts {@link MUTEX_SIDECHAIN_CLOSE} when it expands. Both plugins are
+ * vendored, so the protocol is a plain window CustomEvent pair — no shared
+ * package, no harness change.
+ */
+export const MUTEX_SIDEBAR_COLLAPSE = 'dsh:better-sidebar:collapse'
+/** Broadcast by dsh-better-sidebar when its panel expands. */
+export const MUTEX_SIDECHAIN_CLOSE = 'dsh:sidechain:close'
+
+/** Broadcast the collapse request (no-op outside a browser window). */
+function notifySidebarCollapse(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(MUTEX_SIDEBAR_COLLAPSE))
+}
+
 function emit(): void {
   for (const listener of [...listeners]) listener()
 }
@@ -34,10 +51,11 @@ export function selectedChildId(): SessionId | undefined {
   return selected
 }
 
-/** Open the panel (no-op when already open). */
+/** Open the panel (no-op when already open); collapses the sidebar first. */
 export function openSidechainPanel(): void {
   if (open) return
   open = true
+  notifySidebarCollapse()
   emit()
 }
 
@@ -60,7 +78,9 @@ export function toggleSidechainPanel(): void {
  * @param childSessionId - the child to show; undefined returns to the list.
  */
 export function revealChild(childSessionId: SessionId | undefined): void {
+  const wasClosed = !open
   open = true
+  if (wasClosed) notifySidebarCollapse()
   if (selected === childSessionId) return
   selected = childSessionId
   emit()

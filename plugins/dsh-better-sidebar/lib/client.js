@@ -7581,6 +7581,14 @@ window.__ModuleLoader__.load({
 					document.body.removeAttribute("data-dsh-sidebar-collapsed");
 				};
 			}, [collapsed]);
+			(0, react.useEffect)(() => {
+				if (!collapsed) window.dispatchEvent(new CustomEvent("dsh:sidechain:close"));
+			}, [collapsed]);
+			(0, react.useEffect)(() => {
+				const collapse = () => { store.reduce((s) => (s.panelOpen ? togglePanel(s) : s)); };
+				window.addEventListener("dsh:better-sidebar:collapse", collapse);
+				return () => { window.removeEventListener("dsh:better-sidebar:collapse", collapse); };
+			}, [store]);
 			const desktopEnv = parseDesktopEnv();
 			const autoTitleBarCompat = desktopEnv.win32OverlayTop > 0;
 			const titleBarCompat = snapshot.prefs.titleBarCompat || autoTitleBarCompat;

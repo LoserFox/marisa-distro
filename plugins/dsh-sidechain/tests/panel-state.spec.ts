@@ -6,6 +6,7 @@ import type { SessionId } from '@deepseek-ai/dsh-client-connection/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   clampPanelWidth, closeSidechainPanel, isSidechainPanelOpen, openSidechainPanel,
+  MUTEX_SIDEBAR_COLLAPSE, MUTEX_SIDECHAIN_CLOSE,
   PANEL_DEFAULT_WIDTH, PANEL_MAX_WIDTH, PANEL_MIN_WIDTH, panelMaxWidth,
   readPanelWidth, resetSidechainPanel, revealChild, selectedChildId, selectChild,
   subscribeSidechainPanel, toggleSidechainPanel, writePanelWidth,
@@ -62,6 +63,52 @@ describe('panel-state', () => {
     subscribeSidechainPanel(listener)
     revealChild(CHILD_A)
     expect(listener).not.toHaveBeenCalled()
+  })
+
+  describe('panel mutex with dsh-better-sidebar (Marisa fork)', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('broadcasts the sidebar-collapse event when opening from closed', () => {
+      const dispatchEvent = vi.fn()
+      vi.stubGlobal('window', { dispatchEvent })
+      openSidechainPanel()
+      expect(dispatchEvent).toHaveBeenCalledTimes(1)
+      const event = dispatchEvent.mock.calls[0][0] as CustomEvent
+      expect(event.type).toBe(MUTEX_SIDEBAR_COLLAPSE)
+    })
+
+    it('does not re-broadcast on an idempotent open', () => {
+      const dispatchEvent = vi.fn()
+      vi.stubGlobal('window', { dispatchEvent })
+      openSidechainPanel()
+      openSidechainPanel()
+      expect(dispatchEvent).toHaveBeenCalledTimes(1)
+    })
+
+    it('revealChild broadcasts when it opens a closed panel', () => {
+      const dispatchEvent = vi.fn()
+      vi.stubGlobal('window', { dispatchEvent })
+      revealChild(CHILD_A)
+      expect(dispatchEvent).toHaveBeenCalledTimes(1)
+      // Revealing another child while open does not broadcast again.
+      revealChild(CHILD_B)
+      expect(dispatchEvent).toHaveBeenCalledTimes(1)
+    })
+
+    it('close never broadcasts', () => {
+      const dispatchEvent = vi.fn()
+      vi.stubGlobal('window', { dispatchEvent })
+      openSidechainPanel()
+      dispatchEvent.mockClear()
+      closeSidechainPanel()
+      expect(dispatchEvent).not.toHaveBeenCalled()
+    })
+
+    it('exposes the opposite-direction event name for the sidebar listener', () => {
+      expect(MUTEX_SIDECHAIN_CLOSE).toBe('dsh:sidechain:close')
+    })
   })
 
   it('selectChild switches the selection without touching visibility', () => {
