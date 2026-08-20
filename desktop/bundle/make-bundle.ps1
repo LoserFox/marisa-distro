@@ -282,6 +282,123 @@ ui-onboarding:
   # and nothing is duplicated.
   Invoke-PnpmProd "$stage\marisa-distro" 'repo root workspace'
 
+  # --- dedupe file: plugin copies (2026-08-20) ----------------------------------
+  # pnpm's `install-links: false` copies file: dependencies instead of linking
+  # them, so the same vendored plugin can appear as `plugins/<name>` plus a real
+  # copy under `node_modules/<name>` and/or `bundles/marisa-bundle/node_modules`.
+  # The plugin source tree is already the runtime target for workspace:^ links;
+  # convert the real copies into junctions (recorded later in LINKS.json) so the
+  # archive keeps only one copy.
+  Write-Host 'deduping file: plugin copies ...'
+  $dedupeBytes = 0L
+  $dedupeCount = 0
+
+  # Root node_modules: real copies of vendored plugins -> junction to plugins/
+  $pluginDirs = Get-ChildItem "$stage\marisa-distro\plugins" -Directory -Force -ErrorAction SilentlyContinue
+  foreach ($pluginDir in $pluginDirs) {
+    $pkgJson = Join-Path $pluginDir.FullName 'package.json'
+    if (-not (Test-Path -LiteralPath $pkgJson)) { continue }
+    try {
+      $pkgName = (Get-Content $pkgJson -Raw | ConvertFrom-Json).name
+    } catch { continue }
+    if (-not $pkgName) { continue }
+    $rootPkg = Join-Path "$stage\marisa-distro\node_modules" ($pkgName -replace '/', '\')
+    if (Test-Path -LiteralPath $rootPkg) {
+      $item = Get-Item -LiteralPath $rootPkg -Force
+      if (-not ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        $size = (Get-ChildItem $rootPkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+        Remove-Item $rootPkg -Recurse -Force
+        $targetRel = 'marisa-distro/plugins/' + $pluginDir.Name
+        $linkRel = 'marisa-distro/node_modules/' + ($pkgName -replace '\', '/')
+        New-Item -ItemType Junction -Path $rootPkg -Target (Join-Path $stage ($targetRel -replace '/', '\')) -Force | Out-Null
+        $dedupeBytes += [long]$size
+        $dedupeCount++
+        Write-Host ("  root plugin copy -> junction: {0} -> {1}" -f $linkRel, $targetRel)
+      }
+    }
+  }
+
+  # Root node_modules: MyGO file: deps are copied by pnpm as real dirs too.
+  # Point them at the vendored dsh-mygo source (already in the bundle).
+  $mygoFileDeps = @{
+    '@r05en1cu/dsh-mygo'                  = 'marisa-distro/dsh-mygo/packages/cordis/mygo'
+    '@r05en1cu/dsh-mygo-api'              = 'marisa-distro/dsh-mygo/packages/core/mygo-api'
+    '@r05en1cu/dsh-mygo-cli'              = 'marisa-distro/dsh-mygo/packages/cordis/mygo-cli'
+    '@r05en1cu/dsh-mygo-ext-fabric'       = 'marisa-distro/dsh-mygo/packages/extensions/mygo-fabric'
+    '@r05en1cu/dsh-mygo-ext-panel'        = 'marisa-distro/dsh-mygo/packages/extensions/mygo-panel'
+    '@r05en1cu/dsh-mygo-loader-hub'       = 'marisa-distro/dsh-mygo/packages/loaders/mygo-loader-hub'
+    '@r05en1cu/dsh-mygo-loader-profile'   = 'marisa-distro/dsh-mygo/packages/loaders/mygo-loader-profile'
+  }
+  foreach ($pkgName in $mygoFileDeps.Keys) {
+    $rootPkg = Join-Path "$stage\marisa-distro\node_modules" ($pkgName -replace '/', '\')
+    if (Test-Path -LiteralPath $rootPkg) {
+      $item = Get-Item -LiteralPath $rootPkg -Force
+      if (-not ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        $size = (Get-ChildItem $rootPkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+        Remove-Item $rootPkg -Recurse -Force
+        $targetRel = $mygoFileDeps[$pkgName]
+        $linkRel = 'marisa-distro/node_modules/' + ($pkgName -replace '\', '/')
+        New-Item -ItemType Junction -Path $rootPkg -Target (Join-Path $stage ($targetRel -replace '/', '\')) -Force | Out-Null
+        $dedupeBytes += [long]$size
+        $dedupeCount++
+        Write-Host ("  root mygo copy -> junction: {0} -> {1}" -f $linkRel, $targetRel)
+      }
+    }
+  }
+
+  # Bundle node_modules: real copies whose package also resolves at the root ->
+  # replace with a junction to the same root target (fallback also works).
+  $bundleNm = "$stage\marisa-distro\bundles\marisa-bundle\node_modules"
+  if (Test-Path $bundleNm) {
+    $bundlePkgs = Get-ChildItem $bundleNm -Directory -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne '.bin' }
+    foreach ($scopeDir in $bundlePkgs) {
+      if ($scopeDir.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { continue }
+      if ($scopeDir.Name.StartsWith('@')) {
+        $children = Get-ChildItem $scopeDir.FullName -Directory -Force -ErrorAction SilentlyContinue
+        foreach ($child in $children) {
+          if ($child.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { continue }
+          $pkgRel = "$($scopeDir.Name)/$($child.Name)"
+          $rootPkg = Join-Path "$stage\marisa-distro\node_modules" ($pkgRel -replace '/', '\')
+          if (-not (Test-Path -LiteralPath (Join-Path $rootPkg 'package.json'))) { continue }
+          $rootItem = Get-Item -LiteralPath $rootPkg -Force
+          $target = $null
+          if ($rootItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            $resolved = Resolve-LinkTarget $rootItem
+            if ($resolved) { $target = StageRel $resolved }
+          }
+          if (-not $target) { $target = 'marisa-distro/node_modules/' + ($pkgRel -replace '\', '/') }
+          $bundlePkg = Join-Path $scopeDir.FullName $child.Name
+          $size = (Get-ChildItem $bundlePkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+          Remove-Item $bundlePkg -Recurse -Force
+          $linkRel = 'marisa-distro/bundles/marisa-bundle/node_modules/' + ($pkgRel -replace '\', '/')
+          New-Item -ItemType Junction -Path $bundlePkg -Target (Join-Path $stage ($target -replace '/', '\')) -Force | Out-Null
+          $dedupeBytes += [long]$size
+          $dedupeCount++
+          Write-Host ("  bundle copy -> junction: {0} -> {1}" -f $linkRel, $target)
+        }
+      } else {
+        $pkgRel = $scopeDir.Name
+        $rootPkg = Join-Path "$stage\marisa-distro\node_modules" $pkgRel
+        if (-not (Test-Path -LiteralPath (Join-Path $rootPkg 'package.json'))) { continue }
+        $rootItem = Get-Item -LiteralPath $rootPkg -Force
+        $target = $null
+        if ($rootItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+          $resolved = Resolve-LinkTarget $rootItem
+          if ($resolved) { $target = StageRel $resolved }
+        }
+        if (-not $target) { $target = 'marisa-distro/node_modules/' + $pkgRel }
+        $size = (Get-ChildItem $scopeDir.FullName -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+        Remove-Item $scopeDir.FullName -Recurse -Force
+        $linkRel = 'marisa-distro/bundles/marisa-bundle/node_modules/' + $pkgRel
+        New-Item -ItemType Junction -Path $scopeDir.FullName -Target (Join-Path $stage ($target -replace '/', '\')) -Force | Out-Null
+        $dedupeBytes += [long]$size
+        $dedupeCount++
+        Write-Host ("  bundle copy -> junction: {0} -> {1}" -f $linkRel, $target)
+      }
+    }
+  }
+  Write-Host ("  deduped {0} copies ({1:N1} MB)" -f $dedupeCount, ($dedupeBytes / 1MB))
+
   # rc7 sync (2026-08-18): the vendored input stack provides `ctx.inputTriggers`
   # (ui-input-trigger) and `ctx.commandUi` (ui-commands) natively, so the legacy
   # 0808-snapshot service-alias patches are gone with the old ui-slash/ui-command
@@ -407,6 +524,34 @@ ui-onboarding:
         Write-Host ("  pruned store {0}  ({1:N0} bytes)" -f $entry.Name, $size)
       }
     }
+  }
+  # pnpm's hoisted root directories survive the store-body prune because the
+  # files are hard-linked into the root package dirs. Remove the actual hoisted
+  # dev-only packages too (typescript is intentionally kept: dsh-code-map loads
+  # the TS compiler at runtime).
+  Write-Host 'pruning hoisted dev-only root packages ...'
+  $hoistedKill = @(
+    'tsx', 'vite', 'vitest', 'jsdom', 'rollup', '@rollup', '@esbuild',
+    '@shikijs', 'lightningcss', 'lightningcss-win32-x64-msvc', '@vitest',
+    'prettier', 'eslint', '@eslint', 'playwright', 'playwright-core',
+    'mermaid', 'vitepress', 'knip', 'publint', 'tsdown', 'rolldown', 'oxlint'
+  )
+  foreach ($name in $hoistedKill) {
+    $p = Join-Path "$stage\marisa-distro\node_modules" $name
+    if (Test-Path $p) {
+      $size = (Get-ChildItem $p -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+      Remove-Item $p -Recurse -Force
+      $pruned += [long]$size
+      Write-Host ("  pruned hoisted {0}  ({1:N0} bytes)" -f $name, $size)
+    }
+  }
+  # @types are type declarations only; never read by the JS runtime.
+  $typesRoot = "$stage\marisa-distro\node_modules\@types"
+  if (Test-Path $typesRoot) {
+    $size = (Get-ChildItem $typesRoot -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+    Remove-Item $typesRoot -Recurse -Force
+    $pruned += [long]$size
+    Write-Host ("  pruned hoisted @types  ({0:N0} bytes)" -f $size)
   }
   Write-Host ("total pruned: {0:N1} MB" -f ($pruned / 1MB))
 }
@@ -601,6 +746,100 @@ while ($pending.Count -gt 0) {
   } catch { }
 }
 Write-Host "  pruned $prunedCount entries (test dirs + *.map)"
+
+# --- additional dead-weight prune (2026-08-20) ---------------------------------
+# PDB/TS build metadata, @types, harness dev dirs, and plugin docs/promo are not
+# part of the runtime closure. Run after junction deletion (pure real files).
+Write-Host 'pruning metadata, docs, and non-runtime harness dirs ...'
+$extraPrunedBytes = 0L
+$extraPrunedCount = 0
+
+# 1. *.pdb + *.tsbuildinfo + @types anywhere in the staged tree
+$pendingX = New-Object System.Collections.Generic.Stack[string]
+$pendingX.Push($stage)
+while ($pendingX.Count -gt 0) {
+  $d = $pendingX.Pop()
+  try {
+    foreach ($e in [System.IO.Directory]::EnumerateFileSystemEntries($d)) {
+      $attr = [System.IO.File]::GetAttributes($e)
+      if (($attr -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+      if (($attr -band [System.IO.FileAttributes]::Directory) -ne 0) {
+        $name = [System.IO.Path]::GetFileName($e)
+        if ($name -eq '@types') {
+          $size = (Get-ChildItem $e -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+          [System.IO.Directory]::Delete($e, $true)
+          $extraPrunedBytes += [long]$size
+          $extraPrunedCount++
+        } else {
+          $pendingX.Push($e)
+        }
+      } elseif ($e.EndsWith('.pdb') -or $e.EndsWith('.tsbuildinfo')) {
+        $size = (Get-Item $e -Force).Length
+        [System.IO.File]::Delete($e)
+        $extraPrunedBytes += $size
+        $extraPrunedCount++
+      }
+    }
+  } catch { }
+}
+
+# 2. harness top-level non-runtime dirs
+$harnessDevDirs = @('.agents', '.claude', '.github', 'docs', 'examples', 'scripts', 'website', 'python', 'assets')
+foreach ($name in $harnessDevDirs) {
+  $p = Join-Path "$stage\marisa-distro\harness" $name
+  if (Test-Path $p) {
+    $size = (Get-ChildItem $p -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+    [System.IO.Directory]::Delete($p, $true)
+    $extraPrunedBytes += [long]$size
+    $extraPrunedCount++
+    Write-Host ("  pruned harness\{0}  ({1:N0} bytes)" -f $name, $size)
+  }
+}
+
+# 3. docs/promo/wechat submission under plugin/bundle/mygo source trees
+# dsh-stickers additionally keeps build-only `assets/source` (the runtime only
+# reads `assets/stickers` and `assets/stickers/black`).
+$stickerSource = "$stage\marisa-distro\plugins\dsh-stickers\assets\source"
+if (Test-Path $stickerSource) {
+  $size = (Get-ChildItem $stickerSource -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+  [System.IO.Directory]::Delete($stickerSource, $true)
+  $extraPrunedBytes += [long]$size
+  $extraPrunedCount++
+  Write-Host ("  pruned dsh-stickers/assets/source  ({0:N0} bytes)" -f $size)
+}
+foreach ($area in @("$stage\marisa-distro\plugins", "$stage\marisa-distro\bundles", "$stage\marisa-distro\dsh-mygo")) {
+  if (-not (Test-Path $area)) { continue }
+  $pendingY = New-Object System.Collections.Generic.Stack[string]
+  $pendingY.Push($area)
+  while ($pendingY.Count -gt 0) {
+    $d = $pendingY.Pop()
+    try {
+      foreach ($e in [System.IO.Directory]::EnumerateFileSystemEntries($d)) {
+        $attr = [System.IO.File]::GetAttributes($e)
+        if (($attr -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+        if (($attr -band [System.IO.FileAttributes]::Directory) -eq 0) { continue }
+        $name = [System.IO.Path]::GetFileName($e)
+        if ($name -eq 'docs' -or $name -eq 'promo' -or $name -eq 'wechat-submission') {
+          $size = (Get-ChildItem $e -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
+          [System.IO.Directory]::Delete($e, $true)
+          $extraPrunedBytes += [long]$size
+          $extraPrunedCount++
+        } else {
+          $pendingY.Push($e)
+        }
+      }
+    } catch { }
+  }
+}
+Write-Host ("  pruned {0} metadata/docs entries ({1:N1} MB)" -f $extraPrunedCount, ($extraPrunedBytes / 1MB))
+
+# 4. Convert dsh-stickers runtime PNGs to WebP and patch plugin references.
+$stickerPlugin = "$stage\marisa-distro\plugins\dsh-stickers"
+if (Test-Path "$stickerPlugin\assets\stickers") {
+  Write-Host 'converting dsh-stickers PNGs to WebP ...'
+  & node "$repo\desktop\bundle\convert-stickers-webp.mjs" $stickerPlugin
+  if ($LASTEXITCODE -ne 0) { throw "convert-stickers-webp.mjs failed: $LASTEXITCODE" }
+}
 
 # --- prune redundant member-internal node_modules ------------------------------
 # (2026-08-18, backend size review) The pnpm install puts two classes of dead
