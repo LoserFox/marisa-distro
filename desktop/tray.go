@@ -4,9 +4,11 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -105,6 +107,19 @@ func setupTray(app *application.App, win *application.WebviewWindow) {
 			win.OpenDevTools()
 		})
 	}
+
+	// 版本信息：原生信息对话框展示后端版本、安装形态与日志位置。
+	aboutItem := menu.Add("版本信息")
+	aboutItem.OnClick(func(*application.Context) {
+		msg := fmt.Sprintf("Marisa DSH 桌面版\n\n版本：%s\n安装形态：%s", currentVersion, installForm)
+		if dir, err := appLogDir(); err == nil {
+			msg += fmt.Sprintf("\n日志：%s", filepath.Join(dir, appLogName))
+		}
+		dialog := app.Dialog.Info()
+		dialog.Title = "Marisa DSH"
+		dialog.Message = msg
+		dialog.Show()
+	})
 
 	menu.AddSeparator()
 

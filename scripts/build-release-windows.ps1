@@ -133,7 +133,9 @@ try {
 
   Write-ReleaseStep 'build standalone executable and MSI'
   New-Item -ItemType Directory -Force -Path $release | Out-Null
-  & go build -C desktop -tags embeddedbundle -trimpath -ldflags '-s -w' -o $standalone .
+  # -H=windowsgui：GUI 子系统，双击启动不弹终端窗口（需要终端日志时以
+  # --console / MARISA_CONSOLE=1 启动，见 desktop/console_windows.go）。
+  & go build -C desktop -tags embeddedbundle -trimpath -ldflags '-s -w -H=windowsgui' -o $standalone .
   if ($LASTEXITCODE -ne 0) { throw "standalone build failed: $LASTEXITCODE" }
 
   & pwsh -NoProfile -File desktop/scripts/build-msi.ps1 -Output $msi -Version $Version

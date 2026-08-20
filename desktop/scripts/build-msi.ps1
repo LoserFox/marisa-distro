@@ -63,7 +63,9 @@ New-Item -ItemType Directory -Force -Path (Split-Path $outputPath) | Out-Null
 $wixobj = Join-Path $buildDir 'Product.wixobj'
 
 Write-Host 'Building thin MSI desktop shell ...'
-& go build -C (Join-Path $repo 'desktop') -tags installedbundle -o $source .
+# -H=windowsgui：GUI 子系统，双击启动不弹终端窗口（日志只写持久文件；
+# 需要终端日志时以 --console / MARISA_CONSOLE=1 启动，见 console_windows.go）。
+& go build -C (Join-Path $repo 'desktop') -tags installedbundle -ldflags '-H=windowsgui' -o $source .
 if ($LASTEXITCODE -ne 0) { throw "Go MSI shell build failed with exit code $LASTEXITCODE" }
 
 Write-Host "Compiling MSI definition for $source ..."

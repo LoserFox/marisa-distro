@@ -26,6 +26,13 @@ import (
 //go:embed landing.html
 var loadingHTML string
 
+// mainWindow 是主窗口句柄：单实例二次启动回调（注册于 application.New，
+// 早于窗口创建）与托盘菜单用它显示/聚焦窗口；窗口创建后赋值。
+var mainWindow *application.WebviewWindow
+
+// currentVersion 是后端版本号（main 启动时读取），供托盘「版本信息」展示。
+var currentVersion string
+
 // 后端 URL 就绪的等待上限，以及重启退避的初值与上限。
 // urlTimeout 放宽到 120s：standalone 首启是 tsx 冷启动 + 整树 profile 加载，
 // 实测 boot 到 URL 行需 30-60s+，30s 会在 boot 途中误杀后端形成重启循环。
@@ -187,6 +194,12 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 }
 
 func main() {
+	// --console / MARISA_CONSOLE=1：GUI 子系统发行构建默认无控制台，显式
+	// 请求时分配一个并把 stdout/stderr 接过去（必须在 setupLogging 捕获
+	// os.Stderr 镜像之前调用；dev 构建从终端启动时 AllocConsole 失败即保持
+	// 原句柄，终端日志照常）。
+	maybeAttachConsole()
+
 	logPath, closeLog, err := setupLogging()
 	if err != nil {
 		log.Printf("persistent logging unavailable: %v", err)
@@ -245,6 +258,7 @@ func main() {
 	if err != nil {
 		log.Printf("read backend version: %v (update checks will be disabled)", err)
 	}
+	currentVersion = version
 	injectBackendEnv(installForm, version)
 	log.Printf("backend env injected: MARISA_INSTALL_FORM=%s MARISA_VERSION=%s", installForm, version)
 
@@ -254,6 +268,23 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "Marisa DSH",
 		Description: "Marisa DSH Desktop",
+		// 应用/托盘图标：wails 在 Windows 上优先加载 exe 内嵌图标资源（ID 3，
+		// 见 icon_windows.syso），缺失时回退到此 PNG（CreateLargeHIconFromImage
+		// 支持 PNG 字节）。
+		Icon: trayIcon(),
+		// 单实例：第二次启动不建第二个窗口/托盘/后端，而是通知首个实例显示
+		// 并聚焦已有窗口后直接退出（wails 以命名互斥体 + 隐藏消息窗口实现，
+		// UniqueID 需跨安装全局唯一）。
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "io.marisa-distro.desktop",
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if mainWindow == nil {
+					return
+				}
+				mainWindow.Show()
+				mainWindow.Focus()
+			},
+		},
 		Mac: application.MacOptions{
 			// 托盘常驻:关窗只隐藏,应用持续运行,托盘「退出」才结束。
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
@@ -280,6 +311,7 @@ func main() {
 	if devtools {
 		log.Printf("MARISA_DEVTOOLS=1: DevTools 将在窗口就绪后自动打开（托盘菜单可随时开关）")
 	}
+	mainWindow = win
 	registerCloseToTray(win)
 	// 首次导航完成信号：必须在 app.Run() 之前订阅（启动页导航在应用启动后
 	// 数秒内完成，后端就绪前早已发出；事件流无回放，晚订阅会错过）。

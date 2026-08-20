@@ -58,8 +58,11 @@ pnpm dev:desktop
 - `MARISA_DEVTOOLS`：设为 `1` 时窗口就绪后自动打开 WebView2 DevTools（仅非 production 构建生效）。
 - `MARISA_LOG_DIR`：持久日志目录，默认操作系统缓存目录（Windows 为 `%LOCALAPPDATA%\marisa-distro\logs`）。
 - `MARISA_LOG_LEVEL`：设为 `debug` 时记录后端 stdout 逐行、窗口显隐与 webview 导航等高频事件，默认 `info`。
+- `MARISA_CONSOLE`（或启动参数 `--console`）：分配终端窗口并把持久日志镜像过去。Windows 发行构建是 GUI 子系统、默认无控制台，只有该开关会创建终端，便于现场诊断。
 
-托盘菜单还提供调试捷径：「打开日志目录」「打开数据目录」用系统文件管理器打开对应目录；「重启后端」终止当前后端、由守护进程自动重启（harness/profile 变更后无需关应用）；「打开 DevTools」打开 webview 检查器。
+壳进程强制单实例：再次启动不会创建第二个窗口/托盘图标/后端，而是通知已运行实例显示并聚焦主窗口，第二个进程随即退出。
+
+托盘菜单还提供调试捷径：「打开日志目录」「打开数据目录」用系统文件管理器打开对应目录；「重启后端」终止当前后端、由守护进程自动重启（harness/profile 变更后无需关应用）；「打开 DevTools」打开 webview 检查器（非 production 构建）；「版本信息」展示后端版本、安装形态与日志位置。
 
 Windows 打包版本会把 `DSH_WEB_CMD` 替换为随包 launcher。不要用这些变量把已发布的 Windows 包替换成任意外部后端。
 

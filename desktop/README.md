@@ -106,11 +106,21 @@ development backend:
   directory (`%LOCALAPPDATA%\marisa-distro\logs` on Windows).
 - `MARISA_LOG_LEVEL`: set to `debug` for per-line backend stdout, window
   visibility, and webview navigation events. Defaults to `info`.
+- `MARISA_CONSOLE` (or the `--console` startup argument): attach a terminal
+  window and mirror the persistent log to it. Windows packaged builds are GUI
+  subsystem binaries with no console; only this opt-in creates one. Useful for
+  on-site diagnosis without opening the log file.
+
+The shell enforces single-instance: launching the app again does not create a
+second window, tray icon, or backend — it notifies the running instance, which
+shows and focuses its main window, then the second process exits.
 
 The tray menu also carries diagnostics shortcuts: 「打开日志目录」「打开数据
 目录」open the respective folders in the system file manager, 「重启后端」
 kills the current backend so the supervisor relaunches it (useful after
-harness or profile changes), and 「打开 DevTools」 opens the webview inspector.
+harness or profile changes), 「打开 DevTools」 opens the webview inspector
+(non-production builds), and 「版本信息」 shows the backend version, install
+form, and log location.
 
 Windows packaged builds deliberately replace `DSH_WEB_CMD` with their bundled
 launcher. Do not use those variables to substitute an arbitrary backend into a
