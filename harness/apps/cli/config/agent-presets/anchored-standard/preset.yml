@@ -1,0 +1,3 @@
+name: 锚定标准（实验）
+description: 实验预设：首轮只暴露极简双工具（POSIX 为持久 bash + str_replace_editor，Windows 为 pwsh + str_replace_editor）并抑制自动注入上下文，首个 durable 事件后恢复完整标准能力。机制已复现，但能力提升未达显著（见 docs/agent-preset-anchored-standard.md），请勿当作性能保证。
+order: 5
