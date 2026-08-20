@@ -27,7 +27,7 @@
 | `dsh-input-history` | fork | 组合启用 | workspace 路径兼容 |
 | `dsh-multimedia-webui-input` | mirror | rc7 待重测 | 历史客户端包缺口尚未在 rc7 复核 |
 | `dsh-paste-input` | mirror | 组合启用 | 粘贴输入 |
-| `dsh-sidechain` | mirror | 组合启用 | Sidechain |
+| `dsh-sidechain` | fork | 组合启用 | Sidechain；深色模式适配补丁（--ds-* → --dsw-alias-* 映射，见 [plugins/dsh-sidechain.md](plugins/dsh-sidechain.md)） |
 | `dsh-sonar` | mirror | rc7 待重测 | 历史 Cordis 服务与 `conversation.view` slot 结论尚未在 rc7 复核 |
 | `dsh-stickers` | fork | 组合启用 | workspace 路径兼容 |
 | `dsh-suggested-replies` | fork | rc7 待重测 | 历史依赖与路径结论尚未在 rc7 复核 |

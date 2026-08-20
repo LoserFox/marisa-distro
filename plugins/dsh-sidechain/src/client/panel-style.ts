@@ -8,6 +8,23 @@
 
 /** The injected stylesheet body. */
 export const SIDECHAIN_STYLE_CSS = `
+/* Marisa fork (2026-08-22): the panel styles consume Arco-style --ds-color-*
+   variables that the DSH theme does not define, so every colour fell back to
+   the light palette and the panel stayed light in dark mode. Map them to the
+   DSH semantic aliases at :root — the page itself never defines --ds-color-*,
+   so the mapping is sidechain-scoped in practice. */
+:root {
+  --ds-color-bg-1: var(--dsw-alias-bg-module-platform, #ffffff);
+  --ds-color-bg-2: var(--dsw-alias-bg-layer-2, #f2f3f5);
+  --ds-color-surface-2: var(--dsw-alias-bg-layer-1, #f2f3f5);
+  --ds-color-text-1: var(--dsw-alias-label-primary, #1d2129);
+  --ds-color-text-2: var(--dsw-alias-label-secondary, #4e5969);
+  --ds-color-text-3: var(--dsw-alias-label-caption, #9ca3af);
+  --ds-color-hover: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.06));
+  --ds-color-border-1: var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.12));
+  --ds-color-primary: var(--dsw-alias-state-business-primary, #3370ff);
+  --ds-color-danger: var(--dsw-alias-state-error-primary, #f53f3f);
+}
 @keyframes dsh-sidechain-shimmer {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }

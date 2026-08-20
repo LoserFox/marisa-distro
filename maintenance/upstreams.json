@@ -104,9 +104,11 @@
     },
     {
       "id": "dsh-sidechain",
-      "mode": "mirror",
+      "mode": "fork",
       "repository": "https://github.com/dsh-external/dsh-sidechain.git",
-      "baseline": "9dc75fefc1f79d1a28e388e14012a45da83f474e"
+      "baseline": "9dc75fefc1f79d1a28e388e14012a45da83f474e",
+      "diffDocument": "docs/plugins/dsh-sidechain.md",
+      "note": "2026-08-22 fork 化：深色模式适配补丁——面板内联样式消费 Arco 风格 --ds-color-* 变量，DSH 主题不定义该命名，全部落浅色 fallback；panel-style.ts 注入 :root 级 --ds-color-* → --dsw-alias-* 映射（bg/text/hover/border/primary/danger），lib 重建，107 测试全过"
     },
     {
       "id": "dsh-sonar",
