@@ -11,7 +11,7 @@
 - **rc7 待重测**：沿用历史停用策略，但尚无足够 rc7 证据，不把 rc6 结论当作 rc7 结论。
 - **兼容停用**：当前有明确的 rc7 阻断或发布包问题，需修复后再挂载。
 
-## 22 个 git 插件
+## 21 个 git 插件
 
 | 目录 | 类型 | 状态 | 说明 |
 |---|---|---|---|
@@ -34,11 +34,10 @@
 | `dsh-track` | fork | rc7 待重测 | 历史 session-query、Context 与客户端契约结论尚未在 rc7 复核 |
 | `dsh-ui-progress` | fork | 组合启用 | workspace 路径兼容 |
 | `dsh-update-check` | fork | 组合启用 | 本地第一方：检查更新（仅检查+通知，按钮深链 Release 资产） |
-| `dsh-vision-toolkit` | fork | 组合启用 | 默认匿名 Zen MiMo；设置页可切换免费 GLM |
 | `dsh-web-ui-approval-notify` | fork | 组合启用 | rc6 测试路径兼容 |
 | `whale-girl` | mirror | rc7 待重测 | 沿用历史停用策略，尚无 rc7 证据 |
 
-## 8 个 npm 快照插件
+## 9 个 npm 快照插件
 
 这些插件以已发布 npm 包内容 vendored 进 `plugins/`，并以 `file:` 依赖精确锁定；安装期不执行构建脚本。
 
@@ -47,6 +46,7 @@
 | `dsh-bash-terminal` | `dsh-bash-terminal` | fork | 0.3.14 | 组合启用；一个 shell 工具四种 Windows 终端（powershell/msys2/gitbash/wsl），设置页默认后端 + 按调用切换；fork 增量见 [plugins/dsh-bash-terminal.md](plugins/dsh-bash-terminal.md) |
 | `dsh-better-sidebar` | `dsh-better-sidebar` | fork | 0.14.0 | 组合启用；rc8 peers，web-react/schema-form 死包依赖已由上游移除 |
 | `dsh-llm-fallbacks` | `dsh-llm-fallbacks` | fork | 0.3.2 | rc7 待重测；当前停用并移除安装期生命周期脚本 |
+| `modlens` | `@liustack/modlens` | fork | 3.22.1 | 组合启用；取代 dsh-vision-toolkit（无 Python），默认匿名 Zen MiMo（首启 seed）；fork 增量见 [plugins/modlens.md](plugins/modlens.md) |
 | `dsh-web-review` | `@canglongcl/dsh-web-review` | mirror | 0.3.0 | 兼容停用；client 脚本修复待重测 |
 | `yet-another-subagent` | `@huanlin/dsh-plugin-yet-another-subagent` | mirror | 0.1.2 | 安装未挂载；需先禁用官方 `tool-subagent` |
 | `ya-workspace-sidebar` | `@huanlin/dsh-plugin-ya-workspace-sidebar` | fork | 0.3.1 | 组合启用；devDeps 改写 workspace:^（fork 差异见 [plugins/ya-workspace-sidebar.md](plugins/ya-workspace-sidebar.md)） |

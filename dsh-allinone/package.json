@@ -13,7 +13,7 @@
     "@loserfox/git-identity": "file:../dsh-git-identity",
     "@deepseek-ai/dsh-genui": "file:../dsh-genui",
     "@dsh-external/workflow": "file:../dsh_workflow",
-    "@dsh-external/dsh-vision-toolkit": "file:../dsh-vision-toolkit",
+    "@liustack/modlens": "file:../modlens",
     "@dsh-external/dsh-web-ui-notify": "file:../dsh-web-ui-approval-notify",
     "@dsh-external/dsh-suggested-replies": "file:../dsh-suggested-replies",
     "whale-girl": "file:../whale-girl",

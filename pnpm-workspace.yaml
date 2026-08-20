@@ -165,6 +165,7 @@ minimumReleaseAgeExclude:
   - '@r05en1cu/dsh-mygo-loader-hub@0.2.0-rc.7'
   - '@r05en1cu/dsh-mygo-api@0.2.0-rc.7'
   - '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.7'
+  - '@liustack/modlens@3.22.1'
 patchedDependencies:
   # (2026-08-18) emptied: MyGO is now vendored source (dsh-mygo/, keyed fix
   # applied in-tree) instead of the npm build that needed the patch.

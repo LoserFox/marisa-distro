@@ -77,19 +77,13 @@
     - id: dsh-external-workflow
       name: '@dsh-external/workflow'
 
-# ── @dsh-external/dsh-vision-toolkit ──
-# dsh-vision-toolkit bundle patch: mounts the plugin into a profile layer stack.
-# Runtime defaults live at the plugin's config boundary. Users override them in
-# their profile patch row with the same id.
+# ── @liustack/modlens ──
+# modlens bundle patch: mounts the plugin into a profile layer stack. The
+# first-run anonymous Zen default is seeded by the vendored fork (see
+# docs/plugins/modlens.md); users switch engines in 设置→插件→插件配置.
 - insert:
-    - id: vision-toolkit
-      name: '@dsh-external/dsh-vision-toolkit'
-      config:
-        provider:
-          baseUrl: 'https://opencode.ai/zen/v1'
-          authMode: none
-          credential: VISION_API_KEY
-          model: mimo-v2.5-free
+    - id: modlens
+      name: '@liustack/modlens'
 
 # ── @bill9109/dsh-web-ui-notify ──
 # dsh-web-ui-notify bundle patch: mount the desktop-notification plugin.

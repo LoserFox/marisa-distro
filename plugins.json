@@ -37,15 +37,6 @@
       "patch-id": null
     },
     {
-      "name": "@dsh-external/dsh-vision-toolkit",
-      "source": "git",
-      "dir": "dsh-vision-toolkit",
-      "repo": "https://github.com/dsh-external/dsh-vision-toolkit.git",
-      "needs-build": true,
-      "has-lib": true,
-      "patch-id": null
-    },
-    {
       "name": "@bill9109/dsh-web-ui-notify",
       "source": "git",
       "dir": "dsh-web-ui-approval-notify",

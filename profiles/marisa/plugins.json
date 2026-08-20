@@ -112,9 +112,10 @@
       "dir": "dsh-ui-progress"
     },
     {
-      "name": "@dsh-external/dsh-vision-toolkit",
-      "source": "git",
-      "dir": "dsh-vision-toolkit"
+      "name": "@liustack/modlens",
+      "source": "npm",
+      "dir": "modlens",
+      "version": "3.22.1"
     },
     {
       "name": "@canglongcl/dsh-web-review",

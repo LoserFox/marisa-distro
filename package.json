@@ -282,7 +282,7 @@
     "@dsh-external/dsh-suggested-replies": "workspace:^",
     "@fakechris/dsh-track": "workspace:^",
     "@dsh-external/dsh-ui-progress": "workspace:^",
-    "@dsh-external/dsh-vision-toolkit": "workspace:^",
+    "@liustack/modlens": "workspace:^",
     "@bill9109/dsh-web-ui-notify": "workspace:^",
     "@dsh-external/workflow": "workspace:^",
     "whale-girl": "workspace:^",

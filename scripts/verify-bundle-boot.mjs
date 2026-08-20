@@ -73,10 +73,10 @@ try {
   }
   // Plugin route probes: these routes must be claimed by their plugins, not
   // fall through to the SPA (a "<!doctype" HTML body here is the exact
-  // regression the vision-toolkit webServer fix addressed).
+  // regression a missing webServer route fix would reintroduce).
   const probes = [
     ['update-check state', `${url}/plugins/dsh-update-check/state`],
-    ['vision settings', `${url}/_dsh/vision-toolkit/settings`],
+    ['modlens config', `${url}/modlens/config`],
   ]
   const routeResults = []
   for (const [name, probeUrl] of probes) {
