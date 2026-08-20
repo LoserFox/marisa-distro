@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -132,10 +133,34 @@ func (m *backendManager) restart() bool {
 // backendMgr 是托盘重启入口与 supervise 之间的共享句柄。
 var backendMgr backendManager
 
+// retryFullMode 是托盘「重试完整模式」的请求标志：置位后 supervise 在下一轮
+// 迭代把阶段拉回 normal（清除 MARISA_BOOT_PROFILE 并重置失败计数）。
+var retryFullMode atomic.Bool
+
+// lastBootError 记录最近一次后端启动失败原因（急救页展示）。
+var lastBootError error
+
 // supervise 守护后端：启动 → 就绪后把窗口指向其 URL → 进程退出则退避重启，
 // 直到 ctx 取消（应用退出）。后端在任意时刻意外终结都会走同一重启路径。
 // ready 是 subscribeWebviewReady 在窗口创建时订阅的首次导航完成信号。
+//
+// 三级启动状态机：
+//   - normal：完整 marisa 组合；连续 normalFailuresBeforeMinimal 次启动失败
+//     降级 minimal；
+//   - minimal：harness 内置 web 模板（base+web-app，不加载任何 marisa 插件）；
+//     连续 minimalFailuresBeforeRescue 次失败进入 rescue；
+//   - rescue：壳层自带急救页（rescue.html + 本地控制端点），不依赖后端；
+//     恢复或重试后回到 normal。
+//
+// 成功启动（发布 URL）清除失败计数与降级状态；冷启动读到持久化的
+// stage=rescue 时直接进急救页，避免每次开机重复等待两轮失败。
 func supervise(ctx context.Context, port string, win *application.WebviewWindow, ready <-chan struct{}) {
+	stage := stageNormal
+	if loadRescueState().Stage == stageRescue {
+		stage = stageRescue
+		log.Printf("上次启动停在急救模式，本次直接进入")
+	}
+	failures := 0
 	backoff := restartBackoff
 	for {
 		select {
@@ -144,16 +169,59 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 		default:
 		}
 
+		if retryFullMode.Swap(false) {
+			stage = stageNormal
+			failures = 0
+			backoff = restartBackoff
+			lastBootError = nil
+			saveRescueState(stageNormal, nil)
+			log.Printf("用户请求重试完整模式")
+		}
+
+		if stage == stageRescue {
+			enterRescue(ctx, win, ready, lastBootError)
+			stage = stageNormal
+			failures = 0
+			backoff = restartBackoff
+			lastBootError = nil
+			saveRescueState(stageNormal, nil)
+			continue
+		}
+
+		applyBootProfile(stage)
 		backendMgr.set(nil, nil)
 		cmd, url, exitCh, err := startServer(ctx, port)
 		if err != nil {
 			if ctx.Err() != nil {
 				return
 			}
+			failures++
+			lastBootError = err
 			log.Printf("dsh server 启动失败：%v（%s 后重试）", err, backoff)
+			if stage == stageNormal && failures >= normalFailuresBeforeMinimal {
+				stage = stageMinimal
+				failures = 0
+				backoff = restartBackoff
+				saveRescueState(stageMinimal, err)
+				log.Printf("完整模式连续 %d 次启动失败，降级极简模式（profile=%s）：%v",
+					normalFailuresBeforeMinimal, minimalBootProfile, err)
+			} else if stage == stageMinimal && failures >= minimalFailuresBeforeRescue {
+				saveRescueState(stageRescue, err)
+				log.Printf("极简模式连续 %d 次启动失败，进入急救模式：%v", minimalFailuresBeforeRescue, err)
+				enterRescue(ctx, win, ready, err)
+				stage = stageNormal
+				failures = 0
+				backoff = restartBackoff
+				lastBootError = nil
+				saveRescueState(stageNormal, nil)
+				continue
+			}
 		} else {
 			backendMgr.set(cmd, exitCh)
 			backoff = restartBackoff
+			failures = 0
+			lastBootError = nil
+			saveRescueState(stageNormal, nil)
 			if err := awaitWebviewReady(ready, ctx); err != nil {
 				// Webview 未就绪（或应用退出）：跳过本次导航，窗口停留在
 				// 启动页；下一次后端就绪时再试。
@@ -190,6 +258,38 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 				backoff = maxRestartWait
 			}
 		}
+	}
+}
+
+// enterRescue 进入急救模式：启动壳层本地控制端点并把窗口切到急救页，阻塞
+// 到用户完成恢复（或点「重试完整启动」）或应用退出。调用方在返回后回到
+// normal 阶段重新尝试完整启动。
+func enterRescue(ctx context.Context, win *application.WebviewWindow, ready <-chan struct{}, lastErr error) {
+	log.Printf("进入急救模式：后端无法以完整/极简组合启动")
+	var lastErrStr string
+	if lastErr != nil {
+		lastErrStr = lastErr.Error()
+	}
+	srv, err := newRescueServer(lastErrStr)
+	if err != nil {
+		log.Printf("rescue server 启动失败：%v（回到普通重启）", err)
+		return
+	}
+	if err := srv.start(); err != nil {
+		log.Printf("rescue server 启动失败：%v（回到普通重启）", err)
+		return
+	}
+	defer srv.srv.Close()
+	if err := awaitWebviewReady(ready, ctx); err != nil {
+		log.Printf("rescue 页面导航跳过：%v", err)
+	} else {
+		log.Printf("rescue 页面：%s", srv.url)
+		win.SetURL(srv.url)
+	}
+	select {
+	case <-srv.done:
+		log.Printf("急救动作完成，回到完整模式重启")
+	case <-ctx.Done():
 	}
 }
 
