@@ -20,6 +20,7 @@
     { "name": "@dsh-external/dsh-suggested-replies", "source": "git", "dir": "dsh-suggested-replies" },
     { "name": "@fakechris/dsh-track", "source": "git", "dir": "dsh-track" },
     { "name": "@omdsh-dev/dsh-update-check", "source": "git", "dir": "dsh-update-check" },
+    { "name": "dsh-bash-terminal", "source": "npm", "dir": "dsh-bash-terminal", "version": "0.3.14" },
     { "name": "@dsh-external/dsh-ui-progress", "source": "git", "dir": "dsh-ui-progress" },
     { "name": "@dsh-external/dsh-vision-toolkit", "source": "git", "dir": "dsh-vision-toolkit" },
     { "name": "@canglongcl/dsh-web-review", "source": "npm", "dir": "dsh-web-review", "version": "0.1.0" },

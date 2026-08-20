@@ -1,6 +1,6 @@
 # 插件清单
 
-默认插件全部 vendored 在 `plugins/`，共 28 个。机器可读的目录、上游、基线和 mirror/fork 分类由 `maintenance/upstreams.json` 管理；profile 生成器使用的目录映射由 `profiles/marisa/plugins.json` 管理。
+默认插件全部 vendored 在 `plugins/`，共 29 个。机器可读的目录、上游、基线和 mirror/fork 分类由 `maintenance/upstreams.json` 管理；profile 生成器使用的目录映射由 `profiles/marisa/plugins.json` 管理。
 
 状态基线：DSH `0.1.0-rc.7`，upstream commit `99f6f02fecdb7dff40c3fbc9470f5907c29f74ca`（2026-08-18）。完整的逐项证据和下一步见 [rc7 插件兼容评估清单](rc7-plugin-compatibility.md)。
 
@@ -37,12 +37,13 @@
 | `dsh-web-ui-approval-notify` | fork | 组合启用 | rc6 测试路径兼容 |
 | `whale-girl` | mirror | rc7 待重测 | 沿用历史停用策略，尚无 rc7 证据 |
 
-## 7 个 npm 快照插件
+## 8 个 npm 快照插件
 
 这些插件以已发布 npm 包内容 vendored 进 `plugins/`，并以 `file:` 依赖精确锁定；安装期不执行构建脚本。
 
 | 目录 | npm 包 | 类型 | 版本 | 状态 |
 |---|---|---|---|---|
+| `dsh-bash-terminal` | `dsh-bash-terminal` | fork | 0.3.14 | 组合启用；一个 shell 工具四种 Windows 终端（powershell/msys2/gitbash/wsl），设置页默认后端 + 按调用切换；fork 增量见 [plugins/dsh-bash-terminal.md](plugins/dsh-bash-terminal.md) |
 | `dsh-better-sidebar` | `dsh-better-sidebar` | fork | 0.10.3 | 组合启用；移除安装期生命周期脚本 |
 | `dsh-llm-fallbacks` | `dsh-llm-fallbacks` | fork | 0.1.0-alpha.1 | rc7 待重测；当前停用并移除安装期生命周期脚本 |
 | `dsh-web-review` | `@canglongcl/dsh-web-review` | mirror | 0.1.0 | 兼容停用；发布包的 client 脚本语法损坏，等待上游修复 |

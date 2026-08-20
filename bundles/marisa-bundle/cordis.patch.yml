@@ -206,6 +206,22 @@
     - id: update-check
       name: '@omdsh-dev/dsh-update-check'
 
+# ── dsh-bash-terminal（fork v0.4.0：一个 shell 工具、四种 Windows 终端，按调用可切换）──
+# 默认后端 = 设置页 defaultShell（默认 powershell）；shell/terminal 工具带 shell
+# 参数，用户要求时模型可按调用切到 msys2 / gitbash / wsl。msys2Root/wslDistro 留空
+# 时自动探测（C:\msys64 等已知根 + PATH usr\bin；wsl 默认发行版）。
+- insert:
+    - id: tool-bash-terminal
+      name: 'dsh-bash-terminal'
+      config:
+        defaultShell: 'powershell'
+        msys2Root: ''
+        msys2Msystem: 'MINGW64'
+        wslDistro: ''
+        pwshPath: ''
+        gitBashPath: ''
+        wslPath: ''
+
 # ── 纯 host 插件 ──
 - insert:
     - id: a2a
