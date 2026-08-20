@@ -1,0 +1,5 @@
+# dsh-auto-resume bundle layer: mounts the plugin row.
+
+- insert:
+    - id: dsh-auto-resume
+      name: '@dsh-external/dsh-auto-resume'

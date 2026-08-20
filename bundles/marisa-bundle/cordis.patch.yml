@@ -224,6 +224,11 @@
         gitBashPath: ''
         wslPath: ''
 
+# ── dsh-auto-resume（本地第一方：中断后发送按钮原位变播放，点击发「继续」）──
+- insert:
+    - id: dsh-auto-resume
+      name: '@dsh-external/dsh-auto-resume'
+
 # ── 纯 host 插件 ──
 - insert:
     - id: a2a

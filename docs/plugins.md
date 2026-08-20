@@ -1,6 +1,6 @@
 # 插件清单
 
-默认插件全部 vendored 在 `plugins/`，共 29 个。机器可读的目录、上游、基线和 mirror/fork 分类由 `maintenance/upstreams.json` 管理；profile 生成器使用的目录映射由 `profiles/marisa/plugins.json` 管理。
+默认插件全部 vendored 在 `plugins/`，共 30 个。机器可读的目录、上游、基线和 mirror/fork 分类由 `maintenance/upstreams.json` 管理；profile 生成器使用的目录映射由 `profiles/marisa/plugins.json` 管理。
 
 状态基线：DSH `0.1.0-rc.7`，upstream commit `99f6f02fecdb7dff40c3fbc9470f5907c29f74ca`（2026-08-18）。完整的逐项证据和下一步见 [rc7 插件兼容评估清单](rc7-plugin-compatibility.md)。
 
@@ -11,13 +11,14 @@
 - **rc7 待重测**：沿用历史停用策略，但尚无足够 rc7 证据，不把 rc6 结论当作 rc7 结论。
 - **兼容停用**：当前有明确的 rc7 阻断或发布包问题，需修复后再挂载。
 
-## 21 个 git 插件
+## 22 个 git 插件
 
 | 目录 | 类型 | 状态 | 说明 |
 |---|---|---|---|
 | `dsh_workflow` | fork | 组合启用 | workspace 路径兼容 |
 | `dsh-a2a` | mirror | 组合启用 | A2A 工具 |
 | `dsh-artifact` | mirror | 组合启用 | Artifact UI |
+| `dsh-auto-resume` | fork | 组合启用 | 本地第一方：中断后发送按钮原位变播放，点击发「继续」；见 [plugins/dsh-auto-resume.md](plugins/dsh-auto-resume.md) |
 | `dsh-code-map` | mirror | 组合启用 | 代码地图 |
 | `dsh-diff-viewer` | fork | rc7 待重测 | 历史 UI primitives/slot 结论尚未在 rc7 复核，保留官方编辑/写入界面 |
 | `dsh-drag-and-drop` | mirror | 组合启用 | 拖放输入 |
@@ -44,13 +45,13 @@
 | 目录 | npm 包 | 类型 | 版本 | 状态 |
 |---|---|---|---|---|
 | `dsh-bash-terminal` | `dsh-bash-terminal` | fork | 0.3.14 | 组合启用；一个 shell 工具四种 Windows 终端（powershell/msys2/gitbash/wsl），设置页默认后端 + 按调用切换；fork 增量见 [plugins/dsh-bash-terminal.md](plugins/dsh-bash-terminal.md) |
-| `dsh-better-sidebar` | `dsh-better-sidebar` | fork | 0.10.3 | 组合启用；移除安装期生命周期脚本 |
-| `dsh-llm-fallbacks` | `dsh-llm-fallbacks` | fork | 0.1.0-alpha.1 | rc7 待重测；当前停用并移除安装期生命周期脚本 |
-| `dsh-web-review` | `@canglongcl/dsh-web-review` | mirror | 0.1.0 | 兼容停用；发布包的 client 脚本语法损坏，等待上游修复 |
+| `dsh-better-sidebar` | `dsh-better-sidebar` | fork | 0.14.0 | 组合启用；rc8 peers，web-react/schema-form 死包依赖已由上游移除 |
+| `dsh-llm-fallbacks` | `dsh-llm-fallbacks` | fork | 0.3.2 | rc7 待重测；当前停用并移除安装期生命周期脚本 |
+| `dsh-web-review` | `@canglongcl/dsh-web-review` | mirror | 0.3.0 | 兼容停用；client 脚本修复待重测 |
 | `yet-another-subagent` | `@huanlin/dsh-plugin-yet-another-subagent` | mirror | 0.1.2 | 安装未挂载；需先禁用官方 `tool-subagent` |
-| `ya-workspace-sidebar` | `@huanlin/dsh-plugin-ya-workspace-sidebar` | mirror | 0.1.0 | 组合启用；已完成 boot 链路验证 |
-| `interpreters` | `@huanlin/dsh-plugin-interpreters` | mirror | 0.1.0 | 组合启用；keyed 修复后完成 boot 链路验证 |
-| `mnemon` | `dsh-mnemon` | mirror | 0.2.9 | 组合启用；三层记忆系统（runtime memory / documents / memory spaces），Go 引擎二进制 v0.2.3 随包；workspace 存储 + local-only 数据边界 + 只读远程面 |
+| `ya-workspace-sidebar` | `@huanlin/dsh-plugin-ya-workspace-sidebar` | fork | 0.3.1 | 组合启用；devDeps 改写 workspace:^（fork 差异见 [plugins/ya-workspace-sidebar.md](plugins/ya-workspace-sidebar.md)） |
+| `interpreters` | `@huanlin/dsh-plugin-interpreters` | mirror | 0.2.1 | 组合启用；keyed 修复后完成 boot 链路验证 |
+| `mnemon` | `dsh-mnemon` | mirror | 0.2.13 | 组合启用；三层记忆系统（runtime memory / documents / memory spaces），Go 引擎二进制 v0.2.3 随包；workspace 存储 + local-only 数据边界 + 只读远程面 |
 
 ## 市场基础设施（vendored 源，不在 `plugins/`）
 

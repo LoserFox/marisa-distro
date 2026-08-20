@@ -221,6 +221,15 @@
       "repository": null,
       "version": "0.1.2",
       "note": "npm snapshot; upstream repository not published"
+    },
+    {
+      "id": "dsh-auto-resume",
+      "source": "git",
+      "mode": "fork",
+      "repository": "https://github.com/omdsh-dev/marisa-distro.git",
+      "baseline": "2c515d6a3d7809358ab774f9d4265dbf42013bcb",
+      "diffDocument": "docs/plugins/dsh-auto-resume.md",
+      "note": "本地第一方插件（2026-08-22）：Marisa 自研——会话中断后 composer 发送按钮原位变播放按钮，点击发送「继续」；基于 19:56 会话的 Cordis 动态插件原型落地（v2 run-2 验证通过），改为原位替换交互。baseline 为引入时的仓库基线 commit"
     }
   ]
 }
