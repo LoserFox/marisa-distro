@@ -89,6 +89,14 @@ func ensureBackend() (string, error) {
 	}
 	if cur, err := os.ReadFile(filepath.Join(dir, backendVersionName)); err == nil && strings.TrimSpace(string(cur)) == want {
 		log.Printf("backend up to date at %s (version %s)", dir, want)
+		// Repair drift: a junction deleted after first install (e.g. a dev
+		// shortcut symlinking into this tree, or a manual cleanup) never gets
+		// recreated otherwise, and the next boot dies with ERR_MODULE_NOT_FOUND
+		// for workspace packages (schemastery / dsh-settings / ...). The replay
+		// only creates missing links; present ones are untouched.
+		if err := recreateLinks(filepath.Join(dir, "LINKS.json"), dir); err != nil {
+			return "", fmt.Errorf("repair installed backend links: %w", err)
+		}
 		return dir, nil
 	}
 
