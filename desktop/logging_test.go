@@ -35,6 +35,8 @@ func TestPersistentLogWriterIgnoresTerminalFailure(t *testing.T) {
 }
 
 func TestSetupLoggingCapturesShellAndBackendOutput(t *testing.T) {
+	// 后端 stdout 逐行为 debug 级，此测试开启以断言其落盘。
+	t.Setenv("MARISA_LOG_LEVEL", "debug")
 	t.Setenv("MARISA_LOG_DIR", t.TempDir())
 	path, closeLog, err := setupLogging()
 	if err != nil {
@@ -63,13 +65,33 @@ func TestSetupLoggingCapturesShellAndBackendOutput(t *testing.T) {
 	for _, marker := range []string{
 		"shell-log-marker",
 		"backend-stderr-marker",
-		"backend stdout: booting",
-		"backend stdout: dsh web: http://127.0.0.1:4321",
-		"backend stdout: ready",
+		"[debug] backend stdout: booting",
+		"[debug] backend stdout: dsh web: http://127.0.0.1:4321",
+		"[debug] backend stdout: ready",
 	} {
 		if !strings.Contains(text, marker) {
 			t.Errorf("log does not contain %q:\n%s", marker, text)
 		}
+	}
+}
+
+func TestLogDebugfSilentUnlessDebugLevel(t *testing.T) {
+	t.Setenv("MARISA_LOG_LEVEL", "")
+	t.Setenv("MARISA_LOG_DIR", t.TempDir())
+	_, closeLog, err := setupLogging()
+	if err != nil {
+		t.Fatalf("setupLogging: %v", err)
+	}
+	defer func() {
+		closeLog()
+		log.SetOutput(os.Stderr)
+		backendLogOutput = os.Stderr
+		logDebug = false
+	}()
+
+	logDebugf("debug-marker-%s", "hidden")
+	if logDebug {
+		t.Fatal("logDebug set without MARISA_LOG_LEVEL=debug")
 	}
 }
 

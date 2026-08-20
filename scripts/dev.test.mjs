@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, utimesSync, writeFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -8,8 +8,11 @@ import {
   buildBackendArgs,
   buildDesktopBackendCommand,
   buildWatcherArgs,
+  desktopGoFiles,
+  desktopShellBuildCommand,
   extractWebUrl,
   missingPrerequisites,
+  needsDesktopShellRebuild,
   parseArgs,
   resolveLayout,
   supportsNativeTypeScript,
@@ -63,10 +66,54 @@ test('preflight reports only missing artifacts and includes the shell in desktop
     mkdirSync(path.dirname(layout.tsdownManifest), { recursive: true })
     writeFileSync(layout.tsdownManifest, '{}')
     mkdirSync(layout.profileModules, { recursive: true })
+    // 桌面壳由 dev 流程按需自动重建，不再是预检硬依赖。
     assert.deepEqual(missingPrerequisites(layout), [])
-    assert.deepEqual(missingPrerequisites(layout, { desktop: true }), [
-      ['development desktop shell', layout.desktopShell],
-    ])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('desktop shell is rebuilt when missing or stale relative to Go sources', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'marisa-dev-shell-'))
+  try {
+    const layout = resolveLayout({ root, home: path.join(root, 'home'), platform: 'win32' })
+    mkdirSync(path.join(layout.desktopDir, 'sub'), { recursive: true })
+    writeFileSync(path.join(layout.desktopDir, 'main.go'), 'package main\n')
+    writeFileSync(path.join(layout.desktopDir, 'sub', 'util.go'), 'package main\n')
+    writeFileSync(path.join(layout.desktopDir, 'main_test.go'), 'package main\n')
+
+    // 测试文件不影响产物，不计入重建判定。
+    assert.deepEqual(
+      desktopGoFiles(layout.desktopDir).map((file) => path.relative(layout.desktopDir, file)).sort(),
+      ['main.go', path.join('sub', 'util.go')],
+    )
+
+    // 壳缺失 → 需要重建。
+    assert.equal(needsDesktopShellRebuild(layout), true)
+
+    mkdirSync(path.dirname(layout.desktopShell), { recursive: true })
+    writeFileSync(layout.desktopShell, '')
+    const future = new Date(Date.now() + 60_000)
+    // 任一源文件比壳新 → 需要重建。
+    utimesSync(path.join(layout.desktopDir, 'main.go'), future, future)
+    assert.equal(needsDesktopShellRebuild(layout), true)
+
+    // 壳比所有源文件新 → 无需重建。
+    utimesSync(layout.desktopShell, new Date(future.getTime() + 60_000), new Date(future.getTime() + 60_000))
+    assert.equal(needsDesktopShellRebuild(layout), false)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('desktop shell build command pins -C first and an absolute -o', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'marisa-dev-shell-'))
+  try {
+    const layout = resolveLayout({ root, home: path.join(root, 'home'), platform: 'win32' })
+    const build = desktopShellBuildCommand(layout)
+    assert.equal(build.command, 'go')
+    assert.equal(build.cwd, root)
+    assert.deepEqual(build.args, ['build', '-C', layout.desktopDir, '-o', layout.desktopShell, '.'])
   } finally {
     await rm(root, { recursive: true, force: true })
   }

@@ -19,6 +19,18 @@ const (
 // it with the same terminal-and-file writer used by the desktop shell logger.
 var backendLogOutput io.Writer = os.Stderr
 
+// logDebug 由 MARISA_LOG_LEVEL=debug 开启：后端 stdout 逐行、窗口显隐、
+// webview 导航等高频事件只在该级别记录；默认 info 只保留生命周期事件。
+var logDebug bool
+
+// logDebugf 记录调试级事件（MARISA_LOG_LEVEL=debug 时生效），消息带
+// [debug] 前缀便于在文件日志中检索。
+func logDebugf(format string, args ...any) {
+	if logDebug {
+		log.Printf("[debug] "+format, args...)
+	}
+}
+
 type persistentLogWriter struct {
 	file     io.Writer
 	terminal io.Writer
@@ -52,6 +64,8 @@ func appLogDir() (string, error) {
 
 // setupLogging configures one bounded persistent log for both the desktop
 // shell and its backend. The previous log is retained as .1 after rotation.
+// Shell log lines carry file:line (Lshortfile) so a GUI-process crash can be
+// traced to the emitting site; backend passthrough writes stay verbatim.
 func setupLogging() (path string, closeLog func(), err error) {
 	dir, err := appLogDir()
 	if err != nil {
@@ -68,9 +82,16 @@ func setupLogging() (path string, closeLog func(), err error) {
 	if err != nil {
 		return "", func() {}, fmt.Errorf("open log %s: %w", path, err)
 	}
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// 显式重置而非只置真：setupLogging 可被重复调用（测试），级别必须由
+	// 本次调用的环境决定。
+	logDebug = os.Getenv("MARISA_LOG_LEVEL") == "debug"
 	output := persistentLogWriter{file: file, terminal: os.Stderr}
 	log.SetOutput(output)
 	backendLogOutput = output
+	if logDebug {
+		log.Printf("[debug] log level: debug (MARISA_LOG_LEVEL)")
+	}
 	return path, func() { _ = file.Close() }, nil
 }
 
@@ -95,8 +116,8 @@ func rotateAppLog(path string) error {
 	return nil
 }
 
-// scanBackendStdout drains stdout for the lifetime of the backend, writes
-// every line to the persistent log, and publishes the first listening URL.
+// scanBackendStdout 持续消费后端 stdout 直到进程退出，逐行写入持久日志
+// （debug 级：后端自述输出在高频运行时噪声较大），并发布首个监听 URL。
 func scanBackendStdout(stdout io.Reader) <-chan string {
 	urlCh := make(chan string, 1)
 	go func() {
@@ -106,7 +127,7 @@ func scanBackendStdout(stdout io.Reader) <-chan string {
 		published := false
 		for scanner.Scan() {
 			line := scanner.Text()
-			log.Printf("backend stdout: %s", line)
+			logDebugf("backend stdout: %s", line)
 			if !published && strings.HasPrefix(line, "dsh web: ") {
 				urlCh <- strings.TrimSpace(strings.TrimPrefix(line, "dsh web: "))
 				published = true
