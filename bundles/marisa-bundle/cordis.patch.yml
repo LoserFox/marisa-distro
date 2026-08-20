@@ -15,7 +15,7 @@
 # 行 name 通过 profile node_modules（file: 链接安装的 vendored 包）解析，
 # 必须与包实际 name 一致，否则 Loader 解析不到。
 
-# ══ (1) Windows PowerShell lane（rc7 sync，2026-08-18）══
+# ══ (1) Windows PowerShell lane（rc7 sync，2026-08-18 / 2026-08-21 更新）══
 #
 # rc7 base bundle 在 Windows 上原生提供整条 pwsh 栈：
 #   - bash-sandbox / tool-bash  自带 `disabled: process.platform === 'win32'`
@@ -26,14 +26,16 @@
 # 因此 Marisa 只需：
 #   - tool-pwsh 补丁行置为 enabled（web-app 层禁用了它）
 #   - permission 行改名对齐（0808 的 @deepseek-ai/dsh-permission 在 rc7 是
-#     @deepseek-ai/dsh-permission-presets）并保持禁用：pwsh-sandbox 有
-#     sandboxMode 能力，但本发行保持 0808 的零键姿态（模型动作不走审批面，
-#     工具层策略由 sandbox-policy 的 workspace-write 默认约束）。
-#   需要真实隔离 + 审批时，把 permission 改回 enabled 即可。
+#     @deepseek-ai/dsh-permission-presets）并保持启用：pwsh-sandbox 提供
+#     sandboxMode 能力（ACL 受限令牌，enforcement: partial），permission
+#     服务可正常启动。恢复后 composer 底部 Access chip 与 /permission
+#     选择器回归：read-only / workspace-write / danger-full-access（Full
+#     access 档带风险确认 Modal）；base 默认 workspace-write + ask 不变。
+#   若发行要回到 0808 零键姿态（模型动作不走审批面），改回 disabled: true。
 
 - id: permission
   name: '@deepseek-ai/dsh-permission-presets'
-  disabled: true
+  disabled: false
 
 # rc6 sync (2026-08-18): the base web-app patch now inserts the native rc6
 # input stack (ui-input-trigger + ui-commands). The 0808 snapshot's legacy
@@ -206,6 +208,22 @@
     - id: update-check
       name: '@omdsh-dev/dsh-update-check'
 
+# ── dsh-bash-terminal（fork v0.4.0：一个 shell 工具、四种 Windows 终端，按调用可切换）──
+# 默认后端 = 设置页 defaultShell（默认 powershell）；shell/terminal 工具带 shell
+# 参数，用户要求时模型可按调用切到 msys2 / gitbash / wsl。msys2Root/wslDistro 留空
+# 时自动探测（C:\msys64 等已知根 + PATH usr\bin；wsl 默认发行版）。
+- insert:
+    - id: tool-bash-terminal
+      name: 'dsh-bash-terminal'
+      config:
+        defaultShell: 'powershell'
+        msys2Root: ''
+        msys2Msystem: 'MINGW64'
+        wslDistro: ''
+        pwshPath: ''
+        gitBashPath: ''
+        wslPath: ''
+
 # ── 纯 host 插件 ──
 - insert:
     - id: a2a
@@ -251,6 +269,26 @@
           candidateMultiplier: 3
           maxMediumResults: 4
           maxUnknownResults: 2
+
+# ── 官方会话搜索（2026-08-22 启用）──
+# @deepseek-ai/dsh-tool-session-query：session_search / session_event_search /
+# session_trace / session_event_trace / session_event_read 五个 workspace-
+# authorized 的跨会话只读搜索/追踪工具。与 tool-cordis 一样挂 profile 层（全局
+# 工具层，所有会话可见）；将来要按预设隔离再挪进 agent-presets 的
+# agent.cordis.yml。依赖已登记在根 package.json（workspace:^，rc8 同步）。
+# 前置：base/web-app 默认 session-query-sqlite 为 openAt: never（搜索调用报
+# SESSION_QUERY_SEARCH_DISABLED，GUI 侧边栏搜索只匹配标题），这里覆写为
+# first-search + 持久化索引库 $DSH_HOME/session-query.sqlite（首次搜索懒建
+# 索引，启动安静，SQLite 文件缺目录自动创建）。
+- insert:
+    - id: tool-session-query
+      name: '@deepseek-ai/dsh-tool-session-query'
+
+- id: session-query-sqlite
+  name: '@deepseek-ai/dsh-session-query-sqlite'
+  config:
+    path: !!js dshHomePath('session-query.sqlite')
+    openAt: first-search
 
 # ══ (3) v1 已禁用插件 2/2：ui-workspace（官方工作区浏览器）──
 # ya-workspace-sidebar 提供 sidebar.workspaces + conversation.hero.workspace
