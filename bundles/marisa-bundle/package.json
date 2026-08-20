@@ -23,7 +23,6 @@
     "@fakechris/dsh-track": "file:../../plugins/dsh-track",
     "@omdsh-dev/dsh-update-check": "file:../../plugins/dsh-update-check",
     "@dsh-external/dsh-ui-progress": "file:../../plugins/dsh-ui-progress",
-    "@dsh-external/dsh-vision-toolkit": "file:../../plugins/dsh-vision-toolkit",
     "@bill9109/dsh-web-ui-notify": "file:../../plugins/dsh-web-ui-approval-notify",
     "whale-girl": "file:../../plugins/whale-girl",
     "@dsh-external/dsh-auto-resume": "file:../../plugins/dsh-auto-resume",

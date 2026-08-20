@@ -1,5 +1,7 @@
 # dsh-vision-toolkit
 
+> **⚠️ 已退役（2026-08-22）**：Marisa 组合已移除本插件，由 [`@liustack/modlens`](modlens.md) 取代（无 Python 运行时、纯 JS、跨平台；默认匿名 Zen MiMo 端点沿用 `https://opencode.ai/zen/v1` + `mimo-v2.5-free`，由 modlens fork 首启 seed 预置）。下方内容保留为历史记录。决策与迁移过程见 `docs/RESEARCH-modlens-vision-switch-20260822.md`。
+
 ## 基线
 
 - 上游仓库：`https://github.com/Anionex/dsh-vision-toolkit.git`（agent-vision-toolkit 壳仓库的 npm 包子模块；2026-08-13 上游重构，原 dsh-external 镜像 URL 作废）

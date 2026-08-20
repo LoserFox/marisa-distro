@@ -20,7 +20,7 @@
 
 | 类型 | 数量 | 插件 |
 |---|---|---|
-| **需 patch insert（20）** | 见下节 | better-sidebar / track / git-identity / genui / workflow / vision-toolkit / ui-notify / suggested-replies / whale-girl / qwen-mm(禁用) / multimedia-webui-input / cc-tui / drag-and-drop / stickers / gal / diff-viewer / code-map / sonar / sidechain / llm-fallbacks |
+| **需 patch insert（20）** | 见下节 | better-sidebar / track / git-identity / genui / workflow / modlens / ui-notify / suggested-replies / whale-girl / qwen-mm(禁用) / multimedia-webui-input / cc-tui / drag-and-drop / stickers / gal / diff-viewer / code-map / sonar / sidechain / llm-fallbacks |
 | **纯 client（dsh.client，无需 patch）** | 6 | dsh-ui-progress / dsh-paste-input / dsh-input-history / dsh-web-review(@canglongcl) / dsh-artifact |
 | **非 bundle（不可 npm file 依赖）** | 1 | dsh-win-port（无 package.json，Windows 移植脚本，单独处理） |
 

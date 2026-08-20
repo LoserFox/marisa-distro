@@ -2,7 +2,7 @@
 /**
  * generate-profile.mjs — materialize the marisa v2 distribution.
  *
- * Reads profiles/marisa/plugins.json (29 vendored plugins) and writes:
+ * Reads profiles/marisa/plugins.json (30 vendored plugins) and writes:
  *   1. bundles/marisa-bundle/package.json — the fork's aggregation bundle:
  *      the 21 vendored git plugins + pwsh lane + tool-cordis + skill-manager
  *      as file: deps, with the composition patch (cordis.patch.yml, checked
@@ -66,8 +66,8 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 // ── manifest ─────────────────────────────────────────────────────────────
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
-if (gitPlugins.length !== 22) throw new Error(`expected 22 git plugins, got ${gitPlugins.length}`);
-if (npmPlugins.length !== 8) throw new Error(`expected 8 npm plugins, got ${npmPlugins.length}`);
+if (gitPlugins.length !== 21) throw new Error(`expected 21 git plugins, got ${gitPlugins.length}`);
+if (npmPlugins.length !== 9) throw new Error(`expected 9 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
 const bundleDeps = {};
@@ -218,6 +218,7 @@ const minimumReleaseAgeExclude = [
   ...MYGO_PACKAGES.map((name) => `${name}@0.2.0-rc.7`),
   '@r05en1cu/dsh-mygo-api@0.2.0-rc.7',
   '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.7',
+  '@liustack/modlens@3.22.1',
 ];
 const workspaceYaml = `# marisa v2 profile workspace — joins the marisa-distro harness workspaces.
 packages:

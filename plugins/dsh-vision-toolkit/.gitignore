@@ -1,8 +1,0 @@
-node_modules/
-*.tsbuildinfo
-*.tgz
-.DS_Store
-.dsh-vision-toolkit/
-.venv/
-__pycache__/
-*.pyc
