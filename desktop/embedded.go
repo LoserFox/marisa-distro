@@ -100,6 +100,9 @@ func ensureBackend() (string, error) {
 		return dir, nil
 	}
 
+	// 升级迁移起点：旧 backend 的版本号（读不到视为空，跳过迁移）。
+	from, _ := readBackendVersionFile(dir)
+
 	stagingDir := dir + ".extracting"
 	log.Printf("extracting embedded backend (version %s, %d bytes) to %s", want, len(backendZip), stagingDir)
 	progress := newExtractionProgress(int64(len(backendZip)))
@@ -119,6 +122,11 @@ func ensureBackend() (string, error) {
 	n, err := extractBackend(backendZip, stagingDir, progress.report)
 	if err != nil {
 		return "", fmt.Errorf("extract backend to %s: %w", stagingDir, err)
+	}
+	// 升级迁移（阶段 1）：解包 staging 之后、删除旧 backend 之前执行。
+	// 失败保留旧目录可启动，下次启动重试；无 MIGRATIONS.json 或 from 为空时跳过。
+	if err := runUpgradeMigrations(dir, stagingDir, from, want); err != nil {
+		return "", fmt.Errorf("upgrade migrations %s -> %s: %w (old backend kept)", from, want, err)
 	}
 	if err := os.RemoveAll(dir); err != nil {
 		return "", fmt.Errorf("remove stale backend %s: %w", dir, err)
