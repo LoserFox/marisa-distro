@@ -4,12 +4,12 @@
     "mode": "mirror",
     "path": "harness",
     "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
-    "baseline": "141eb6fef83422698aef7a981029e843e8161534",
+    "baseline": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
     "baselineReviewed": "2026-08-22",
-    "dshVersion": "0.1.0-rc.8",
+    "dshVersion": "0.1.1-rc.2",
     "channel": "next",
     "diffDocument": "docs/upstream-diff.md",
-    "note": "rc8 swap 2026-08-22 (test branch feature/rc8-test): upstream tree replaced with dsh-v0.1.0-rc.8 (141eb6fe, 318 commits past rc7); replay = anchored-standard preset only (apps/cli/src/6 files + webserver + pnpm-workspace unchanged upstream per RESEARCH-rc8-migration-20260820); root workspace deps bumped ^0.1.0-rc.8, dead packages dsh-client-web-react/dsh-client-schema-form removed; verification pending (build/boot/真机)"
+    "note": "0.1.1-rc.2 swap 2026-08-22 (branch sync/0.1.1-rc1, worktree off origin/main 578bf32e): upstream tree replaced with dsh-v0.1.1-rc.2 (b150a551, 207 commits past rc8, zero upstream deletions; rc.1 528c682e superseded by rc.2 before validation - image pipeline unification master/Files, attachment canonical encoding, deepseek Files fallback, read_image downscale coords, permission-default rework reverted #2608); replay = anchored-standard preset only; restored scripts/release/* silently dropped by rc8 swap via root .gitignore release/ rule (git add -f); removed legacy harness/.tmp-rc7-tree.tar (52MB); root deps bumped ^0.1.0-rc.8 -> ^0.1.1-rc.2 + minimumReleaseAgeExclude 0.1.1 block (root yaml + profile generator); Windows tree form: symlinks stored as content-equal plain files / exec bits absent (blob SHAs verified identical to upstream); verification pending"
   },
   "plugins": [
     {
