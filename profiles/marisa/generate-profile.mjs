@@ -219,6 +219,21 @@ const minimumReleaseAgeExclude = [
   '@r05en1cu/dsh-mygo-api@0.2.0-rc.7',
   '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.7',
   '@liustack/modlens@3.22.1',
+  // 0.1.1-rc.1 sync (2026-08-22): mirror the root workspace registry bump so
+  // the bundle prod closure resolves the same generation if it ever falls
+  // back to the registry instead of workspace links.
+  '@deepseek-ai/dsh-agent@0.1.1-rc.2',
+  '@deepseek-ai/dsh-brand@0.1.1-rc.2',
+  '@deepseek-ai/dsh-commands@0.1.1-rc.2',
+  '@deepseek-ai/dsh-invariants@0.1.1-rc.2',
+  '@deepseek-ai/dsh-llm@0.1.1-rc.2',
+  '@deepseek-ai/dsh-session@0.1.1-rc.2',
+  '@deepseek-ai/dsh-settings@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage-domain@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage-sqlite@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage@0.1.1-rc.2',
+  '@deepseek-ai/dsh-system-prompt@0.1.1-rc.2',
+  '@deepseek-ai/dsh-tools@0.1.1-rc.2',
 ];
 const workspaceYaml = `# marisa v2 profile workspace — joins the marisa-distro harness workspaces.
 packages:
