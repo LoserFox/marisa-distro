@@ -13,7 +13,13 @@
 - 原位替换：CSS `:has()` + 兄弟选择器隐藏官方发送按钮（`div[data-slot="conversation.input.right"]:has(button.dsh-resume-play) ~ button[aria-label="发送消息"|"Send message"]`）——纯插件侧样式覆盖，不修改 harness 源码。
 - 中断判定（`src/interrupted.js` 的 `isInterrupted`）：未运行 + 仍打开 + （未完成 partial / 最后节点 `assistant.interrupted` / `turn-max-tokens` / 未闭合回合计时）。
 - 点击动作复用输入机：`setDraft('继续')` + `submit()`（与官方 max-tokens 提示一致）。
-- 构建：`scripts/build-client.mjs`（esbuild + `__ModuleLoader__` wrapper → `dist/client.js`）；测试 `test/unit.mjs`（node:test，8 例覆盖中断判定全分支）。
+- 构建：`scripts/build-client.mjs`（esbuild + `__ModuleLoader__` wrapper → `dist/client.js`）；测试 `test/unit.mjs`（node:test，9 例覆盖中断判定全分支 + client bundle 导出契约）。
+
+## rc8 修复（2026-08-22）：client bundle 必须声明 inject
+
+rc8 冒烟（headless Chromium 加载真实 web）发现启动即报 `failed to apply loader entry (@dsh-external/dsh-auto-resume): cannot get property "slots" without inject`，整个 GUI 卡在 boot 失败页。根因：`src/client.jsx` 只导出 `apply`，未导出 `inject`；Cordis 的 ctx 代理仅按插件 `inject` 白名单解析 `ctx.<service>`（见 harness `vendor/cordis/src/reflect.ts`），`apply()` 里 `ctx.slots.inject(...)` 直接抛错。对照 `dsh-bash-terminal` 的同款 slots 用法（声明 `export const inject = ["slots", "locale", "settingsScope"]`）。
+
+修复：`src/client.jsx` 增加 `export const inject = ['slots']`（locale 保持 `ctx.get()` 可选读取，不设硬依赖）并重建 `dist/client.js`；`test/unit.mjs` 新增「client bundle exports inject with slots」回归用例。验证证据：`node test/unit.mjs` 9/9 通过；stage 后端 boot + headless Chromium 冒烟，boot 页无插件失败横幅、应用完整挂载（截图 `release/smoke-rc8-fixed.png`）。
 
 ## 同步动作
 

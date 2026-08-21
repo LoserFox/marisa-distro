@@ -16,14 +16,15 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// plugins/dsh-auto-resume/src/client.jsx
+// .claude/worktrees/rc8-test/plugins/dsh-auto-resume/src/client.jsx
 var client_exports = {};
 __export(client_exports, {
-  apply: () => apply
+  apply: () => apply,
+  inject: () => inject
 });
 module.exports = __toCommonJS(client_exports);
 
-// plugins/dsh-auto-resume/src/interrupted.js
+// .claude/worktrees/rc8-test/plugins/dsh-auto-resume/src/interrupted.js
 function isInterrupted(session) {
   if (session === void 0 || session === null) return false;
   if (session.running || session.removed) return false;
@@ -47,9 +48,10 @@ function isInterrupted(session) {
   return false;
 }
 
-// plugins/dsh-auto-resume/src/client.jsx
+// .claude/worktrees/rc8-test/plugins/dsh-auto-resume/src/client.jsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var NS = "dsh-auto-resume";
+var inject = ["slots"];
 function PlayIcon() {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": true, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 2.5L13 8L4 13.5V2.5Z", fill: "currentColor" }) });
 }

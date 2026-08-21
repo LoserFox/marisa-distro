@@ -11,6 +11,11 @@ import { isInterrupted } from './interrupted.js'
 
 const NS = 'dsh-auto-resume'
 
+// Cordis resolves ctx.<service> through the plugin's inject whitelist only;
+// apply() uses ctx.slots, so the slots service must be declared here.
+// (locale stays optional and is read via ctx.get() below.)
+export const inject = ['slots']
+
 /** The play icon mirrors the send icon's box and stroke weight. */
 function PlayIcon() {
   return (
