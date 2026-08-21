@@ -204,6 +204,22 @@ bundles 仅 dsh-base 的组合树 78 条、无 webserver/web-runtime、不打印
 
 ### 9.6 待办（未在本轮内）
 
-- 移植项 3：页面挂掉时的恢复入口（健康监控触发 → 窗口切急救页，带失败上下文）。
 - --rescue 真机验证（见 §9.2）。
 - mygo 安装链路接线 wal begin/seal/verify（WAL 的写入端），及急救页 WAL 回滚卡片。
+
+### 9.7 移植项 3：页面挂时的恢复入口（2026-08-23，本分支提交 5）
+
+对应上游 boot 页注入的场景（webserver 起来了但页面挂了），利用壳层控窗口优势实现，
+不动 vendored harness：
+
+- `main.go` healthErr 分支：页面健康检查失败（白屏/client 模块加载失败）不再静默
+  「计入失败→重启等待降级」，而是立即 `enterRescue`——窗口直接切到急救页（带失败
+  原因 + 插件管理 + 恢复动作），用户可即时禁用出问题的插件或重试。
+- `enterRescue` 增加 `waitNav` 参数：stage=rescue 冷启动（窗口停在 landing）走原
+  等待导航逻辑；页面挂场景（窗口已在后端页面）直接 SetURL，避免 awaitWebviewReady
+  死等下一次导航事件（120s 超时）而切不过去。
+- 语义：页面挂不再累计到 normal→minimal 降级计数（每次都直接给入口）；三级状态机
+  保留给「后端起不来」的连续失败降级。
+
+测试证据：go test 双 tag 全绿（-count=1 强制重跑）；此改动为 supervise 集成路径，
+真机验证随 §9.2 一并安排。
