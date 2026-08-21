@@ -12,11 +12,13 @@ import (
 // webCommandLine 返回启动 dsh web 后端的完整命令行。`{port}` 占位符会被
 // 替换为实际端口(默认 "0",由 OS 分配);DSH_WEB_CMD 未设置时用 PATH 上的
 // `dsh`(install-windows.ps1 安装的 dsh.cmd,或补丁后检出的 bin\dsh.cmd)。
+// rc8 (#2410) 起 `dsh web` 默认自动打开浏览器;桌面壳自带 WebView2 窗口,
+// 必须显式 --no-open。
 func webCommandLine(port string) string {
 	if cmd := os.Getenv("DSH_WEB_CMD"); cmd != "" {
 		return strings.ReplaceAll(cmd, "{port}", port)
 	}
-	return "dsh web --port " + port
+	return "dsh web --no-open --port " + port
 }
 
 // parseCommandLine 把一行命令行拆成 argv:空白分隔,双引号内的空格保留,

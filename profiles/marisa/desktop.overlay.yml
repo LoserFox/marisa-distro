@@ -6,3 +6,14 @@
   config:
     host: 127.0.0.1
     port: 0
+
+# rc8 (#2410): `dsh web` opens the default browser unless --no-open; the
+# launcher path (bin.js --profile marisa, no web subcommand) cannot pass the
+# flag, so pin the web-app bundle's web-runtime row here. The restated keys
+# mirror packages/bundle/web-app/cordis.patch.yml.
+- id: web-runtime
+  config:
+    openBrowser: false
+    printUrl: true
+    surfaceContext: true
+    trustedHosts: !!js ctx.webStartup.trustedHosts

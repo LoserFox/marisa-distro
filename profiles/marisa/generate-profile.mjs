@@ -250,6 +250,10 @@ allowBuilds:
   sharp: true
 
 overrides:
+  # rolldown 1.2.5 (2026-08-19) crashes dsh-sidechain tsdown builds (masked
+  # "Cannot convert undefined or null to object"); pin the proven 1.2.4 to match
+  # the root workspace.
+  rolldown: 1.2.4
   '@dsh-external/dsh-code-map>schemastery': 'npm:@deepseek-ai/schemastery@3.18.1'
   # Some third-party plugin declares bare 'cordis: >=4.0.0 <5.0.0-0'; pin
   # the bare peer to the rc7-compatible release used by the root workspace.

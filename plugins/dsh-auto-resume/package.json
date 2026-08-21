@@ -6,6 +6,7 @@
   "description": "Resume an interrupted conversation from the composer: the send button becomes a play button that submits 继续/Continue.",
   "license": "MIT",
   "exports": {
+    ".": "./src/index.js",
     "./client": "./dist/client.js",
     "./package.json": "./package.json"
   },
