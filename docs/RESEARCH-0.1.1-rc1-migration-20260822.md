@@ -108,3 +108,26 @@ git -C $env:TEMP\dsh-upstream-bare diff --name-status dsh-v0.1.0-rc.8 dsh-v0.1.1
 
 - `maintenance/upstreams.json`：harness 节点更新 `baseline`（528c682e…）、`dshVersion`（0.1.1-rc.1）、`note`（同步日期与要点）。
 - `docs/upstream-diff.md`：基线表更新；逐项复核「重放、迁移或删除」三选并记录。
+
+## 十一、执行记录（2026-08-22，分支 sync/0.1.1-rc1）
+
+**版本线更新：rc.1 已让位 rc.2。** 0.1.1-rc.1（528c682e，08-21 发布）在本同步完成前即被 0.1.1-rc.2（b150a551，08-22）取代——35 提交 / 431 文件：图像管线大一统（master/Files 双请求合并、附件规范化编码、deepseek Files 回退、read_image 缩放坐标）、权限默认值重做回滚（#2608 revert）。**最终换树目标 = 0.1.1-rc.2**，本文档 rc.1 部分作为差异分析方法与基线对照保留。
+
+已执行：
+
+1. **worktree**：`git worktree add -b sync/0.1.1-rc1 .claude/worktrees/sync-011-rc1 origin/main`（578bf32e，rc.8 树）。
+2. **增量盘点**：对象层比对（index blob SHA vs 上游 rc.8 tree）——真实本地增量仅 `anchored-standard/` 四件套 + `.tmp-rc7-tree.tar`（52MB 遗留，随换树清除）；15 个 mode 位伪差异（symlink 120000→100644、可执行位 100755→100644，blob 全同）；另发现 rc8 换树被根 `.gitignore` 的 `release/` 规则误吞 `harness/scripts/release/*` 9 个源码文件。
+3. **换树**：tar 导出 + 保留/回放 anchored-standard 与 8 个 Windows 链接文件（内容 = 链接目标字符串，与上游 blob 逐字节一致）；`git add` 时用 `GIT_CONFIG_*` 环境变量局部禁用 autocrlf 避免 CRLF 洗库；`scripts/release` 需 `git add -f`。对象层终检：仅 Marisa=4 / 仅上游=0 / 内容差异=0。提交 `62f7f8cc`（amend 自 rc.1 版）。
+4. **依赖升级**：根 package.json 56 个 `^0.1.0-rc.8` → `^0.1.1-rc.2`；根 pnpm-workspace.yaml 追加 0.1.1-rc.2 白名单块（56 条）；`generate-profile.mjs` 白名单补 12 条 rc.2（profile 生成面）。
+5. **安装环境坑（本机实测）**：
+   - pnpm（11.9.0，undici）**不吃 socks5 代理**——`.npmrc` 写 `socks5://127.0.0.1:10808` 导致所有 registry GET `error (unknown)` 无限重试；**registry.npmjs.org 当前直连可达**（1s 200），删掉代理行即可。
+   - 全新 worktree 缺 `profiles/marisa/runtime/`（gitignore 的生成物）→ 非 frozen install 报 `ERR_PNPM_WORKSPACE_PKG_NOT_FOUND marisa-marisa`（root deps 的 `marisa-marisa@workspace:^` 解析到 `link:profiles/marisa/runtime`）；解法：先 `MARISA_PROFILE_DIR=<worktree>\profiles\marisa\runtime node profiles/marisa/generate-profile.mjs`。
+   - 285 workspace 项目链接阶段 **Node OOM**（默认堆 4GB）→ `NODE_OPTIONS=--max-old-space-size=8192`（**每次 install 都要带**，frozen 同样会炸）。
+   - **全新 worktree 首次 install 必挂于 mygo-panel prepare**：`TS2664 module '@deepseek-ai/dsh-client-ui-slots' cannot be found`——mygo-panel 以 `workspace:^` 引用 ui-slots/ui-settings/client-runtime，这些包**无 prepare 脚本**（lib 由上游根构建管线产出），全新克隆时 lib 不存在 → 增强目标类型解析失败（rc.8 环境能过是因为早已构建过）。解法：先构建 harness lib——cwd=harness、二进制走根 `node_modules\.bin`（不能 `pnpm --dir harness`，会触发嵌套 workspace）：`tsc -b tsconfig.host.json` → `tsdown --env.DSH_BUILD_FACE host` → `tsc -b tsconfig.client.json` → `tsdown --env.DSH_BUILD_FACE client`（先 host 后 client，client 依赖 host 产出的子路径类型如 `dsh-session-reference/remote`）。另需 `harness/node_modules/@types` junction → 根 `node_modules/@types`（TS 在 harness/node_modules 处找不到 @types/node，TS2688）。
+   - 安装会重建 `plugins/dsh-stickers/lib/*`（CSS 哈希含源码绝对路径，worktree 路径不同即变）——纯构建噪声，`git checkout` 还原即可。
+   - `bundles/marisa-bundle/package.json` 由生成器重写后内容与已提交版一致（仅 EOL 噪声），已 checkout 还原。
+6. **记账**：upstreams.json（baseline=b150a551…、dshVersion=0.1.1-rc.2、note 同步）、upstream-diff.md（基线表 + 版本线说明 + scripts/release 与 Windows 平台形态两行）。
+
+验证结果（2026-08-22 全绿）：`pnpm install --frozen-lockfile` 通过（NODE_OPTIONS=8G）、`pnpm test` 三套全过、桌面 Go installedbundle/embeddedbundle 双 tag 通过（embeddedbundle 需先复制 `desktop/bundle/backend.tar.zst` 生成物）、PR 边界检查通过（2433 路径）。分支 `sync/0.1.1-rc1` 三分提交：`62f7f8cc` 换树 / `fa9fe594` 依赖 / `b983b275` 记账；工作树干净，未 push。
+
+遗留（分支外）：真机窗口验收 + MSI 链路；vision-toolkit 0.1.36+ 与原生 vision 取舍复评（rc.2 图像管线大一统后更必要）；上游 mygo 的 `settings.plugin.item` 槽位兼容性已在本次以预构建 lib 方式解围（上游 mygo 未适配 rc.1/rc.2，见第十一节第 5 条）。

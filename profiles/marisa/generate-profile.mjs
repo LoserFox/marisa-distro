@@ -67,7 +67,7 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
 if (gitPlugins.length !== 21) throw new Error(`expected 21 git plugins, got ${gitPlugins.length}`);
-if (npmPlugins.length !== 10) throw new Error(`expected 10 npm plugins, got ${npmPlugins.length}`);
+if (npmPlugins.length !== 9) throw new Error(`expected 9 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
 const bundleDeps = {};
@@ -219,6 +219,21 @@ const minimumReleaseAgeExclude = [
   '@r05en1cu/dsh-mygo-api@0.2.0-rc.7',
   '@r05en1cu/dsh-mygo-loader-profile@0.2.0-rc.7',
   '@liustack/modlens@3.22.1',
+  // 0.1.1-rc.1 sync (2026-08-22): mirror the root workspace registry bump so
+  // the bundle prod closure resolves the same generation if it ever falls
+  // back to the registry instead of workspace links.
+  '@deepseek-ai/dsh-agent@0.1.1-rc.2',
+  '@deepseek-ai/dsh-brand@0.1.1-rc.2',
+  '@deepseek-ai/dsh-commands@0.1.1-rc.2',
+  '@deepseek-ai/dsh-invariants@0.1.1-rc.2',
+  '@deepseek-ai/dsh-llm@0.1.1-rc.2',
+  '@deepseek-ai/dsh-session@0.1.1-rc.2',
+  '@deepseek-ai/dsh-settings@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage-domain@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage-sqlite@0.1.1-rc.2',
+  '@deepseek-ai/dsh-storage@0.1.1-rc.2',
+  '@deepseek-ai/dsh-system-prompt@0.1.1-rc.2',
+  '@deepseek-ai/dsh-tools@0.1.1-rc.2',
 ];
 const workspaceYaml = `# marisa v2 profile workspace — joins the marisa-distro harness workspaces.
 packages:
@@ -263,11 +278,6 @@ overrides:
   # 0.4.9 pin would otherwise win the top-level hoist in --prod and break
   # boot). Mirrors the root workspace.
   fflate: '0.8.3'
-  # schemastery 单实例（2026-08-23，随 mygo devDeps 升 0.1.x）：@deepseek-ai/dsh-*
-  # 的 0.1.x 依赖声明 ^3.18.1，与 vendored mygo 钉的 3.18.1-rc.1 形成双实例，
-  # 会让 mygo 的 schema 推断类型无法命名（tsc TS2883）。与上游 dsh-mygo
-  # PR #1 同款 override。
-  '@deepseek-ai/schemastery': '3.18.1-rc.1'
 
 minimumReleaseAgeExclude:
 ${minimumReleaseAgeExclude.map((p) => `  - '${p}'`).join('\n')}
