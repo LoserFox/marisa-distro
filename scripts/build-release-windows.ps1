@@ -8,8 +8,9 @@ param(
 $ErrorActionPreference = 'Stop'
 $env:CI = 'true'   # pnpm non-interactive mode: never prompt for modules-dir purge confirmation
 # pnpm resolution (verification-profile install) can exceed the default V8 heap
-# on the ~275-project workspace; cap is a limit, not a reservation.
-$env:NODE_OPTIONS = '--max-old-space-size=8192'
+# on the ~286-project workspace; cap is a limit, not a reservation.
+# 2026-08-22: 8G 在合并后工作区（286 项目）链接阶段 OOM（V8 堆满 8.2G），提到 10G。
+$env:NODE_OPTIONS = '--max-old-space-size=10240'
 $env:npm_config_fetch_retries = '5'
 $env:npm_config_fetch_retry_mintimeout = '2000'
 $env:npm_config_network_concurrency = '8'
