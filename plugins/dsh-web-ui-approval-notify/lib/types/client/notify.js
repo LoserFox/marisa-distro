@@ -13,6 +13,19 @@ export function hiddenNow() {
 export function desktopShellNow() {
     return typeof window !== 'undefined' && '_wails' in window;
 }
+/** localStorage key persisting the user's notification display style. */
+export const STYLE_KEY = 'dsh-web-ui-notify.style';
+/**
+ * Read the persisted notification style. Missing or invalid values fall back
+ * to 'native' (the desktop shell's preferred path; when the native bridge is
+ * unavailable the display falls back to the browser default anyway).
+ * @returns the persisted style, defaulting to 'native'.
+ */
+export function notificationStyle() {
+    if (typeof localStorage === 'undefined')
+        return 'native';
+    return localStorage.getItem(STYLE_KEY) === 'webview' ? 'webview' : 'native';
+}
 /**
  * Whether the user is away from this app: the page is hidden, or — in the
  * Wails desktop shell — the window lost focus while staying visible. A plain
@@ -73,12 +86,14 @@ function fetchNativeToast(title, body, sessionId) {
 }
 /**
  * The one rendering path every notification kind funnels through. In the
- * Wails desktop shell the notification is delegated to the host-side native
- * toast bridge (falling back to the WebView2 default UI when the bridge is
- * unavailable); in a plain browser it uses `new Notification` directly.
+ * Wails desktop shell with the 'native' style (the default) the notification
+ * is delegated to the host-side native toast bridge (falling back to the
+ * WebView2 default UI when the bridge is unavailable); with the 'webview'
+ * style — or in a plain browser, which has no native bridge — it uses
+ * `new Notification` directly.
  */
 function show(title, body, tag, target) {
-    if (desktopShellNow()) {
+    if (desktopShellNow() && notificationStyle() === 'native') {
         void fetchNativeToast(title, body, target.sessionId).catch(() => {
             withClickFocus(new Notification(title, { body, tag, requireInteraction: true }), target.onOpen);
         });

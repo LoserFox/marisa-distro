@@ -7,7 +7,7 @@
  * fiber-teardown cleanup.
  */
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ISessions, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
@@ -16,6 +16,21 @@ import { NotificationSettingsRow } from '../src/client/NotificationSettingsRow.t
 import { apply, inject } from '../src/client/index.ts'
 
 const SID = 's1' as SessionId
+
+/** In-memory Storage stub: this environment's `localStorage` global is undefined. */
+class MemoryStorage implements Storage {
+  private store = new Map<string, string>()
+  get length(): number { return this.store.size }
+  clear(): void { this.store.clear() }
+  getItem(key: string): string | null { return this.store.has(key) ? this.store.get(key)! : null }
+  key(index: number): string | null { return [...this.store.keys()][index] ?? null }
+  removeItem(key: string): void { this.store.delete(key) }
+  setItem(key: string, value: string): void { this.store.set(key, String(value)) }
+}
+
+beforeEach(() => {
+  Object.defineProperty(globalThis, 'localStorage', { value: new MemoryStorage(), configurable: true, writable: true })
+})
 
 /** Scripted notification: construct from options, record the instance, and let the test fire onclick. */
 class StubNotification {
@@ -191,6 +206,7 @@ afterEach(() => {
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
   delete (globalThis as { Notification?: unknown }).Notification
   delete (window as { _wails?: unknown })._wails
+  delete (globalThis as { localStorage?: unknown }).localStorage
 })
 
 describe('apply', () => {
@@ -370,6 +386,33 @@ describe('apply', () => {
     expect(notify.created[0]).toMatchObject({
       title: '主会话 · 需要审批',
       options: { body: '越权执行', tag: 'a:rpc-19' },
+    })
+  })
+
+  it('uses the browser default UI instead of the native route when the style is webview', async () => {
+    const { ctx, notify } = await bench()
+    // User chose the WebView2 style: even in the shell, display goes to the
+    // browser default Notification UI, not the host-side native-toast bridge.
+    localStorage.setItem('dsh-web-ui-notify.style', 'webview')
+    Object.assign(window, { _wails: {} })
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    notify.created.length = 0
+    const approval = {
+      kind: 'approval',
+      key: 'a:rpc-18',
+      payload: { approvalId: 'ap-18', toolName: 'bash', reason: '越权执行' },
+    }
+    const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
+    sessions.setPending([approval])
+    expect(notify.created).toHaveLength(1)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(notify.created[0]).toMatchObject({
+      title: '主会话 · 需要审批',
+      options: { body: '越权执行', tag: 'a:rpc-18' },
     })
   })
 

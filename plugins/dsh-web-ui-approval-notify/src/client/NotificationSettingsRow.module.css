@@ -38,6 +38,39 @@
   color: var(--dsw-alias-label-secondary);
 }
 
+.styleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.styleLabel {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+}
+
+.styleSelect {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-module-platform);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.styleHint {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .button {
   display: inline-flex;
   align-items: center;

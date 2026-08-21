@@ -36,6 +36,17 @@ export declare function hiddenNow(): boolean;
  * @returns true when the Wails runtime marker is present.
  */
 export declare function desktopShellNow(): boolean;
+/** localStorage key persisting the user's notification display style. */
+export declare const STYLE_KEY = "dsh-web-ui-notify.style";
+/** Notification display style: native Windows toast, or the browser default UI. */
+export type NotifyStyle = 'native' | 'webview';
+/**
+ * Read the persisted notification style. Missing or invalid values fall back
+ * to 'native' (the desktop shell's preferred path; when the native bridge is
+ * unavailable the display falls back to the browser default anyway).
+ * @returns the persisted style, defaulting to 'native'.
+ */
+export declare function notificationStyle(): NotifyStyle;
 /**
  * Whether the user is away from this app: the page is hidden, or — in the
  * Wails desktop shell — the window lost focus while staying visible. A plain

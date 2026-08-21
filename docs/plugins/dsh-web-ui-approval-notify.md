@@ -51,6 +51,14 @@ id/url/rev/inject），浏览器半的开关只能靠壳侧。
    `window.__dshWebUiNotifyOpen?.("<sid>")` → 客户端 `sessions.open`。
 5. **提醒默认打开**：`desktop/main.go` 注入 `requestNotificationPermissionJS`
    （启动时自动请求一次通知权限，壳全局 ALLOW 立即放行；回退路径所需）。
+6. **通知样式设置**（追加）：设置 → 通用 的「桌面通知」行新增「通知样式」
+   下拉（localStorage `dsh-web-ui-notify.style`，默认 `native`）：
+   - **系统原生 (Windows Toast)**：壳内走上面的桥接链路（默认）；
+   - **浏览器默认 (WebView2)**：壳内也直接用 `new Notification`（WebView2
+     自绘 UI），不经过原生桥；
+   普通浏览器无原生桥，始终为浏览器默认。偏好存 localStorage——客户端插件
+   读不到 profile 行 config（`__DSH_BOOT__` 只带 id/url/rev/inject），
+   浏览器半的开关只能靠壳侧/localStorage。
 
 权限影响（AGENTS.md 要求注明）：本插件 host 半边新增网络能力——仅向
 `127.0.0.1:<MARISA_TOAST_PORT>`（壳注入的随机回环端口）发起 POST；桌面壳
