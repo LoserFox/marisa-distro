@@ -381,6 +381,12 @@ func enterRescue(ctx context.Context, win *application.WebviewWindow, ready <-ch
 }
 
 func main() {
+	// `wal` 子命令：安装事务 WAL 的 CLI 入口（install_wal_cli.go）。先于
+	// 控制台/日志/GUI 初始化分派，安装链路调用后直接退出，不进入桌面流程。
+	if handleWalCLI() {
+		return
+	}
+
 	// --console / MARISA_CONSOLE=1：GUI 子系统发行构建默认无控制台，显式
 	// 请求时分配一个并把 stdout/stderr 接过去（必须在 setupLogging 捕获
 	// os.Stderr 镜像之前调用；dev 构建从终端启动时 AllocConsole 失败即保持
