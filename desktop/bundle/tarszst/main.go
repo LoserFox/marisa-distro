@@ -61,12 +61,12 @@ func main() {
 	bw := bufio.NewWriterSize(f, 4<<20)
 	enc, err := zstd.NewWriter(bw,
 		zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(8)), // zstd -8 sweet spot
-		zstd.WithEncoderConcurrency(runtime.GOMAXPROCS(0)), // block-parallel
+		zstd.WithEncoderConcurrency(runtime.GOMAXPROCS(0)),  // block-parallel
 		// 16MB window: larger windows (128MB) shrink the archive further but
 		// far-distance matches make DECODING several times slower — and
 		// install time matters more than download size (measured 2026-08-18:
 		// 108MB archive @128MB window decoded in 23.6s vs 16MB window's ~5s).
-		zstd.WithWindowSize(16 << 20),
+		zstd.WithWindowSize(16<<20),
 		zstd.WithEncoderCRC(false), // tar carries no CRC anyway
 	)
 	if err != nil {
@@ -92,11 +92,11 @@ func main() {
 			continue
 		}
 		err := tw.WriteHeader(&tar.Header{
-			Name:    it.name,
+			Name:     it.name,
 			Typeflag: tar.TypeReg,
-			Mode:    0o644,
-			Size:    it.size,
-			ModTime: epoch,
+			Mode:     0o644,
+			Size:     it.size,
+			ModTime:  epoch,
 		})
 		if err != nil {
 			fatal(err)
@@ -105,9 +105,16 @@ func main() {
 		if err != nil {
 			fatal(err)
 		}
+		// Guard against the file changing between collect() and open (hard
+		// links into the pnpm store can be rewritten mid-build): a stale
+		// Size header would abort the whole stream with "write too long".
+		if fi, statErr := in.Stat(); statErr == nil && fi.Size() != it.size {
+			in.Close()
+			fatal(fmt.Errorf("file changed size during archive: %s (%d -> %d)", it.name, it.size, fi.Size()))
+		}
 		if _, err := io.Copy(tw, in); err != nil {
 			in.Close()
-			fatal(err)
+			fatal(fmt.Errorf("write %s: %w", it.name, err))
 		}
 		in.Close()
 		files++

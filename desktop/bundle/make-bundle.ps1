@@ -258,6 +258,19 @@ if (-not $SkipBodies) {
   Write-Host 'copying profile files (node_modules excluded) ...'
   Copy-DerefTree $profile "$stage\.dsh\profiles\marisa" 'node_modules'
 
+  # dsh-stickers runtime PNGs -> WebP + patch references. Runs BEFORE the
+  # prod install: pnpm hard-links the plugin's file: copies from this staged
+  # dir, so every shipped copy (plugins/, bundle nm, hoisted nm) inherits the
+  # patched content at creation and nothing writes stickers files afterwards —
+  # an in-place rewrite through the shared inode previously raced tarszst's
+  # stat/read window and aborted the archive (2026-08-22).
+  $stickerPlugin = "$stage\marisa-distro\plugins\dsh-stickers"
+  if (Test-Path "$stickerPlugin\assets\stickers") {
+    Write-Host 'converting dsh-stickers PNGs to WebP ...'
+    & node "$repo\desktop\bundle\convert-stickers-webp.mjs" $stickerPlugin
+    if ($LASTEXITCODE -ne 0) { throw "convert-stickers-webp.mjs failed: $LASTEXITCODE" }
+  }
+
   # Marisa is a packaged distribution, not an upstream internal-test build.
   # A bundled DSH home is recreated for each backend version, so seed the
   # upstream acknowledgement with the version that ships in this bundle.
@@ -309,7 +322,7 @@ ui-onboarding:
         $size = (Get-ChildItem $rootPkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
         Remove-Item $rootPkg -Recurse -Force
         $targetRel = 'marisa-distro/plugins/' + $pluginDir.Name
-        $linkRel = 'marisa-distro/node_modules/' + ($pkgName -replace '\', '/')
+        $linkRel = 'marisa-distro/node_modules/' + ($pkgName.Replace('\', '/'))
         New-Item -ItemType Junction -Path $rootPkg -Target (Join-Path $stage ($targetRel -replace '/', '\')) -Force | Out-Null
         $dedupeBytes += [long]$size
         $dedupeCount++
@@ -337,7 +350,7 @@ ui-onboarding:
         $size = (Get-ChildItem $rootPkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
         Remove-Item $rootPkg -Recurse -Force
         $targetRel = $mygoFileDeps[$pkgName]
-        $linkRel = 'marisa-distro/node_modules/' + ($pkgName -replace '\', '/')
+        $linkRel = 'marisa-distro/node_modules/' + ($pkgName.Replace('\', '/'))
         New-Item -ItemType Junction -Path $rootPkg -Target (Join-Path $stage ($targetRel -replace '/', '\')) -Force | Out-Null
         $dedupeBytes += [long]$size
         $dedupeCount++
@@ -366,11 +379,11 @@ ui-onboarding:
             $resolved = Resolve-LinkTarget $rootItem
             if ($resolved) { $target = StageRel $resolved }
           }
-          if (-not $target) { $target = 'marisa-distro/node_modules/' + ($pkgRel -replace '\', '/') }
+          if (-not $target) { $target = 'marisa-distro/node_modules/' + ($pkgRel.Replace('\', '/')) }
           $bundlePkg = Join-Path $scopeDir.FullName $child.Name
           $size = (Get-ChildItem $bundlePkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
           Remove-Item $bundlePkg -Recurse -Force
-          $linkRel = 'marisa-distro/bundles/marisa-bundle/node_modules/' + ($pkgRel -replace '\', '/')
+          $linkRel = 'marisa-distro/bundles/marisa-bundle/node_modules/' + ($pkgRel.Replace('\', '/'))
           New-Item -ItemType Junction -Path $bundlePkg -Target (Join-Path $stage ($target -replace '/', '\')) -Force | Out-Null
           $dedupeBytes += [long]$size
           $dedupeCount++
@@ -832,14 +845,6 @@ foreach ($area in @("$stage\marisa-distro\plugins", "$stage\marisa-distro\bundle
   }
 }
 Write-Host ("  pruned {0} metadata/docs entries ({1:N1} MB)" -f $extraPrunedCount, ($extraPrunedBytes / 1MB))
-
-# 4. Convert dsh-stickers runtime PNGs to WebP and patch plugin references.
-$stickerPlugin = "$stage\marisa-distro\plugins\dsh-stickers"
-if (Test-Path "$stickerPlugin\assets\stickers") {
-  Write-Host 'converting dsh-stickers PNGs to WebP ...'
-  & node "$repo\desktop\bundle\convert-stickers-webp.mjs" $stickerPlugin
-  if ($LASTEXITCODE -ne 0) { throw "convert-stickers-webp.mjs failed: $LASTEXITCODE" }
-}
 
 # --- prune redundant member-internal node_modules ------------------------------
 # (2026-08-18, backend size review) The pnpm install puts two classes of dead
