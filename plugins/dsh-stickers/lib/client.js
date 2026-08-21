@@ -241,8 +241,8 @@ window.__ModuleLoader__.load({
 			return STICKERS.find((sticker) => sticker.id === id);
 		}
 		//#endregion
-		//#region \0dsh-css:C:\Users\lf\Documents\Workspace\marisa-distro\plugins\dsh-stickers\src\client\StickerCard.module.css.mjs
-		const css$1 = ".LaCf1q_card{width:min(340px,78vw);margin:8px 0}.LaCf1q_card>span{color:var(--dsw-alias-label-tertiary);margin-bottom:6px;font-size:12px;display:block}.LaCf1q_card img{object-fit:contain;width:100%;height:auto;display:block}.LaCf1q_user{text-align:right;margin-left:auto}.LaCf1q_user img{margin-left:auto}";
+		//#region \0dsh-css:C:\Users\lf\Documents\Workspace\marisa-distro\.claude\worktrees\rc8-test\plugins\dsh-stickers\src\client\StickerCard.module.css.mjs
+		const css$1 = ".I9OMGG_card{width:min(340px,78vw);margin:8px 0}.I9OMGG_card>span{color:var(--dsw-alias-label-tertiary);margin-bottom:6px;font-size:12px;display:block}.I9OMGG_card img{object-fit:contain;width:100%;height:auto;display:block}.I9OMGG_user{text-align:right;margin-left:auto}.I9OMGG_user img{margin-left:auto}";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=\"@dsh-external/dsh-stickers/StickerCard.module.css\"]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@dsh-external/dsh-stickers";
@@ -251,8 +251,8 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var StickerCard_module_css_default = {
-			"user": "LaCf1q_user",
-			"card": "LaCf1q_card"
+			"card": "I9OMGG_card",
+			"user": "I9OMGG_user"
 		};
 		//#endregion
 		//#region src/client/StickerCard.tsx
@@ -305,8 +305,8 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region \0dsh-css:C:\Users\lf\Documents\Workspace\marisa-distro\plugins\dsh-stickers\src\client\StickerPicker.module.css.mjs
-		const css = ".BNP33a_root{position:relative}.BNP33a_trigger{cursor:pointer;background:0 0;border:0;border-radius:6px;padding:5px;font-size:17px}.BNP33a_trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}.BNP33a_popover{border:1px solid var(--dsw-alias-border-normal);background:var(--dsw-alias-bg-layer-1);z-index:20;border-radius:12px;width:360px;max-height:480px;padding:12px;position:absolute;bottom:42px;right:0;overflow:auto;box-shadow:0 12px 36px #0000004d}.BNP33a_popover header{justify-content:space-between;align-items:center;margin-bottom:10px;display:flex}.BNP33a_popover header button{color:var(--dsw-alias-label-secondary);background:0 0;border:0;font-size:20px}.BNP33a_grid{grid-template-columns:repeat(2,1fr);gap:8px;display:grid}.BNP33a_grid button{border:1px solid var(--dsw-alias-border-normal);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);cursor:pointer;text-align:left;border-radius:9px;padding:6px}.BNP33a_grid button:hover{border-color:var(--dsw-alias-brand-primary)}.BNP33a_grid img{object-fit:contain;width:100%;height:120px;display:block}.BNP33a_grid span{margin-top:4px;font-size:11px;line-height:16px;display:block}.BNP33a_variants{border:1px solid var(--dsw-alias-border-normal);background:var(--dsw-alias-bg-layer-2);border-radius:8px;gap:2px;padding:2px;display:flex}.BNP33a_variants button{color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:0;border-radius:6px;padding:2px 10px;font-size:12px;line-height:18px}.BNP33a_variants button.BNP33a_active{background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);box-shadow:0 1px 3px #0003}";
+		//#region \0dsh-css:C:\Users\lf\Documents\Workspace\marisa-distro\.claude\worktrees\rc8-test\plugins\dsh-stickers\src\client\StickerPicker.module.css.mjs
+		const css = ".Hna8qa_root{position:relative}.Hna8qa_trigger{cursor:pointer;background:0 0;border:0;border-radius:6px;padding:5px;font-size:17px}.Hna8qa_trigger:hover{background:var(--dsw-alias-interactive-bg-hover)}.Hna8qa_popover{border:1px solid var(--dsw-alias-border-normal);background:var(--dsw-alias-bg-layer-1);z-index:20;border-radius:12px;width:360px;max-height:480px;padding:12px;position:absolute;bottom:42px;right:0;overflow:auto;box-shadow:0 12px 36px #0000004d}.Hna8qa_popover header{justify-content:space-between;align-items:center;margin-bottom:10px;display:flex}.Hna8qa_popover header button{color:var(--dsw-alias-label-secondary);background:0 0;border:0;font-size:20px}.Hna8qa_grid{grid-template-columns:repeat(2,1fr);gap:8px;display:grid}.Hna8qa_grid button{border:1px solid var(--dsw-alias-border-normal);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);cursor:pointer;text-align:left;border-radius:9px;padding:6px}.Hna8qa_grid button:hover{border-color:var(--dsw-alias-brand-primary)}.Hna8qa_grid img{object-fit:contain;width:100%;height:120px;display:block}.Hna8qa_grid span{margin-top:4px;font-size:11px;line-height:16px;display:block}.Hna8qa_variants{border:1px solid var(--dsw-alias-border-normal);background:var(--dsw-alias-bg-layer-2);border-radius:8px;gap:2px;padding:2px;display:flex}.Hna8qa_variants button{color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:0;border-radius:6px;padding:2px 10px;font-size:12px;line-height:18px}.Hna8qa_variants button.Hna8qa_active{background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);box-shadow:0 1px 3px #0003}";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=\"@dsh-external/dsh-stickers/StickerPicker.module.css\"]") === null) {
 			const tag = document.createElement("style");
 			tag.dataset.plugin = "@dsh-external/dsh-stickers";
@@ -315,12 +315,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var StickerPicker_module_css_default = {
-			"active": "BNP33a_active",
-			"grid": "BNP33a_grid",
-			"variants": "BNP33a_variants",
-			"trigger": "BNP33a_trigger",
-			"popover": "BNP33a_popover",
-			"root": "BNP33a_root"
+			"active": "Hna8qa_active",
+			"popover": "Hna8qa_popover",
+			"trigger": "Hna8qa_trigger",
+			"variants": "Hna8qa_variants",
+			"root": "Hna8qa_root",
+			"grid": "Hna8qa_grid"
 		};
 		//#endregion
 		//#region src/client/StickerPicker.tsx
