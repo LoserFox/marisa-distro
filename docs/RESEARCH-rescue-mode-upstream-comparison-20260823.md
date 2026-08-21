@@ -123,3 +123,64 @@ WAL 只保护调用方显式传入的绝对路径（默认集合即上表）；�
 
 - 2026-08-23：创建 worktree `.claude/worktrees/rescue-upstream`（分支 `feature/rescue-upstream`，
   基线 origin/main 578bf32e）；本文档落盘；提交 1 = 本文档，提交 2 = WAL 核心（见 git log）。
+
+## 9. 真机验证记录（2026-08-23，用户质疑「我们的急救模式没跑起来过 / minimal 不关插件」后补充）
+
+验证对象：部署树 `%LOCALAPPDATA%\marisa-distro\backend`（VERSION=marisa-backend-0.1.8-rc8test-dirty，
+8/21），运行中 GUI = rc8-test worktree release 构建（138MB exe，二进制内确认含急救模式 marker：
+「魔理沙急救模式」/ rescue-state / MARISA_BOOT_PROFILE）。
+
+### 9.1 minimal（web profile）实际挂载 —— 已实测
+
+- 临时 `DSH_HOME=%TEMP%\rescue-verify-home` + 部署树 node/bin.js `--dump-config`：
+  - web profile 组合树 **135 个条目**（timer/llm/session/typert/fs/tools/approval/skill + 全部
+    web client UI 层 ui-sidebar/ui-settings/ui-conversation……）；
+  - marisa profile 组合树 **166 个条目**（+31 个 marisa 专属）；
+  - web dump 中**无**任何 marisa 专属插件（dsh-better-sidebar/whale-widget/mnemon/marisa-bundle/
+    ego-browser/modlens 均未出现）。
+- 真实启动验证：临时 home + `node bin.js --profile web --patch <marisa desktop.overlay.yml>
+  --patch <standalone.overlay.yml>` → boot 成功（URL http://127.0.0.1:2266，HTTP 200，无报错）。
+- **结论：minimal 确实不加载 marisa 插件（设计意图达成），但挂载 135 个 harness 自带插件，
+  不是「关掉所有插件」的空壳；若故障在 harness 核心层（llm/session/storage/webserver），
+  minimal 照样挂。** 佐证文件：%TEMP%\rescue-verify-web-dump.txt / rescue-verify-marisa-dump.txt。
+- 附带发现：minimal 路径 launcher 仍传 marisa profile 的两个 --patch overlay（desktop.overlay.yml
+  端口/web-runtime + standalone.overlay.yml 两 client 插件），语义上 marisa 配置面混入 web profile
+  （内容无害，但属设计瑕疵，见移植项 2a）。
+
+### 9.2 --rescue 急救模式 —— 未真机验证（待 GUI 空闲）
+
+- 运行中的 GUI 持有单实例互斥体 `Local\io.marisa-distro.desktop.early`（跨安装全局），
+  `--rescue` 无法并行验证；用户选择跳过，待 GUI 空闲。
+- 验证步骤（下次执行）：
+  1. 关闭 GUI（同一 exe 重启，不换版本、不碰 backend 数据）；
+  2. `Marisa-DSH-windows-x64-standalone.exe --rescue` 后台启动；
+  3. 读持久日志（appLogDir）中 `rescue 页面：http://127.0.0.1:<port>/?token=...` 行；
+  4. `GET /api/state`（带 token）验证页面数据（stage/lastError/logTail/capabilities）；
+  5. 验证 `/api/backups`、`/api/open-log`（只读动作），**不执行** /api/rescue 的备份/重解包；
+  6. 结束后杀进程，用同一 exe 正常启动拉回 GUI。
+- 待验证项还包含：三级状态机自然触发路径（连续 2 次快速异常退出 → minimal → 2 次 → rescue）
+  在真机上从未被观察到，属长期未验收路径。
+
+### 9.3 boot 注入 —— 确认缺失
+
+- 我们没有上游 desktop-boot-recovery.ts 式的「webserver 起来了但页面挂了 → 页面内恢复控件」。
+- 现有页面健康监控（monitorPageHealth）只做检测→计入失败→重启/降级，无用户可操作入口。
+- 对应修正见移植项 3（利用壳层控窗口优势：健康监控触发时切窗口到急救页，带失败上下文）。
+
+### 9.4 minimal 修正（2026-08-23，本分支提交 3）
+
+用户质疑「minimal 不关掉所有插件，没什么用」成立。实测补充一个关键约束：**空壳不可行**——
+bundles 仅 dsh-base 的组合树 78 条、无 webserver/web-runtime、不打印 URL，桌面壳无法导航，
+必然超时降级（比现状更糟）。因此 minimal 的正确形态是：
+
+1. **保持 web 模板**（base+web-app，135 条，无 marisa 插件、有完整基础 UI）——这是桌面壳能
+   出界面的最小可用集，且已排除 marisa 层故障；
+2. **脱离 marisa 配置面**：新增出厂 `bundle/minimal.overlay.yml`（webserver 端口 0 +
+   web-runtime openBrowser:false + input 插件），launcher 在 `MARISA_BOOT_PROFILE=web` 时只传
+   该 overlay，不再引用 marisa profile 的 desktop/standalone overlay（shim 实测：
+   `--profile web --patch <minimal.overlay.yml>`；默认分支不变）；
+3. **语义透明化**：rescue_state.go 注释与降级日志改为「基础界面模式（无 Marisa 定制）」，
+   明确 minimal 不是零插件空壳；「按需关掉单个插件」由移植项 2（急救页插件级禁用）承担。
+
+测试证据：go test -tags installedbundle / embeddedbundle 全绿；launcher.cmd 分支 shim 实测
+（默认 marisa 参数不变；BOOT_PROFILE=web 只传 bundled overlay）。

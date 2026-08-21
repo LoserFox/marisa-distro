@@ -17,8 +17,12 @@ const (
 	normalFailuresBeforeMinimal = 2
 	// minimal 阶段连续启动失败多少次后进入急救模式（壳层自带页面）。
 	minimalFailuresBeforeRescue = 2
-	// 极简模式使用的 profile：harness 内置模板（@deepseek-ai/dsh-base +
-	// @deepseek-ai/dsh-web-app），不加载任何 marisa 插件与非核心组合。
+	// minimalBootProfile 是极简模式使用的 profile：harness 内置模板
+	// （@deepseek-ai/dsh-base + @deepseek-ai/dsh-web-app）。它不加载任何
+	// marisa 插件，但仍含 harness 自带的完整基础界面（实测组合树 135 个
+	// 条目）；不是「零插件」空壳——空壳（仅 dsh-base）无 webserver，
+	// 桌面壳无法导航。真正按需关掉单个插件的入口是急救页的插件级禁用
+	// （移植项 2），minimal 只负责「无 Marisa 定制」。
 	minimalBootProfile = "web"
 	// 注入 launcher.cmd 的环境变量：覆盖 --profile 名。
 	bootProfileEnv = "MARISA_BOOT_PROFILE"

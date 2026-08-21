@@ -1,0 +1,29 @@
+# Minimal-boot overlay: the desktop-shell-independent configuration the
+# launcher applies when MARISA_BOOT_PROFILE=web (the minimal fallback after
+# repeated startup failures).
+#
+# This file is bundled next to launcher.cmd and deliberately does NOT live
+# under the marisa profile: the minimal fallback must boot a harness template
+# (base + web-app) with zero marisa configuration surface. It mirrors the
+# generic rows of the marisa profile's desktop.overlay.yml / standalone.overlay.yml
+# (webserver pinned to an OS-assigned port, no browser open, input stack on).
+
+- id: webserver
+  config:
+    host: 127.0.0.1
+    port: 0
+
+- id: web-runtime
+  config:
+    openBrowser: false
+    printUrl: true
+    surfaceContext: true
+    trustedHosts: !!js ctx.webStartup.trustedHosts
+
+- id: ui-input-trigger
+  name: '@deepseek-ai/dsh-client-ui-input-trigger'
+  disabled: false
+
+- id: ui-commands
+  name: '@deepseek-ai/dsh-client-ui-commands'
+  disabled: false

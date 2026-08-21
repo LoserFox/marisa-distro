@@ -318,7 +318,7 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 				failures = 0
 				backoff = restartBackoff
 				saveRescueState(stageMinimal, lastBootError)
-				log.Printf("完整模式连续 %d 次启动失败，降级极简模式（profile=%s）：%v",
+				log.Printf("完整模式连续 %d 次启动失败，降级基础界面模式（profile=%s，无 Marisa 定制）：%v",
 					normalFailuresBeforeMinimal, minimalBootProfile, lastBootError)
 			} else if stage == stageMinimal && failures >= minimalFailuresBeforeRescue {
 				saveRescueState(stageRescue, lastBootError)
