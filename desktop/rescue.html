@@ -176,6 +176,39 @@
                     transform: rotate(360deg);
                 }
             }
+            .section-divider {
+                border-top: 1px solid rgba(127, 127, 127, 0.15);
+                margin: 16px 0 10px;
+            }
+            .plugins-block .option {
+                padding: 8px 0;
+            }
+            .plugin-row label {
+                flex: 1;
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
+            .plugin-row .btn {
+                padding: 6px 12px;
+                font-size: 13px;
+                flex-shrink: 0;
+            }
+            .plugin-row .btn.danger {
+                background: #ef4444;
+                color: #fff;
+            }
+            .plugin-row .btn.secondary {
+                background: #e5e7eb;
+                color: #1c1f26;
+            }
+            #pluginList {
+                margin-top: 4px;
+            }
+            #pluginStatus {
+                margin-top: 8px;
+                font-size: 12px;
+                min-height: 16px;
+            }
         </style>
     </head>
     <body>
@@ -205,6 +238,16 @@
                     <span class="opt-title">初始化源码：从内置资源重新提取</span><br />
                     <span class="sub">从 exe 内嵌的原始 backend 重新解包，覆盖当前代码</span>
                 </label>
+            </div>
+
+            <div class="section-divider"></div>
+            <div class="plugins-block">
+                <div class="option">
+                    <span class="opt-title">插件管理（故障排查）</span><br />
+                    <span class="sub">禁用某个出问题的插件后重启，仅跳过加载、不卸载文件；可随时重新启用。变更受安装事务保护，可在备份目录还原</span>
+                </div>
+                <div id="pluginList"></div>
+                <div id="pluginStatus" class="sub" role="status"></div>
             </div>
 
             <div class="actions">
@@ -247,6 +290,51 @@
                 return res.json();
             }
 
+            async function loadBundles() {
+                const list = $("pluginList");
+                list.innerHTML = "";
+                let r;
+                try {
+                    r = await api("/api/bundles");
+                } catch (e) {
+                    list.textContent = `插件清单不可用：${e.message}`;
+                    return;
+                }
+                if (!r.ok) {
+                    list.textContent = `插件清单不可用：${r.error ?? "未知错误"}`;
+                    return;
+                }
+                for (const b of r.bundles) {
+                    const row = document.createElement("div");
+                    row.className = "option plugin-row" + (b.disabled ? " disabled" : "");
+                    const label = document.createElement("label");
+                    const title = document.createElement("span");
+                    title.className = "opt-title";
+                    title.textContent = b.disabled ? `${b.name}（已禁用）` : b.name;
+                    label.appendChild(title);
+                    row.appendChild(label);
+                    const btn = document.createElement("button");
+                    btn.className = "btn " + (b.disabled ? "secondary" : "danger");
+                    btn.textContent = b.disabled ? "启用" : "禁用";
+                    btn.addEventListener("click", async () => {
+                        btn.disabled = true;
+                        const path = b.disabled ? "/api/enable-bundle" : "/api/disable-bundle";
+                        try {
+                            const res = await api(path, { name: b.name });
+                            $("pluginStatus").textContent = res.ok
+                                ? `${b.name} ${b.disabled ? "已启用" : "已禁用"}：重启后端后生效`
+                                : `操作失败：${res.error ?? "未知错误"}`;
+                            await loadBundles();
+                        } catch (e) {
+                            $("pluginStatus").textContent = `操作失败：${e.message}`;
+                            btn.disabled = false;
+                        }
+                    });
+                    row.appendChild(btn);
+                    list.appendChild(row);
+                }
+            }
+
             async function init() {
                 const st = await api("/api/state");
                 if (st.lastError) {
@@ -264,6 +352,7 @@
                     const backups = await fetch(`/api/backups?${q()}`).then((r) => r.json());
                     if (backups.exists) $("btnOpenBackups").hidden = false;
                 }
+                await loadBundles();
             }
 
             $("btnRescue").addEventListener("click", async () => {

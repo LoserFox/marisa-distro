@@ -223,7 +223,7 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 			// 持久化急救状态：冷启动（含 --rescue 强制）期间关闭应用，
 			// 下次启动仍直接进急救页，直到用户完成恢复或重试。
 			saveRescueState(stageRescue, lastBootError)
-			enterRescue(ctx, win, ready, lastBootError)
+			enterRescue(ctx, win, ready, lastBootError, true)
 			stage = stageNormal
 			failures = 0
 			backoff = restartBackoff
@@ -303,11 +303,20 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 				}
 			case herr := <-healthErr:
 				close(healthStop)
-				failures++
 				lastBootError = herr
-				failed = true
-				log.Printf("web 页面健康检查失败（计入失败）：%v", herr)
+				log.Printf("web 页面健康检查失败，进入急救模式：%v", herr)
 				stopServer(cmd, exitCh)
+				// 页面挂 = 界面/插件层故障（白屏、client 模块加载失败等）：
+				// 立即给用户可操作的修复入口（急救页带失败原因 + 插件管理 +
+				// 恢复动作），而不是静默重启等待降级计数。窗口已在后端页面，
+				// 直接导航（waitNav=false），不等待下一次导航事件。
+				enterRescue(ctx, win, ready, herr, false)
+				stage = stageNormal
+				failures = 0
+				backoff = restartBackoff
+				lastBootError = nil
+				saveRescueState(stageNormal, nil)
+				continue
 			}
 		}
 
@@ -318,12 +327,12 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 				failures = 0
 				backoff = restartBackoff
 				saveRescueState(stageMinimal, lastBootError)
-				log.Printf("完整模式连续 %d 次启动失败，降级极简模式（profile=%s）：%v",
+				log.Printf("完整模式连续 %d 次启动失败，降级基础界面模式（profile=%s，无 Marisa 定制）：%v",
 					normalFailuresBeforeMinimal, minimalBootProfile, lastBootError)
 			} else if stage == stageMinimal && failures >= minimalFailuresBeforeRescue {
 				saveRescueState(stageRescue, lastBootError)
 				log.Printf("极简模式连续 %d 次启动失败，进入急救模式：%v", minimalFailuresBeforeRescue, lastBootError)
-				enterRescue(ctx, win, ready, lastBootError)
+				enterRescue(ctx, win, ready, lastBootError, true)
 				stage = stageNormal
 				failures = 0
 				backoff = restartBackoff
@@ -351,7 +360,11 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 // enterRescue 进入急救模式：启动壳层本地控制端点并把窗口切到急救页，阻塞
 // 到用户完成恢复（或点「重试完整启动」）或应用退出。调用方在返回后回到
 // normal 阶段重新尝试完整启动。
-func enterRescue(ctx context.Context, win *application.WebviewWindow, ready <-chan struct{}, lastErr error) {
+//
+// waitNav 控制导航方式：stage=rescue 冷启动时窗口停在启动页（landing），
+// 需等首次导航完成再 SetURL（waitNav=true）；页面健康失败时窗口已在后端
+// 页面、可直接导航（waitNav=false），否则会死等下一次导航事件超时。
+func enterRescue(ctx context.Context, win *application.WebviewWindow, ready <-chan struct{}, lastErr error, waitNav bool) {
 	log.Printf("进入急救模式：后端无法以完整/极简组合启动")
 	var lastErrStr string
 	if lastErr != nil {
@@ -367,11 +380,18 @@ func enterRescue(ctx context.Context, win *application.WebviewWindow, ready <-ch
 		return
 	}
 	defer srv.srv.Close()
-	if err := awaitWebviewReady(ready, ctx); err != nil {
-		log.Printf("rescue 页面导航跳过：%v", err)
-	} else {
+	navigate := func() {
 		log.Printf("rescue 页面：%s", srv.url)
 		win.SetURL(srv.url)
+	}
+	if waitNav {
+		if err := awaitWebviewReady(ready, ctx); err != nil {
+			log.Printf("rescue 页面导航跳过：%v", err)
+		} else {
+			navigate()
+		}
+	} else {
+		navigate()
 	}
 	select {
 	case <-srv.done:
@@ -381,6 +401,12 @@ func enterRescue(ctx context.Context, win *application.WebviewWindow, ready <-ch
 }
 
 func main() {
+	// `wal` 子命令：安装事务 WAL 的 CLI 入口（install_wal_cli.go）。先于
+	// 控制台/日志/GUI 初始化分派，安装链路调用后直接退出，不进入桌面流程。
+	if handleWalCLI() {
+		return
+	}
+
 	// --console / MARISA_CONSOLE=1：GUI 子系统发行构建默认无控制台，显式
 	// 请求时分配一个并把 stdout/stderr 接过去（必须在 setupLogging 捕获
 	// os.Stderr 镜像之前调用；dev 构建从终端启动时 AllocConsole 失败即保持

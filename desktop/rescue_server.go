@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 //go:embed rescue.html
@@ -69,6 +70,9 @@ func (s *rescueServer) start() error {
 	mux.HandleFunc("/api/retry", s.handleRetry)
 	mux.HandleFunc("/api/open-log", s.handleOpenLog)
 	mux.HandleFunc("/api/open-backups", s.handleOpenBackups)
+	mux.HandleFunc("/api/bundles", s.handleBundles)
+	mux.HandleFunc("/api/disable-bundle", s.handleSetBundle)
+	mux.HandleFunc("/api/enable-bundle", s.handleSetBundle)
 	s.srv = &http.Server{Handler: s.auth(mux)}
 	go func() {
 		if err := s.srv.Serve(ln); err != nil && err != http.ErrServerClosed {
@@ -197,4 +201,60 @@ func readLogTail(path string, maxBytes int) string {
 		data = data[len(data)-maxBytes:]
 	}
 	return string(data)
+}
+
+// handleBundles 返回 profile 的 bundle 清单（GET /api/bundles）。
+func (s *rescueServer) handleBundles(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	repo, err := newBundleRepo()
+	if err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	bundles, err := repo.list()
+	if err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "profile": marisaProfileName, "bundles": bundles})
+}
+
+// bundleToggleRequest 是禁用/启用请求的载荷。
+type bundleToggleRequest struct {
+	Name string `json:"name"`
+}
+
+// handleSetBundle 处理禁用/启用（POST /api/disable-bundle 与 /api/enable-bundle）。
+func (s *rescueServer) handleSetBundle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	disable := strings.HasSuffix(r.URL.Path, "/disable-bundle")
+	var req bundleToggleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		writeJSON(w, map[string]any{"ok": false, "error": "请求格式错误"})
+		return
+	}
+	repo, err := newBundleRepo()
+	if err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if err := repo.setDisabled(req.Name, disable); err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	action := "启用"
+	if disable {
+		action = "禁用"
+	}
+	writeJSON(w, map[string]any{
+		"ok":            true,
+		"message":       action + "成功，重启后端后生效（仅跳过加载，不卸载文件）",
+		"restartNeeded": true,
+	})
 }
