@@ -76,7 +76,7 @@ Windows 打包版本会把 `DSH_WEB_CMD` 替换为随包 launcher。不要用这
 
 ## 启动日志
 
-桌面壳与随包后端启动时总会写入同一份持久日志：Windows 下为 `%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop.log`（`MARISA_LOG_DIR` 可覆盖目录）。后端 stdout（debug 级）与 stderr、壳的启动/就绪/退出/重启/托盘诊断都记录在此。日志在启动时超过 5 MiB 即轮转，保留上一份为 `marisa-desktop.log.1`。壳自身的日志行带 `file:line`，后端透传内容保持原样。分享日志前请检查其中是否包含本地路径、插件配置等敏感信息。
+桌面壳与随包后端启动时总会写入持久日志，每次启动独占一个文件：Windows 下为 `%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop-YYYYMMDD-HHMMSS.log`（`MARISA_LOG_DIR` 可覆盖目录；同一秒内多次启动自动追加 `-N` 后缀）。稳定入口 `marisa-desktop.log` 硬链接到最近一次启动的日志（硬链接不可用时退化为一行文本指针），托盘「版本信息」等固定路径入口照常可用。单个启动日志超过 5 MiB 时在写入路径轮转为 `.1`；启动时会清理历史，只保留最近 20 次启动的日志。后端 stdout（debug 级）与 stderr、壳的启动/就绪/退出/重启/托盘诊断都记录在当前启动日志中。壳自身的日志行带 `file:line`，后端透传内容保持原样。分享日志前请检查其中是否包含本地路径、插件配置等敏感信息。
 
 ## 验证
 

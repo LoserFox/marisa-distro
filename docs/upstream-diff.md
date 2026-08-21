@@ -19,6 +19,7 @@
 | `tsconfig.host.json`、`apps/web/package.json` | 无 Marisa 源码 patch；保持上游 rc7 的项目引用、examples/website 类型范围和 Vite 构建命令 | harness 只作为上游 rc7 基线同步，不承载发行版 workspace 适配 | 更新 submodule 时只需 checkout 上游 pin；发行构建适配放在根 workspace/profile/打包阶段 |
 | `packages/host/webserver` 与 `packages/client/web` | rc7 host/client 使用同一协议树，`host.describe.canOpenPath` 由双方同源 schema 约束 | 修复旧版 host/client 不一致导致的握手重连 | 后续同步优先确认上游是否已提供等价能力，避免重复补丁 |
 | `apps/cli/config/agent-presets/anchored-standard/`（2026-08-21 新增，**发行版本地增量**） | 锚定标准实验预设：`tool-bootstrap.mjs` vendored 自 `xiaobright/dsh-anchored-standard@95b98af`（MIT，SHA-256 84CF3D58…）+ `agent.cordis.yml` = rc7 standard + 锚定增量（bootstrap 行第一、Minimal persona complete、tool-bash 全平台禁用）+ `preset.yml`/`LICENSE` | 实验预设不属上游产品面；Windows 无持久 PTY bash，persistent-shell 组按平台禁用 | rc8 换树时原样重放（或按 rc8 preset 结构重新对齐）；不随上游同步删除 |
+| `apps/web/index.html` 与 `apps/web/tests/smoke-real.e2e.ts`（2026-08-22 新增，**发行版本地增量**） | 浏览器标签标题由上游 `DeepSeek Harness` 改为 `Marisa DSH`（仅静态 title，`DocumentTitle` 组件保留原始 title 的行为不变；侧边栏品牌与 PWA manifest 保持上游） | Marisa 发行品牌标题；rc8 版 harness 已删除 `DSH_CLIENT_TITLE` 构建期覆盖机制，品牌只能落静态 title | 同步时原样重放；若上游恢复构建期品牌注入机制则删除本行 |
 
 当前基线已完成 rc7 同源 host/client 同步；`canOpenPath` 缺失不应再通过手工响应字段规避。
 

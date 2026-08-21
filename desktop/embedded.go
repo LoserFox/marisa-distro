@@ -128,6 +128,22 @@ func ensureBackend() (string, error) {
 	if err := runUpgradeMigrations(dir, stagingDir, from, want); err != nil {
 		return "", fmt.Errorf("upgrade migrations %s -> %s: %w (old backend kept)", from, want, err)
 	}
+	// 更新数据守卫：替换 backend 前保护 backend\.dsh（会话/设置等用户数据）。
+	// 弹确认框询问「备份后更新 / 直接洗 / 取消」；备份失败或用户取消都保留
+	// 旧目录（失败安全，下次启动重试）。
+	dataKept, cancelled, backupDir, err := guardUpdateData(dir, from, want)
+	if err != nil {
+		return "", fmt.Errorf("update data guard: %w (old backend kept)", err)
+	}
+	if cancelled {
+		return "", fmt.Errorf("update cancelled by user (old backend kept)")
+	}
+	if backupDir != "" {
+		log.Printf("backend data backed up to %s before update", backupDir)
+	}
+	if !dataKept {
+		log.Printf("user chose to discard existing backend data (no backup)")
+	}
 	if err := os.RemoveAll(dir); err != nil {
 		return "", fmt.Errorf("remove stale backend %s: %w", dir, err)
 	}

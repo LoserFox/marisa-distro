@@ -26,11 +26,13 @@ function PlayIcon() {
 }
 
 const CSS = `
-.dsh-resume-play{display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;border:none;border-radius:999px;background:var(--dsw-alias-button-info-fill,var(--dsw-alias-brand-primary));color:#fff;cursor:pointer;transition:background-color 100ms ease}
+.dsh-resume-play{display:inline-flex;align-items:center;justify-content:center;flex:none;order:999;width:34px;height:34px;border:none;border-radius:999px;background:var(--dsw-alias-button-info-fill,var(--dsw-alias-brand-primary));color:#fff;cursor:pointer;transition:background-color 100ms ease}
 .dsh-resume-play:hover:not(:disabled){background:var(--dsw-alias-button-info-hover,var(--dsw-alias-brand-primary))}
 .dsh-resume-play:disabled{opacity:.4;cursor:default}
-/* In-place replacement: while the play button is present, hide the stock
-   primary send button that follows it in the composer tool row. */
+/* In-place replacement: the play button renders in the conversation.input.right
+   slot, which sits at the START of the composer tool row. order:999 pushes it
+   to the row's flex end — the stock send button's original position — so it
+   truly replaces the send button instead of appearing to its left. */
 div[data-slot="conversation.input.right"]:has(button.dsh-resume-play) ~ button[aria-label="发送消息"],
 div[data-slot="conversation.input.right"]:has(button.dsh-resume-play) ~ button[aria-label="Send message"]{display:none}
 `

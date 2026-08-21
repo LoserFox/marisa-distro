@@ -55,7 +55,7 @@
 
 ## 市场基础设施（vendored 源，不在 `plugins/`）
 
-MyGO Core、Loader Hub、CLI 和 Web Panel 以 vendored 源（`dsh-mygo/`，omdsh-dev/dsh-mygo@next 的 `0.2.0-rc.7`）经 `file:` 依赖装载，是设置页里的插件市场入口。MyGO 只在用户点击安装/更新时下载额外插件；默认组合不依赖首次启动时联网拉取核心插件。
+MyGO Core、Loader Hub、CLI 和 Web Panel 以 vendored 源（`dsh-mygo/`，omdsh-dev/dsh-mygo@next 的 `0.2.0-rc.7`）经 `file:` 依赖装载，是设置页里的插件市场入口。MyGO 只在用户点击安装/更新时下载额外插件；默认组合不依赖首次启动时联网拉取核心插件。fork 治理记录（vendored 基线 + 本地修改清单 + 上游 PR）见 [plugins/dsh-mygo.md](plugins/dsh-mygo.md)。
 
 ## 许可证
 

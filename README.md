@@ -33,9 +33,18 @@ MSI 会按当前用户安装 Marisa，并在首次启动时准备随包运行环
 |---|---|---|
 | [🪄 MSI 安装包](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-windows-x64.msi) | 大多数 Windows 用户 | **推荐** |
 | [🧳 便携版 EXE](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-windows-x64-standalone.exe) | 不希望安装、需要放在自定义目录的用户 | 首次运行自解压 |
+| [🧑‍💻 Profile 版（tar.zst，终端运行）](https://github.com/omdsh-dev/marisa-distro/releases) | 开发者、CI、喜欢终端操作的用户 | 解压即用，随下个版本发布 |
 | [🔐 SHA256SUMS.txt](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/SHA256SUMS.txt) | 校验下载文件是否完整 | 推荐校验 |
 
 > Windows 产物目前没有代码签名，SmartScreen 可能提示“未知发布者”。请只从本仓库 Release 下载。
+
+**🧑‍💻 开发者 / 终端用户：Profile 版**：同一个后端，不带桌面壳。下载 `Marisa-DSH-profile-<版本>-win-x64.tar.zst` 和 `Marisa-DSH-windows-x64-extract.exe`，解压后运行 `run-marisa.bat`，Web 界面会在默认浏览器打开：
+
+```bat
+Marisa-DSH-windows-x64-extract.exe Marisa-DSH-profile-0.1.7-win-x64.tar.zst
+```
+
+无需安装、无托盘、无自动更新；会话数据保存在解压目录内的 `.dsh` 下——换版本就是解压到一个**新目录**，旧数据不受影响（提取器默认拒绝覆盖已有不同版本的目录）。
 
 ### Linux 与 macOS
 

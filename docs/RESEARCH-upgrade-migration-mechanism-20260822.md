@@ -1,7 +1,7 @@
 # 发行版升级迁移机制方案（standalone/MSI）
 
 日期：2026-08-22
-状态：**方案定稿，未落地**（用户「先只出方案不动手」；落地窗口建议随 rc8 harness 换树同 PR）
+状态：**方案定稿；阶段 1（迁移框架）+ 更新数据守卫（备份/确认 UI）已落地**（2026-08-21 会话，desktop/update_guard*.go；阶段 2/3 未做，见第七节）
 目标：给 Marisa 发行版补上缺失的「老版本 → 新版本」迁移机制——回答三个问题：迁移要不要提示、迁移什么、失败怎么办。当前仓库**没有任何迁移代码**（详见 `docs/plugins/dsh-update-check.md` 与 `desktop/embedded.go`/`installed.go`）。
 
 ## 零、现状与缺口（审计结论，2026-08-22）
@@ -11,7 +11,7 @@
 | 发现新版本 | `dsh-update-check`（plugins/，本地第一方）：轮询 GitHub Releases，横幅/设置卡片，深链下载 | 无（职责保持：只检查+通知，不下载不安装） |
 | 程序落地（standalone） | `ensureBackend()`：VERSION 不一致 → **静默删旧 backend 目录 + 整体重解包**（embedded.go:102-146） | ① 无迁移步骤钩子 ② 用户改过 backend 目录内文件（部署 profile、cordis.patch.yml 等）被静默覆盖 ③ 无迁移日志/可查性 |
 | 程序落地（MSI） | WiX `MajorUpgrade` 覆盖安装 + `--prepare-installed-backend` 全新解包（Product.wxs） | 卸载旧版时旧 backend 内自定义文件随 `RemoveBackend` 删除，无备份 |
-| 用户数据 | 会话/设置/profile 运行时数据在 `%USERPROFILE%\.dsh\`，不在 backend 内，升级天然保留 | 若新版本改数据格式（rc8 研究已点名 session 存储格式变化，见 `docs/RESEARCH-rc8-migration-20260820.md` §6），**无迁移路径、无提示，旧数据可能直接读不了** |
+| 用户数据 | **Marisa 桌面版 DSH_HOME 就在 backend 内**：`launcher.cmd` 的 `%BUNDLE%.dsh`（`%LOCALAPPDATA%\marisa-distro\backend\.dsh`），升级 RemoveAll 旧 backend 时**会话/设置/记忆随目录一起删除**（2026-08-21 两次事故实锤；此前的「数据在 %USERPROFILE%\.dsh」是审计误判，仅对旧 dsh-0806/0807 安装成立） | ① 替换前无备份 ② 无确认提示 ③ 用户以为数据安全 |
 
 用户原话问题：「老版本更新到新版本，会提示要迁移吗？还是默认迁移？」——现状回答：**不会提示，也没有迁移，是默认静默替换**。
 
@@ -151,3 +151,35 @@
 3. 跨多级：0.1.5 → 0.1.8 沿阶梯依次执行且每级只执行一次。
 4. `pnpm test`、`go test -C desktop ./...` 与双 tag（`-tags embeddedbundle` / `installedbundle`）全绿。
 5. 真实窗口验收：standalone 升级后首启横幅出现、MSI 覆盖安装后数据层迁移提示出现。
+
+## 九、更新数据守卫（已落地，2026-08-21）
+
+动机：本方案第一节曾误判「用户数据不在 backend 内」。实测 Marisa 桌面版
+DSH_HOME 就在 `backend\.dsh`（launcher.cmd `%BUNDLE%.dsh`），standalone 升级 /
+MSI 覆盖 / 卸载的 RemoveAll 会连会话一起删除——2026-08-21 08:35:41 用户运行
+rc8-test exe 时 8/14–8/21 全部会话被删（无备份、不走回收站），同日用户拍板：
+**更新时加备份 + 至少一个小界面提示「保留数据还是直接洗一遍」**。
+
+实现（`desktop/update_guard.go` + `update_guard_windows.go`/`_other.go`）：
+
+- **standalone（embedded.go ensureBackend）**：升级路径在 `runUpgradeMigrations`
+  之后、`os.RemoveAll(dir)` 之前调 `guardUpdateData`。旧 `backend\.dsh` 有数据时
+  弹 MessageBoxW（`是`=备份后更新 / `否`=直接洗 / `取消`=中止启动保留旧目录）；
+  `MARISA_UPDATE_NO_PROMPT=1` 跳过询问默认备份（自动化场景）。
+- **MSI（installed.go）**：`--prepare-installed-backend`（覆盖安装）与
+  `--remove-installed-backend`（卸载）在删 backend 前自动备份，不弹窗——
+  WiX deferred custom action 中弹窗会挂起安装（`Execute="deferred"`）。
+- **备份位置**：`%LOCALAPPDATA%\marisa-distro\backup\dsh-<from>-<ts>\`（复用
+  `backupRootDir()`，与迁移备份区同级、命名区分），内含 `BACKUP-INFO.txt`
+  （来源版本/时间/恢复方法）。
+- **junction 处理**：跳过部署共享链接（`profiles/marisa/node_modules` 等）。
+  注意 Windows 上 Go 对目录型 junction（IO_REPARSE_TAG_MOUNT_POINT）的 Lstat
+  返回 `ModeIrregular` 而非 `ModeSymlink`（2026-08-21 实测），两种位都要判。
+- **失败安全**：备份失败 → 中止替换、保留旧 backend（下次启动重试）；无数据
+  （.dsh 不存在/只有 junction）→ 直接替换不询问。
+- 测试：`update_guard_test.go`（数据判定含 junction-only 场景、备份内容/junction
+  跳过/原树保留、无数据跳过提示），三形态（默认/embeddedbundle/installedbundle）
+  全绿；另修 `toast_bridge.go` markReady 为幂等（sync.Once，重复调用不再 panic）。
+
+恢复方法（写于 BACKUP-INFO.txt）：退出 Marisa → 把备份目录内容整体复制回新
+部署的 `backend\.dsh` → 重启。会话/设置即回（storages/workspace.json 一并备份）。

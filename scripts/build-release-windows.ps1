@@ -142,13 +142,20 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "MSI build failed: $LASTEXITCODE" }
   Complete-ReleaseStep
 
+  Write-ReleaseStep 'package profile zip'
+  & pwsh -NoProfile -File scripts/package-profile.ps1 -Version $Version
+  if ($LASTEXITCODE -ne 0) { throw "profile zip packaging failed: $LASTEXITCODE" }
+  Complete-ReleaseStep
+
   Write-ReleaseStep 'write release checksums'
-  $lines = foreach ($path in @($standalone, $msi)) {
+  $profileZip = Join-Path $release "Marisa-DSH-profile-$Version-win-x64.tar.zst"
+  $extractor = Join-Path $release 'Marisa-DSH-windows-x64-extract.exe'
+  $lines = foreach ($path in @($standalone, $msi, $profileZip, $extractor)) {
     $hash = Get-FileHash -LiteralPath $path -Algorithm SHA256
     "$($hash.Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($path))"
   }
   [System.IO.File]::WriteAllLines($checksums, $lines, [System.Text.UTF8Encoding]::new($false))
-  Get-Item $standalone, $msi, $checksums | Select-Object FullName, Length
+  Get-Item $standalone, $msi, $profileZip, $extractor, $checksums | Select-Object FullName, Length
   Complete-ReleaseStep
 } finally {
   Pop-Location

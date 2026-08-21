@@ -693,7 +693,9 @@ async function ensureNodeModulesLink(target: string): Promise<void> {
       const pkgDir = dirname(require.resolve(`${name}/package.json`))
       const link = join(target, 'node_modules', name)
       await mkdir(dirname(link), { recursive: true })
-      await symlink(pkgDir, link, 'dir')
+      // 用 junction 而非目录 symlink：Windows 上 symlink 需要管理员/开发者
+      // 模式（EPERM），junction 免权限；POSIX 上 type 参数被忽略，行为不变。
+      await symlink(pkgDir, link, 'junction')
     } catch (error) {
       if (!(error instanceof Error) || (error as { code?: string }).code !== 'EEXIST') {
         if ((error as { code?: string }).code !== 'MODULE_NOT_FOUND') throw error
@@ -753,7 +755,7 @@ async function linkWorkspaceDependencies(target: string, dependencies: Record<st
     await mkdir(scopeDir, { recursive: true })
     const link = join(scopeDir, name.slice(name.lastIndexOf('/') + 1))
     try {
-      await symlink(workspace, link, 'dir')
+      await symlink(workspace, link, 'junction')
     } catch (error) {
       if (!(error instanceof Error) || (error as { code?: string }).code !== 'EEXIST') {
         throw error
@@ -1115,7 +1117,7 @@ async function linkStorePackage(
     }
     await mkdir(dirname(join(target, linkPath)), { recursive: true })
     try {
-      await symlink(source, join(target, linkPath), 'dir')
+      await symlink(source, join(target, linkPath), 'junction')
     } catch (error) {
       if (!(error instanceof Error) || (error as { code?: string }).code !== 'EEXIST') {
         throw error
@@ -1138,7 +1140,7 @@ async function linkFrameworkDependencies(target: string): Promise<void> {
     const source = join(flat, name)
     try {
       if (!(await stat(source)).isDirectory()) continue
-      await symlink(source, join(target, 'node_modules', name), 'dir')
+      await symlink(source, join(target, 'node_modules', name), 'junction')
     } catch (error) {
       if (!(error instanceof Error) || (error as { code?: string }).code !== 'EEXIST') {
         throw error
@@ -1151,7 +1153,7 @@ async function linkFrameworkDependencies(target: string): Promise<void> {
   const typesFlat = join(flat, '@types')
   try {
     if ((await stat(typesFlat)).isDirectory()) {
-      await symlink(typesFlat, join(target, 'node_modules', '@types'), 'dir')
+      await symlink(typesFlat, join(target, 'node_modules', '@types'), 'junction')
     }
   } catch (error) {
     if (!(error instanceof Error) || (error as { code?: string }).code !== 'EEXIST') {
@@ -1610,13 +1612,13 @@ export function apply(ctx: { readonly pluginManager: PluginManager }, config: un
     await mkdir(scopeDir, { recursive: true })
     const link = join(scopeDir, `${manifest.id}-mygo`)
     await rm(link, { force: true, recursive: false })
-    await symlink(bridgeDir, link, 'dir')
+    await symlink(bridgeDir, link, 'junction')
   }
   const profileScope = join(HOME_ROOT, 'profiles', panelProfile(), 'node_modules', '@r05en1cu')
   await mkdir(profileScope, { recursive: true })
   const profileLink = join(profileScope, `${manifest.id}-mygo`)
   await rm(profileLink, { force: true, recursive: false })
-  await symlink(bridgeDir, profileLink, 'dir')
+  await symlink(bridgeDir, profileLink, 'junction')
 }
 
 /** Remove a projected bridge: package dir, checkout link, and generated files. */
