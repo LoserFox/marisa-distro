@@ -19,13 +19,13 @@ Issues 只接收完整、可复现的 Marisa 发行版缺陷。提交者必须�
 
 ## Windows 启动日志
 
-桌面壳、随包后端的 stdout 和 stderr 会写入同一个启动日志：
+桌面壳、随包后端的 stdout 和 stderr 会写入持久启动日志，每次启动独占一个文件：
 
 ```text
-%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop.log
+%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop-YYYYMMDD-HHMMSS.log
 ```
 
-日志达到 5 MiB 后会在下次启动时轮转；上一份保留为 `marisa-desktop.log.1`。报告启动后持续停留在加载界面、后端反复重启或插件加载失败时，请从托盘退出 Marisa DSH，复现一次，再附上去敏后的这两份日志。日志可能包含本机路径、插件配置错误和后端诊断信息，提交前不得包含密钥。
+`marisa-desktop.log` 是稳定入口，硬链接到最近一次启动的日志（硬链接不可用时退化为一行文本指针）。单个启动日志达到 5 MiB 后会在写入路径轮转为 `.1`；启动时只保留最近 20 次启动的日志。报告启动后持续停留在加载界面、后端反复重启或插件加载失败时，请从托盘退出 Marisa DSH，复现一次，再附上去敏后的最近一份启动日志（或整个日志目录）。日志可能包含本机路径、插件配置错误和后端诊断信息，提交前不得包含密钥。
 
 MSI 安装或卸载后端失败时，安装目录还可能出现 `backend-maintenance-error.log`；它只覆盖安装维护阶段，成功时会自动删除，不能代替上述启动日志。
 

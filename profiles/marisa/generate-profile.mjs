@@ -67,7 +67,7 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
 if (gitPlugins.length !== 22) throw new Error(`expected 22 git plugins, got ${gitPlugins.length}`);
-if (npmPlugins.length !== 8) throw new Error(`expected 8 npm plugins, got ${npmPlugins.length}`);
+if (npmPlugins.length !== 9) throw new Error(`expected 9 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
 const bundleDeps = {};
@@ -258,6 +258,11 @@ overrides:
   # 0.4.9 pin would otherwise win the top-level hoist in --prod and break
   # boot). Mirrors the root workspace.
   fflate: '0.8.3'
+  # schemastery 单实例（2026-08-23，随 mygo devDeps 升 0.1.x）：@deepseek-ai/dsh-*
+  # 的 0.1.x 依赖声明 ^3.18.1，与 vendored mygo 钉的 3.18.1-rc.1 形成双实例，
+  # 会让 mygo 的 schema 推断类型无法命名（tsc TS2883）。与上游 dsh-mygo
+  # PR #1 同款 override。
+  '@deepseek-ai/schemastery': '3.18.1-rc.1'
 
 minimumReleaseAgeExclude:
 ${minimumReleaseAgeExclude.map((p) => `  - '${p}'`).join('\n')}

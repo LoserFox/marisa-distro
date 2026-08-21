@@ -39,6 +39,13 @@
       "dir": "dsh-drag-and-drop"
     },
     {
+      "name": "@dsh-external/ego-browser",
+      "source": "npm",
+      "dir": "dsh-ego-browser",
+      "version": "0.8.0",
+      "bundle": true
+    },
+    {
       "name": "@deepseek-ai/dsh-genui",
       "source": "git",
       "dir": "dsh-genui"

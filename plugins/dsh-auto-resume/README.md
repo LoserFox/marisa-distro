@@ -11,7 +11,7 @@
 
 ## 实现
 
-- client-only 插件：注册 `conversation.input.right` 座位（发送按钮左侧的 tool row 座位）。
+- client-only 插件：注册 `conversation.input.right` 座位（tool row 座位；该槽位渲染在工具行**起点**，故按钮本体用 `order:999` 推到 flex 行尾 = 发送按钮原位，模型选择器/上下文环等其它控件仍保持在它左侧）。
 - 原位替换用 CSS `:has()`：`div[data-slot="conversation.input.right"]:has(button.dsh-resume-play) ~ button[aria-label="发送消息"|"Send message"]` 隐藏官方发送按钮——不修改 harness 源码，纯插件侧样式覆盖。
 - 中断判定独立于 `src/interrupted.js`（`isInterrupted`），`test/unit.mjs` 覆盖全分支（node:test）。
 

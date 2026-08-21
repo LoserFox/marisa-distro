@@ -15,6 +15,7 @@
 | SESSION-rc6-vs-rc7-2026-08-17.md | 47581740, 690cea2f, 4cfddaa5 | 上游 harness rc6 vs rc7 对比调研 | 2026-08-17 | ✅ 完成 |
 | SESSION-release-v012-v017-2026-08-20.md | c2b2e77c | v0.1.2→v0.1.7 发布工作流：update-check、vision-toolkit、mnemon、CI | 2026-08-18→20 | ✅ 完成 |
 | SESSION-misc-2026-08-18.md | 07623210, 1e2e586a | 杂项小任务（LLM API 上下文、workbuddy 配置） | 2026-08-18 | ✅ 完成 |
+| SESSION-feature-integration-vision-2026-08-22.md | 非 JSONL（提交史+文档整理） | 功能整合日：通知链路、升级迁移、急救模式、会话搜索、modlens 视觉切换 | 2026-08-22 | ✅ 完成 |
 
 ## 整理工具
 

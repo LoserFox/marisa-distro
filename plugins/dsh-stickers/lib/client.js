@@ -251,8 +251,8 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var StickerCard_module_css_default = {
-			"card": "LaCf1q_card",
-			"user": "LaCf1q_user"
+			"user": "LaCf1q_user",
+			"card": "LaCf1q_card"
 		};
 		//#endregion
 		//#region src/client/StickerCard.tsx
@@ -317,9 +317,9 @@ window.__ModuleLoader__.load({
 		var StickerPicker_module_css_default = {
 			"active": "BNP33a_active",
 			"grid": "BNP33a_grid",
+			"variants": "BNP33a_variants",
 			"trigger": "BNP33a_trigger",
 			"popover": "BNP33a_popover",
-			"variants": "BNP33a_variants",
 			"root": "BNP33a_root"
 		};
 		//#endregion

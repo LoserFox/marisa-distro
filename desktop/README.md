@@ -96,8 +96,9 @@ then launches the desktop shell instead of a browser. It rebuilds
 `release/dsh-shell.exe` automatically whenever `desktop/` Go sources are newer
 than the binary, so a shell change only needs a restart (Ctrl+C and re-run) —
 no manual `go build`. The shell's stdout/stderr are relayed to the terminal,
-and its persistent log goes to `<repo>/.dev/logs/marisa-desktop.log`
-(`MARISA_LOG_DIR`) instead of the default cache directory.
+and its persistent logs go to `<repo>/.dev/logs/` (`MARISA_LOG_DIR`) instead of
+the default cache directory, one file per launch with `marisa-desktop.log`
+pointing at the latest.
 
 WebView2 DevTools are available from the tray menu item 「打开 DevTools」 in
 non-production builds; `MARISA_DEVTOOLS=1` opens them automatically once the
@@ -142,15 +143,20 @@ published Windows package.
 
 ## Startup logs
 
-The desktop shell and bundled backend always write to a shared persistent log
-on startup: `%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop.log` on Windows
-(`MARISA_LOG_DIR` overrides the directory). Backend stdout (debug level) and
-stderr, plus the shell's startup, readiness, exit, restart, and tray
-diagnostics, are recorded there. The file rotates on startup after reaching
-5 MiB, retaining the previous file as `marisa-desktop.log.1`. Shell log lines
-carry `file:line`; backend passthrough stays verbatim. Review logs for local
-paths, plugin configuration, and other sensitive information before sharing
-them.
+The desktop shell and bundled backend always write a persistent log on
+startup, with one file per launch:
+`%LOCALAPPDATA%\marisa-distro\logs\marisa-desktop-YYYYMMDD-HHMMSS.log` on
+Windows (`MARISA_LOG_DIR` overrides the directory); launches within the same
+second get a `-2`, `-3`, … suffix. The stable entry point
+`marisa-desktop.log` is a hard link to the newest launch file (a one-line text
+pointer when hard links are unavailable), so fixed-path entry points such as
+the tray 「版本信息」 dialog keep working. A single launch file rotates to `.1`
+in the write path once it reaches 5 MiB, and startup cleanup keeps only the 20
+most recent launches. Backend stdout (debug level) and stderr, plus the
+shell's startup, readiness, exit, restart, and tray diagnostics, are recorded
+in the current launch file. Shell log lines carry `file:line`; backend
+passthrough stays verbatim. Review logs for local paths, plugin configuration,
+and other sensitive information before sharing them.
 
 ## Verification
 

@@ -100,6 +100,17 @@ func prepareInstalledBackend(zipPath string) error {
 		_ = os.RemoveAll(staging)
 		return err
 	}
+	// 更新数据守卫（MSI 形态）：deferred custom action 中不能弹窗（会挂起
+	// 安装），自动备份 backend\.dsh 到备份区；失败中止替换（保留旧目录）。
+	if from, err := readBackendVersionFile(dir); err == nil && from != "" {
+		if backupDir, err := backupDshData(dir, from); err != nil {
+			return fmt.Errorf("backup installed backend data: %w (old backend kept)", err)
+		} else if backupDir != "" {
+			log.Printf("installed backend data backed up to %s before replace", backupDir)
+		}
+	} else if err != nil {
+		log.Printf("installed backend version unreadable (%v); skipping data backup", err)
+	}
 	if err := removeInstalledLinks(dir); err != nil {
 		return err
 	}
@@ -124,6 +135,13 @@ func removeInstalledBackend(requested string) error {
 	}
 	if !strings.EqualFold(expected, filepath.Clean(actual)) {
 		return fmt.Errorf("refusing to remove unexpected backend path %s", actual)
+	}
+	// 卸载前尽力备份用户数据：卸载会删掉 backend\.dsh，备份失败不阻断
+	// 卸载（MSI 语义：卸载失败更糟），仅记录日志。
+	if backupDir, err := backupDshData(expected, "uninstall"); err != nil {
+		log.Printf("backup before backend removal failed (continuing): %v", err)
+	} else if backupDir != "" {
+		log.Printf("installed backend data backed up to %s before removal", backupDir)
 	}
 	if err := removeInstalledLinks(expected); err != nil {
 		return err

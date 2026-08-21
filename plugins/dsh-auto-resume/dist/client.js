@@ -21,14 +21,15 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// plugins/dsh-auto-resume/src/client.jsx
+// src/client.jsx
 var client_exports = {};
 __export(client_exports, {
-  apply: () => apply
+  apply: () => apply,
+  inject: () => inject
 });
 module.exports = __toCommonJS(client_exports);
 
-// plugins/dsh-auto-resume/src/interrupted.js
+// src/interrupted.js
 function isInterrupted(session) {
   if (session === void 0 || session === null) return false;
   if (session.running || session.removed) return false;
@@ -52,18 +53,21 @@ function isInterrupted(session) {
   return false;
 }
 
-// plugins/dsh-auto-resume/src/client.jsx
+// src/client.jsx
 var import_jsx_runtime = require("react/jsx-runtime");
 var NS = "dsh-auto-resume";
+var inject = ["slots"];
 function PlayIcon() {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": true, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 2.5L13 8L4 13.5V2.5Z", fill: "currentColor" }) });
 }
 var CSS = `
-.dsh-resume-play{display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;border:none;border-radius:999px;background:var(--dsw-alias-button-info-fill,var(--dsw-alias-brand-primary));color:#fff;cursor:pointer;transition:background-color 100ms ease}
+.dsh-resume-play{display:inline-flex;align-items:center;justify-content:center;flex:none;order:999;width:34px;height:34px;border:none;border-radius:999px;background:var(--dsw-alias-button-info-fill,var(--dsw-alias-brand-primary));color:#fff;cursor:pointer;transition:background-color 100ms ease}
 .dsh-resume-play:hover:not(:disabled){background:var(--dsw-alias-button-info-hover,var(--dsw-alias-brand-primary))}
 .dsh-resume-play:disabled{opacity:.4;cursor:default}
-/* In-place replacement: while the play button is present, hide the stock
-   primary send button that follows it in the composer tool row. */
+/* In-place replacement: the play button renders in the conversation.input.right
+   slot, which sits at the START of the composer tool row. order:999 pushes it
+   to the row's flex end \u2014 the stock send button's original position \u2014 so it
+   truly replaces the send button instead of appearing to its left. */
 div[data-slot="conversation.input.right"]:has(button.dsh-resume-play) ~ button[aria-label="\u53D1\u9001\u6D88\u606F"],
 div[data-slot="conversation.input.right"]:has(button.dsh-resume-play) ~ button[aria-label="Send message"]{display:none}
 `;

@@ -31,7 +31,7 @@
 - 修复 2、3 已提交上游 PR（2026-08-23）：
   - [omdsh-dev/dsh-mygo#1](https://github.com/omdsh-dev/dsh-mygo/pull/1)（devDeps 升 `^0.1.0-rc.6` + schemastery 单实例 override，分支 `fix/devdep-ranges` → next）
   - [omdsh-dev/dsh-mygo#2](https://github.com/omdsh-dev/dsh-mygo/pull/2)（bridge symlink → junction，分支 `fix/windows-junction-links` → fix/devdep-ranges，栈式）
-- 等待上游合并后按 vendored 同步流程收编；本次**发行版侧零改动**（vendored 树保持 0.2.0-rc.7 + keyed 修复原样，PR 合入前桌面装插件问题仍存在，见下节）。
+- 等待上游合并后按 vendored 同步流程收编。**本地已先行应用**（2026-08-23，未提交待测）：vendored 树 4 包 devDeps 升 `^0.1.0-rc.6` + panel src 7 处 symlink→junction（lib 已重建）+ `generate-profile.mjs` 加 schemastery 单实例 override，内容与上游 PR 一致；staging 实测 `POST /api/mygo/install` 无补丁直接成功、重启后挂载生效（修复 2 生效证据）。
 - 修复 1（keyed 契约）是 Marisa 对 rc7 harness 的适配层，暂未回馈（官方 harness 的 keyed 契约演进另行评估；上游 panel 的 list 形式靠类型增强可编译，但现代 harness 下卡片渲染需 keyed 运行时契约，属独立 PR）。
 
 ## 已知限制（发行版侧实测，2026-08-23）
