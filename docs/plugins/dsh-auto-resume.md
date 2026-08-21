@@ -25,3 +25,7 @@ rc8 冒烟（headless Chromium 加载真实 web）发现启动即报 `failed to 
 
 - 本插件无上游，同步动作 = 无；harness 升级时核对 `conversation.input.right` owner 契约（`InputZone` 的 `input`/`inputActions`）与 aria-label 文案是否变化。
 - 若未来要发布 npm，按 npm 快照登记方式迁移（当前 `mode: fork` + repository 指向发行版仓库自身）。
+
+## 2026-08-22 修复：发送按钮原位替换（order:999）
+
+`conversation.input.right` 座位实际渲染在工具行**起点**，导致播放按钮出现在发送按钮左侧而非原位。修复：按钮 CSS 增加 `order:999` 推到 flex 行尾（= 发送按钮原位置），模型选择器、上下文环等其它控件保持在它左侧；注释与 README 同步说明槽位语义。`dist/client.js` 由 `scripts/build-client.mjs` 重建（源码路径注释干净化，去除 worktree 路径）。验证：`node test/unit.mjs` 全过；真机 GUI 挂载后目测按钮位于发送按钮原位。
