@@ -309,7 +309,7 @@ ui-onboarding:
         $size = (Get-ChildItem $rootPkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
         Remove-Item $rootPkg -Recurse -Force
         $targetRel = 'marisa-distro/plugins/' + $pluginDir.Name
-        $linkRel = 'marisa-distro/node_modules/' + ($pkgName -replace '\', '/')
+        $linkRel = 'marisa-distro/node_modules/' + $pkgName.Replace('\', '/')
         New-Item -ItemType Junction -Path $rootPkg -Target (Join-Path $stage ($targetRel -replace '/', '\')) -Force | Out-Null
         $dedupeBytes += [long]$size
         $dedupeCount++
@@ -337,7 +337,7 @@ ui-onboarding:
         $size = (Get-ChildItem $rootPkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
         Remove-Item $rootPkg -Recurse -Force
         $targetRel = $mygoFileDeps[$pkgName]
-        $linkRel = 'marisa-distro/node_modules/' + ($pkgName -replace '\', '/')
+        $linkRel = 'marisa-distro/node_modules/' + $pkgName.Replace('\', '/')
         New-Item -ItemType Junction -Path $rootPkg -Target (Join-Path $stage ($targetRel -replace '/', '\')) -Force | Out-Null
         $dedupeBytes += [long]$size
         $dedupeCount++
@@ -366,11 +366,11 @@ ui-onboarding:
             $resolved = Resolve-LinkTarget $rootItem
             if ($resolved) { $target = StageRel $resolved }
           }
-          if (-not $target) { $target = 'marisa-distro/node_modules/' + ($pkgRel -replace '\', '/') }
+          if (-not $target) { $target = 'marisa-distro/node_modules/' + $pkgRel.Replace('\', '/') }
           $bundlePkg = Join-Path $scopeDir.FullName $child.Name
           $size = (Get-ChildItem $bundlePkg -Recurse -File -Force -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum
           Remove-Item $bundlePkg -Recurse -Force
-          $linkRel = 'marisa-distro/bundles/marisa-bundle/node_modules/' + ($pkgRel -replace '\', '/')
+          $linkRel = 'marisa-distro/bundles/marisa-bundle/node_modules/' + $pkgRel.Replace('\', '/')
           New-Item -ItemType Junction -Path $bundlePkg -Target (Join-Path $stage ($target -replace '/', '\')) -Force | Out-Null
           $dedupeBytes += [long]$size
           $dedupeCount++
