@@ -63,6 +63,10 @@ pnpm dev:desktop
 - `MARISA_LOG_DIR`：持久日志目录，默认操作系统缓存目录（Windows 为 `%LOCALAPPDATA%\marisa-distro\logs`）。
 - `MARISA_LOG_LEVEL`：设为 `debug` 时记录后端 stdout 逐行、窗口显隐与 webview 导航等高频事件，默认 `info`。
 - `MARISA_CONSOLE`（或启动参数 `--console`）：分配终端窗口并把持久日志镜像过去。Windows 发行构建是 GUI 子系统、默认无控制台，只有该开关会创建终端，便于现场诊断。
+- `--minimal`（启动参数）：跳过完整组合直接以极简 profile（harness 内置 base+web-app，不加载任何 marisa 插件）启动，用于排查插件/组合导致的启动失败。
+- `--rescue`（启动参数）：直接进入急救模式页面（不启动后端），用于手动恢复/重置。
+
+三级启动状态机（详见 [docs/RESEARCH-rescue-mode-implementation-20260822.md](../docs/RESEARCH-rescue-mode-implementation-20260822.md)）：完整组合连续 2 次启动失败（后端未发布 URL / 快速异常退出 / 页面内 JS 报错或白屏）自动降级极简模式；极简模式再连续 2 次失败进入急救页（备份/重置配置/重解包源码）。托盘「重试完整模式」可随时拉回完整组合。
 
 壳进程强制单实例：再次启动不会创建第二个窗口/托盘图标/后端，而是通知已运行实例显示并聚焦主窗口，第二个进程随即退出。
 

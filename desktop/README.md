@@ -124,6 +124,19 @@ development backend:
   window and mirror the persistent log to it. Windows packaged builds are GUI
   subsystem binaries with no console; only this opt-in creates one. Useful for
   on-site diagnosis without opening the log file.
+- `--minimal` (startup argument): boot directly with the minimal profile
+  (harness-shipped base + web-app template, no marisa plugins), skipping the
+  full composition. Useful when a plugin or composition breaks startup.
+- `--rescue` (startup argument): enter the rescue-mode page directly without
+  starting the backend, for manual backup/reset/reinstall actions.
+
+A three-stage boot state machine (see
+[docs/RESEARCH-rescue-mode-implementation-20260822.md](../docs/RESEARCH-rescue-mode-implementation-20260822.md))
+downgrades automatically: two consecutive full-composition failures (backend
+never publishes a URL, fast abnormal exit, or page-level JS errors / white
+screen detected by the shell's page-health probe) switch to the minimal
+profile; two more failures there open the rescue page. The tray menu's
+"Retry Full Mode" pulls back to the full composition at any time.
 
 The shell enforces single-instance: launching the app again does not create a
 second window, tray icon, or backend — it notifies the running instance, which

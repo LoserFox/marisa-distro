@@ -122,6 +122,9 @@ func (m *backendManager) restart() bool {
 	if cmd == nil || exitCh == nil {
 		return false
 	}
+	// 置位用户重启标志：本次终结是主动行为，不计入启动失败计数
+	// （崩溃循环计数排除托盘「重启后端」的进程树杀）。
+	userRestartRequested.Store(true)
 	go func() {
 		killServerTree(cmd.Process.Pid, false)
 		time.Sleep(serverStopGrace)
@@ -136,6 +139,10 @@ var backendMgr backendManager
 // retryFullMode 是托盘「重试完整模式」的请求标志：置位后 supervise 在下一轮
 // 迭代把阶段拉回 normal（清除 MARISA_BOOT_PROFILE 并重置失败计数）。
 var retryFullMode atomic.Bool
+
+// userRestartRequested 是托盘「重启后端」的请求标志：置位后本次后端终结
+// 不计入启动失败（exitFailureClass 据此清零计数）。
+var userRestartRequested atomic.Bool
 
 // lastBootError 记录最近一次后端启动失败原因（急救页展示）。
 var lastBootError error
@@ -152,11 +159,22 @@ var lastBootError error
 //   - rescue：壳层自带急救页（rescue.html + 本地控制端点），不依赖后端；
 //     恢复或重试后回到 normal。
 //
-// 成功启动（发布 URL）清除失败计数与降级状态；冷启动读到持久化的
-// stage=rescue 时直接进急救页，避免每次开机重复等待两轮失败。
+// 计入失败计数的事件（同一计数器，连续累计）：
+//   - 后端进程未发布 URL（启动即退出 / 超时 / 启动失败）；
+//   - 发布 URL 后 stableRunTime 内快速异常退出（崩溃循环不再无限重试）；
+//   - 页面健康检查失败：页面内未捕获 JS 错误（白屏/错误横幅）或窗口超时
+//     未加载完成——shell 对页面可用性的唯一感知通道。
+//
+// 清零计数的事件：页面健康通过后的干净退出 / 用户主动重启（托盘）。
+//
+// 冷启动读到持久化的 stage=rescue 时直接进急救页；命令行 --minimal /
+// --rescue 强制指定起始阶段，优先于持久化状态。
 func supervise(ctx context.Context, port string, win *application.WebviewWindow, ready <-chan struct{}) {
 	stage := stageNormal
-	if loadRescueState().Stage == stageRescue {
+	if forcedBootStage != "" {
+		stage = forcedBootStage
+		log.Printf("命令行强制启动阶段：%s", stage)
+	} else if loadRescueState().Stage == stageRescue {
 		stage = stageRescue
 		log.Printf("上次启动停在急救模式，本次直接进入")
 	}
@@ -179,6 +197,9 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 		}
 
 		if stage == stageRescue {
+			// 持久化急救状态：冷启动（含 --rescue 强制）期间关闭应用，
+			// 下次启动仍直接进急救页，直到用户完成恢复或重试。
+			saveRescueState(stageRescue, lastBootError)
 			enterRescue(ctx, win, ready, lastBootError)
 			stage = stageNormal
 			failures = 0
@@ -191,37 +212,22 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 		applyBootProfile(stage)
 		backendMgr.set(nil, nil)
 		cmd, url, exitCh, err := startServer(ctx, port)
+		failed := false
 		if err != nil {
 			if ctx.Err() != nil {
 				return
 			}
 			failures++
 			lastBootError = err
+			failed = true
 			log.Printf("dsh server 启动失败：%v（%s 后重试）", err, backoff)
-			if stage == stageNormal && failures >= normalFailuresBeforeMinimal {
-				stage = stageMinimal
-				failures = 0
-				backoff = restartBackoff
-				saveRescueState(stageMinimal, err)
-				log.Printf("完整模式连续 %d 次启动失败，降级极简模式（profile=%s）：%v",
-					normalFailuresBeforeMinimal, minimalBootProfile, err)
-			} else if stage == stageMinimal && failures >= minimalFailuresBeforeRescue {
-				saveRescueState(stageRescue, err)
-				log.Printf("极简模式连续 %d 次启动失败，进入急救模式：%v", minimalFailuresBeforeRescue, err)
-				enterRescue(ctx, win, ready, err)
-				stage = stageNormal
-				failures = 0
-				backoff = restartBackoff
-				lastBootError = nil
-				saveRescueState(stageNormal, nil)
-				continue
-			}
 		} else {
+			startedAt := time.Now()
 			backendMgr.set(cmd, exitCh)
 			backoff = restartBackoff
-			failures = 0
 			lastBootError = nil
 			saveRescueState(stageNormal, nil)
+			navigated := false
 			if err := awaitWebviewReady(ready, ctx); err != nil {
 				// Webview 未就绪（或应用退出）：跳过本次导航，窗口停留在
 				// 启动页；下一次后端就绪时再试。
@@ -229,20 +235,78 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 			} else {
 				log.Printf("dsh server ready at %s", url)
 				win.SetURL(url)
+				navigated = true
 			}
 
-			// 等待本次进程终结（或应用退出）。
+			// 页面健康监控：导航成功后注入探针，捕获页面内 JS 报错/白屏。
+			// 未导航（webview 未就绪）时不监控——没有可检查的页面。
+			healthStop := make(chan struct{})
+			healthErr := make(chan error, 1)
+			if navigated {
+				if ph, err := newPageHealth(); err != nil {
+					log.Printf("页面健康端点不可用：%v（跳过页面健康检查）", err)
+				} else {
+					go monitorPageHealth(ph, func(js string) { win.ExecJS(js) },
+						healthStop, healthErr, pageBootTimeout)
+				}
+			}
+
+			// 等待本次进程终结、页面健康失败（或应用退出）。
 			select {
 			case <-ctx.Done():
 				// 应用退出：终止后端进程组并等待收口，不留孤儿 node。
+				close(healthStop)
 				stopServer(cmd, exitCh)
 				return
 			case exit := <-exitCh:
+				close(healthStop)
 				if exit.err != nil {
-					log.Printf("dsh server 异常退出：%v", exit.err)
+					count, reset := exitFailureClass(exit.err, userRestartRequested.Swap(false), time.Since(startedAt))
+					switch {
+					case count:
+						failures++
+						lastBootError = exit.err
+						failed = true
+						log.Printf("dsh server 快速异常退出（计入失败）：%v", exit.err)
+					case reset:
+						failures = 0
+						log.Printf("dsh server 异常退出（用户重启或长期运行后偶发，不计失败）：%v", exit.err)
+					default:
+						log.Printf("dsh server 异常退出：%v", exit.err)
+					}
 				} else {
+					failures = 0
 					log.Printf("dsh server 退出（重启）")
 				}
+			case herr := <-healthErr:
+				close(healthStop)
+				failures++
+				lastBootError = herr
+				failed = true
+				log.Printf("web 页面健康检查失败（计入失败）：%v", herr)
+				stopServer(cmd, exitCh)
+			}
+		}
+
+		// 状态机推进：启动失败、快速崩溃与页面级失败共用同一连续计数。
+		if failed {
+			if stage == stageNormal && failures >= normalFailuresBeforeMinimal {
+				stage = stageMinimal
+				failures = 0
+				backoff = restartBackoff
+				saveRescueState(stageMinimal, lastBootError)
+				log.Printf("完整模式连续 %d 次启动失败，降级极简模式（profile=%s）：%v",
+					normalFailuresBeforeMinimal, minimalBootProfile, lastBootError)
+			} else if stage == stageMinimal && failures >= minimalFailuresBeforeRescue {
+				saveRescueState(stageRescue, lastBootError)
+				log.Printf("极简模式连续 %d 次启动失败，进入急救模式：%v", minimalFailuresBeforeRescue, lastBootError)
+				enterRescue(ctx, win, ready, lastBootError)
+				stage = stageNormal
+				failures = 0
+				backoff = restartBackoff
+				lastBootError = nil
+				saveRescueState(stageNormal, nil)
+				continue
 			}
 		}
 
@@ -300,6 +364,10 @@ func main() {
 	// 原句柄，终端日志照常）。
 	maybeAttachConsole()
 
+	// --minimal / --rescue：命令行强制启动阶段（详见 rescue_state.go）。
+	// 解析必须在 supervise 启动前完成。
+	parseBootFlags()
+
 	logPath, closeLog, err := setupLogging()
 	if err != nil {
 		log.Printf("persistent logging unavailable: %v", err)
@@ -314,6 +382,18 @@ func main() {
 		}
 		return
 	}
+
+	// 单实例早检查：wails 的互斥到 application.New 才生效，而 ensureBackend
+	// （首次解包 40-70s）在其之前——重复启动会并行解包同一 staging 目录
+	// 互相踩踏（实测两次解包冲突、进程退出）。这里在解包前拦下第二实例并
+	// 通知首个实例聚焦窗口（exit 0 静默退出，不弹错误框）；wails 互斥仍作
+	// 兜底。
+	releaseLock, err := acquireSingleInstance()
+	if err != nil {
+		log.Printf("检测到已有 Marisa DSH 实例，本实例退出（%v）", err)
+		os.Exit(0)
+	}
+	defer releaseLock()
 
 	// 加载前读取环境变量：全部在创建窗口/启动后端之前解析。
 	// DSH_APP_WORKSPACE — 工作目录（默认用户主目录；受限/测试环境可覆盖）。

@@ -33,6 +33,24 @@ const (
 	stageRescue  bootStage = "rescue"
 )
 
+// forcedBootStage 是命令行强制启动阶段（--minimal / --rescue），优先于
+// 持久化状态：--minimal 直接以极简 profile 启动（不先尝试完整组合）；
+// --rescue 直接进急救页（不尝试启动后端）。仅本次进程生效，不做持久化。
+var forcedBootStage bootStage
+
+// parseBootFlags 解析命令行启动阶段覆盖。与 --console 同风格：未知参数
+// 忽略。desktop 是唯一参数解析方（wails 只识别含 "://" 的协议唤起参数）。
+func parseBootFlags() {
+	for _, a := range os.Args[1:] {
+		switch a {
+		case "--minimal":
+			forcedBootStage = stageMinimal
+		case "--rescue":
+			forcedBootStage = stageRescue
+		}
+	}
+}
+
 // rescueState 是跨进程持久化的启动阶段状态。
 type rescueState struct {
 	Stage     bootStage `json:"stage"`
