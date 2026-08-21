@@ -8,6 +8,10 @@ export declare const zh: {
     'settings.status.default': string;
     'settings.status.unsupported': string;
     'settings.request': string;
+    'settings.style': string;
+    'settings.style.desc': string;
+    'settings.style.native': string;
+    'settings.style.webview': string;
     'notify.approval.title': string;
     'notify.approval.body': string;
     'notify.question.title': string;
@@ -28,6 +32,10 @@ export declare const en: {
     'settings.status.default': string;
     'settings.status.unsupported': string;
     'settings.request': string;
+    'settings.style': string;
+    'settings.style.desc': string;
+    'settings.style.native': string;
+    'settings.style.webview': string;
     'notify.approval.title': string;
     'notify.approval.body': string;
     'notify.question.title': string;

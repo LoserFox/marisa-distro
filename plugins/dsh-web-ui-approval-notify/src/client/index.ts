@@ -39,7 +39,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { NotificationSettingsRow } from './NotificationSettingsRow.tsx'
 import { en, NS, zh, type NotifyKey } from './locales.ts'
 import {
-  fireNotification, fireSessionDoneNotification, fireTurnNotification, hiddenNow, notificationUsable,
+  awayNow, fireNotification, fireSessionDoneNotification, fireTurnNotification, notificationUsable,
 } from './notify.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -117,6 +117,18 @@ export function apply(ctx: ClientContext): void {
     if (sessions.list.getSnapshot().byId[sid] !== undefined) sessions.open(sid)
   }
 
+  /** 桌面壳点击原生 toast 的跳转入口：壳经 ExecJS 调用，语义同 openOf。 */
+  const openSessionHook = (sid: string): void => {
+    if (sessions.list.getSnapshot().byId[sid as SessionId] !== undefined) {
+      window.focus()
+      sessions.open(sid as SessionId)
+    }
+  }
+  ;(window as unknown as Record<string, unknown>).__dshWebUiNotifyOpen = openSessionHook
+  ctx.effect(() => () => {
+    delete (window as unknown as Record<string, unknown>).__dshWebUiNotifyOpen
+  }, 'ui-notify: open-session hook')
+
   /** Scan the current session's snapshot; notify newly finished turns. */
   const scan = (): void => {
     const current = sessions.list.getSnapshot().current
@@ -138,9 +150,9 @@ export function apply(ctx: ClientContext): void {
     for (const turn of snapshot.turnEnds.keys()) {
       if (turns.has(turn)) continue
       turns.add(turn)
-      if (hiddenNow() && notificationUsable()) {
+      if (awayNow() && notificationUsable()) {
         fireTurnNotification(turn, turnSummaryOf(snapshot.nodes, turn), t, {
-          label: labelOf(current), onOpen: openOf(current),
+          label: labelOf(current), onOpen: openOf(current), sessionId: current,
         })
       }
     }
@@ -166,8 +178,8 @@ export function apply(ctx: ClientContext): void {
             const key = `${sid}:${wait.key}`
             if (notified.has(key)) continue
             notified.add(key)
-            if (hiddenNow() && notificationUsable()) {
-              fireNotification(wait, t, { label: labelOf(sid), onOpen: openOf(sid) })
+            if (awayNow() && notificationUsable()) {
+              fireNotification(wait, t, { label: labelOf(sid), onOpen: openOf(sid), sessionId: sid })
             }
           }
         }
@@ -177,9 +189,9 @@ export function apply(ctx: ClientContext): void {
       if (sid !== current && summary.completed === true) {
         if (!completedNotified.has(sid)) {
           completedNotified.add(sid)
-          if (hiddenNow() && notificationUsable()) {
+          if (awayNow() && notificationUsable()) {
             fireSessionDoneNotification(t, {
-              label: labelOf(sid), onOpen: openOf(sid), tag: `${sid}:done`,
+              label: labelOf(sid), onOpen: openOf(sid), tag: `${sid}:done`, sessionId: sid,
             })
           }
         }

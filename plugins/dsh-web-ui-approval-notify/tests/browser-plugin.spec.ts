@@ -7,7 +7,7 @@
  * fiber-teardown cleanup.
  */
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ISessions, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
@@ -16,6 +16,21 @@ import { NotificationSettingsRow } from '../src/client/NotificationSettingsRow.t
 import { apply, inject } from '../src/client/index.ts'
 
 const SID = 's1' as SessionId
+
+/** In-memory Storage stub: this environment's `localStorage` global is undefined. */
+class MemoryStorage implements Storage {
+  private store = new Map<string, string>()
+  get length(): number { return this.store.size }
+  clear(): void { this.store.clear() }
+  getItem(key: string): string | null { return this.store.has(key) ? this.store.get(key)! : null }
+  key(index: number): string | null { return [...this.store.keys()][index] ?? null }
+  removeItem(key: string): void { this.store.delete(key) }
+  setItem(key: string, value: string): void { this.store.set(key, String(value)) }
+}
+
+beforeEach(() => {
+  Object.defineProperty(globalThis, 'localStorage', { value: new MemoryStorage(), configurable: true, writable: true })
+})
 
 /** Scripted notification: construct from options, record the instance, and let the test fire onclick. */
 class StubNotification {
@@ -184,11 +199,14 @@ async function bench() {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   StubNotification.created.length = 0
   StubNotification.permission = 'granted'
   // Restore a visible page for the next test.
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
   delete (globalThis as { Notification?: unknown }).Notification
+  delete (window as { _wails?: unknown })._wails
+  delete (globalThis as { localStorage?: unknown }).localStorage
 })
 
 describe('apply', () => {
@@ -270,6 +288,132 @@ describe('apply', () => {
     const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
     sessions.setPending([approval])
     expect(notify.created).toHaveLength(0)
+  })
+
+  it('delegates an unfocused-shell wait to the native-toast route instead of constructing a Notification', async () => {
+    const { ctx, notify } = await bench()
+    // Wails shell marker: the window lost focus (user switched apps) but the
+    // page visibilityState stays 'visible' — the shell-aware gate must fire,
+    // and the display goes to the host-side native-toast bridge.
+    Object.assign(window, { _wails: {} })
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    notify.created.length = 0
+    const approval = {
+      kind: 'approval',
+      key: 'a:rpc-15',
+      payload: { approvalId: 'ap-15', toolName: 'bash', reason: '越权执行' },
+    }
+    const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
+    sessions.setPending([approval])
+    await Promise.resolve()
+    expect(notify.created).toHaveLength(0)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/plugins/dsh-web-ui-approval-notify/toast')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(String(init.body))).toEqual({ title: '主会话 · 需要审批', body: '越权执行', sessionId: SID })
+  })
+
+  it('exposes the open-session hook for native-toast clicks', async () => {
+    const { ctx, sessions } = await bench()
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    const hook = (window as unknown as Record<string, unknown>).__dshWebUiNotifyOpen as (sid: string) => void
+    expect(typeof hook).toBe('function')
+    // 已列出的会话：跳转。
+    hook(SID)
+    expect(sessions.open).toHaveBeenCalledWith(SID)
+    sessions.open.mockClear()
+    // 未知会话：open() 会抛错，钩子应静默跳过。
+    hook('missing-session')
+    expect(sessions.open).not.toHaveBeenCalled()
+  })
+
+  it('stays silent while the desktop shell window is visible and focused', async () => {
+    const { ctx, notify } = await bench()
+    Object.assign(window, { _wails: {} })
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true)
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    notify.created.length = 0
+    const approval = {
+      kind: 'approval',
+      key: 'a:rpc-16',
+      payload: { approvalId: 'ap-16', toolName: 'bash' },
+    }
+    const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
+    sessions.setPending([approval])
+    expect(notify.created).toHaveLength(0)
+  })
+
+  it('keeps browser parity: visible but unfocused without the shell stays silent', async () => {
+    const { ctx, notify } = await bench()
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    notify.created.length = 0
+    const approval = {
+      kind: 'approval',
+      key: 'a:rpc-17',
+      payload: { approvalId: 'ap-17', toolName: 'bash' },
+    }
+    const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
+    sessions.setPending([approval])
+    expect(notify.created).toHaveLength(0)
+  })
+
+  it('falls back to a Notification when the native-toast route is unavailable', async () => {
+    const { ctx, notify } = await bench()
+    Object.assign(window, { _wails: {} })
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('bridge down')))
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    notify.created.length = 0
+    const approval = {
+      kind: 'approval',
+      key: 'a:rpc-19',
+      payload: { approvalId: 'ap-19', toolName: 'bash', reason: '越权执行' },
+    }
+    const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
+    sessions.setPending([approval])
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(notify.created).toHaveLength(1)
+    expect(notify.created[0]).toMatchObject({
+      title: '主会话 · 需要审批',
+      options: { body: '越权执行', tag: 'a:rpc-19' },
+    })
+  })
+
+  it('uses the browser default UI instead of the native route when the style is webview', async () => {
+    const { ctx, notify } = await bench()
+    // User chose the WebView2 style: even in the shell, display goes to the
+    // browser default Notification UI, not the host-side native-toast bridge.
+    localStorage.setItem('dsh-web-ui-notify.style', 'webview')
+    Object.assign(window, { _wails: {} })
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    notify.created.length = 0
+    const approval = {
+      kind: 'approval',
+      key: 'a:rpc-18',
+      payload: { approvalId: 'ap-18', toolName: 'bash', reason: '越权执行' },
+    }
+    const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
+    sessions.setPending([approval])
+    expect(notify.created).toHaveLength(1)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(notify.created[0]).toMatchObject({
+      title: '主会话 · 需要审批',
+      options: { body: '越权执行', tag: 'a:rpc-18' },
+    })
   })
 
   it('does not notify without granted permission', async () => {

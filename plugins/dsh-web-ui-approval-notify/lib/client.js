@@ -6,124 +6,6 @@ window.__ModuleLoader__.load({
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let react_jsx_runtime = require("react/jsx-runtime");
-		//#region \0dsh-css:src/client/NotificationSettingsRow.module.css.mjs
-		const css = ".W6CegG_row{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}.W6CegG_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}.W6CegG_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}.W6CegG_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.W6CegG_status{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:400;line-height:18px}.W6CegG_button{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.W6CegG_button:hover{background:var(--dsw-alias-interactive-bg-hover)}";
-		const tagId = "@bill9109/dsh-web-ui-notify/NotificationSettingsRow.module.css";
-		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
-			const tag = document.createElement("style");
-			tag.dataset.plugin = "@bill9109/dsh-web-ui-notify";
-			tag.dataset.pluginCss = tagId;
-			tag.textContent = css;
-			document.head.appendChild(tag);
-		}
-		var NotificationSettingsRow_module_css_default = {
-			"desc": "W6CegG_desc",
-			"title": "W6CegG_title",
-			"rowText": "W6CegG_rowText",
-			"row": "W6CegG_row",
-			"button": "W6CegG_button",
-			"status": "W6CegG_status"
-		};
-		//#endregion
-		//#region src/client/NotificationSettingsRow.tsx
-		/** General Settings row for the desktop-notification permission. */
-		/** Read the current browser permission state (safe outside browsers). */
-		function permissionState() {
-			if (typeof Notification === "undefined") return "unsupported";
-			return Notification.permission;
-		}
-		/** Locale key for a permission state, for the settings row copy. */
-		function statusKey(state) {
-			switch (state) {
-				case "granted": return "settings.status.granted";
-				case "denied": return "settings.status.denied";
-				case "default": return "settings.status.default";
-				case "unsupported": return "settings.status.unsupported";
-			}
-		}
-		/**
-		* Render the desktop-notification permission row: current browser state plus
-		* a request button (the user-gesture entry point the browser requires before
-		* `new Notification` works).
-		* @param props - composed Settings slot props.
-		* @returns the preference row.
-		*/
-		function NotificationSettingsRow({ t }) {
-			const [state, setState] = (0, react.useState)(permissionState);
-			const request = async () => {
-				if (typeof Notification === "undefined") return;
-				setState(await Notification.requestPermission());
-			};
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: NotificationSettingsRow_module_css_default.row,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: NotificationSettingsRow_module_css_default.rowText,
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: NotificationSettingsRow_module_css_default.title,
-							children: t("settings.title")
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: NotificationSettingsRow_module_css_default.desc,
-							children: t("settings.description")
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: NotificationSettingsRow_module_css_default.status,
-							children: t(statusKey(state))
-						})
-					]
-				}), state === "granted" || state === "unsupported" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-					type: "button",
-					className: NotificationSettingsRow_module_css_default.button,
-					onClick: () => {
-						request();
-					},
-					children: t("settings.request")
-				})]
-			});
-		}
-		//#endregion
-		//#region src/client/locales.ts
-		/** `web-ui-notify` namespace dictionaries. */
-		/** Simplified Chinese dictionary (the key-set source of truth). */
-		const zh = {
-			"settings.title": "桌面通知",
-			"settings.description": "当工具需要审批、向你提问、或轮次完成，而你正在浏览其他标签页时，弹出系统通知提醒你。",
-			"settings.status.granted": "已开启",
-			"settings.status.denied": "已被浏览器阻止",
-			"settings.status.default": "未授权",
-			"settings.status.unsupported": "浏览器不支持",
-			"settings.request": "开启桌面通知",
-			"notify.approval.title": "需要审批",
-			"notify.approval.body": "工具 {toolName} 请求越权执行",
-			"notify.question.title": "需要你的回答",
-			"notify.question.bodyGeneric": "Agent 有一个问题需要你回答",
-			"notify.turn.title": "轮次完成",
-			"notify.turn.body": "第 {turn} 轮已完成",
-			"notify.sessionDone.title": "会话完成",
-			"notify.other.done.body": "该会话已完成，可以切回查看"
-		};
-		/** English dictionary, checked complete against the zh key set. */
-		const en = {
-			"settings.title": "Desktop notifications",
-			"settings.description": "Show a system notification when a tool needs approval, asks you a question, or a turn finishes while you are on another tab.",
-			"settings.status.granted": "On",
-			"settings.status.denied": "Blocked by the browser",
-			"settings.status.default": "Not granted",
-			"settings.status.unsupported": "Not supported",
-			"settings.request": "Enable desktop notifications",
-			"notify.approval.title": "Approval required",
-			"notify.approval.body": "Tool {toolName} requests privileged execution",
-			"notify.question.title": "Your answer is needed",
-			"notify.question.bodyGeneric": "The agent has a question for you",
-			"notify.turn.title": "Turn finished",
-			"notify.turn.body": "Turn {turn} completed",
-			"notify.sessionDone.title": "Session finished",
-			"notify.other.done.body": "This session finished — switch over to see the result"
-		};
-		/** Dictionary namespace owned by this plugin. */
-		const NS = "web-ui-notify";
-		//#endregion
 		//#region src/client/notify.ts
 		/**
 		* Whether the page is currently hidden (the user is on another tab).
@@ -131,6 +13,37 @@ window.__ModuleLoader__.load({
 		*/
 		function hiddenNow() {
 			return typeof document !== "undefined" && document.visibilityState === "hidden";
+		}
+		/**
+		* Whether the page runs inside the Wails desktop shell rather than a plain
+		* browser: the shell injects `window._wails` on every document.
+		* @returns true when the Wails runtime marker is present.
+		*/
+		function desktopShellNow() {
+			return typeof window !== "undefined" && "_wails" in window;
+		}
+		/** localStorage key persisting the user's notification display style. */
+		const STYLE_KEY = "dsh-web-ui-notify.style";
+		/**
+		* Read the persisted notification style. Missing or invalid values fall back
+		* to 'native' (the desktop shell's preferred path; when the native bridge is
+		* unavailable the display falls back to the browser default anyway).
+		* @returns the persisted style, defaulting to 'native'.
+		*/
+		function notificationStyle() {
+			if (typeof localStorage === "undefined") return "native";
+			return localStorage.getItem("dsh-web-ui-notify.style") === "webview" ? "webview" : "native";
+		}
+		/**
+		* Whether the user is away from this app: the page is hidden, or — in the
+		* Wails desktop shell — the window lost focus while staying visible. A plain
+		* browser tab keeps `visibilityState` 'visible' when the window is merely
+		* unfocused, so the shell check keeps browser behavior unchanged.
+		* @returns true when the plugin should raise a notification.
+		*/
+		function awayNow() {
+			if (hiddenNow()) return true;
+			return desktopShellNow() && typeof document !== "undefined" && !document.hasFocus();
 		}
 		/**
 		* Whether the browser supports the Notification API and has granted permission.
@@ -155,8 +68,49 @@ window.__ModuleLoader__.load({
 		function titled(kindTitle, label) {
 			return label === "" ? kindTitle : `${label} · ${kindTitle}`;
 		}
-		/** The one rendering path every notification kind funnels through. */
+		/** 与 host 半边 TOAST_ROUTE 保持同步（双 bundle 无法共享常量）。 */
+		const TOAST_ROUTE = "/plugins/dsh-web-ui-approval-notify/toast";
+		/**
+		* 把通知意图交给 host 半边的原生 toast 路由（桌面壳经 Wails 通知服务弹
+		* Windows 原生 toast）。非 2xx 视为失败。
+		* @param title - toast 标题。
+		* @param body - toast 正文。
+		* @param sessionId - 可选：源会话 id，随激活载荷回传用于点击跳转。
+		* @returns 完成即成功；网络错误或非 2xx 以 rejection 呈现。
+		*/
+		function fetchNativeToast(title, body, sessionId) {
+			const payload = {
+				title,
+				body
+			};
+			if (sessionId !== void 0) payload.sessionId = sessionId;
+			return fetch(TOAST_ROUTE, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(payload)
+			}).then((response) => {
+				if (!response.ok) throw new Error(`toast route responded ${response.status}`);
+			});
+		}
+		/**
+		* The one rendering path every notification kind funnels through. In the
+		* Wails desktop shell with the 'native' style (the default) the notification
+		* is delegated to the host-side native toast bridge (falling back to the
+		* WebView2 default UI when the bridge is unavailable); with the 'webview'
+		* style — or in a plain browser, which has no native bridge — it uses
+		* `new Notification` directly.
+		*/
 		function show(title, body, tag, target) {
+			if (desktopShellNow() && notificationStyle() === "native") {
+				fetchNativeToast(title, body, target.sessionId).catch(() => {
+					withClickFocus(new Notification(title, {
+						body,
+						tag,
+						requireInteraction: true
+					}), target.onOpen);
+				});
+				return;
+			}
 			return withClickFocus(new Notification(title, {
 				body,
 				tag,
@@ -170,7 +124,8 @@ window.__ModuleLoader__.load({
 		* @param wait - the pending approval or question interaction.
 		* @param t - bound locale translate for the plugin namespace.
 		* @param target - session label + click-to-jump handler.
-		* @returns the constructed Notification (tests assert on it).
+		* @returns the constructed Notification in a browser, or undefined when the
+		*   desktop-shell native-toast bridge took over the display.
 		*/
 		function fireNotification(wait, t, target) {
 			return show(titled(wait.kind === "approval" ? t("notify.approval.title") : t("notify.question.title"), target.label), wait.kind === "approval" ? wait.payload.reason ?? t("notify.approval.body", { toolName: wait.payload.toolName }) : (() => {
@@ -187,7 +142,8 @@ window.__ModuleLoader__.load({
 		*   absent (a tool-only turn) the notification falls back to the turn number.
 		* @param t - bound locale translate for the plugin namespace.
 		* @param target - session label + click-to-jump handler.
-		* @returns the constructed Notification (tests assert on it).
+		* @returns the constructed Notification in a browser, or undefined when the
+		*   desktop-shell native-toast bridge took over the display.
 		*/
 		function fireTurnNotification(turn, summary, t, target) {
 			const body = summary !== void 0 && summary !== "" ? summary : t("notify.turn.body", { turn: String(turn) });
@@ -201,11 +157,175 @@ window.__ModuleLoader__.load({
 		* @param t - bound locale translate for the plugin namespace.
 		* @param target - session label + click-to-jump handler + a unique tag so the
 		*   browser never replaces one session's notification with another's.
-		* @returns the constructed Notification (tests assert on it).
+		* @returns the constructed Notification in a browser, or undefined when the
+		*   desktop-shell native-toast bridge took over the display.
 		*/
 		function fireSessionDoneNotification(t, target) {
 			return show(titled(t("notify.sessionDone.title"), target.label), t("notify.other.done.body"), target.tag, target);
 		}
+		//#endregion
+		//#region \0dsh-css:C:\Users\lf\Documents\Workspace\marisa-distro\plugins\dsh-web-ui-approval-notify\src\client\NotificationSettingsRow.module.css.mjs
+		const css = ".TrRyMG_row{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}.TrRyMG_rowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}.TrRyMG_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}.TrRyMG_desc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.TrRyMG_status{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:400;line-height:18px}.TrRyMG_styleRow{align-items:center;gap:8px;display:flex}.TrRyMG_styleLabel{color:var(--dsw-alias-label-secondary);white-space:nowrap;font-size:12px;font-weight:400;line-height:18px}.TrRyMG_styleSelect{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-module-platform);height:28px;font:inherit;color:var(--dsw-alias-label-primary);border-radius:6px;padding:0 8px;font-size:12px;line-height:18px}.TrRyMG_styleHint{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.TrRyMG_button{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.TrRyMG_button:hover{background:var(--dsw-alias-interactive-bg-hover)}";
+		const tagId = "@bill9109/dsh-web-ui-notify/NotificationSettingsRow.module.css";
+		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
+			const tag = document.createElement("style");
+			tag.dataset.plugin = "@bill9109/dsh-web-ui-notify";
+			tag.dataset.pluginCss = tagId;
+			tag.textContent = css;
+			document.head.appendChild(tag);
+		}
+		var NotificationSettingsRow_module_css_default = {
+			"title": "TrRyMG_title",
+			"status": "TrRyMG_status",
+			"styleLabel": "TrRyMG_styleLabel",
+			"button": "TrRyMG_button",
+			"desc": "TrRyMG_desc",
+			"styleRow": "TrRyMG_styleRow",
+			"styleHint": "TrRyMG_styleHint",
+			"styleSelect": "TrRyMG_styleSelect",
+			"row": "TrRyMG_row",
+			"rowText": "TrRyMG_rowText"
+		};
+		//#endregion
+		//#region src/client/NotificationSettingsRow.tsx
+		/** General Settings row for the desktop-notification permission and display style. */
+		/** Read the current browser permission state (safe outside browsers). */
+		function permissionState() {
+			if (typeof Notification === "undefined") return "unsupported";
+			return Notification.permission;
+		}
+		/** Locale key for a permission state, for the settings row copy. */
+		function statusKey(state) {
+			switch (state) {
+				case "granted": return "settings.status.granted";
+				case "denied": return "settings.status.denied";
+				case "default": return "settings.status.default";
+				case "unsupported": return "settings.status.unsupported";
+			}
+		}
+		/**
+		* Render the desktop-notification preference row: current browser state plus
+		* a request button (the user-gesture entry point the browser requires before
+		* `new Notification` works), and a display-style selector (native Windows
+		* toast vs the browser default UI) persisted to localStorage.
+		* @param props - composed Settings slot props.
+		* @returns the preference row.
+		*/
+		function NotificationSettingsRow({ t }) {
+			const [state, setState] = (0, react.useState)(permissionState);
+			const [style, setStyle] = (0, react.useState)(notificationStyle);
+			const request = async () => {
+				if (typeof Notification === "undefined") return;
+				setState(await Notification.requestPermission());
+			};
+			const changeStyle = (next) => {
+				setStyle(next);
+				try {
+					localStorage.setItem(STYLE_KEY, next);
+				} catch {}
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: NotificationSettingsRow_module_css_default.row,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: NotificationSettingsRow_module_css_default.rowText,
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: NotificationSettingsRow_module_css_default.title,
+							children: t("settings.title")
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: NotificationSettingsRow_module_css_default.desc,
+							children: t("settings.description")
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: NotificationSettingsRow_module_css_default.status,
+							children: t(statusKey(state))
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: NotificationSettingsRow_module_css_default.styleRow,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: NotificationSettingsRow_module_css_default.styleLabel,
+								children: t("settings.style")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+								className: NotificationSettingsRow_module_css_default.styleSelect,
+								value: style,
+								"aria-label": t("settings.style"),
+								onChange: (event) => {
+									changeStyle(event.target.value);
+								},
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "native",
+									children: t("settings.style.native")
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+									value: "webview",
+									children: t("settings.style.webview")
+								})]
+							})]
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: NotificationSettingsRow_module_css_default.styleHint,
+							children: t("settings.style.desc")
+						})
+					]
+				}), state === "granted" || state === "unsupported" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					type: "button",
+					className: NotificationSettingsRow_module_css_default.button,
+					onClick: () => {
+						request();
+					},
+					children: t("settings.request")
+				})]
+			});
+		}
+		//#endregion
+		//#region src/client/locales.ts
+		/** `web-ui-notify` namespace dictionaries. */
+		/** Simplified Chinese dictionary (the key-set source of truth). */
+		const zh = {
+			"settings.title": "桌面通知",
+			"settings.description": "当工具需要审批、向你提问、或轮次完成，而你正在浏览其他标签页时，弹出系统通知提醒你。",
+			"settings.status.granted": "已开启",
+			"settings.status.denied": "已被浏览器阻止",
+			"settings.status.default": "未授权",
+			"settings.status.unsupported": "浏览器不支持",
+			"settings.request": "开启桌面通知",
+			"settings.style": "通知样式",
+			"settings.style.desc": "桌面通知的展示方式：系统原生 toast，或浏览器默认通知（WebView2）。原生仅桌面 App 可用，普通浏览器始终使用浏览器默认。",
+			"settings.style.native": "系统原生 (Windows Toast)",
+			"settings.style.webview": "浏览器默认 (WebView2)",
+			"notify.approval.title": "需要审批",
+			"notify.approval.body": "工具 {toolName} 请求越权执行",
+			"notify.question.title": "需要你的回答",
+			"notify.question.bodyGeneric": "Agent 有一个问题需要你回答",
+			"notify.turn.title": "轮次完成",
+			"notify.turn.body": "第 {turn} 轮已完成",
+			"notify.sessionDone.title": "会话完成",
+			"notify.other.done.body": "该会话已完成，可以切回查看"
+		};
+		/** English dictionary, checked complete against the zh key set. */
+		const en = {
+			"settings.title": "Desktop notifications",
+			"settings.description": "Show a system notification when a tool needs approval, asks you a question, or a turn finishes while you are on another tab.",
+			"settings.status.granted": "On",
+			"settings.status.denied": "Blocked by the browser",
+			"settings.status.default": "Not granted",
+			"settings.status.unsupported": "Not supported",
+			"settings.request": "Enable desktop notifications",
+			"settings.style": "Notification style",
+			"settings.style.desc": "How desktop notifications are displayed: native Windows toast, or the browser default (WebView2). Native is desktop-app only; plain browsers always use the browser default.",
+			"settings.style.native": "Native (Windows toast)",
+			"settings.style.webview": "Browser default (WebView2)",
+			"notify.approval.title": "Approval required",
+			"notify.approval.body": "Tool {toolName} requests privileged execution",
+			"notify.question.title": "Your answer is needed",
+			"notify.question.bodyGeneric": "The agent has a question for you",
+			"notify.turn.title": "Turn finished",
+			"notify.turn.body": "Turn {turn} completed",
+			"notify.sessionDone.title": "Session finished",
+			"notify.other.done.body": "This session finished — switch over to see the result"
+		};
+		/** Dictionary namespace owned by this plugin. */
+		const NS = "web-ui-notify";
 		//#endregion
 		//#region src/client/index.ts
 		/** Notification-body excerpt cap: keep the system notification compact. */
@@ -272,6 +392,17 @@ window.__ModuleLoader__.load({
 			const openOf = (sid) => () => {
 				if (sessions.list.getSnapshot().byId[sid] !== void 0) sessions.open(sid);
 			};
+			/** 桌面壳点击原生 toast 的跳转入口：壳经 ExecJS 调用，语义同 openOf。 */
+			const openSessionHook = (sid) => {
+				if (sessions.list.getSnapshot().byId[sid] !== void 0) {
+					window.focus();
+					sessions.open(sid);
+				}
+			};
+			window.__dshWebUiNotifyOpen = openSessionHook;
+			ctx.effect(() => () => {
+				delete window.__dshWebUiNotifyOpen;
+			}, "ui-notify: open-session hook");
 			/** Scan the current session's snapshot; notify newly finished turns. */
 			const scan = () => {
 				const current = sessions.list.getSnapshot().current;
@@ -289,9 +420,10 @@ window.__ModuleLoader__.load({
 				for (const turn of snapshot.turnEnds.keys()) {
 					if (turns.has(turn)) continue;
 					turns.add(turn);
-					if (hiddenNow() && notificationUsable()) fireTurnNotification(turn, turnSummaryOf(snapshot.nodes, turn), t, {
+					if (awayNow() && notificationUsable()) fireTurnNotification(turn, turnSummaryOf(snapshot.nodes, turn), t, {
 						label: labelOf(current),
-						onOpen: openOf(current)
+						onOpen: openOf(current),
+						sessionId: current
 					});
 				}
 			};
@@ -312,19 +444,21 @@ window.__ModuleLoader__.load({
 							const key = `${sid}:${wait.key}`;
 							if (notified.has(key)) continue;
 							notified.add(key);
-							if (hiddenNow() && notificationUsable()) fireNotification(wait, t, {
+							if (awayNow() && notificationUsable()) fireNotification(wait, t, {
 								label: labelOf(sid),
-								onOpen: openOf(sid)
+								onOpen: openOf(sid),
+								sessionId: sid
 							});
 						}
 					}
 					if (sid !== current && summary.completed === true) {
 						if (!completedNotified.has(sid)) {
 							completedNotified.add(sid);
-							if (hiddenNow() && notificationUsable()) fireSessionDoneNotification(t, {
+							if (awayNow() && notificationUsable()) fireSessionDoneNotification(t, {
 								label: labelOf(sid),
 								onOpen: openOf(sid),
-								tag: `${sid}:done`
+								tag: `${sid}:done`,
+								sessionId: sid
 							});
 						}
 					} else if (summary.completed !== true) completedNotified.delete(sid);

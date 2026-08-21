@@ -1,6 +1,6 @@
 import { NotificationSettingsRow } from "./NotificationSettingsRow.js";
 import { en, NS, zh } from "./locales.js";
-import { fireNotification, fireSessionDoneNotification, fireTurnNotification, hiddenNow, notificationUsable, } from "./notify.js";
+import { awayNow, fireNotification, fireSessionDoneNotification, fireTurnNotification, notificationUsable, } from "./notify.js";
 /** Notification-body excerpt cap: keep the system notification compact. */
 const SUMMARY_MAX = 80;
 /** Session-label cap in notification titles: keep the title bar compact. */
@@ -67,6 +67,17 @@ export function apply(ctx) {
         if (sessions.list.getSnapshot().byId[sid] !== undefined)
             sessions.open(sid);
     };
+    /** 桌面壳点击原生 toast 的跳转入口：壳经 ExecJS 调用，语义同 openOf。 */
+    const openSessionHook = (sid) => {
+        if (sessions.list.getSnapshot().byId[sid] !== undefined) {
+            window.focus();
+            sessions.open(sid);
+        }
+    };
+    window.__dshWebUiNotifyOpen = openSessionHook;
+    ctx.effect(() => () => {
+        delete window.__dshWebUiNotifyOpen;
+    }, 'ui-notify: open-session hook');
     /** Scan the current session's snapshot; notify newly finished turns. */
     const scan = () => {
         const current = sessions.list.getSnapshot().current;
@@ -92,9 +103,9 @@ export function apply(ctx) {
             if (turns.has(turn))
                 continue;
             turns.add(turn);
-            if (hiddenNow() && notificationUsable()) {
+            if (awayNow() && notificationUsable()) {
                 fireTurnNotification(turn, turnSummaryOf(snapshot.nodes, turn), t, {
-                    label: labelOf(current), onOpen: openOf(current),
+                    label: labelOf(current), onOpen: openOf(current), sessionId: current,
                 });
             }
         }
@@ -121,8 +132,8 @@ export function apply(ctx) {
                         if (notified.has(key))
                             continue;
                         notified.add(key);
-                        if (hiddenNow() && notificationUsable()) {
-                            fireNotification(wait, t, { label: labelOf(sid), onOpen: openOf(sid) });
+                        if (awayNow() && notificationUsable()) {
+                            fireNotification(wait, t, { label: labelOf(sid), onOpen: openOf(sid), sessionId: sid });
                         }
                     }
                 }
@@ -132,9 +143,9 @@ export function apply(ctx) {
             if (sid !== current && summary.completed === true) {
                 if (!completedNotified.has(sid)) {
                     completedNotified.add(sid);
-                    if (hiddenNow() && notificationUsable()) {
+                    if (awayNow() && notificationUsable()) {
                         fireSessionDoneNotification(t, {
-                            label: labelOf(sid), onOpen: openOf(sid), tag: `${sid}:done`,
+                            label: labelOf(sid), onOpen: openOf(sid), tag: `${sid}:done`, sessionId: sid,
                         });
                     }
                 }

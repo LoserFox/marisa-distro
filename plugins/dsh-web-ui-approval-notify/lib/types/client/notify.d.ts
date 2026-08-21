@@ -13,20 +13,48 @@ export type Translate = (key: NotifyKey, params?: Record<string, string>) => str
 export type OpenHandler = () => void;
 /**
  * Session-target bundle every notification carries: the session's display
- * label (for the title) and the click-to-jump handler (which opens that
- * conversation in the web UI).
+ * label (for the title), the click-to-jump handler (browser path), and — in
+ * the desktop shell — the session id carried into the native-toast activation
+ * payload so clicking the toast can open the same conversation.
  */
 export interface NotifyTarget {
     /** Session display label appended to the title, e.g. "重构数据库 · 需要审批". */
     label: string;
     /** Click-to-jump handler (open the source conversation). */
     onOpen: OpenHandler;
+    /** Source session id, forwarded to the native-toast bridge for click-to-open. */
+    sessionId?: string;
 }
 /**
  * Whether the page is currently hidden (the user is on another tab).
  * @returns true when the document visibility state is 'hidden'.
  */
 export declare function hiddenNow(): boolean;
+/**
+ * Whether the page runs inside the Wails desktop shell rather than a plain
+ * browser: the shell injects `window._wails` on every document.
+ * @returns true when the Wails runtime marker is present.
+ */
+export declare function desktopShellNow(): boolean;
+/** localStorage key persisting the user's notification display style. */
+export declare const STYLE_KEY = "dsh-web-ui-notify.style";
+/** Notification display style: native Windows toast, or the browser default UI. */
+export type NotifyStyle = 'native' | 'webview';
+/**
+ * Read the persisted notification style. Missing or invalid values fall back
+ * to 'native' (the desktop shell's preferred path; when the native bridge is
+ * unavailable the display falls back to the browser default anyway).
+ * @returns the persisted style, defaulting to 'native'.
+ */
+export declare function notificationStyle(): NotifyStyle;
+/**
+ * Whether the user is away from this app: the page is hidden, or — in the
+ * Wails desktop shell — the window lost focus while staying visible. A plain
+ * browser tab keeps `visibilityState` 'visible' when the window is merely
+ * unfocused, so the shell check keeps browser behavior unchanged.
+ * @returns true when the plugin should raise a notification.
+ */
+export declare function awayNow(): boolean;
 /**
  * Whether the browser supports the Notification API and has granted permission.
  * @returns true when `new Notification` may be constructed.
@@ -39,9 +67,10 @@ export declare function notificationUsable(): boolean;
  * @param wait - the pending approval or question interaction.
  * @param t - bound locale translate for the plugin namespace.
  * @param target - session label + click-to-jump handler.
- * @returns the constructed Notification (tests assert on it).
+ * @returns the constructed Notification in a browser, or undefined when the
+ *   desktop-shell native-toast bridge took over the display.
  */
-export declare function fireNotification(wait: PendingInteraction, t: Translate, target: NotifyTarget): Notification;
+export declare function fireNotification(wait: PendingInteraction, t: Translate, target: NotifyTarget): Notification | undefined;
 /**
  * Build and show the desktop notification for a completed turn. The caller
  * gates on {@link hiddenNow} / {@link notificationUsable} and dedupes by
@@ -51,9 +80,10 @@ export declare function fireNotification(wait: PendingInteraction, t: Translate,
  *   absent (a tool-only turn) the notification falls back to the turn number.
  * @param t - bound locale translate for the plugin namespace.
  * @param target - session label + click-to-jump handler.
- * @returns the constructed Notification (tests assert on it).
+ * @returns the constructed Notification in a browser, or undefined when the
+ *   desktop-shell native-toast bridge took over the display.
  */
-export declare function fireTurnNotification(turn: number, summary: string | undefined, t: Translate, target: NotifyTarget): Notification;
+export declare function fireTurnNotification(turn: number, summary: string | undefined, t: Translate, target: NotifyTarget): Notification | undefined;
 /**
  * Build and show the desktop notification for a whole background session
  * finishing ("done" reminder). The caller gates on {@link hiddenNow} /
@@ -62,8 +92,9 @@ export declare function fireTurnNotification(turn: number, summary: string | und
  * @param t - bound locale translate for the plugin namespace.
  * @param target - session label + click-to-jump handler + a unique tag so the
  *   browser never replaces one session's notification with another's.
- * @returns the constructed Notification (tests assert on it).
+ * @returns the constructed Notification in a browser, or undefined when the
+ *   desktop-shell native-toast bridge took over the display.
  */
 export declare function fireSessionDoneNotification(t: Translate, target: NotifyTarget & {
     tag: string;
-}): Notification;
+}): Notification | undefined;
