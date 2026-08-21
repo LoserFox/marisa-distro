@@ -184,3 +184,26 @@ bundles 仅 dsh-base 的组合树 78 条、无 webserver/web-runtime、不打印
 
 测试证据：go test -tags installedbundle / embeddedbundle 全绿；launcher.cmd 分支 shim 实测
 （默认 marisa 参数不变；BOOT_PROFILE=web 只传 bundled overlay）。
+
+### 9.5 移植项 2 核心：急救页插件级禁用（2026-08-23，本分支提交 4）
+
+对应上游「Temporarily disable a plugin」动作面。实现：
+
+- `desktop/rescue_bundles.go`：bundleRepo（目录可注入）——解析 profile package.json 的
+  `dsh.profile.bundles` 加载清单，禁用=从清单移除并记入 profile 内 `.disabled-bundles.json`，
+  启用=加回清单末尾并清记录；每次变更先开安装事务 WAL（保护 package.json，可回滚）；
+  名字经 npm 包名正则校验防路径注入；写回用 map 解析保留非 bundles 字段。
+- `desktop/rescue_server.go`：`GET /api/bundles`（清单+禁用标记）、`POST /api/disable-bundle`
+  / `POST /api/enable-bundle`（`{name}`，重启后生效）。
+- `desktop/rescue.html`：插件管理区块（bundle 行 + 禁用/启用按钮 + 状态提示）。
+- 语义：仅跳过加载、不卸载文件；重解包/初始化配置清禁用记录（回到出厂即全部启用）。
+
+测试证据：新增 6 个用例（清单解析/禁用+WAL 封存+字段保留/重复与未知禁用/启用+去重/
+回滚一致性/非法名与缺失损坏清单）；`go test` 双 tag 全绿。禁用后必须重启才生效——
+连续禁用/启用间 WAL 事务未终态会被单事务语义拒绝（正确行为，测试以 verifyPendingTx 模拟重启）。
+
+### 9.6 待办（未在本轮内）
+
+- 移植项 3：页面挂掉时的恢复入口（健康监控触发 → 窗口切急救页，带失败上下文）。
+- --rescue 真机验证（见 §9.2）。
+- mygo 安装链路接线 wal begin/seal/verify（WAL 的写入端），及急救页 WAL 回滚卡片。
