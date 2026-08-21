@@ -10,7 +10,10 @@ package main
 import (
 	"os/exec"
 	"strconv"
+	"syscall"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 // serverCommand 启动用户环境里的 dsh web 后端：默认 `dsh web --port <port>`
@@ -23,7 +26,15 @@ func serverCommand(port string) *exec.Cmd {
 		// 不可达：webCommandLine 至少返回 "dsh web --port <port>"。
 		argv = []string{"dsh", "web", "--port", port}
 	}
-	return exec.Command(argv[0], argv[1:]...)
+	cmd := exec.Command(argv[0], argv[1:]...)
+	// 发行构建（GUI 子系统）下壳没有控制台可继承：.cmd launcher 会被
+	// os/exec 自动套 cmd.exe /c，Windows 会给它新建一个空的控制台窗口。
+	// 父进程无控制台时用 CREATE_NO_WINDOW 抑制该窗口；dev 构建从终端
+	// 启动（有控制台）时保持继承，终端日志照常可见。
+	if !hasConsole() {
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW}
+	}
+	return cmd
 }
 
 // killServerTree 按进程树终止后端（taskkill /T 覆盖其后代进程）。

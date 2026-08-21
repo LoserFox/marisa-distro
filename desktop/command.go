@@ -1,5 +1,5 @@
 // 后端启动命令的解析:壳不再内置 SEA 后端,而是启动用户环境里的 dsh
-// (`dsh web --port 0` 默认;`DSH_WEB_CMD` 覆盖)。用户自己 clone、安装
+// (`dsh web --no-open --port 0` 默认;`DSH_WEB_CMD` 覆盖)。用户自己 clone、安装
 // Node/pnpm 并运行 install-windows.ps1 把 dsh 装进 PATH —— 壳只负责开窗口、
 // 解析后端地址、退出时按进程树清理。
 package main

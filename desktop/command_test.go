@@ -27,7 +27,7 @@ func TestParseCommandLine(t *testing.T) {
 
 func TestWebCommandLine(t *testing.T) {
 	t.Setenv("DSH_WEB_CMD", "")
-	if got, want := webCommandLine("0"), "dsh web --port 0"; got != want {
+	if got, want := webCommandLine("0"), "dsh web --no-open --port 0"; got != want {
 		t.Errorf("default: got %q, want %q", got, want)
 	}
 	t.Setenv("DSH_WEB_CMD", `node "C:\my checkout\bin.ts" web --port {port}`)

@@ -13,11 +13,23 @@ import (
 // errConsoleUnavailable 表示 AllocConsole 失败（通常因进程已有控制台）。
 var errConsoleUnavailable = errors.New("AllocConsole failed: a console is already attached")
 
-// kernel32.AllocConsole：x/sys/windows 未提供包装，直接经 LazyDLL 调用。
+// kernel32.AllocConsole / GetConsoleWindow：x/sys/windows 未提供包装，
+// 直接经 LazyDLL 调用。
 var (
-	kernel32          = windows.NewLazySystemDLL("kernel32.dll")
-	procAllocConsole  = kernel32.NewProc("AllocConsole")
+	kernel32             = windows.NewLazySystemDLL("kernel32.dll")
+	procAllocConsole     = kernel32.NewProc("AllocConsole")
+	procGetConsoleWindow = kernel32.NewProc("GetConsoleWindow")
 )
+
+// hasConsole 报告当前进程是否已连接控制台：dev 构建从终端启动（或
+// --console / MARISA_CONSOLE=1 分配后）为真；GUI 子系统发行构建默认为假。
+// serverCommand 据此决定是否给后端子进程加 CREATE_NO_WINDOW——父进程无
+// 控制台可继承时，os/exec 经 cmd.exe /c 启动 .cmd launcher 会新建一个空
+// 的控制台窗口，必须显式抑制。
+func hasConsole() bool {
+	r, _, _ := procGetConsoleWindow.Call()
+	return r != 0
+}
 
 // maybeAttachConsole 在 GUI 子系统构建（-H=windowsgui）下为 --console /
 // MARISA_CONSOLE=1 分配一个新控制台，并把 stdout/stderr 重绑过去，使
