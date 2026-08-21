@@ -67,7 +67,7 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
 if (gitPlugins.length !== 21) throw new Error(`expected 21 git plugins, got ${gitPlugins.length}`);
-if (npmPlugins.length !== 9) throw new Error(`expected 9 npm plugins, got ${npmPlugins.length}`);
+if (npmPlugins.length !== 10) throw new Error(`expected 10 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
 const bundleDeps = {};
