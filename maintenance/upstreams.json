@@ -4,12 +4,12 @@
     "mode": "mirror",
     "path": "harness",
     "repository": "https://github.com/deepseek-ai/deepseek-harness.git",
-    "baseline": "99f6f02fecdb7dff40c3fbc9470f5907c29f74ca",
-    "baselineReviewed": "2026-08-18",
-    "dshVersion": "0.1.0-rc.7",
+    "baseline": "141eb6fef83422698aef7a981029e843e8161534",
+    "baselineReviewed": "2026-08-22",
+    "dshVersion": "0.1.0-rc.8",
     "channel": "next",
     "diffDocument": "docs/upstream-diff.md",
-    "note": "rc7 sync 2026-08-18: replaced the private 4e7fb95f snapshot (which lacked host.describe.canOpenPath) with public rc7; client+host now share one rc7 tree. 2026-08-20: added apps/cli/config/agent-presets/anchored-standard (experimental preset; tool-bootstrap.mjs vendored from xiaobright/dsh-anchored-standard@95b98af, MIT; see docs/upstream-diff.md + docs/agent-preset-anchored-standard.md)"
+    "note": "rc8 swap 2026-08-22 (test branch feature/rc8-test): upstream tree replaced with dsh-v0.1.0-rc.8 (141eb6fe, 318 commits past rc7); replay = anchored-standard preset only (apps/cli/src/6 files + webserver + pnpm-workspace unchanged upstream per RESEARCH-rc8-migration-20260820); root workspace deps bumped ^0.1.0-rc.8, dead packages dsh-client-web-react/dsh-client-schema-form removed; verification pending (build/boot/真机)"
   },
   "plugins": [
     {

@@ -4,12 +4,12 @@
 
 | 项 | 值 |
 |---|---|
-| DSH 兼容版本 | `0.1.0-rc.7` |
+| DSH 兼容版本 | `0.1.0-rc.8` |
 | 上游仓库 | `https://github.com/deepseek-ai/deepseek-harness` |
-| 当前导入基线 | `99f6f02fecdb7dff40c3fbc9470f5907c29f74ca`（2026-08-18 复核） |
-| 本仓库位置 | `harness/`，内容应保持上游 rc7；当前 Git 工作区仍是 rc6 索引上的同步结果，待提交/转换为 pinned submodule |
+| 当前导入基线 | `141eb6fef83422698aef7a981029e843e8161534`（2026-08-22 换树，测试分支 feature/rc8-test） |
+| 本仓库位置 | `harness/`，内容应保持上游 rc8；测试分支换树已重放 anchored-standard 预设 |
 
-机器可读值以 `maintenance/upstreams.json` 为准。本文件记录当前 rc7 基线、已移出 harness 的发行适配，以及升级 rc 时必须验证什么。harness 源码本身不应承载 Marisa 专用修改。
+机器可读值以 `maintenance/upstreams.json` 为准。本文件记录当前 rc8 基线、已移出 harness 的发行适配，以及升级 rc 时必须验证什么。harness 源码本身不应承载 Marisa 专用修改。
 
 ## Harness 源码差异
 

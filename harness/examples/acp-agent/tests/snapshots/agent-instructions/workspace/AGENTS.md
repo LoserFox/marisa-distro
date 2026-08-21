@@ -1,1 +1,1 @@
-Root snapshot instruction.
+AGENTS.canonical.md
