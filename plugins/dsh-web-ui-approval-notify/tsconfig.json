@@ -9,7 +9,9 @@
     "rewriteRelativeImportExtensions": true,
     "jsx": "react-jsx",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "types": ["react"],
+    // node: host 半边（src/index.ts）注册同源路由，需要 node:http / process /
+    // Buffer 类型；react: 客户端 JSX。
+    "types": ["react", "node"],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": false,

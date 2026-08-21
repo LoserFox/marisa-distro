@@ -16,15 +16,38 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
+	notifications "github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
 
 //go:embed landing.html
 var loadingHTML string
+
+// requestNotificationPermissionJS 是注入每个 WebView2 文档的启动脚本。桌面壳
+// 对权限请求一律放行（wails 未配置 Permissions 策略时对 WebView2 权限请求全局
+// ALLOW），因此应用页启动时主动请求一次通知权限即可把 Notification.permission
+// 从 'default' 翻成 'granted'：通知类插件（dsh-web-ui-notify 的审批/提问/轮次
+// 完成/会话完成提醒）默认生效，无需用户去 设置 → 通用 点「开启桌面通知」。
+// 只在真实应用页（http/https；landing 页是 about:blank，origin 无意义）执行；
+// 已定的权限（granted/denied）不重复请求；请求失败静默。
+const requestNotificationPermissionJS = `(() => {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'default') return
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') return
+  const request = () => {
+    if (Notification.permission === 'default') Notification.requestPermission().catch(() => {})
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', request)
+  } else {
+    request()
+  }
+})()`
 
 // mainWindow 是主窗口句柄：单实例二次启动回调（注册于 application.New，
 // 早于窗口创建）与托盘菜单用它显示/聚焦窗口；窗口创建后赋值。
@@ -262,6 +285,19 @@ func main() {
 	injectBackendEnv(installForm, version)
 	log.Printf("backend env injected: MARISA_INSTALL_FORM=%s MARISA_VERSION=%s", installForm, version)
 
+	// 原生 toast 桥：回环监听 + Wails 通知服务（wintoast 自注册 AUMID）。
+	// 端口注入 MARISA_TOAST_PORT，后端子进程继承；桥不可用时后端插件回
+	// 503、浏览器半回退 WebView2 默认通知 UI。
+	var notificationService *notifications.NotificationService
+	var toastBridgeInstance *toastBridge
+	if svc, bridge, port, err := startToastBridge(); err != nil {
+		log.Printf("toast bridge unavailable: %v (native toasts disabled)", err)
+	} else {
+		notificationService, toastBridgeInstance = svc, bridge
+		os.Setenv("MARISA_TOAST_PORT", strconv.Itoa(port))
+		log.Printf("toast bridge on 127.0.0.1:%d (MARISA_TOAST_PORT)", port)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -272,6 +308,9 @@ func main() {
 		// 见 icon_windows.syso），缺失时回退到此 PNG（CreateLargeHIconFromImage
 		// 支持 PNG 字节）。
 		Icon: trayIcon(),
+		// 原生 toast：通知服务在 app.Run() 时启动（wintoast 注册 AUMID/
+		// CLSID activator），toast 桥的请求经它展示。
+		Services: serviceList(notificationService),
 		// 单实例：第二次启动不建第二个窗口/托盘/后端，而是通知首个实例显示
 		// 并聚焦已有窗口后直接退出（wails 以命名互斥体 + 隐藏消息窗口实现，
 		// UniqueID 需跨安装全局唯一）。
@@ -307,12 +346,26 @@ func main() {
 		// isDebugMode 门控），production 构建下此选项被忽略。
 		OpenInspectorOnStartup: devtools,
 		HTML:                   loadingHTML,
+		// 启动即请求通知权限：桌面壳对权限请求自动放行，通知插件的提醒
+		// 默认打开（见 requestNotificationPermissionJS）。
+		JS: requestNotificationPermissionJS,
 	})
 	if devtools {
 		log.Printf("MARISA_DEVTOOLS=1: DevTools 将在窗口就绪后自动打开（托盘菜单可随时开关）")
 	}
 	mainWindow = win
 	registerCloseToTray(win)
+	// toast 点击激活 → 聚焦窗口 + 把会话 id 注入 webview（浏览器半的
+	// __dshWebUiNotifyOpen 钩子负责跳转）。需在 mainWindow 赋值之后注册。
+	if notificationService != nil {
+		openSessionOnToast(notificationService, func() {
+			if mainWindow == nil {
+				return
+			}
+			mainWindow.Show()
+			mainWindow.Focus()
+		}, mainWindow.ExecJS)
+	}
 	// 首次导航完成信号：必须在 app.Run() 之前订阅（启动页导航在应用启动后
 	// 数秒内完成，后端就绪前早已发出；事件流无回放，晚订阅会错过）。
 	ready := subscribeWebviewReady(win)
@@ -326,6 +379,10 @@ func main() {
 	// 应用启动后再建托盘(此时 tray impl 可用);托盘菜单/图标由此接管
 	// 窗口显隐与退出,后端守护逻辑不变。
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+		// 通知服务 Startup 完成（AUMID/activator 已注册），放行 toast 请求。
+		if toastBridgeInstance != nil {
+			toastBridgeInstance.markReady()
+		}
 		setupTray(app, win)
 	})
 
