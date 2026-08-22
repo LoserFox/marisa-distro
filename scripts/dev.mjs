@@ -36,6 +36,7 @@ export function resolveLayout({
     harness: path.join(root, 'harness'),
     cli: path.join(root, 'harness', 'apps', 'cli', 'lib', 'bin.js'),
     watcherScript: path.join(root, 'harness', 'scripts', 'dev-web.ts'),
+    profileRoot,
     profileManifest: path.join(profileRoot, 'package.json'),
     profileModules: path.join(profileRoot, 'node_modules'),
     overlay: path.join(profileRoot, 'desktop.overlay.yml'),
@@ -47,10 +48,50 @@ export function resolveLayout({
   }
 }
 
+// resolveTsdownManifest 定位 tsdown 包清单。hoisted linker 会把 tsdown 提升
+// 到根顶层；isolated linker（本地一键安装的省内存路径）下 tsdown 只存在于
+// node_modules/.pnpm/tsdown@*/node_modules/tsdown。两种布局都要认。
+export function resolveTsdownManifest(rootModules) {
+  const topLevel = path.join(rootModules, 'tsdown', 'package.json')
+  if (existsSync(topLevel)) return topLevel
+  const pnpmDir = path.join(rootModules, '.pnpm')
+  try {
+    const hit = readdirSync(pnpmDir)
+      .filter(name => /^tsdown@/.test(name))
+      .map(name => path.join(pnpmDir, name, 'node_modules', 'tsdown', 'package.json'))
+      .find(target => existsSync(target))
+    return hit ?? topLevel
+  } catch {
+    return topLevel
+  }
+}
+
+// ensureProfileDependencies 在 profile 清单存在而依赖未安装时自动补装。
+// profile 是独立小 workspace（自己的 pnpm-workspace.yaml，file: 指回插件），
+// 安装只依赖 pnpm store，不触碰根 lockfile——因此对 hoisted/isolated 两种
+// 根布局都安全。--offline 优先（store 已由根安装填充），失败回退在线。
+export function ensureProfileDependencies(layout) {
+  if (!existsSync(layout.profileManifest) || existsSync(layout.profileModules)) return null
+  console.log('[dev] profile dependencies missing; installing (pnpm store should make this fast)...')
+  const run = (args) => spawnSync('pnpm', args, {
+    cwd: layout.profileRoot,
+    stdio: 'inherit',
+    windowsHide: true,
+    // Windows 上 pnpm 是 .cmd shim，无 shell 时 spawn 直接 ENOENT。
+    shell: process.platform === 'win32',
+  })
+  let result = run(['install', '--offline', '--no-frozen-lockfile'])
+  if (result.status !== 0) result = run(['install', '--no-frozen-lockfile'])
+  if (result.status !== 0) {
+    throw new Error(`profile dependency install failed (exit ${String(result.status)}${result.error ? `, ${result.error.message}` : ''}); run \`pnpm install\` inside ${layout.profileRoot} manually`)
+  }
+  return 'installed'
+}
+
 export function missingPrerequisites(layout) {
   const required = [
     ['root workspace dependencies', layout.rootModules],
-    ['tsdown HMR build dependency', layout.tsdownManifest],
+    ['tsdown HMR build dependency', resolveTsdownManifest(layout.rootModules)],
     ['built Harness CLI', layout.cli],
     ['Harness HMR watcher', layout.watcherScript],
     ['generated Marisa profile', layout.profileManifest],
@@ -151,7 +192,9 @@ function printHelp() {
        pnpm dev:desktop
 
 Starts the Marisa development backend and Harness client-plugin HMR watcher.
-Run pnpm build once before the first development session.`)
+Run \`pnpm install --config.node-linker=isolated\` and \`pnpm build\` once before
+the first development session (isolated linker keeps the one-command install
+within 8G heap on 16G machines; profile dependencies install automatically).`)
 }
 
 function spawnService(command, args, options = {}) {
@@ -234,6 +277,7 @@ export async function runDev(options, layout = resolveLayout()) {
   if (!supportsNativeTypeScript()) {
     throw new Error(`Node ${process.versions.node} is unsupported; development requires Node 22.19+ or 24+`)
   }
+  ensureProfileDependencies(layout)
   const missing = missingPrerequisites(layout, options)
   if (missing.length > 0) {
     const detail = missing.map(([label, target]) => `  - ${label}: ${target}`).join('\n')

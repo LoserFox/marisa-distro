@@ -256,6 +256,7 @@ linkWorkspacePackages: true
 install-links: false
 
 allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
   '@google/genai': true
   esbuild: true
   koffi: true
