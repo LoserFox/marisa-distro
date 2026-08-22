@@ -30,9 +30,11 @@
       ]
     }
   },
+
   "dependencies": {
-    "@deepseek-ai/schemastery": "link:../dsh/vendor/schemastery"
+    "@deepseek-ai/schemastery": "workspace:^"
   },
+
   "peerDependencies": {
     "@deepseek-ai/dsh-client-locale": "0.1.0-rc.8",
     "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.8",
