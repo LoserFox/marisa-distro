@@ -7,6 +7,7 @@
     "node": "^22.19.0 || >=24.0.0"
   },
   "scripts": {
+    "setup": "pnpm install --frozen-lockfile --config.node-linker=isolated --filter '!./plugins/*'",
     "build": "pwsh -NoProfile -File build.ps1",
     "dev": "node scripts/dev.mjs",
     "dev:desktop": "node scripts/dev.mjs --desktop",
@@ -15,6 +16,11 @@
     "test:repository": "node scripts/verify-repository.mjs",
     "test": "pnpm test:repository && pnpm test:dev && pnpm test:profile",
     "upstream:check": "node scripts/check-upstreams.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@r05en1cu/dsh-mygo": "file:./dsh-mygo/packages/cordis/mygo",
@@ -287,6 +293,7 @@
     "marisa-marisa": "workspace:^",
     "@r05en1cu/dsh-mygo-api": "file:./dsh-mygo/packages/core/mygo-api",
     "@r05en1cu/dsh-mygo-ext-fabric": "file:./dsh-mygo/packages/extensions/mygo-fabric",
-    "@r05en1cu/dsh-mygo-loader-profile": "file:./dsh-mygo/packages/loaders/mygo-loader-profile"
+    "@r05en1cu/dsh-mygo-loader-profile": "file:./dsh-mygo/packages/loaders/mygo-loader-profile",
+    "pnpm": "11.9.0"
   }
 }

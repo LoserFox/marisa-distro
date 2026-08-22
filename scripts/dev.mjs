@@ -70,6 +70,11 @@ export function resolveTsdownManifest(rootModules) {
 // profile 是独立小 workspace（自己的 pnpm-workspace.yaml，file: 指回插件），
 // 安装只依赖 pnpm store，不触碰根 lockfile——因此对 hoisted/isolated 两种
 // 根布局都安全。--offline 优先（store 已由根安装填充），失败回退在线。
+// --ignore-scripts：live 插件目录的 prepare 从插件目录向上解析模块，命中的
+// 是仓库根的 node_modules（filtered 安装不含插件 devDeps）而非 profile 的
+// hoisted 树——几何上不可能解析成功（release 验证流能跑是因为它用拷贝树）。
+// dev 场景的插件构建由根工具链（build.ps1/HMR watcher）负责，profile 侧
+// prepare 是冗余的，跳过后安装更快也不会误报缺依赖。
 export function ensureProfileDependencies(layout) {
   if (!existsSync(layout.profileManifest) || existsSync(layout.profileModules)) return null
   console.log('[dev] profile dependencies missing; installing (pnpm store should make this fast)...')
@@ -80,8 +85,8 @@ export function ensureProfileDependencies(layout) {
     // Windows 上 pnpm 是 .cmd shim，无 shell 时 spawn 直接 ENOENT。
     shell: process.platform === 'win32',
   })
-  let result = run(['install', '--offline', '--no-frozen-lockfile'])
-  if (result.status !== 0) result = run(['install', '--no-frozen-lockfile'])
+  let result = run(['install', '--offline', '--no-frozen-lockfile', '--ignore-scripts'])
+  if (result.status !== 0) result = run(['install', '--no-frozen-lockfile', '--ignore-scripts'])
   if (result.status !== 0) {
     throw new Error(`profile dependency install failed (exit ${String(result.status)}${result.error ? `, ${result.error.message}` : ''}); run \`pnpm install\` inside ${layout.profileRoot} manually`)
   }
@@ -157,13 +162,16 @@ export function rebuildDesktopShell(layout) {
 }
 
 export function buildBackendArgs(layout, { port = '0' } = {}) {
-  // rc7 CLI syntax: --profile is a launcher flag (dsh --profile marisa);
-  // the `web` subcommand does not accept it (rc7 sync, 2026-08-18).
+  // rc.2 CLI 语法：--profile/--patch 是 launcher 级；port/no-open 是 profile
+  // 应用（marisa 组合的应用即 web）的参数，直接跟在 launcher 旗标后。注意
+  // `web` 子命令是 "--profile web" 的别名，不能与父级 --profile/--patch 并用
+  // （rc.7 时代的 launcher 级 --dev/--port 已废除，客户端 HMR 由 dev-web
+  // watcher 独立承担）。--no-open：开浏览器由本脚本按输出 URL 统一控制。
   return [
     layout.cli,
     '--profile', 'marisa',
     '--patch', layout.overlay,
-    '--dev',
+    '--no-open',
     '--port', port,
   ]
 }
