@@ -45,6 +45,8 @@ $node = (Get-Command node.exe -ErrorAction Stop).Source
 $required = @(
   'VERSION',
   'node.exe',
+  'pnpm.cmd',
+  'marisa-distro\node_modules\pnpm\bin\pnpm.mjs',
   'marisa-distro\harness\apps\cli\lib\bin.js',
   '.dsh\profiles\marisa\desktop.overlay.yml',
   '.dsh\profiles\marisa\standalone.overlay.yml'

@@ -4,6 +4,8 @@
 # Bundle layout (zip root = extraction dir):
 #   VERSION                       version marker (version-gates re-extraction)
 #   node.exe                      bundled Node runtime (copied from system)
+#   mnemon.exe                    memory engine exe (PATH lookup by the plugin)
+#   pnpm.cmd                      pnpm shim → bundled node + hoisted JS pnpm
 #   launcher.cmd                  backend launcher the shell spawns
 #   LINKS.json                    symlink manifest (see below)
 #   marisa-distro/node_modules    hoisted runtime store (real files)
@@ -121,6 +123,34 @@ function StageRel([string]$path) {
   return $null
 }
 
+# Resolve a source-profile reference (a `file:` spec path, a workspace glob,
+# or the desktop icon — absolute, or relative to the SOURCE profile dir) to
+# its deployed form relative to .dsh/profiles/marisa, or $null when the value
+# is not a path at all (e.g. minimumReleaseAgeExclude entries).
+function Resolve-ProfileRef([string]$raw) {
+  if ($raw -eq '.') { return $null }
+  if ($raw -match '^[A-Za-z]:[\\/]' -or $raw.StartsWith('//')) { return [System.IO.Path]::GetFullPath($raw) }
+  if ($raw -like './*' -or $raw -like '../*') { return [System.IO.Path]::GetFullPath((Join-Path $profile $raw)) }
+  return $null
+}
+
+# Convert a resolved source-profile ref to '../../../<stage-relative>' form.
+# The desktop tree is not staged wholesale; the icon is the one file carried.
+function Convert-ProfileRef([string]$raw) {
+  $resolved = Resolve-ProfileRef $raw
+  if (-not $resolved) { return $null }
+  $stageRel = StageRel $resolved
+  if ($stageRel) { return "../../../$stageRel" }
+  if ($resolved.StartsWith("$repo\desktop\")) {
+    $rel = $resolved.Substring("$repo\desktop\".Length).Replace('\', '/')
+    $dst = Join-Path $stage ("marisa-distro\desktop\" + $rel.Replace('/', '\'))
+    New-Item -ItemType Directory -Force (Split-Path $dst) | Out-Null
+    Copy-Item -LiteralPath $resolved -Destination $dst -Force
+    return "../../../marisa-distro/desktop/$rel"
+  }
+  throw "profile ref resolves outside the staged bundle: $raw -> $resolved"
+}
+
 function Resolve-LinkTarget([System.IO.FileSystemInfo]$item) {
   try {
     $target = [string]$item.Target
@@ -228,6 +258,12 @@ if (-not $SkipBodies) {
   $launcherText = Get-Content "$repo\desktop\bundle\launcher.cmd" -Raw
   $launcherText = $launcherText -replace "`r?`n", "`r`n"
   Set-Content -Path "$stage\launcher.cmd" -Value $launcherText -NoNewline -Encoding ascii
+  # pnpm.cmd rides PATH the same way (mygo `pnpm add` / `dsh plugin`): the
+  # shim runs the JS pnpm hoisted into marisa-distro/node_modules (a root
+  # prod dependency) on the bundled node.exe. Same CRLF rule as launcher.cmd.
+  $pnpmShimText = Get-Content "$repo\desktop\bundle\pnpm.cmd" -Raw
+  $pnpmShimText = $pnpmShimText -replace "`r?`n", "`r`n"
+  Set-Content -Path "$stage\pnpm.cmd" -Value $pnpmShimText -NoNewline -Encoding ascii
 }
 
 # --- stage source trees (no node_modules anywhere) ---------------------------
@@ -257,6 +293,91 @@ if (-not $SkipBodies) {
   Copy-DerefTree "$repo\dsh-mygo" "$stage\marisa-distro\dsh-mygo" 'node_modules'
   Write-Host 'copying profile files (node_modules excluded) ...'
   Copy-DerefTree $profile "$stage\.dsh\profiles\marisa" 'node_modules'
+
+  # --- deployed-profile pnpm metadata normalization ---------------------------
+  # The source profile's `file:` specs / workspace globs / icon are written
+  # for the SOURCE location (repo runtime dir: three `..` reach the repo
+  # root; a live ~/.dsh profile: absolute paths). Deployed at
+  # .dsh/profiles/marisa the same three `..` reach the extraction root, so
+  # every repo-relative ref needs the marisa-distro/ segment inserted. Boot
+  # never consults these values (dsh-app-boot resolves composition rows via
+  # Node resolution + bundles keys only —
+  # harness/packages/boot/app-boot/src/profile.ts), so this rewrite only
+  # serves the runtime pnpm that mygo `pnpm add` / `dsh plugin` spawn in the
+  # profile dir.
+  $stageProfileDir = "$stage\.dsh\profiles\marisa"
+  $profileManifestPath = Join-Path $stageProfileDir 'package.json'
+  $manifest = Read-Utf8Text $profileManifestPath | ConvertFrom-Json
+  if ($manifest.dependencies) {
+    foreach ($depName in @($manifest.dependencies.PSObject.Properties.Name)) {
+      $spec = [string]$manifest.dependencies.$depName
+      if ($spec -like 'file:*') {
+        $converted = Convert-ProfileRef ($spec -replace '^file:', '')
+        $manifest.dependencies.$depName = "file:$converted"
+      }
+    }
+  }
+  if ($manifest.dsh -and $manifest.dsh.desktop -and $manifest.dsh.desktop.icon) {
+    $convertedIcon = Convert-ProfileRef ([string]$manifest.dsh.desktop.icon)
+    if ($convertedIcon) { $manifest.dsh.desktop.icon = $convertedIcon }
+  }
+  Write-Utf8Text $profileManifestPath (($manifest | ConvertTo-Json -Depth 64) + "`n")
+
+  $profileWorkspacePath = Join-Path $stageProfileDir 'pnpm-workspace.yaml'
+  if (Test-Path -LiteralPath $profileWorkspacePath) {
+    $wsLines = @((Read-Utf8Text $profileWorkspacePath) -split "`r?`n" | ForEach-Object {
+      # NB: all groups are named — .NET numbers unnamed groups ahead of named
+      # ones, so positional $Matches indices are not what they appear to be.
+      if ($_ -match "^(?<indent>\s*-\s+')(?<spec>[^']+)(?<close>')\s*$") {
+        $convertedGlob = Convert-ProfileRef $Matches['spec']
+        if ($convertedGlob) { "$($Matches['indent'])$convertedGlob$($Matches['close'])" } else { $_ }
+      } else {
+        $_
+      }
+    })
+    # pnpm 11 gates installs on a 1-day minimumReleaseAge by default; a
+    # desktop user installing a just-published plugin through mygo would be
+    # blocked by it (mygo's auto-fix only covers build-script policies).
+    # Disable the gate for the deployed profile — supply-chain pacing is a
+    # builder concern, not an end-user one.
+    $wsText = ($wsLines -join "`n").TrimEnd() + "`n`nminimumReleaseAge: 0`n"
+    Write-Utf8Text $profileWorkspacePath $wsText
+  }
+
+  # A live source profile may carry its dev-machine pnpm-lock.yaml (absolute
+  # file: specifiers, source-depth relative refs); the deployed profile must
+  # resolve fresh on the user's first runtime install instead of trusting it.
+  Remove-Item (Join-Path $stageProfileDir 'pnpm-lock.yaml') -Force -ErrorAction SilentlyContinue
+
+  # Hard gate: every rewritten ref must resolve from the DEPLOYED profile
+  # dir inside the stage (glob entries must match at least one path).
+  $manifestAfter = Read-Utf8Text $profileManifestPath | ConvertFrom-Json
+  if ($manifestAfter.dependencies) {
+    foreach ($depName in @($manifestAfter.dependencies.PSObject.Properties.Name)) {
+      $spec = [string]$manifestAfter.dependencies.$depName
+      if ($spec -notlike 'file:*') { continue }
+      $target = Join-Path $stageProfileDir (($spec -replace '^file:', '') -replace '/', '\')
+      if (-not (Test-Path -LiteralPath $target)) {
+        throw "deployed profile dependency does not resolve: $depName -> $spec"
+      }
+    }
+  }
+  $iconAfter = if ($manifestAfter.dsh -and $manifestAfter.dsh.desktop) { $manifestAfter.dsh.desktop.icon }
+  if ($iconAfter) {
+    $iconTarget = Join-Path $stageProfileDir (([string]$iconAfter) -replace '/', '\')
+    if (-not (Test-Path -LiteralPath $iconTarget)) {
+      throw "deployed profile icon does not resolve: $iconAfter"
+    }
+  }
+  if (Test-Path -LiteralPath $profileWorkspacePath) {
+    foreach ($line in (Read-Utf8Text $profileWorkspacePath) -split "`r?`n") {
+      if ($line -notmatch "^\s*-\s+'(?<spec>\.\./\.\./\.\./[^']+)'") { continue }
+      $globPath = Join-Path $stageProfileDir ($Matches['spec'] -replace '/', '\')
+      if (@(Get-Item -Path $globPath -ErrorAction SilentlyContinue).Count -lt 1) {
+        throw "deployed profile workspace glob matches nothing: $($Matches['spec'])"
+      }
+    }
+  }
 
   # dsh-stickers runtime PNGs -> WebP + patch references. Runs BEFORE the
   # prod install: pnpm hard-links the plugin's file: copies from this staged
@@ -707,6 +828,24 @@ foreach ($requiredRootLink in 'marisa-distro/node_modules/@deepseek-ai/schemaste
     throw "link manifest INCOMPLETE — required root runtime link missing: $requiredRootLink"
   }
 }
+
+# --- bundled pnpm gate ---------------------------------------------------------
+# The staged --prod install must have materialized the JS pnpm (root prod
+# dependency), and it must run on the staged node.exe — that pair is exactly
+# what the bundle-root pnpm.cmd shim executes for mygo `pnpm add` / `dsh
+# plugin` at runtime. Expected version comes from the staged root manifest so
+# the gate follows dependency bumps, not a hardcoded string.
+$stagedPnpmMjs = "$stage\marisa-distro\node_modules\pnpm\bin\pnpm.mjs"
+if (-not (Test-Path -LiteralPath $stagedPnpmMjs -PathType Leaf)) {
+  throw "bundled pnpm missing: $stagedPnpmMjs (root prod dependency 'pnpm' not materialized by the staged --prod install?)"
+}
+$expectedPnpmVersion = (Get-Content "$stage\marisa-distro\package.json" -Raw | ConvertFrom-Json).dependencies.pnpm
+$pnpmVersionOutput = (& $node $stagedPnpmMjs --version 2>$null)
+if ($LASTEXITCODE -ne 0 -or "$pnpmVersionOutput".Trim() -ne $expectedPnpmVersion) {
+  throw "bundled pnpm gate failed: --version returned '$pnpmVersionOutput' (exit $LASTEXITCODE), expected $expectedPnpmVersion — pnpm.cmd shim would ship broken"
+}
+Write-Host "bundled pnpm gate: $("$pnpmVersionOutput".Trim()) OK"
+
 $links | ConvertTo-Json | Set-Content "$stage\LINKS.json" -Encoding utf8
 
 # --- delete staged junctions (7z must not see reparse points) -----------------
