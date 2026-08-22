@@ -30,7 +30,7 @@ Windows 需要 WebView2。较新的 Windows 11 通常已经包含它；Windows 1
 - `Marisa-DSH-windows-x64.msi`：推荐的按用户安装包。安装时会安装桌面壳并准备随包后端，因此首次启动无需再解压后端。
 - `Marisa-DSH-windows-x64-standalone.exe`：便携单文件版本。首次启动会把随包后端释放到当前用户的本地应用数据目录；之后会复用匹配版本。
 
-两种格式都包含 Node、Marisa harness、发行 profile 和默认插件，不要求系统安装 Node、pnpm 或另一份 `dsh`。运行下载文件前请校验 Release 附带的 `SHA256SUMS.txt`。当前 Windows 产物尚未签名，SmartScreen 可能显示未知发布者警告。
+两种格式都包含 Node、Marisa harness、发行 profile 和默认插件，不要求系统安装 Node、pnpm 或另一份 `dsh`。后端同时内置 JS 版 pnpm（`pnpm.cmd` 走内置 Node），因此通过 MyGO 面板或 `dsh plugin` 在运行期安装/卸载插件同样不需要系统工具链。运行下载文件前请校验 Release 附带的 `SHA256SUMS.txt`。当前 Windows 产物尚未签名，SmartScreen 可能显示未知发布者警告。
 
 ## 实验性平台
 

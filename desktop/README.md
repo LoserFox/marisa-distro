@@ -59,7 +59,10 @@ Each supported Windows Release has two self-contained choices:
 
 Both formats contain Node, the Marisa harness, the release profile, and its
 default plugins. They do not require system Node, pnpm, or a separately
-installed `dsh`. Check the `SHA256SUMS.txt` asset before running a download.
+installed `dsh`. The backend also ships a JS pnpm (`pnpm.cmd` on the bundled
+Node), so runtime plugin installs and removals through the MyGO panel or
+`dsh plugin` need no system toolchain either. Check the `SHA256SUMS.txt` asset
+before running a download.
 Windows artifacts are currently unsigned, so SmartScreen can show an unknown
 publisher warning.
 

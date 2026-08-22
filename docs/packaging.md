@@ -5,7 +5,7 @@
 1. `pnpm install --frozen-lockfile`
 2. 构建 harness 和需要编译的 vendored 插件。
 3. 生成并安装 Marisa profile，执行 profile/MyGO 自检。
-4. `desktop/bundle/make-bundle.ps1` 创建生产后端 `backend.tar.zst`。
+4. `desktop/bundle/make-bundle.ps1` 创建生产后端 `backend.tar.zst`。脚本内建两道与运行期插件管理相关的门禁：bundle 根的 `pnpm.cmd` shim 必须能在解包后的 node.exe 上跑出版本号（JS 版 pnpm 以根 prod 依赖进 hoisted 树）；部署到 `.dsh/profiles/marisa` 的 profile 的 `file:` 依赖与 workspace globs 会被重写为部署布局下的相对路径并逐一断言可解析（源 profile 的引用只对源位置成立）。
 5. `go build -tags embeddedbundle` 生成单文件 EXE。首次启动时解压后端到用户本地目录。
 6. `desktop/scripts/build-msi.ps1` 生成薄桌面壳 MSI；MSI 在安装阶段展开 `backend.tar.zst`，首次启动不再自解压。
 7. 生成 `SHA256SUMS.txt`，由手动 Release workflow 上传。
