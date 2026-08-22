@@ -170,6 +170,10 @@ func recreateInstalledLinks(manifestPath, root string) error {
 	}
 	entries = outermostInstalledLinks(entries)
 	created := 0
+	// Same shadowing guard as the embedded bundle's recreateLinks: a manifest
+	// link replaced by a real directory (failed pnpm/npm operation) must fail
+	// MSI prepare/repair explicitly, not surface as a later boot death.
+	var shadowedLinks []string
 	for _, entry := range entries {
 		link := filepath.Join(root, filepath.FromSlash(entry.Link))
 		target := filepath.Join(root, filepath.FromSlash(entry.Target))
@@ -179,13 +183,19 @@ func recreateInstalledLinks(manifestPath, root string) error {
 		if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 			return err
 		}
-		if _, err := os.Lstat(link); err == nil {
+		if fi, err := os.Lstat(link); err == nil {
+			if !isLinkInfo(fi) {
+				shadowedLinks = append(shadowedLinks, entry.Link)
+			}
 			continue
 		}
 		if err := createJunction(link, target); err != nil {
 			return fmt.Errorf("create junction %s -> %s: %w", entry.Link, entry.Target, err)
 		}
 		created++
+	}
+	if len(shadowedLinks) > 0 {
+		return fmt.Errorf("%d manifest link(s) replaced by real directories (first: %s) — a failed pnpm/npm operation likely overwrote a workspace junction; reinstall the backend (rescue page) to restore", len(shadowedLinks), shadowedLinks[0])
 	}
 	log.Printf("recreated %d installed workspace links", created)
 	return nil

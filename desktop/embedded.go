@@ -241,6 +241,14 @@ func recreateLinks(manifestPath, root string) error {
 		}
 	}
 	created := 0
+	// A manifest link path that exists but is NOT a link got shadowed by a
+	// real directory — typically a failed/interrupted pnpm operation in the
+	// profile dir (its node_modules is one of these junctions). Silent
+	// acceptance here used to surface much later as ERR_MODULE_NOT_FOUND
+	// boot deaths; fail explicitly instead. No auto-repair: the shadowing
+	// directory may hold user-installed content, deleting it silently is
+	// worse than demanding a rescue-page reinstall.
+	var shadowedLinks []string
 	for _, e := range entries {
 		link := filepath.Join(root, filepath.FromSlash(e.Link))
 		target := filepath.Join(root, filepath.FromSlash(e.Target))
@@ -250,13 +258,19 @@ func recreateLinks(manifestPath, root string) error {
 		if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 			return err
 		}
-		if _, err := os.Lstat(link); err == nil {
-			continue // already present
+		if fi, err := os.Lstat(link); err == nil {
+			if !isLinkInfo(fi) {
+				shadowedLinks = append(shadowedLinks, e.Link)
+			}
+			continue
 		}
 		if err := createJunction(link, target); err != nil {
 			return fmt.Errorf("create junction %s -> %s: %w", e.Link, e.Target, err)
 		}
 		created++
+	}
+	if len(shadowedLinks) > 0 {
+		return fmt.Errorf("%d manifest link(s) replaced by real directories (first: %s) — a failed pnpm/npm operation likely overwrote a workspace junction; reinstall the backend (rescue page) to restore", len(shadowedLinks), shadowedLinks[0])
 	}
 	log.Printf("recreated %d workspace links as junctions", created)
 	return nil
