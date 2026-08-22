@@ -37,12 +37,12 @@ test('backend command selects the Marisa profile, HMR, overlay, and requested po
     layout.cli,
     '--profile', 'marisa',
     '--patch', layout.overlay,
-    '--dev',
+    '--no-open',
     '--port', '{port}',
   ])
   const command = buildDesktopBackendCommand(layout, 'C:\\Program Files\\nodejs\\node.exe')
   assert.match(command, /^"C:\\Program Files\\nodejs\\node\.exe"/u)
-  assert.match(command, /"--dev" "--port" "\{port\}"$/u)
+  assert.match(command, /"--no-open" "--port" "\{port\}"$/u)
   assert.deepEqual(buildWatcherArgs(layout), [layout.watcherScript, '--poll'])
 })
 
