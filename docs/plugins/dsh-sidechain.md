@@ -38,3 +38,7 @@
 
 1. 上游若改用 DSH 语义 token（或提供自身变量定义），删除本映射补丁。
 2. 同步上游新版本时重放映射段与互斥段（panel-style.ts 头部 / panel-state.ts / index.tsx / 对应测试）。
+
+## 2026-08-23 依赖区间迁移
+
+0.1.1-rc.2 迁移收敛的一部分：`@deepseek-ai/*` 依赖区间从 `^0.1.0-rc.6`/`^0.1.0-rc.8` 统一改为 `workspace:^`（workspace 成员）或 `^0.1.1-rc.2`（registry 包）。机械替换，无代码改动；解析目标从 registry rc.8 副本树切换到 workspace rc.2 树。反馈上游：待同步窗口。

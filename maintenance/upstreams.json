@@ -23,7 +23,8 @@
       "id": "dsh-a2a",
       "mode": "mirror",
       "repository": "https://github.com/dsh-external/dsh-a2a.git",
-      "baseline": "220de3a5cf8b57627107e91991227ad2184ed977"
+      "baseline": "220de3a5cf8b57627107e91991227ad2184ed977",
+      "note": "2026-08-23 0.1.1-rc.2 迁移收敛：@deepseek-ai 依赖区间 rc.6/rc.8 统一改 workspace:^（机械替换，随迁移反馈上游）"
     },
     {
       "id": "dsh-artifact",
@@ -192,7 +193,7 @@
       "mode": "mirror",
       "repository": null,
       "version": "0.2.1",
-      "note": "npm snapshot 2026-08-20 sync: 0.1.0 -> 0.2.1 (peers ^0.1.0-rc.8; fixes workspace web-react dep)"
+      "note": "2026-08-23 0.1.1-rc.2 迁移收敛：@deepseek-ai 依赖区间 rc.6/rc.8 统一改 workspace:^（机械替换，随迁移反馈上游）"
     },
     {
       "id": "mnemon",
@@ -200,7 +201,7 @@
       "mode": "mirror",
       "repository": "https://github.com/omdsh-dev/dsh-mnemon.git",
       "version": "0.2.13",
-      "note": "npm snapshot 2026-08-20 sync: 0.2.9 -> 0.2.13; prepublishOnly removed per vendoring rule; Go engine binary desktop/bundle/mnemon.exe unchanged (verify against 0.2.13 runtime resolution)"
+      "note": "2026-08-23 0.1.1-rc.2 迁移收敛：@deepseek-ai 依赖区间 rc.6/rc.8 统一改 workspace:^（机械替换，随迁移反馈上游）"
     },
     {
       "id": "whale-girl",

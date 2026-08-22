@@ -29,3 +29,7 @@ rc8 冒烟（headless Chromium 加载真实 web）发现启动即报 `failed to 
 ## 2026-08-22 修复：发送按钮原位替换（order:999）
 
 `conversation.input.right` 座位实际渲染在工具行**起点**，导致播放按钮出现在发送按钮左侧而非原位。修复：按钮 CSS 增加 `order:999` 推到 flex 行尾（= 发送按钮原位置），模型选择器、上下文环等其它控件保持在它左侧；注释与 README 同步说明槽位语义。`dist/client.js` 由 `scripts/build-client.mjs` 重建（源码路径注释干净化，去除 worktree 路径）。验证：`node test/unit.mjs` 全过；真机 GUI 挂载后目测按钮位于发送按钮原位。
+
+## 2026-08-23 依赖区间迁移
+
+0.1.1-rc.2 迁移收敛的一部分：`@deepseek-ai/*` 依赖区间从 `^0.1.0-rc.6`/`^0.1.0-rc.8` 统一改为 `workspace:^`（workspace 成员）或 `^0.1.1-rc.2`（registry 包）。机械替换，无代码改动；解析目标从 registry rc.8 副本树切换到 workspace rc.2 树。反馈上游：待同步窗口。
