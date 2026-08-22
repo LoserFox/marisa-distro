@@ -40,7 +40,7 @@
     },
     {
       "name": "@dsh-external/ego-browser",
-      "source": "npm",
+      "source": "internal",
       "dir": "dsh-ego-browser",
       "version": "0.8.0",
       "bundle": true

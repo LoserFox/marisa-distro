@@ -29,11 +29,17 @@ const profileManifest = JSON.parse(readFileSync(profileManifestPath, 'utf8'))
 assert.equal(profileManifest.schemaVersion, 1, 'unsupported profile plugin manifest schema')
 
 for (const plugin of manifest.plugins) {
-  assert.ok(['mirror', 'fork'].includes(plugin.mode), `${plugin.id}: invalid mode ${plugin.mode}`)
+  assert.ok(['mirror', 'fork', 'internal'].includes(plugin.mode), `${plugin.id}: invalid mode ${plugin.mode}`)
   const pluginRoot = join(root, 'plugins', plugin.id)
   const packagePath = join(pluginRoot, 'package.json')
   assert.ok(existsSync(packagePath), `${plugin.id}: package.json is missing`)
   assert.ok(!existsSync(join(pluginRoot, '.git')), `${plugin.id}: nested .git is forbidden`)
+
+  // internal：自研插件（无上游仓库），不做上游字段要求。
+  if (plugin.mode === 'internal') {
+    assert.equal(plugin.repository, undefined, `${plugin.id}: internal plugins have no upstream repository`)
+    continue
+  }
 
   const source = plugin.source ?? 'git'
   if (source === 'npm') {
@@ -65,7 +71,7 @@ for (const plugin of manifest.plugins) {
 const profileDirs = profileManifest.plugins.map(plugin => plugin.dir).sort()
 assert.deepEqual(profileDirs, pluginDirectories, 'profiles/marisa/plugins.json must describe every plugins/* directory exactly once')
 for (const plugin of profileManifest.plugins) {
-  assert.ok(['git', 'npm'].includes(plugin.source), `${plugin.dir}: invalid profile plugin source ${plugin.source}`)
+  assert.ok(['git', 'npm', 'internal'].includes(plugin.source), `${plugin.dir}: invalid profile plugin source ${plugin.source}`)
   const pkg = JSON.parse(readFileSync(join(root, 'plugins', plugin.dir, 'package.json'), 'utf8'))
   assert.equal(pkg.name, plugin.name, `${plugin.dir}: profile manifest name must match package.json name`)
   const upstream = manifest.plugins.find(entry => entry.id === plugin.dir)

@@ -44,6 +44,10 @@ let updates = 0
 let errors = 0
 
 for (const component of [{ id: 'harness', ...manifest.harness }, ...manifest.plugins]) {
+  if (component.mode === 'internal' || (!component.repository && component.source !== 'npm')) {
+    rows.push({ id: component.id, mode: component.mode, pin: '—', signal: '自研组件（无上游）', suggest: '—', status: 'INTERNAL' })
+    continue
+  }
   try {
     if (component.source === 'npm') {
       const pkg = component.npmName ?? component.id
@@ -83,7 +87,7 @@ for (const component of [{ id: 'harness', ...manifest.harness }, ...manifest.plu
   }
 }
 
-const order = { 'UPDATE-稳定': 0, 'NO-STABLE→人工': 1, ERROR: 2, 'OK(tag)': 3, OK: 3 }
+const order = { 'UPDATE-稳定': 0, 'NO-STABLE→人工': 1, ERROR: 2, 'OK(tag)': 3, OK: 3, INTERNAL: 4 }
 rows.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.id.localeCompare(b.id))
 
 for (const r of rows) {
