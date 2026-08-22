@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@r05en1cu/dsh-mygo": "workspace:^",
-    "@deepseek-ai/dsh-app-boot": "^0.1.0-rc.2"
+    "@deepseek-ai/dsh-app-boot": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1"
