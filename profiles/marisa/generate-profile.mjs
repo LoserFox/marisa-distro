@@ -120,6 +120,13 @@ const bundlePkg = {
 // ── thin profile ─────────────────────────────────────────────────────────
 const profileDeps = {
   'marisa-bundle': `file:${profileRef(BUNDLE_DIR)}`,
+  // composition 补丁（cordis.patch.yml）启用的核心包必须在 profile 根可解析。
+  // 声明在 profile 层而非 bundle 层：pnpm 对 file: 依赖可能物化过期拷贝，
+  // workspace:* 链成员则始终指向源码树。（对应 bundle deps 中的同名声明。）
+  '@deepseek-ai/dsh-permission-presets': 'workspace:*',
+  '@deepseek-ai/dsh-tool-session-query': 'workspace:*',
+  '@deepseek-ai/dsh-session-query-sqlite': 'workspace:*',
+  '@deepseek-ai/dsh-client-ui-workspace': 'workspace:*',
 };
 for (const p of npmPlugins) {
   const dir = path.join(PLUGINS_ROOT, p.dir);
