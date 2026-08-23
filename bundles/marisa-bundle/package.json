@@ -11,6 +11,7 @@
     "@dsh-external/dsh-code-map": "file:../../plugins/dsh-code-map",
     "@dsh-external/dsh-diff-viewer": "file:../../plugins/dsh-diff-viewer",
     "@omdsh-dev/dsh-drag-and-drop": "file:../../plugins/dsh-drag-and-drop",
+    "@dsh-external/ego-browser": "file:../../plugins/dsh-ego-browser",
     "@deepseek-ai/dsh-genui": "file:../../plugins/dsh-genui",
     "@loserfox/git-identity": "file:../../plugins/dsh-git-identity",
     "@dsh-external/dsh-input-history": "file:../../plugins/dsh-input-history",
