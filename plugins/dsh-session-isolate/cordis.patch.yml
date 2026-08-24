@@ -1,0 +1,4 @@
+# Mount the session-isolate service and its model-facing tools into a DSH profile.
+- insert:
+    - id: session-isolate
+      name: 'dsh-session-isolate'
