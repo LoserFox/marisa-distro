@@ -53,7 +53,7 @@ try {
   }
   assert.ok(rootResponse?.ok, `Marisa did not become HTTP-ready:\n${output}`);
   const rootHtml = await rootResponse.text();
-  const bootMatch = rootHtml.match(/window\.__DSH_BOOT__\s*=\s*({.*?})<\/script>/s);
+  const bootMatch = rootHtml.match(/(?:window\.__DSH_BOOT__|globalThis\["__DSH_BOOT__"\])\s*=\s*({.*?})<\/script>/s);
   assert.ok(bootMatch, 'Marisa root page must contain the client boot manifest');
   const boot = JSON.parse(bootMatch[1]);
   assert.ok(Array.isArray(boot.entries), 'Client boot manifest must contain entries');
