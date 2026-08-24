@@ -67,7 +67,7 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 // internal（自研，如 dsh-ego-browser）与 git 插件同样以 file: 从源码树组合。
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git' || p.source === 'internal');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
-if (gitPlugins.length !== 22) throw new Error(`expected 22 git+internal plugins, got ${gitPlugins.length}`);
+if (gitPlugins.length !== 25) throw new Error(`expected 25 git+internal plugins, got ${gitPlugins.length}`);
 if (npmPlugins.length !== 9) throw new Error(`expected 9 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
@@ -133,6 +133,17 @@ for (const p of npmPlugins) {
   if (!existsSync(path.join(dir, 'package.json'))) throw new Error(`vendored npm plugin dir missing: ${dir}`);
   profileDeps[p.name] = `file:${profileRef(dir)}`;
 }
+// internal 源 bundle 插件（自研/vendored 第一方，如 ego-browser、whale-widget）
+// 同样显式声明在 profile 依赖——它们挂 profile bundles 层，bundle 层包必须
+// 从 profile node_modules 可解析（与 8-22 手工形态一致；仅靠 marisa-bundle
+// 传递依赖在 pnpm isolated 布局下不保证 hoist 到 profile 根）。
+for (const p of gitPlugins) {
+  if (p.source === 'internal' && p.bundle) {
+    const dir = path.join(PLUGINS_ROOT, p.dir);
+    if (!existsSync(path.join(dir, 'package.json'))) throw new Error(`vendored internal plugin dir missing: ${dir}`);
+    profileDeps[p.name] = `file:${profileRef(dir)}`;
+  }
+}
 
 // MyGO is vendored source (dsh-mygo/, omdsh-dev/dsh-mygo@next + keyed fix
 // 2026-08-18); the profile consumes the built lib via file: like every other
@@ -166,7 +177,12 @@ const MYGO_PACKAGES = [
 // aborts the entire web boot. Keep it installed for MyGO visibility, but do
 // not activate it until the harness client runtime is migrated as a unit.
 const incompatibleBundlePlugins = new Set(['dsh-llm-fallbacks']);
-const bundleNpmPlugins = npmPlugins
+// bundle 插件 = bundle:true 且不在不兼容集合（npm 源 + internal 源都算）。
+// 2026-08-24 修复：internal 源（自研/vendored，如 ego-browser、whale-widget）
+// 同样进 profile bundles——8/22 板子合并把 ego 从 npm 改 internal 后，这里只
+// 统计 npm 源导致 ego 从 profile bundles 断链（8/23 9:59 载荷起运行实例无
+// ego），bundles 挂载语义回归 bundle:true 字段。
+const bundlePlugins = MANIFEST.plugins
   .filter((p) => p.bundle && !incompatibleBundlePlugins.has(p.name))
   .map((p) => p.name);
 const bundles = [
@@ -174,7 +190,7 @@ const bundles = [
   '@deepseek-ai/dsh-web-app',
   'marisa-bundle',
   ...MYGO_PACKAGES,
-  ...bundleNpmPlugins,
+  ...bundlePlugins,
 ];
 
 // dsh.desktop follows the ecosystem convention (cf. omdsh-dev/dsh-coding):

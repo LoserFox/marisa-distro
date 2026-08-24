@@ -153,6 +153,27 @@
       "dir": "whale-girl"
     },
     {
+      "name": "dsh-whale-widget",
+      "source": "internal",
+      "dir": "dsh-whale-widget",
+      "version": "0.2.3",
+      "bundle": true
+    },
+    {
+      "name": "dsh-session-isolate",
+      "source": "internal",
+      "dir": "dsh-session-isolate",
+      "version": "0.1.0",
+      "bundle": true
+    },
+    {
+      "name": "@dsh-external/change-ledger",
+      "source": "internal",
+      "dir": "dsh-change-ledger",
+      "version": "0.1.0",
+      "bundle": true
+    },
+    {
       "name": "@huanlin/dsh-plugin-ya-workspace-sidebar",
       "source": "npm",
       "dir": "ya-workspace-sidebar",

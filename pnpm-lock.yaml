@@ -818,7 +818,7 @@ importers:
         version: link:plugins/dsh-sonar
       marisa-bundle:
         specifier: file:./bundles/marisa-bundle
-        version: file:bundles/marisa-bundle(45eaa55df5411318187af8350a2ee033)
+        version: link:bundles/marisa-bundle
       marisa-distro:
         specifier: workspace:^
         version: 'link:'
@@ -850,27 +850,15 @@ importers:
       '@deepseek-ai/cordis':
         specifier: file:../../harness/vendor/cordis
         version: file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader)
-      '@deepseek-ai/dsh-client-ui-workspace':
-        specifier: workspace:^
-        version: link:../../harness/packages/client/ui-workspace
       '@deepseek-ai/dsh-genui':
         specifier: file:../../plugins/dsh-genui
         version: file:plugins/dsh-genui(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-client-ui-tool@harness+packages+client+ui-tool)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)
-      '@deepseek-ai/dsh-permission-presets':
-        specifier: workspace:^
-        version: link:../../harness/packages/interaction/permission-presets
-      '@deepseek-ai/dsh-session-query-sqlite':
-        specifier: workspace:^
-        version: link:../../harness/packages/session-query/session-query-sqlite
       '@deepseek-ai/dsh-tool-cordis':
         specifier: file:../../harness/packages/extensions/tool-cordis
         version: file:harness/packages/extensions/tool-cordis(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-cordis-host-runner@harness+packages+extensions+cordis-host-runner)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-scope@harness+packages+core+scope)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)
       '@deepseek-ai/dsh-tool-pwsh':
         specifier: file:../../harness/packages/shell/tool-pwsh
         version: file:harness/packages/shell/tool-pwsh(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-jobs@harness+packages+jobs+jobs)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-sandbox-policy@harness+packages+sandbox+sandbox-policy)(@deepseek-ai/dsh-sandbox@harness+packages+sandbox+sandbox)(@deepseek-ai/dsh-shell-env@harness+packages+shell+shell-env)(@deepseek-ai/dsh-shell@harness+packages+shell+shell)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(@deepseek-ai/dsh-user-approval@harness+packages+interaction+user-approval)
-      '@deepseek-ai/dsh-tool-session-query':
-        specifier: workspace:^
-        version: link:../../harness/packages/session-query/tool-session-query
       '@dpskh/a2a':
         specifier: file:../../plugins/dsh-a2a
         version: file:plugins/dsh-a2a(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-brand@harness+packages+util+brand)(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)
@@ -880,6 +868,9 @@ importers:
       '@dsh-community/multimedia-webui-input':
         specifier: file:../../plugins/dsh-multimedia-webui-input
         version: link:../../plugins/dsh-multimedia-webui-input
+      '@dsh-external/change-ledger':
+        specifier: file:../../plugins/dsh-change-ledger
+        version: link:../../plugins/dsh-change-ledger
       '@dsh-external/dsh-artifact':
         specifier: file:../../plugins/dsh-artifact
         version: file:plugins/dsh-artifact(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)
@@ -907,6 +898,9 @@ importers:
       '@dsh-external/dsh-ui-progress':
         specifier: file:../../plugins/dsh-ui-progress
         version: file:plugins/dsh-ui-progress(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-tool-todo@harness+packages+todo+tool-todo)(react@18.3.1)
+      '@dsh-external/ego-browser':
+        specifier: file:../../plugins/dsh-ego-browser
+        version: file:plugins/dsh-ego-browser(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-settings-plugins@harness+packages+client+ui-settings-plugins)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)(schemastery@3.18.0)
       '@dsh-external/workflow':
         specifier: file:../../plugins/dsh_workflow
         version: file:plugins/dsh_workflow(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-jobs@harness+packages+jobs+jobs)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-subagent@harness+packages+subagent+subagent)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(@deepseek-ai/dsh-user-approval@harness+packages+interaction+user-approval)(@deepseek-ai/dsh-user-questions@harness+packages+interaction+user-questions)(@deepseek-ai/dsh-workflow@harness+packages+workflow+workflow)(@deepseek-ai/schemastery@harness+vendor+schemastery)
@@ -922,12 +916,18 @@ importers:
       '@omdsh-dev/dsh-update-check':
         specifier: file:../../plugins/dsh-update-check
         version: file:plugins/dsh-update-check(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-home-paths@harness+packages+util+home-paths)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/schemastery@harness+vendor+schemastery)(react@18.3.1)
+      dsh-session-isolate:
+        specifier: file:../../plugins/dsh-session-isolate
+        version: link:../../plugins/dsh-session-isolate
       dsh-skill-manager:
         specifier: file:../../dsh-skill-manager
         version: file:dsh-skill-manager
       dsh-sonar:
         specifier: file:../../plugins/dsh-sonar
         version: file:plugins/dsh-sonar(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-client-connection@harness+packages+client+connection)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)(schemastery@3.18.0)
+      dsh-whale-widget:
+        specifier: file:../../plugins/dsh-whale-widget
+        version: link:../../plugins/dsh-whale-widget
       whale-girl:
         specifier: file:../../plugins/whale-girl
         version: link:../../plugins/whale-girl
@@ -10388,6 +10388,24 @@ importers:
         specifier: ^4.1.8
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1(@noble/hashes@2.2.0))(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.0))
 
+  plugins/dsh-change-ledger:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      '@types/react':
+        specifier: 18.3.28
+        version: 18.3.28
+      cordis:
+        specifier: 4.0.0-rc.7
+        version: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   plugins/dsh-code-map:
     dependencies:
       schemastery:
@@ -10757,6 +10775,18 @@ importers:
   plugins/dsh-multimedia-webui-input: {}
 
   plugins/dsh-paste-input: {}
+
+  plugins/dsh-session-isolate:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      cordis:
+        specifier: 4.0.0-rc.7
+        version: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   plugins/dsh-sidechain:
     dependencies:
@@ -11180,6 +11210,8 @@ importers:
 
   plugins/dsh-web-ui-approval-notify: {}
 
+  plugins/dsh-whale-widget: {}
+
   plugins/dsh_workflow:
     dependencies:
       quickjs-emscripten:
@@ -11566,6 +11598,21 @@ importers:
       '@canglongcl/dsh-web-review':
         specifier: file:../../../plugins/dsh-web-review
         version: link:../../../plugins/dsh-web-review
+      '@deepseek-ai/dsh-client-ui-workspace':
+        specifier: workspace:*
+        version: link:../../../harness/packages/client/ui-workspace
+      '@deepseek-ai/dsh-permission-presets':
+        specifier: workspace:*
+        version: link:../../../harness/packages/interaction/permission-presets
+      '@deepseek-ai/dsh-session-query-sqlite':
+        specifier: workspace:*
+        version: link:../../../harness/packages/session-query/session-query-sqlite
+      '@deepseek-ai/dsh-tool-session-query':
+        specifier: workspace:*
+        version: link:../../../harness/packages/session-query/tool-session-query
+      '@dsh-external/change-ledger':
+        specifier: file:../../../plugins/dsh-change-ledger
+        version: link:../../../plugins/dsh-change-ledger
       '@dsh-external/ego-browser':
         specifier: file:../../../plugins/dsh-ego-browser
         version: file:plugins/dsh-ego-browser(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-settings-plugins@harness+packages+client+ui-settings-plugins)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)(schemastery@3.18.0)
@@ -11614,9 +11661,15 @@ importers:
       dsh-mnemon:
         specifier: file:../../../plugins/mnemon
         version: file:plugins/mnemon(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      dsh-session-isolate:
+        specifier: file:../../../plugins/dsh-session-isolate
+        version: link:../../../plugins/dsh-session-isolate
+      dsh-whale-widget:
+        specifier: file:../../../plugins/dsh-whale-widget
+        version: link:../../../plugins/dsh-whale-widget
       marisa-bundle:
         specifier: file:../../../bundles/marisa-bundle
-        version: file:bundles/marisa-bundle(45eaa55df5411318187af8350a2ee033)
+        version: link:../../../bundles/marisa-bundle
 
 packages:
 
@@ -11996,10 +12049,6 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@bill9109/dsh-web-ui-notify@file:plugins/dsh-web-ui-approval-notify':
-    resolution: {directory: plugins/dsh-web-ui-approval-notify, type: directory}
-    engines: {node: ^20.0.0 || >=22.0.0}
-
   '@biomejs/biome@2.5.9':
     resolution: {integrity: sha512-KkgCvdHB4IhtpHpF564plA9jo6fDOwWGQ/3jvreLzgOtRLEDoPqr7QO9qejNA8jKwDsSkAKr77hqBHnyUbIw4g==}
     engines: {node: '>=14.21.3'}
@@ -12346,12 +12395,6 @@ packages:
       '@deepseek-ai/dsh-settings': workspace:^
       '@deepseek-ai/dsh-system-prompt': workspace:^
       '@deepseek-ai/dsh-tools': workspace:^
-
-  '@dsh-community/dsh-paste-input@file:plugins/dsh-paste-input':
-    resolution: {directory: plugins/dsh-paste-input, type: directory}
-
-  '@dsh-community/multimedia-webui-input@file:plugins/dsh-multimedia-webui-input':
-    resolution: {directory: plugins/dsh-multimedia-webui-input, type: directory}
 
   '@dsh-external/dsh-artifact@file:plugins/dsh-artifact':
     resolution: {directory: plugins/dsh-artifact, type: directory}
@@ -13720,9 +13763,6 @@ packages:
   '@loaderkit/resolve@1.0.6':
     resolution: {integrity: sha512-G8FdIoF5CypfwmD9rl8BXod5HDn8JqB0CCNBXDTaRZ+yRYhARrrSToX1zg1zy9jX3zLqigsELwhT4gNtkdQAUg==}
 
-  '@loserfox/git-identity@file:plugins/dsh-git-identity':
-    resolution: {directory: plugins/dsh-git-identity, type: directory}
-
   '@marijn/find-cluster-break@1.0.3':
     resolution: {integrity: sha512-FY+MKLBoTsLNJF/eLWaOsXGdz6uh3Iu1axjPf6TUq92IYumcTcXWHoS747JARLkcdlJ/Waiaxc5wQfFO8jC6NA==}
 
@@ -13781,10 +13821,6 @@ packages:
   '@noble/hashes@2.2.0':
     resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
     engines: {node: '>= 20.19.0'}
-
-  '@omdsh-dev/dsh-drag-and-drop@file:plugins/dsh-drag-and-drop':
-    resolution: {directory: plugins/dsh-drag-and-drop, type: directory}
-    engines: {node: ^20.0.0 || >=22.0.0}
 
   '@omdsh-dev/dsh-update-check@file:plugins/dsh-update-check':
     resolution: {directory: plugins/dsh-update-check, type: directory}
@@ -14946,6 +14982,9 @@ packages:
     resolution: {integrity: sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==}
     peerDependencies:
       '@types/react': ^18.0.0
+
+  '@types/react@18.3.28':
+    resolution: {integrity: sha512-z9VXpC7MWrhfWipitjNdgCauoMLRdIILQsAEV+ZesIzBq/oUlxk0m3ApZuMFCXdnS4U7KrI+l3WRUEGQ8K1QKw==}
 
   '@types/react@18.3.31':
     resolution: {integrity: sha512-vfEqpXTvwT91yhmwdfouStN2hSKwTvyRs8qpLfADyrq/kxDw0hZM7Wk9Ug1FELj8hIby+S/+kQCSRFF32nv2Qw==}
@@ -17015,9 +17054,6 @@ packages:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
     engines: {node: '>=10'}
 
-  marisa-bundle@file:bundles/marisa-bundle:
-    resolution: {directory: bundles/marisa-bundle, type: directory}
-
   mark.js@8.11.1:
     resolution: {integrity: sha512-1I+1qpDt4idfgLQG+BNWmrqku+7/2bi5nLf4YwF8y8zXvmfiTBY3PV3ZibfrjBueCByROpuBjLLFCajqkgYoLQ==}
 
@@ -18560,9 +18596,6 @@ packages:
     resolution: {integrity: sha512-BMhLD/Sw+GbJC21C/UgyaZX41nPt8bUTg+jWyDeg7e7YN4xOM05YPSIXceACnXVtqyEw/LMClUQMtMZ+PGGpqQ==}
     engines: {node: '>=20'}
 
-  whale-girl@file:plugins/whale-girl:
-    resolution: {directory: plugins/whale-girl, type: directory}
-
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
@@ -19264,8 +19297,6 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@bill9109/dsh-web-ui-notify@file:plugins/dsh-web-ui-approval-notify': {}
-
   '@biomejs/biome@2.5.9':
     optionalDependencies:
       '@biomejs/cli-darwin-arm64': 2.5.9
@@ -19659,10 +19690,6 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
-
-  '@dsh-community/dsh-paste-input@file:plugins/dsh-paste-input': {}
-
-  '@dsh-community/multimedia-webui-input@file:plugins/dsh-multimedia-webui-input': {}
 
   '@dsh-external/dsh-artifact@file:plugins/dsh-artifact(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)':
     dependencies:
@@ -20578,8 +20605,6 @@ snapshots:
     dependencies:
       '@braidai/lang': 1.1.2
 
-  '@loserfox/git-identity@file:plugins/dsh-git-identity': {}
-
   '@marijn/find-cluster-break@1.0.3': {}
 
   '@mermaid-js/mermaid-mindmap@9.3.0':
@@ -20671,8 +20696,6 @@ snapshots:
 
   '@noble/hashes@2.2.0':
     optional: true
-
-  '@omdsh-dev/dsh-drag-and-drop@file:plugins/dsh-drag-and-drop': {}
 
   '@omdsh-dev/dsh-update-check@file:plugins/dsh-update-check(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-home-paths@harness+packages+util+home-paths)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/schemastery@harness+vendor+schemastery)(react@18.3.1)':
     dependencies:
@@ -21594,6 +21617,11 @@ snapshots:
   '@types/react-dom@18.3.7(@types/react@18.3.31)':
     dependencies:
       '@types/react': 18.3.31
+
+  '@types/react@18.3.28':
+    dependencies:
+      '@types/prop-types': 15.7.15
+      csstype: 3.2.3
 
   '@types/react@18.3.31':
     dependencies:
@@ -23837,84 +23865,6 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  marisa-bundle@file:bundles/marisa-bundle(45eaa55df5411318187af8350a2ee033):
-    dependencies:
-      '@bill9109/dsh-web-ui-notify': file:plugins/dsh-web-ui-approval-notify
-      '@deepseek-ai/cordis': file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader)
-      '@deepseek-ai/dsh-client-ui-workspace': link:harness/packages/client/ui-workspace
-      '@deepseek-ai/dsh-genui': file:plugins/dsh-genui(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-client-ui-tool@harness+packages+client+ui-tool)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)
-      '@deepseek-ai/dsh-permission-presets': link:harness/packages/interaction/permission-presets
-      '@deepseek-ai/dsh-session-query-sqlite': link:harness/packages/session-query/session-query-sqlite
-      '@deepseek-ai/dsh-tool-cordis': file:harness/packages/extensions/tool-cordis(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-cordis-host-runner@harness+packages+extensions+cordis-host-runner)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-scope@harness+packages+core+scope)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)
-      '@deepseek-ai/dsh-tool-pwsh': file:harness/packages/shell/tool-pwsh(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-jobs@harness+packages+jobs+jobs)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-sandbox-policy@harness+packages+sandbox+sandbox-policy)(@deepseek-ai/dsh-sandbox@harness+packages+sandbox+sandbox)(@deepseek-ai/dsh-shell-env@harness+packages+shell+shell-env)(@deepseek-ai/dsh-shell@harness+packages+shell+shell)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(@deepseek-ai/dsh-user-approval@harness+packages+interaction+user-approval)
-      '@deepseek-ai/dsh-tool-session-query': link:harness/packages/session-query/tool-session-query
-      '@dpskh/a2a': file:plugins/dsh-a2a(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-brand@harness+packages+util+brand)(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)
-      '@dsh-community/dsh-paste-input': file:plugins/dsh-paste-input
-      '@dsh-community/multimedia-webui-input': file:plugins/dsh-multimedia-webui-input
-      '@dsh-external/dsh-artifact': file:plugins/dsh-artifact(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)
-      '@dsh-external/dsh-auto-resume': file:plugins/dsh-auto-resume(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(react@18.3.1)
-      '@dsh-external/dsh-code-map': file:plugins/dsh-code-map
-      '@dsh-external/dsh-diff-viewer': file:plugins/dsh-diff-viewer(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(cordis@4.0.0-rc.7)(react@18.3.1)
-      '@dsh-external/dsh-input-history': file:plugins/dsh-input-history(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))
-      '@dsh-external/dsh-sidechain': file:plugins/dsh-sidechain(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-subagent@harness+packages+subagent+subagent)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)
-      '@dsh-external/dsh-stickers': file:plugins/dsh-stickers(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-host-webserver@harness+packages+host+webserver)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)
-      '@dsh-external/dsh-suggested-replies': file:plugins/dsh-suggested-replies(15c0d97b39519d6cbb9a9b99a9642ce6)
-      '@dsh-external/dsh-ui-progress': file:plugins/dsh-ui-progress(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-tool-todo@harness+packages+todo+tool-todo)(react@18.3.1)
-      '@dsh-external/workflow': file:plugins/dsh_workflow(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-jobs@harness+packages+jobs+jobs)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-subagent@harness+packages+subagent+subagent)(@deepseek-ai/dsh-system-prompt@harness+packages+core+system-prompt)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(@deepseek-ai/dsh-user-approval@harness+packages+interaction+user-approval)(@deepseek-ai/dsh-user-questions@harness+packages+interaction+user-questions)(@deepseek-ai/dsh-workflow@harness+packages+workflow+workflow)(@deepseek-ai/schemastery@harness+vendor+schemastery)
-      '@fakechris/dsh-track': file:plugins/dsh-track(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-storage@harness+packages+storage+storage)(@deepseek-ai/dsh-tools@harness+packages+core+tools)
-      '@loserfox/git-identity': file:plugins/dsh-git-identity
-      '@omdsh-dev/dsh-drag-and-drop': file:plugins/dsh-drag-and-drop
-      '@omdsh-dev/dsh-update-check': file:plugins/dsh-update-check(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-home-paths@harness+packages+util+home-paths)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/schemastery@harness+vendor+schemastery)(react@18.3.1)
-      dsh-skill-manager: file:dsh-skill-manager
-      dsh-sonar: file:plugins/dsh-sonar(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-client-connection@harness+packages+client+connection)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-commands@harness+packages+interaction+commands)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)(schemastery@3.18.0)
-      whale-girl: file:plugins/whale-girl
-    transitivePeerDependencies:
-      - '@deepseek-ai/cordis-plugin-include'
-      - '@deepseek-ai/cordis-plugin-loader'
-      - '@deepseek-ai/dsh-agent'
-      - '@deepseek-ai/dsh-brand'
-      - '@deepseek-ai/dsh-client-connection'
-      - '@deepseek-ai/dsh-client-locale'
-      - '@deepseek-ai/dsh-client-runtime'
-      - '@deepseek-ai/dsh-client-ui-conversation'
-      - '@deepseek-ai/dsh-client-ui-primitives'
-      - '@deepseek-ai/dsh-client-ui-settings'
-      - '@deepseek-ai/dsh-client-ui-slots'
-      - '@deepseek-ai/dsh-client-ui-tool'
-      - '@deepseek-ai/dsh-commands'
-      - '@deepseek-ai/dsh-cordis-host-runner'
-      - '@deepseek-ai/dsh-home-paths'
-      - '@deepseek-ai/dsh-host-apiproxy'
-      - '@deepseek-ai/dsh-host-webserver'
-      - '@deepseek-ai/dsh-invariants'
-      - '@deepseek-ai/dsh-jobs'
-      - '@deepseek-ai/dsh-llm'
-      - '@deepseek-ai/dsh-sandbox'
-      - '@deepseek-ai/dsh-sandbox-policy'
-      - '@deepseek-ai/dsh-scope'
-      - '@deepseek-ai/dsh-session'
-      - '@deepseek-ai/dsh-session-persistence'
-      - '@deepseek-ai/dsh-settings'
-      - '@deepseek-ai/dsh-shell'
-      - '@deepseek-ai/dsh-shell-env'
-      - '@deepseek-ai/dsh-storage'
-      - '@deepseek-ai/dsh-storage-domain'
-      - '@deepseek-ai/dsh-subagent'
-      - '@deepseek-ai/dsh-system-prompt'
-      - '@deepseek-ai/dsh-tool-todo'
-      - '@deepseek-ai/dsh-tools'
-      - '@deepseek-ai/dsh-user-approval'
-      - '@deepseek-ai/dsh-user-questions'
-      - '@deepseek-ai/dsh-workflow'
-      - '@deepseek-ai/dsh-workspace'
-      - '@deepseek-ai/schemastery'
-      - bufferutil
-      - cordis
-      - react
-      - react-dom
-      - schemastery
-      - utf-8-validate
-
   mark.js@8.11.1: {}
 
   markdown-table@3.0.4: {}
@@ -26137,10 +26087,6 @@ snapshots:
   webidl-conversions@7.0.0: {}
 
   webidl-conversions@8.0.1: {}
-
-  whale-girl@file:plugins/whale-girl:
-    dependencies:
-      schemastery: 3.18.0
 
   whatwg-encoding@3.1.1:
     dependencies:
