@@ -35,9 +35,11 @@ for (const plugin of manifest.plugins) {
       `${plugin.id} is a mirror; only a maintainer-labelled upstream-sync PR may modify it`,
     )
     assert.ok(changedSet.has('maintenance/upstreams.json'), `${plugin.id}: mirror sync must update its commit baseline`)
-  } else {
+  } else if (plugin.mode !== 'internal') {
     assert.ok(changedSet.has(plugin.diffDocument), `${plugin.id}: fork changes must update ${plugin.diffDocument}`)
   }
+  // mode 'internal' = 自研插件（无上游仓库、无 diffDocument），跳过 ——
+  // 与 dsh-ego-browser 等人的登记约定一致。
 }
 
 if (changed.some(path => path.startsWith('harness/'))) {
