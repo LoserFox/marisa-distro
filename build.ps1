@@ -52,6 +52,10 @@ $env:npm_config_fetch_retry_mintimeout = '2000'
 $env:npm_config_network_concurrency = '8'
 
 $results = [ordered]@{}
+# harness 发行版增量（品牌兜底 + anchored-standard）以 overlay 形式在构建期
+# 应用、构建后还原，保证 harness 工作树与上游 pristine（submodule 语义）。
+$overlayApplied = $false
+$overlayScript = Join-Path $Repo 'scripts\apply-harness-overlays.mjs'
 
 function Write-Step([string]$msg) {
   Write-Host ''
@@ -138,6 +142,9 @@ try {
   # ═══════════════ 3/8 harness build ═══════════════
   if (-not $SkipHarnessBuild) {
     Write-Step '3/8 harness build (pnpm run build)'
+    & node $overlayScript apply
+    if ($LASTEXITCODE -ne 0) { throw 'harness overlay apply failed (brand + anchored-standard)' }
+    $overlayApplied = $true
     $env:PATH = "$RootBin;$env:PATH"
     Push-Location (Join-Path $Repo 'harness')
     try {
@@ -289,4 +296,14 @@ try {
   exit 1
 } finally {
   Stop-WebBackend
+  if ($overlayApplied) {
+    try {
+      & node $overlayScript revert | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        Write-Warning 'harness overlay revert failed — harness tree left patched; run scripts/apply-harness-overlays.mjs revert'
+      }
+    } catch {
+      Write-Warning "harness overlay revert failed: $($_.Exception.Message)"
+    }
+  }
 }

@@ -20,7 +20,8 @@
 | 上游 CLI 与 Web 树 | 当前直接使用上游原生能力；Marisa 通过 launcher/profile 参数选择 `marisa` | 避免在 harness 内维护发行版专用源码分叉 | 同步时只更新上游 pin，并运行 profile/boot 验证 |
 | `tsconfig.host.json`、`apps/web/package.json` | 无 Marisa 源码 patch；保持上游的项目引用、examples/website 类型范围和 Vite 构建命令（0.1.1-rc.1 验证：均未变，`verify-repository` 断言继续成立） | harness 只作为上游基线同步，不承载发行版 workspace 适配 | 更新 submodule 时只需 checkout 上游 pin；发行构建适配放在根 workspace/profile/打包阶段 |
 | `packages/host/webserver` 与 `packages/client/web` | rc7 host/client 使用同一协议树，`host.describe.canOpenPath` 由双方同源 schema 约束 | 修复旧版 host/client 不一致导致的握手重连 | 后续同步优先确认上游是否已提供等价能力，避免重复补丁 |
-| `apps/cli/config/agent-presets/anchored-standard/`（2026-08-21 新增，**发行版本地增量**） | 锚定标准实验预设：`tool-bootstrap.mjs` vendored 自 `xiaobright/dsh-anchored-standard@95b98af`（MIT，SHA-256 84CF3D58…）+ `agent.cordis.yml` = rc7 standard + 锚定增量（bootstrap 行第一、Minimal persona complete、tool-bash 全平台禁用）+ `preset.yml`/`LICENSE` | 实验预设不属上游产品面；Windows 无持久 PTY bash，persistent-shell 组按平台禁用 | 每次换树原样重放（0.1.1-rc.1 已重放；上游该区域零变更，无需对齐）；不随上游同步删除 |
+| `apps/cli/config/agent-presets/anchored-standard/`（2026-08-21 引入，**2026-08-27 已移出 harness、overlay 化**） | 锚定标准实验预设：`tool-bootstrap.mjs` vendored 自 `xiaobright/dsh-anchored-standard@95b98af`（MIT，SHA-256 84CF3D58…）+ `agent.cordis.yml` = rc7 standard + 锚定增量（bootstrap 行第一、Minimal persona complete、tool-bash 全平台禁用）+ `preset.yml`/`LICENSE`。现存放于 `overlays/harness/agent-presets/anchored-standard/`，由 `scripts/apply-harness-overlays.mjs` 在构建/打包阶段复制到 `apps/cli/config/agent-presets/anchored-standard/`（CLI `profile-boot.ts` 的 `SHIPPED_PRESET_ROOT` 消费点），harness 工作树不再承载该目录 | 实验预设不属上游产品面；Windows 无持久 PTY bash，persistent-shell 组按平台禁用 | 换树时无需重放：overlay 自动应用；上游若引入等价预设再评估删除 |
+| 品牌兜底字符串（`apps/web/index.html` 标题、`apps/web/vite.config.ts`、`packages/client/ui-sidebar/src/client/SidebarRoot.tsx`、`packages/client/ui-renderer/src/client/DocumentTitle.tsx`） | **2026-08-27 已移出 harness、overlay 化**：四文件全部还原为上游 b150a551 原文（`DSH Local Build`；index.html 另含 `lang="en"` → `zh-CN` 中文化），Marisa 文案由 `overlays/harness/brand-replacements.json` 替换表在构建期应用（`scripts/apply-harness-overlays.mjs`），lib/ 产物固化品牌后源文件还原。品牌相关测试与快照保持上游断言（品牌行为改由构建产物验证，见 `scripts/apply-harness-overlays.mjs` 文档） | 侧边栏 `sidebar.brand.name` 槽无占位者时外壳渲染兜底文案；Marisa 构建不设 `DSH_CLIENT_BUILD_PROFILE=official`（官方 `ui-brand-official` 不激活），文档标题同理读不到 `DSH_CLIENT_TITLE` | 换树时无需重放；若上游恢复构建期品牌注入或 Marisa 改为品牌 client 插件占位，删除替换表对应条目 |
 | `scripts/release/`（9 个发布脚本） | 非 Marisa 修改；2026-08-22 发现 rc8 换树时被根 `.gitignore` 的 `release/` 规则误吞（`git add -A` 静默跳过 `harness/scripts/release/`） | 该 ignore 规则本意是发行构建产物目录，不适用于上游源码路径 | 换树后需 `git add -f harness/scripts/release` 显式入库；0.1.1-rc.1 已恢复 |
 | Windows 平台形态（symlink/可执行位） | 上游 6 个 symlink 条目以内容等价的普通文件入库（120000→100644），若干脚本不带可执行位（100755→100644）；blob SHA 与上游逐一核对一致 | Windows checkout（core.symlinks=false）的系统性形态，非源码修改 | 对象层比对以 blob SHA 为准，mode 位差异不算增量 |
 
@@ -28,7 +29,7 @@
 
 ## Harness 边界
 
-`harness/` 当前应与 `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`（dsh-v0.1.1-rc.2）上游树一致，另有 `apps/cli/config/agent-presets/anchored-standard/` 为记录在案的发行版本地增量。核对口径：逐文件比对 git blob SHA（Windows 工作树的 CRLF/mode 位差异不影响 blob）。工作区中 agent notes 或生成物（`*.tsbuildinfo`、`.claude/skills/` 等）不应进入发行提交。后续应以 pinned submodule 记录该上游对象，避免把换树同步误读为 Marisa 源码修改。
+`harness/` 当前应与 `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`（dsh-v0.1.1-rc.2）上游树**完全一致**：anchored-standard 预设与品牌兜底字符串已于 2026-08-27 移入 `overlays/harness/`（发行版增量唯一合法存放处，构建期由 `scripts/apply-harness-overlays.mjs` 应用，`verify-repository` 会拦截 harness 树内的 overlay 残留）。核对口径：逐文件比对 git blob SHA（Windows 工作树的 CRLF/mode 位差异不影响 blob）。工作区中 agent notes 或生成物（`*.tsbuildinfo`、`.claude/skills/` 等）不应进入发行提交。后续应以 pinned submodule 记录该上游对象，避免把换树同步误读为 Marisa 源码修改。
 
 ## 根 workspace 与依赖图
 

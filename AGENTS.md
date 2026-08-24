@@ -4,7 +4,7 @@
 
 ## 仓库边界
 
-- `plugins/`、`desktop/` 由本仓库直接拥有；`harness/` 跟踪上游 rc pin，转换为 submodule 后不得在其中维护发行版源码修改。不得创建其他嵌套 `.git`。
+- `plugins/`、`desktop/` 由本仓库直接拥有；`harness/` 跟踪上游 rc pin，转换为 submodule 后不得在其中维护发行版源码修改——发行版增量（anchored-standard 预设、品牌兜底字符串）唯一合法存放处是 `overlays/harness/`，由 `scripts/apply-harness-overlays.mjs` 在构建/打包期应用，harness 工作树必须保持上游 pristine（`verify-repository` 强制）。不得创建其他嵌套 `.git`。
 - 根 `pnpm-lock.yaml` 是唯一依赖图；`harness/` 内的 lockfile/workspace 文件不参与构建。
 - `release/`、`node_modules/`、`*.log`、`*.tsbuildinfo` 不得提交。
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
@@ -15,6 +16,20 @@ assert.ok(!existsSync(join(root, 'harness', '.git')), 'harness must be owned by 
 assert.ok(existsSync(join(root, 'harness', 'package.json')), 'harness/package.json is missing')
 assert.match(manifest.harness.baseline, /^[0-9a-f]{7,40}$/, 'harness baseline must be a commit id')
 assert.equal(manifest.harness.mode, 'mirror', 'harness must track the pinned upstream rc baseline')
+
+// harness 工作树必须保持上游 pristine：发行版增量（品牌兜底字符串、
+// anchored-standard 预设）只允许以 overlays/harness 形式存在，由构建期
+// scripts/apply-harness-overlays.mjs 应用。构建残留（apply 后未 revert）会被
+// 这里拦截。
+const overlayCheck = spawnSync(process.execPath, [join(root, 'scripts', 'apply-harness-overlays.mjs'), 'verify'], {
+  cwd: root,
+  encoding: 'utf8',
+})
+assert.equal(
+  overlayCheck.status,
+  0,
+  `harness tree must be pristine (marisa overlays live in overlays/harness only):\n${overlayCheck.stderr ?? ''}`,
+)
 
 const pluginDirectories = readdirSync(join(root, 'plugins'), { withFileTypes: true })
   .filter(entry => entry.isDirectory() && entry.name !== 'node_modules')
