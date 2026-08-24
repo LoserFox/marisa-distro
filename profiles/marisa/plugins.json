@@ -168,7 +168,7 @@
     },
     {
       "name": "@dsh-external/change-ledger",
-      "source": "internal",
+      "source": "git",
       "dir": "dsh-change-ledger",
       "version": "0.1.0",
       "bundle": true

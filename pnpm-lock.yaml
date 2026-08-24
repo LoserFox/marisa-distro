@@ -11610,9 +11610,6 @@ importers:
       '@deepseek-ai/dsh-tool-session-query':
         specifier: workspace:*
         version: link:../../../harness/packages/session-query/tool-session-query
-      '@dsh-external/change-ledger':
-        specifier: file:../../../plugins/dsh-change-ledger
-        version: link:../../../plugins/dsh-change-ledger
       '@dsh-external/ego-browser':
         specifier: file:../../../plugins/dsh-ego-browser
         version: file:plugins/dsh-ego-browser(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-settings-plugins@harness+packages+client+ui-settings-plugins)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)(schemastery@3.18.0)

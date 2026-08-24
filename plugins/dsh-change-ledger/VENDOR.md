@@ -2,7 +2,7 @@
 
 - Upstream: https://github.com/dsh-external/dsh-change-ledger
 - Version: 0.1.0 (`@dsh-external/change-ledger`)
-- Source commit: `c8d1340a`
+- Source commit: `ae742c6`（ae742c65689cbe8676f4ad99a673e010008f1e91；本地参考源为单 commit 导出。历史记录中的 `c8d1340a` 为更早来源 commit，不在本次 clone 中）
 - Vendored into marisa-distro: 2026-08-24
 - Local reference copy: `~/.dsh/plugins/dsh-change-ledger`
 

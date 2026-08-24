@@ -245,6 +245,25 @@
       "mode": "internal",
       "note": "自研插件（vendored ego runtime 集成，2026-08-23 入登记）；无上游仓库，upstream:check 跳过",
       "source": "internal"
+    },
+    {
+      "id": "dsh-whale-widget",
+      "mode": "internal",
+      "source": "internal",
+      "note": "自研插件（DSH Web 余额小鲸鱼挂件，2026-08-22 开发、2026-08-24 从 %TEMP% 恢复 vendored）；无上游仓库，upstream:check 跳过"
+    },
+    {
+      "id": "dsh-session-isolate",
+      "mode": "internal",
+      "source": "internal",
+      "note": "自研插件（每会话 git worktree 隔离，2026-08-22 开发、2026-08-24 迁入仓库）；无上游仓库，upstream:check 跳过"
+    },
+    {
+      "id": "dsh-change-ledger",
+      "mode": "mirror",
+      "repository": "https://github.com/dsh-external/dsh-change-ledger.git",
+      "baseline": "ae742c65689cbe8676f4ad99a673e010008f1e91",
+      "note": "变更账本 0.1.0（2026-08-24 vendored，单 commit ae742c6 导出，参考 ~/.dsh/plugins/dsh-change-ledger）"
     }
   ]
 }
