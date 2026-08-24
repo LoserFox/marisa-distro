@@ -231,7 +231,53 @@ $workspaceDirty = $stashCommit -ne $headHash
 $dirtySuffix = if ($workspaceDirty) { '-dirty' } else { '' }
 $treeHash = & git -C $repo rev-parse "$stashCommit^{tree}" 2>$null
 if (-not $treeHash) { throw "cannot resolve content tree hash from $stashCommit" }
-$runtimeKey = "$lockHash-$($treeHash.Substring(0, 12))"
+# The composition source ($profile / -ProfilePath) lives OUTSIDE the repo tree
+# (~/.dsh) or is a member dir the tree hash cannot attribute to THIS switch —
+# two builds differing only in profile source must not share a cache entry.
+# 2026-08-24: an 8-row ~/.dsh profile and the 12-row release runtime profile
+# collided on one key and the cached copy silently shipped the wrong bundles.
+$profileKey = ''
+foreach ($keyFile in 'package.json', 'pnpm-workspace.yaml', 'cordis.yml', 'cordis.patch.yml', 'desktop.overlay.yml', 'standalone.overlay.yml') {
+  $keyPath = Join-Path $profile $keyFile
+  if (Test-Path -LiteralPath $keyPath -PathType Leaf) {
+    $profileKey += "+$((Get-FileHash $keyPath -Algorithm SHA256).Hash.Substring(0, 12))"
+  }
+}
+# Built outputs (lib/, dist/) are gitignored, so the git tree hash cannot see
+# them. An aborted pnpm prepare leaves them half-built (rm'd lib first!) and
+# the cache would re-ship the broken archive unchanged (2026-08-24, second
+# cache hit of the day). Fold a name+size+mtime manifest of every lib/dist
+# dir across the staged source roots into the key — over-invalidates on
+# rebuilds, which is slow, never wrong.
+$outputsManifest = New-Object System.Text.StringBuilder
+$pendingOutputs = New-Object System.Collections.Generic.Stack[string]
+foreach ($outputRoot in "$repo\harness", "$repo\plugins", "$repo\bundles", "$repo\dsh-mygo", "$repo\dsh-skill-manager", $profile) {
+  $pendingOutputs.Push($outputRoot)
+}
+while ($pendingOutputs.Count -gt 0) {
+  $scanDir = $pendingOutputs.Pop()
+  try { $scanEntries = [System.IO.Directory]::EnumerateFileSystemEntries($scanDir) } catch { continue }
+  foreach ($scanEntry in $scanEntries) {
+    try {
+      $scanAttr = [System.IO.File]::GetAttributes($scanEntry)
+      if (($scanAttr -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+      $scanName = [System.IO.Path]::GetFileName($scanEntry)
+      if (($scanAttr -band [System.IO.FileAttributes]::Directory) -eq 0) { continue }
+      if ($scanName -eq 'node_modules') { continue }
+      if ($scanName -eq 'lib' -or $scanName -eq 'dist') {
+        $outRel = $scanEntry.Substring($repo.Length + 1)
+        foreach ($outFile in [System.IO.Directory]::EnumerateFiles($scanEntry, '*', [System.IO.SearchOption]::AllDirectories)) {
+          $outItem = Get-Item -LiteralPath $outFile -Force
+          [void]$outputsManifest.Append("$outRel\$($outFile.Substring($scanEntry.Length + 1)):$($outItem.Length):$($outItem.LastWriteTimeUtc.Ticks);")
+        }
+      } else {
+        $pendingOutputs.Push($scanEntry)
+      }
+    } catch { }
+  }
+}
+$outputsHash = [BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($outputsManifest.ToString()))).Replace('-', '').Substring(0, 12)
+$runtimeKey = "$lockHash-$($treeHash.Substring(0, 12))$profileKey+$outputsHash"
 $cachedZip = Join-Path $cacheDir "backend-$runtimeKey.zip"
 
 if (-not $SkipBodies -and (Test-Path -LiteralPath $cachedZip)) {
@@ -264,6 +310,11 @@ if (-not $SkipBodies) {
   $pnpmShimText = Get-Content "$repo\desktop\bundle\pnpm.cmd" -Raw
   $pnpmShimText = $pnpmShimText -replace "`r?`n", "`r`n"
   Set-Content -Path "$stage\pnpm.cmd" -Value $pnpmShimText -NoNewline -Encoding ascii
+  # minimal fallback overlay: when the full composition fails twice the shell
+  # relaunches with MARISA_BOOT_PROFILE=web and launcher.cmd boots the web
+  # template patched by this file. Not staged = degraded mode dies ENOENT and
+  # every fallback lands straight in rescue mode (2026-08-24).
+  Copy-Item "$repo\desktop\bundle\minimal.overlay.yml" "$stage\minimal.overlay.yml" -Force
 }
 
 # --- stage source trees (no node_modules anywhere) ---------------------------
@@ -713,6 +764,12 @@ Get-ChildItem "$stage\marisa-distro\node_modules" -Directory -Force -ErrorAction
 foreach ($memberGlob in 'plugins/*', 'bundles/*', 'harness/packages/*/*', 'harness/vendor/*', 'harness/apps/*') {
   Get-ChildItem (Join-Path "$stage\marisa-distro" $memberGlob) -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     if (-not (Test-Path -LiteralPath (Join-Path $_.FullName 'package.json'))) {
+      # rc8 removed harness/packages/client/{schema-form,web-react} but leaves
+      # depleted lib/ dirs checked in — they are not build inputs, skip the gate.
+      $pkg = Join-Path $_.FullName 'package.json'
+      $hasTsconfig = Test-Path -LiteralPath (Join-Path $_.FullName 'tsconfig.json')
+      $hasSrc = Test-Path -LiteralPath (Join-Path $_.FullName 'src')
+      if (-not $hasTsconfig -and -not $hasSrc -and -not (Test-Path -LiteralPath $pkg)) { return }
       $script:bad += $_.FullName.Substring($stage.Length + 1).Replace('\', '/')
     }
   }
@@ -729,6 +786,23 @@ foreach ($requiredRootPackage in '@deepseek-ai/schemastery', '@deepseek-ai/dsh-w
     throw "staged tree INCOMPLETE — required root runtime package missing: $requiredRootPackage"
   }
 }
+# Composition gate: boot resolves every profile.bundles row via Node resolution
+# anchored at the installation / profile dir — both walk UP into the single
+# hoisted ROOT node_modules, so member-internal entries (e.g. under
+# bundles/marisa-bundle/node_modules) never satisfy a row. 2026-08-24
+# regression: dsh-whale-widget / dsh-session-isolate / @dsh-external/
+# change-ledger were wired into marisa-bundle + the profile but not into the
+# ROOT dependencies; pnpm resolved them as link: entries local to the bundle,
+# and full mode died "cannot resolve profile bundle" on first boot.
+$stageBundles = (Read-Utf8Text "$stage\.dsh\profiles\marisa\package.json" | ConvertFrom-Json).dsh.profile.bundles
+if (-not $stageBundles) { throw 'staged profile declares no dsh.profile.bundles rows' }
+foreach ($stageBundleName in @($stageBundles)) {
+  $rowDir = Join-Path "$stage\marisa-distro\node_modules" ($stageBundleName -replace '/', '\')
+  if (-not (Test-Path -LiteralPath (Join-Path $rowDir 'package.json'))) {
+    throw "composition row does not resolve from the staged root node_modules: $stageBundleName — add it to the root package.json dependencies"
+  }
+}
+Write-Host ("  composition rows resolved from root node_modules: {0}" -f @($stageBundles).Count)
 Write-Host '  staged tree integrity OK'
 
 # --- symlink walker -----------------------------------------------------------
