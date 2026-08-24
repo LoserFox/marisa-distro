@@ -56,12 +56,17 @@ func TestPageHealthProbeJS(t *testing.T) {
 	}
 	defer ph.close()
 	js := ph.probeJS()
-	if !strings.Contains(js, ph.addr) {
-		t.Fatalf("probe JS 缺少心跳端点 %s", ph.addr)
+	if !strings.Contains(js, ph.addr+"/hb") {
+		t.Fatalf("probe JS 未打到 /hb 心跳端点（曾漏掉导致 90s 必进急救）：%.200s", js)
 	}
-	for _, want := range []string{"__marisaProbe", "addEventListener('error'", "unhandledrejection", "DOMContentLoaded", "setInterval"} {
+	for _, want := range []string{"__marisaProbe", "addEventListener('error'", "unhandledrejection", "DOMContentLoaded", "setInterval", "/hb"} {
 		if !strings.Contains(js, want) {
 			t.Fatalf("probe JS 缺少 %q", want)
+		}
+	}
+	for _, want := range []string{"?b=", "&e=", "&m=", "encodeURIComponent"} {
+		if !strings.Contains(js, want) {
+			t.Fatalf("probe JS 心跳缺少 %q（曾漏掉导致 b/e/m 永不回传）", want)
 		}
 	}
 }

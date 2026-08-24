@@ -261,28 +261,16 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 				navigated = true
 			}
 
-			// 页面健康监控：导航成功后注入探针，捕获页面内 JS 报错/白屏。
-			// 未导航（webview 未就绪）时不监控——没有可检查的页面。
-			healthStop := make(chan struct{})
-			healthErr := make(chan error, 1)
-			if navigated {
-				if ph, err := newPageHealth(); err != nil {
-					log.Printf("页面健康端点不可用：%v（跳过页面健康检查）", err)
-				} else {
-					go monitorPageHealth(ph, func(js string) { win.ExecJS(js) },
-						healthStop, healthErr, pageBootTimeout)
-				}
-			}
+			// 页面健康监控已隐藏（90s 自动进急救误触发，后续重做）。
+			_ = navigated
 
-			// 等待本次进程终结、页面健康失败（或应用退出）。
+			// 等待本次进程终结（或应用退出）。
 			select {
 			case <-ctx.Done():
 				// 应用退出：终止后端进程组并等待收口，不留孤儿 node。
-				close(healthStop)
 				stopServer(cmd, exitCh)
 				return
 			case exit := <-exitCh:
-				close(healthStop)
 				if exit.err != nil {
 					count, reset := exitFailureClass(exit.err, userRestartRequested.Swap(false), time.Since(startedAt))
 					switch {
@@ -301,20 +289,6 @@ func supervise(ctx context.Context, port string, win *application.WebviewWindow,
 					failures = 0
 					log.Printf("dsh server 退出（重启）")
 				}
-			case herr := <-healthErr:
-				close(healthStop)
-				lastBootError = herr
-				log.Printf("web 页面健康检查失败，进入急救模式：%v", herr)
-				stopServer(cmd, exitCh)
-				// 页面挂 = 界面/插件层故障（白屏、client 模块加载失败等）：
-				// 立即给用户可操作的修复入口（急救页带失败原因 + 插件管理 +
-				// 恢复动作），而不是静默重启等待降级计数。窗口已在后端页面，
-				// 直接导航（waitNav=false），不等待下一次导航事件。
-				enterRescue(ctx, win, ready, herr, false)
-				stage = stageNormal
-				failures = 0
-				backoff = restartBackoff
-				lastBootError = nil
 				saveRescueState(stageNormal, nil)
 				continue
 			}

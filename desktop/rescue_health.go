@@ -99,7 +99,7 @@ func (p *pageHealth) snapshot() (booted bool, errs int, errMsg string) {
 // probeJS 返回注入页面的探针脚本：捕获未捕获错误/未处理拒绝，页面加载
 // 完成标记 booted，周期心跳到壳层端点。重复注入幂等（探针已装则跳过）。
 func (p *pageHealth) probeJS() string {
-	return fmt.Sprintf(pageProbeTemplate, "http://"+p.addr)
+	return fmt.Sprintf(pageProbeTemplate, "http://"+p.addr+"/hb")
 }
 
 const pageProbeTemplate = `(function(){
@@ -110,7 +110,7 @@ window.addEventListener('unhandledrejection',function(x){P.e++;if(!P.m){try{P.m=
 function mark(){P.b=true;}
 if(document.readyState==='interactive'||document.readyState==='complete'){mark();}
 else{document.addEventListener('DOMContentLoaded',mark);}
-setInterval(function(){try{fetch(%q,{cache:'no-store'}).catch(function(){});}catch(_){}},3000);
+setInterval(function(){try{fetch(%q+"?b="+(P.b?1:0)+"&e="+P.e+"&m="+encodeURIComponent(P.m),{cache:'no-store'}).catch(function(){});}catch(_){}},3000);
 })();`
 
 // monitorPageHealth 驱动一次页面健康检查：重复注入探针直到收到首个心跳
