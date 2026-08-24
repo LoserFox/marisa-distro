@@ -735,6 +735,9 @@ importers:
       '@dsh-community/multimedia-webui-input':
         specifier: workspace:^
         version: link:plugins/dsh-multimedia-webui-input
+      '@dsh-external/change-ledger':
+        specifier: workspace:^
+        version: link:plugins/dsh-change-ledger
       '@dsh-external/dsh-artifact':
         specifier: workspace:^
         version: link:plugins/dsh-artifact
@@ -813,9 +816,15 @@ importers:
       dsh-llm-fallbacks:
         specifier: file:./plugins/dsh-llm-fallbacks
         version: file:plugins/dsh-llm-fallbacks(743b41c021bd1c02ac92923b3e2fa846)
+      dsh-session-isolate:
+        specifier: workspace:^
+        version: link:plugins/dsh-session-isolate
       dsh-sonar:
         specifier: workspace:^
         version: link:plugins/dsh-sonar
+      dsh-whale-widget:
+        specifier: workspace:^
+        version: link:plugins/dsh-whale-widget
       marisa-bundle:
         specifier: file:./bundles/marisa-bundle
         version: link:bundles/marisa-bundle
