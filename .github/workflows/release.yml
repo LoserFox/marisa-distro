@@ -51,7 +51,7 @@ jobs:
         with:
           ref: ${{ needs.validate.outputs.commit }}
           submodules: recursive
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           # Pin to 11.9.0: pnpm >= 11.22 resolves workspace peers strictly and
           # fails profile installs (third-party plugins declare ranges like
