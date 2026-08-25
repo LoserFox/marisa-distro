@@ -37,6 +37,12 @@ func trayIcon() []byte {
 //   - 菜单「打开 DevTools」:打开 WebView2 DevTools(仅非 production 构建)
 //   - 菜单「退出」:application.Quit() → main 的 cancel → 后端进程树清理
 func setupTray(app *application.App, win *application.WebviewWindow) {
+	// SystemTray.New() 内部调用 runOrDeferToAppRun：app 运行中时它直接
+	// 执行 Run() 注册托盘（wails 官方示例从不显式调用 Run()）。本函数在
+	// ApplicationStarted 事件里执行（此刻 a.running 已为 true），因此这里
+	// 绝不能再显式调 tray.Run()——重复 Run() 会再次 newSystemTrayImpl +
+	// 再次 ShellNotifyIcon(NIM_ADD)（新消息窗口 + 相同 uid），explorer 以
+	// (hwnd, uid) 区分图标，结果就是系统托盘出现两个相同的 Marisa 图标。
 	tray := app.SystemTray.New()
 	tray.SetTooltip("Marisa DSH")
 	if icon := trayIcon(); icon != nil {
@@ -148,7 +154,7 @@ func setupTray(app *application.App, win *application.WebviewWindow) {
 			win.Show()
 		}
 	})
-	tray.Run()
+	// 不再调用 tray.Run()：New() 在 app 运行后已自动注册托盘（见函数头注释）。
 	log.Printf("system tray ready")
 }
 
