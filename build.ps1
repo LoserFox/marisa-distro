@@ -147,7 +147,7 @@ try {
     # 阶段不依赖脚本，先装链接，step 3 构建 harness lib 后再补跑 lifecycle。
     Push-Location $Repo
     try {
-      Invoke-InstallWithRetry 'root pnpm install (links only)' @('--ignore-scripts')
+      Invoke-InstallWithRetry 'root pnpm install (links only)' -extraArgs @('--ignore-scripts')
       Write-Host 'WARN: lifecycle scripts skipped by --ignore-scripts; will be completed after harness build' -ForegroundColor Yellow
     } finally { Pop-Location }
   } else {
