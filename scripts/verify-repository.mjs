@@ -141,6 +141,9 @@ assert.match(windowsReleaseScript, /while \(\$attempt -le 3\)/, 'the isolated re
 assert.match(windowsReleaseScript, /pnpm install \(prepare phase\) failed/, 'package prepare scripts must run after the harness build')
 assert.match(windowsReleaseScript, /::group::release:/, 'Windows release output must identify the active release stage')
 
+const runtimeVerifier = readFileSync(join(root, 'profiles', 'marisa', 'verify-mygo-runtime.mjs'), 'utf8')
+assert.match(runtimeVerifier, /'--no-open'/, 'isolated runtime verification must never open the user browser')
+
 const bundleScript = readFileSync(join(root, 'desktop', 'bundle', 'make-bundle.ps1'), 'utf8')
 assert.doesNotMatch(bundleScript, /dir \/a:l \/s/, 'bundle link discovery must not recurse through cyclic junctions')
 assert.match(bundleScript, /FileAttributes\]::ReparsePoint/, 'bundle link discovery must explicitly stop at reparse points')

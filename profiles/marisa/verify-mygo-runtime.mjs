@@ -26,7 +26,7 @@ const port = await new Promise((resolve, reject) => {
 
 // rc7 CLI syntax: --profile is a launcher flag; `web` subcommand does not
 // accept it (rc7 sync, 2026-08-18).
-const child = spawn(process.execPath, [bin, '--profile', 'marisa', '--host', '127.0.0.1', '--port', String(port)], {
+const child = spawn(process.execPath, [bin, '--profile', 'marisa', '--host', '127.0.0.1', '--port', String(port), '--no-open'], {
   cwd: repo,
   env: process.env,
   stdio: ['ignore', 'pipe', 'pipe'],
