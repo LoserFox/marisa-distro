@@ -25,7 +25,6 @@
     "@omdsh-dev/dsh-update-check": "file:../../plugins/dsh-update-check",
     "@dsh-external/dsh-ui-progress": "file:../../plugins/dsh-ui-progress",
     "@bill9109/dsh-web-ui-notify": "file:../../plugins/dsh-web-ui-approval-notify",
-    "whale-girl": "file:../../plugins/whale-girl",
     "dsh-whale-widget": "file:../../plugins/dsh-whale-widget",
     "dsh-session-isolate": "file:../../plugins/dsh-session-isolate",
     "@dsh-external/change-ledger": "file:../../plugins/dsh-change-ledger",

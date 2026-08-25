@@ -289,7 +289,6 @@
     "@liustack/modlens": "workspace:^",
     "@bill9109/dsh-web-ui-notify": "workspace:^",
     "@dsh-external/workflow": "workspace:^",
-    "whale-girl": "workspace:^",
     "dsh-whale-widget": "workspace:^",
     "dsh-session-isolate": "workspace:^",
     "@dsh-external/change-ledger": "workspace:^",

@@ -11,8 +11,7 @@
 | dsh-multimedia-webui-input | `fecdc67a4789` | ✅ CLEAN |  |
 | dsh-paste-input | `2fa32218af50` | ❌ DIRTY | package.json (content differs)<br>README.en.md (content differs)<br>README.i18n.yaml (content differs)<br>README.md (content differs) |
 | dsh-sonar | `1de51055a30e` | ❌ DIRTY | package.json (content differs) |
-| whale-girl | `e22e1fd91874` | ❌ DIRTY | desktop/package.json (content differs)<br>desktop/README.md (content differs)<br>docs/AGENTS.md (content differs)<br>package.json (content differs)<br>README.md (content differs)<br>scripts/gates/verify-doc-budget.mjs (content differs) |
 | dsh-change-ledger | `ae742c65689c` | ❌ DIRTY | VENDOR.md (local-only) |
 | harness | `b150a551b8d4` | ✅ CLEAN |  |
 
-共 10 个组件，7 个存在本地差异（DIRTY 组件转 submodule 前必须先消除差异：反馈上游或降级 fork）。
+共 9 个组件，6 个存在本地差异（DIRTY 组件转 submodule 前必须先消除差异：反馈上游或降级 fork）。

@@ -56,15 +56,6 @@
       "patch-id": null
     },
     {
-      "name": "whale-girl",
-      "source": "git",
-      "dir": "whale-girl",
-      "repo": "https://github.com/dsh-external/whale-girl.git",
-      "needs-build": true,
-      "has-lib": false,
-      "patch-id": null
-    },
-    {
       "name": "@deepseek-ai/dsh-qwen-mm",
       "source": "git",
       "dir": "Qwen-MM-Plugins",

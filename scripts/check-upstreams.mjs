@@ -43,7 +43,7 @@ const rows = []
 let updates = 0
 let errors = 0
 
-for (const component of [{ id: 'harness', ...manifest.harness }, ...manifest.plugins]) {
+for (const component of [{ id: 'harness', ...manifest.harness }, { id: 'mygo', ...manifest.mygo }, ...manifest.plugins]) {
   if (component.mode === 'internal' || (!component.repository && component.source !== 'npm')) {
     rows.push({ id: component.id, mode: component.mode, pin: '—', signal: '自研组件（无上游）', suggest: '—', status: 'INTERNAL' })
     continue

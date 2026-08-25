@@ -1,5 +1,14 @@
 {
   "schemaVersion": 1,
+  "mygo": {
+    "mode": "fork",
+    "path": "dsh-mygo",
+    "repository": "https://github.com/omdsh-dev/dsh-mygo.git",
+    "baseline": "e65eb56fe2d9f0f2b0dd9f1f8d8b48e36f6a0c5e",
+    "channel": "next",
+    "diffDocument": "docs/plugins/dsh-mygo.md",
+    "note": "vendored 自 omdsh-dev/dsh-mygo@next（2026-08-18，7 包 0.2.0-rc.7）；本地 fork 增量 3 项：①keyed 契约适配（rc7 harness slot 契约，未反馈上游）②panel symlink→junction（PR #2 fix/windows-junction-links）③devDeps 远古范围修复 + schemastery override（PR #1 fix/devdep-ranges，另 workspace:^ 本地化）——PR #1/#2 2026-08-23 提交上游未合并，合并后应重放同步；验证见 docs/plugins/dsh-mygo.md"
+  },
   "harness": {
     "mode": "mirror",
     "mechanism": "submodule",
@@ -38,9 +47,9 @@
       "source": "npm",
       "mode": "fork",
       "repository": "https://github.com/omdsh-dev/DSH-better-sidebar.git",
-      "version": "0.14.0",
+      "version": "0.16.0",
       "diffDocument": "docs/plugins/dsh-better-sidebar.md",
-      "note": "npm snapshot 2026-08-20 sync: 0.10.3 -> 0.14.0 (rc8 peers, web-react/schema-form deps removed upstream); install-time lifecycle scripts absent in 0.14.0"
+      "note": "npm snapshot 2026-08-20 sync: 0.10.3 -> 0.14.0 (rc8 peers, web-react/schema-form deps removed upstream); install-time lifecycle scripts absent in 0.14.0; npm sync 0.16.0 (2026-08-25): re-vendored from dsh-better-sidebar@0.16.0, 14 workspace dep(s) rewired"
     },
     {
       "id": "dsh-code-map",
@@ -169,9 +178,9 @@
       "source": "npm",
       "mode": "fork",
       "repository": "https://github.com/liustack/modlens.git",
-      "version": "3.22.1",
+      "version": "3.24.2",
       "diffDocument": "docs/plugins/modlens.md",
-      "note": "npm 快照 fork 2026-08-22：vendored @liustack/modlens@3.22.1 取代 dsh-vision-toolkit（移除 Python runtime）；fork 增量 = 首启 seed 匿名 OpenCode Zen 默认（~/.modlens/config.json 缺失时写入 openai provider，baseUrl opencode.ai/zen/v1，model mimo-v2.5-free，占位 key public，0600）；prepublishOnly 按 vendoring 规则移除；Zen 握手实测通过（Bearer public + 带图请求 200）",
+      "note": "npm 快照 fork 2026-08-22：vendored @liustack/modlens@3.22.1 取代 dsh-vision-toolkit（移除 Python runtime）；fork 增量 = 首启 seed 匿名 OpenCode Zen 默认（~/.modlens/config.json 缺失时写入 openai provider，baseUrl opencode.ai/zen/v1，model mimo-v2.5-free，占位 key public，0600）；prepublishOnly 按 vendoring 规则移除；Zen 握手实测通过（Bearer public + 带图请求 200）。2026-08-27 同步 3.24.2：重放 seed 补丁（existsSync import + ZEN_DEFAULT_SEED + seedZenDefault + apply 调用），prepublishOnly 移除，seed 测试 4/4 过",
       "npmName": "@liustack/modlens"
     },
     {
@@ -195,8 +204,8 @@
       "source": "npm",
       "mode": "mirror",
       "repository": null,
-      "version": "0.2.1",
-      "note": "2026-08-23 0.1.1-rc.2 迁移收敛：@deepseek-ai 依赖区间 rc.6/rc.8 统一改 workspace:^（机械替换，随迁移反馈上游）",
+      "version": "0.2.3",
+      "note": "2026-08-23 0.1.1-rc.2 迁移收敛：@deepseek-ai 依赖区间 rc.6/rc.8 统一改 workspace:^（机械替换，随迁移反馈上游）; npm sync 0.2.3 (2026-08-25): re-vendored from @huanlin/dsh-plugin-interpreters@0.2.3, 10 workspace dep(s) rewired",
       "npmName": "@huanlin/dsh-plugin-interpreters"
     },
     {
@@ -208,18 +217,12 @@
       "note": "2026-08-23 0.1.1-rc.2 迁移收敛：@deepseek-ai 依赖区间 rc.6/rc.8 统一改 workspace:^（机械替换，随迁移反馈上游）"
     },
     {
-      "id": "whale-girl",
-      "mode": "mirror",
-      "repository": "https://github.com/dsh-external/whale-girl.git",
-      "baseline": "e22e1fd918746e610f7bfb1713cef1e57a56f37c"
-    },
-    {
       "id": "ya-workspace-sidebar",
       "source": "npm",
       "mode": "fork",
       "repository": null,
-      "version": "0.3.1",
-      "note": "npm snapshot 2026-08-20 sync: 0.1.0 -> 0.3.1; fork diff = devDependencies 的 @deepseek-ai/dsh-* 从 ^0.0.1-rc.1 改写为 workspace:^（避免拉取 rc.1 远古依赖链 dsh-compact 404）；peer 仍 ^0.0.1-rc.1 旧风格，rc8 组合行为待 boot 验证",
+      "version": "0.3.3",
+      "note": "npm snapshot 2026-08-20 sync: 0.1.0 -> 0.3.1; fork diff = devDependencies 的 @deepseek-ai/dsh-* 从 ^0.0.1-rc.1 改写为 workspace:^（避免拉取 rc.1 远古依赖链 dsh-compact 404）；peer 仍 ^0.0.1-rc.1 旧风格，rc8 组合行为待 boot 验证; npm sync 0.3.3 (2026-08-25): re-vendored from @huanlin/dsh-plugin-ya-workspace-sidebar@0.3.3, 7 workspace dep(s) rewired",
       "diffDocument": "docs/plugins/ya-workspace-sidebar.md",
       "npmName": "@huanlin/dsh-plugin-ya-workspace-sidebar"
     },
@@ -228,8 +231,8 @@
       "source": "npm",
       "mode": "mirror",
       "repository": null,
-      "version": "0.1.2",
-      "note": "npm snapshot; upstream repository not published",
+      "version": "0.1.6",
+      "note": "npm snapshot; upstream repository not published; npm sync 0.1.6 (2026-08-25): re-vendored from @huanlin/dsh-plugin-yet-another-subagent@0.1.6, 0 workspace dep(s) rewired",
       "npmName": "@huanlin/dsh-plugin-yet-another-subagent"
     },
     {
