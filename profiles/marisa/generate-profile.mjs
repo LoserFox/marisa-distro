@@ -67,7 +67,7 @@ const profileRef = (target) => isReleaseRuntime ? fwd(path.relative(PROFILE_DIR,
 // internal（自研，如 dsh-ego-browser）与 git 插件同样以 file: 从源码树组合。
 const gitPlugins = MANIFEST.plugins.filter((p) => p.source === 'git' || p.source === 'internal');
 const npmPlugins = MANIFEST.plugins.filter((p) => p.source === 'npm');
-if (gitPlugins.length !== 24) throw new Error(`expected 24 git+internal plugins, got ${gitPlugins.length}`);
+if (gitPlugins.length !== 25) throw new Error(`expected 25 git+internal plugins, got ${gitPlugins.length}`);
 if (npmPlugins.length !== 9) throw new Error(`expected 9 npm plugins, got ${npmPlugins.length}`);
 
 // ── bundle deps (relative file: — machine-independent) ───────────────────
