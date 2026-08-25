@@ -9,11 +9,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-windows-x64.msi"><img alt="下载 Windows MSI" src="https://img.shields.io/badge/Windows-下载_MSI-0078D4?style=for-the-badge&logo=windows11&logoColor=white"></a>
+  <a href="https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/Marisa-DSH-windows-x64.msi"><img alt="下载 Windows MSI" src="https://img.shields.io/badge/Windows-下载_MSI-0078D4?style=for-the-badge&logo=windows11&logoColor=white"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/omdsh-dev/marisa-distro/releases/tag/v0.1.7"><img alt="Release v0.1.7" src="https://img.shields.io/badge/Release-v0.1.7-2DA44E?style=flat-square"></a>
+  <a href="https://github.com/omdsh-dev/marisa-distro/releases/tag/v0.1.11"><img alt="Release v0.1.11" src="https://img.shields.io/badge/Release-v0.1.11-2DA44E?style=flat-square"></a>
   <img alt="DSH 0.1.0-rc.7" src="https://img.shields.io/badge/DSH-0.1.0--rc.7-6F42C1?style=flat-square">
   <img alt="Windows 10/11 x64" src="https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-0078D4?style=flat-square&logo=windows11&logoColor=white">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/License-MIT-24292F?style=flat-square"></a>
@@ -25,35 +25,32 @@
 
 ### Windows 10 / 11 x64
 
-**推荐：[直接下载 MSI 安装包](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-windows-x64.msi)**
+**推荐：[直接下载 MSI 安装包](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/Marisa-DSH-windows-x64.msi)**
 
-MSI 会按当前用户安装 Marisa，并在首次启动时准备随包运行环境。需要免安装版本时，也可以下载 [便携版 EXE](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-windows-x64-standalone.exe)。
+MSI 会按当前用户安装 Marisa，并在首次启动时准备随包运行环境。需要免安装版本时，也可以下载 [便携版 EXE](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/Marisa-DSH-windows-x64-standalone.exe)。
 
 | 下载项 | 适合谁 | 状态 |
 |---|---|---|
-| [🪄 MSI 安装包](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-windows-x64.msi) | 大多数 Windows 用户 | **推荐** |
-| [🧳 便携版 EXE](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-windows-x64-standalone.exe) | 不希望安装、需要放在自定义目录的用户 | 首次运行自解压 |
-| [🧑‍💻 Profile 版（tar.zst，终端运行）](https://github.com/omdsh-dev/marisa-distro/releases) | 开发者、CI、喜欢终端操作的用户 | 解压即用，随下个版本发布 |
-| [🔐 SHA256SUMS.txt](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/SHA256SUMS.txt) | 校验下载文件是否完整 | 推荐校验 |
+| [🪄 MSI 安装包](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/Marisa-DSH-windows-x64.msi) | 大多数 Windows 用户 | **推荐** |
+| [🧳 便携版 EXE](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/Marisa-DSH-windows-x64-standalone.exe) | 不希望安装、需要放在自定义目录的用户 | 首次运行自解压 |
+| [🧑‍💻 Profile 版（tar.zst，终端运行）](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/Marisa-DSH-profile-0.1.11-win-x64.tar.zst) | 开发者、CI、喜欢终端操作的用户 | 配合[解压器](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/Marisa-DSH-windows-x64-extract.exe)使用 |
+| [🔐 SHA256SUMS.txt](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.11/SHA256SUMS.txt) | 校验下载文件是否完整 | 推荐校验 |
 
 > Windows 产物目前没有代码签名，SmartScreen 可能提示“未知发布者”。请只从本仓库 Release 下载。
 
 **🧑‍💻 开发者 / 终端用户：Profile 版**：同一个后端，不带桌面壳。下载 `Marisa-DSH-profile-<版本>-win-x64.tar.zst` 和 `Marisa-DSH-windows-x64-extract.exe`，解压后运行 `run-marisa.bat`，Web 界面会在默认浏览器打开：
 
 ```bat
-Marisa-DSH-windows-x64-extract.exe Marisa-DSH-profile-0.1.7-win-x64.tar.zst
+Marisa-DSH-windows-x64-extract.exe Marisa-DSH-profile-0.1.11-win-x64.tar.zst
 ```
 
 无需安装、无托盘、无自动更新；会话数据保存在解压目录内的 `.dsh` 下——换版本就是解压到一个**新目录**，旧数据不受影响（提取器默认拒绝覆盖已有不同版本的目录）。
 
 ### Linux 与 macOS
 
-这些构建目前只用于试验，不建议作为主力环境：
+当前版本暂不提供 Linux 或 macOS 二进制。相关支持仍处于搁置的实验阶段，不属于本次发行的验收范围。
 
-- [🐧 Linux x64 tar.gz](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-linux-x64-experimental.tar.gz)：依赖系统 DSH、GTK 与 WebKit。
-- [🍎 macOS Apple Silicon app.zip](https://github.com/omdsh-dev/marisa-distro/releases/download/v0.1.7/Marisa-DSH-macos-arm64-experimental.app.zip)：未签名、未公证，可能无法直接运行。
-
-[查看 v0.1.7 的完整发布说明](https://github.com/omdsh-dev/marisa-distro/releases/tag/v0.1.7)
+[查看 v0.1.11 的完整发布说明](https://github.com/omdsh-dev/marisa-distro/releases/tag/v0.1.11)
 
 ## ✨ Marisa 帮你省掉什么？
 
@@ -79,10 +76,10 @@ Marisa-DSH-windows-x64-extract.exe Marisa-DSH-profile-0.1.7-win-x64.tar.zst
 
 ## 🚧 当前状态
 
-- 当前发行版：`v0.1.7`（预发布）
+- 当前发行版：`v0.1.11`（预发布）
 - DSH 基线：公开版 `0.1.0-rc.7`
 - 主要支持：Windows 10 / 11 x64
-- 实验支持：Linux x64、macOS Apple Silicon
+- Linux / macOS：实验支持暂时搁置，当前版本不提供二进制
 - 已知限制：Windows 未代码签名；首次使用仍需按页面提示配置模型服务
 
 所有 `v0.x` Release 都属于预发布版本。Marisa 不替代 DSH 与插件上游，它提供的是经过组合、打包和桌面验收的默认体验。
