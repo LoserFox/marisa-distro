@@ -20,7 +20,7 @@
       "name": "dsh-better-sidebar",
       "source": "npm",
       "dir": "dsh-better-sidebar",
-      "version": "0.14.0",
+      "version": "0.16.0",
       "bundle": true
     },
     {
@@ -122,7 +122,7 @@
       "name": "@liustack/modlens",
       "source": "npm",
       "dir": "modlens",
-      "version": "3.22.1"
+      "version": "3.24.2"
     },
     {
       "name": "@canglongcl/dsh-web-review",
@@ -139,18 +139,13 @@
       "name": "@huanlin/dsh-plugin-interpreters",
       "source": "npm",
       "dir": "interpreters",
-      "version": "0.2.1"
+      "version": "0.2.3"
     },
     {
       "name": "dsh-mnemon",
       "source": "npm",
       "dir": "mnemon",
       "version": "0.2.13"
-    },
-    {
-      "name": "whale-girl",
-      "source": "git",
-      "dir": "whale-girl"
     },
     {
       "name": "dsh-whale-widget",
@@ -167,6 +162,13 @@
       "bundle": true
     },
     {
+      "name": "dsh-model-proxy",
+      "source": "internal",
+      "dir": "dsh-model-proxy",
+      "version": "0.1.0",
+      "bundle": true
+    },
+    {
       "name": "@dsh-external/change-ledger",
       "source": "git",
       "dir": "dsh-change-ledger",
@@ -177,13 +179,13 @@
       "name": "@huanlin/dsh-plugin-ya-workspace-sidebar",
       "source": "npm",
       "dir": "ya-workspace-sidebar",
-      "version": "0.3.1"
+      "version": "0.3.3"
     },
     {
       "name": "@huanlin/dsh-plugin-yet-another-subagent",
       "source": "npm",
       "dir": "yet-another-subagent",
-      "version": "0.1.2"
+      "version": "0.1.6"
     },
     {
       "name": "@dsh-external/dsh-auto-resume",

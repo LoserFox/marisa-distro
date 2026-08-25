@@ -23,11 +23,15 @@ export type SidebarDiffRef = {
     path: string;
     staged: boolean;
     untracked?: boolean;
+    worktree?: string;
+    repoRoot?: string;
 } | {
     kind: 'commit';
     hash: string;
     hashFull: string;
     subject: string;
+    worktree?: string;
+    repoRoot?: string;
 };
 /** One open tab. `path` carries the file (editor) or is absent (git/terminal);
  *  `diff` carries the change a diff tab shows; `meta` (v0.12.0+) carries
@@ -58,6 +62,22 @@ export interface SidebarSplit {
     children: SplitNode[];
 }
 export type SplitNode = SidebarLeaf | SidebarSplit;
+/**
+ * One free window: a tab dragged out of the workbench onto the conversation
+ * area floats in the panel host at viewport coordinates. The tab is OWNED by
+ * the window exactly like a pane owns its tabs (moved, not copied); geometry
+ * persists with the session so a reload restores the window in place.
+ * Stacking order is the array order (last = topmost).
+ */
+export interface FloatWindow {
+    id: string;
+    tab: SidebarTab;
+    /** Viewport coordinates of the window's top-left corner. */
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
 /** The full per-session state. */
 export interface SidebarState {
     panelOpen: boolean;
@@ -72,6 +92,12 @@ export interface SidebarState {
     nextBrowser: number;
     /** Explorer expansion set (absolute directory paths). */
     expanded: string[];
+    /**
+     * Explorer rows highlighted by a "Show in folder" reveal (absolute paths).
+     * Transient by design: sanitizeState never restores it, so a reload starts
+     * unhighlighted.
+     */
+    revealed: string[];
     /** The right sidebar's split tree (the original workbench). */
     splits: SplitNode;
     /** Whether the bottom panel (a second, independent workbench) is open. */
@@ -87,15 +113,27 @@ export interface SidebarState {
     /** The bottom panel's own split tree (panes/tabs live only in ONE tree;
      *  tabs never cross panels — the two panels only share panel-size drags). */
     bottomSplits: SplitNode;
+    /** Free windows (tabs dragged out onto the conversation area). */
+    floats: FloatWindow[];
 }
 export declare const PANEL_MIN = 280;
 export declare const PANEL_MAX = 640;
 export declare const PANEL_DEFAULT = 400;
 export declare const TAB_MAX_WIDTH = 160;
 /** Bottom panel geometry contract (mirrors the width contract; the upper
- * bound is the viewport, enforced by {@link setBottomHeight}). */
+ *  bound is the viewport, enforced by {@link setBottomHeight}). */
 export declare const BOTTOM_MIN = 120;
 export declare const BOTTOM_DEFAULT = 220;
+/** Free-window geometry contract: the floor keeps the window usable (a
+ *  header plus some content), the ceiling is the viewport. */
+export declare const FLOAT_MIN_W = 320;
+export declare const FLOAT_MIN_H = 200;
+/** Geometry a fresh free window starts with: a phone-like portrait ratio
+ *  (390×780 ≈ 1:2). The creation path additionally caps the size to the
+ *  viewport (minus a 24px margin), so a short viewport gets a shorter —
+ *  not overflowing — window instead of an exact ratio. */
+export declare const FLOAT_DEFAULT_W = 390;
+export declare const FLOAT_DEFAULT_H = 780;
 /** Mint a fresh uid-based tab id. The `'editor:' + path` convention only
  *  covers openSidebarFile opens (per-path dedupe); opens that must not
  *  dedupe (the tree's "open to the side") mint through here. */
@@ -141,8 +179,13 @@ export declare function migrateBottomTabs(state: SidebarState): SidebarState;
 export declare function leafWithTab(node: SplitNode, tabId: string): SidebarLeaf | undefined;
 /** All leaves of the tree, depth-first. */
 export declare function allLeaves(node: SplitNode): SidebarLeaf[];
-/** Whether a tab exists anywhere in a state (either tree, any pane). */
+/** Whether a tab exists anywhere in a state (either tree, any pane, or any
+ *  free window — a floating tab is as open as a docked one). */
 export declare function tabOpenIn(state: SidebarState, tabId: string): boolean;
+/** The free window holding a tab id, if any. */
+export declare function floatWithTab(state: SidebarState, tabId: string): FloatWindow | undefined;
+/** The free window with the given window id, if any. */
+export declare function floatById(state: SidebarState, floatId: string): FloatWindow | undefined;
 /** Replace a leaf with a split of it plus a fresh empty leaf. */
 export declare function splitLeafAt(node: SplitNode, paneId: string, dir: 'row' | 'col'): SplitNode;
 /**
@@ -179,7 +222,8 @@ export declare function activateTab(state: SidebarState, paneId: string, tabId: 
 /** Update the display fields of one open tab (title / path / meta) without
  *  re-opening it. The browser tab persists its current URL and hostname
  *  title through this reducer so a reload restores the visited page. A
- *  missing tab id is a no-op. The tab may live in either tree. */
+ *  missing tab id is a no-op. The tab may live in either tree or a free
+ *  window. */
 export declare function patchTab(state: SidebarState, tabId: string, patch: {
     title?: string;
     path?: string;
@@ -234,11 +278,50 @@ export declare function setWidth(state: SidebarState, width: number): SidebarSta
 export declare function setBottomHeight(state: SidebarState, height: number): SidebarState;
 /** Toggle a directory in the explorer expansion set. */
 export declare function toggleExpanded(state: SidebarState, path: string): SidebarState;
+/**
+ * Reveal files in the explorer: expand every ancestor directory between the
+ * explorer root and each file (so the lazy tree actually shows the row) and
+ * record the paths for highlighting. The reveal set is transient —
+ * sanitizeState never restores it, so a reload starts unhighlighted.
+ * @param state - current sidebar state.
+ * @param cwd - the explorer's root (session working directory).
+ * @param files - absolute paths to highlight (parent dirs are expanded).
+ * @returns the next state, or the same reference when nothing is revealed.
+ */
+export declare function revealPaths(state: SidebarState, cwd: string | undefined, files: readonly string[]): SidebarState;
 /** Adjust one split divider: `i` is the left/top child index, delta in fractions. */
 export declare function resizeSplit(node: SplitNode, splitId: string, index: number, delta: number): SplitNode;
 /** State-level {@link resizeSplit} route: the divider may live in either
  *  tree (split ids are globally unique). */
 export declare function resizeSplitIn(state: SidebarState, splitId: string, index: number, delta: number): SidebarState;
+/** Clamp free-window geometry: sizes respect the floor and the viewport, and
+ *  the position keeps the whole window inside the viewport. Without a window
+ *  (unit tests) only the floor applies — the caller's values pass through. */
+export declare function clampFloatGeometry(x: number, y: number, w: number, h: number): Pick<FloatWindow, 'x' | 'y' | 'w' | 'h'>;
+/**
+ * Float a docked tab: remove it from its pane (either tree; an emptied pane
+ * collapses like any move) and append a free window centered on the drop
+ * point, with the default size clamped to the viewport. The stacking order
+ * is the array order, so a fresh window is born topmost. An unknown tab id
+ * (or one already floating) is a strict no-op.
+ */
+export declare function floatTab(state: SidebarState, tabId: string, x: number, y: number): SidebarState;
+/** Move a free window (clamped to the viewport); unknown ids are a no-op. */
+export declare function moveFloat(state: SidebarState, floatId: string, x: number, y: number): SidebarState;
+/** Resize a free window from its SE corner: the top-left corner stays
+ *  anchored, sizes clamp to the floor and to the viewport's remaining room. */
+export declare function resizeFloat(state: SidebarState, floatId: string, w: number, h: number): SidebarState;
+/** Bring a free window to the top (the array's end). Already topmost (or the
+ *  only window) returns the same reference — no persist churn on every click. */
+export declare function raiseFloat(state: SidebarState, floatId: string): SidebarState;
+/** Dock a free window back into a pane (center merge): the tab joins the
+ *  target pane and activates. `toPane` defaults to the active pane with the
+ *  right tree's first leaf as the stale-id fallback (mirrors
+ *  {@link openTabInActivePane}). Unknown window ids are a no-op. */
+export declare function dockFloat(state: SidebarState, floatId: string, toPane?: string): SidebarState;
+/** Close the free window holding a tab (the tab closes WITH the window —
+ *  the caller fires the descriptor's onClose lifecycle). */
+export declare function closeFloatByTab(state: SidebarState, tabId: string): SidebarState;
 /** Prefix marking a tab id as an agent-owned terminal (suffix is the uuid). */
 export declare const AGENT_TAB_PREFIX = "agent:";
 /** Whether a tab id refers to an agent-owned terminal. */

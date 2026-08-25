@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "note": "Marisa 发行版品牌兜底字符串替换表。harness 作为上游 submodule 保持 pristine，这些字符串由 scripts/apply-harness-overlays.mjs 在构建/打包阶段应用。from 必须严格匹配上游 b150a551 原文（apply 时若 from 与 to 都找不到则报错，防止上游改版后静默失效）。index.html 的 lang 中文化（en -> zh-CN）与标题同源，一并纳入。",
+  "files": {
+    "apps/web/index.html": [
+      {
+        "from": "<html lang=\"en\">",
+        "to": "<html lang=\"zh-CN\">"
+      },
+      {
+        "from": "<title>DSH Local Build</title>",
+        "to": "<title>Marisa DSH</title>"
+      }
+    ],
+    "apps/web/vite.config.ts": [
+      {
+        "from": "const DEFAULT_CLIENT_TITLE = 'DSH Local Build'",
+        "to": "const DEFAULT_CLIENT_TITLE = 'Marisa DSH'"
+      },
+      {
+        "from": "html.replace('<title>DSH Local Build</title>'",
+        "to": "html.replace('<title>Marisa DSH</title>'"
+      }
+    ],
+    "packages/client/ui-renderer/src/client/DocumentTitle.tsx": [
+      {
+        "from": "const DEFAULT_CLIENT_TITLE = 'DSH Local Build'",
+        "to": "const DEFAULT_CLIENT_TITLE = 'Marisa DSH'"
+      }
+    ],
+    "packages/client/ui-sidebar/src/client/SidebarRoot.tsx": [
+      {
+        "from": ">DSH Local Build</span>",
+        "to": ">Marisa DSH</span>"
+      }
+    ]
+  }
+}

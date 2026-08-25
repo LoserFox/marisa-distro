@@ -13,6 +13,8 @@ export interface SidebarConfig {
     readLimit?: number;
     /** Media route cap (bytes); larger binaries are refused. */
     mediaLimit?: number;
+    /** Upload route cap (bytes); larger files are refused without touching disk. */
+    uploadLimit?: number;
     /** Explorer row bound of one level. */
     listLimit?: number;
     /** Terminals per session. */
@@ -42,6 +44,7 @@ export declare const Config: z<SidebarConfig>;
 export interface ResolvedSidebarConfig {
     readLimit: number;
     mediaLimit: number;
+    uploadLimit: number;
     listLimit: number;
     terminalsPerSession: number;
     reconnectGraceMs: number;

@@ -33,3 +33,11 @@ export declare function isAbsolutePath(path: string): boolean;
  * relative text keeps the caller's own casing.
  */
 export declare function relativeTo(cwd: string, path: string): string;
+/**
+ * Whether `target` lies under `base` (or equals it), tolerant of separator
+ * style and — on Windows-style drive paths — of letter case. A client-side
+ * mirror of the host's `isWithin` (fs-tree.ts) used to decide whether a
+ * git-derived path can be opened in the editor (a linked worktree outside
+ * the session workspace cannot: the host's workspace fence would reject it).
+ */
+export declare function isWithinWorkspace(base: string, target: string): boolean;

@@ -1,5 +1,5 @@
 /**
- * Minimal zh/en copy for the sidebar. The copy follows the DSH i18n system:
+ * Minimal zh/en/ja copy for the sidebar. The copy follows the DSH i18n system:
  * the client apply attaches the locale service (`ctx.locale`, provided by
  * `@deepseek-ai/dsh-client-locale`) through {@link attachLocale}, and
  * `t()`/`isZh()` resolve the active locale from it — the Host-backed
@@ -7,6 +7,18 @@
  * Without an attached service (standalone/test compositions) the browser
  * language is used, matching the previous behavior. The dictionaries are
  * also registered into the DSH locale registry under {@link LOCALE_NS}.
+ *
+ * ja (Japanese) is opt-in through `@huanlin/dsh-plugin-better-locale`: when
+ * that plugin is installed, the client apply also calls
+ * {@link attachBetterLocale} with the override store. `t()` then consults
+ * the store's active override id first; if it is `'ja'` (or any id whose
+ * dict has the requested key) the ja text wins, otherwise the existing
+ * zh/en chain runs unchanged. better-locale itself patches
+ * `LocaleRuntime.prototype.lookup` so DSH's own translate chain also
+ * returns ja where the `betterSidebar` namespace has a ja entry — that
+ * path covers external callers of `ctx.locale.bind('betterSidebar')`,
+ * while the override-aware `t()` here covers better-sidebar's own
+ * components (which bypass `ctx.locale` and call `t()` directly).
  */
 /** The zh dictionary (also registered into the DSH locale registry under {@link LOCALE_NS}). */
 export declare const zh: {
@@ -29,6 +41,26 @@ export declare const zh: {
     editorEmptyHint: string;
     openFileNewTab: string;
     openFileSide: string;
+    openWithMenu: string;
+    openWithSshSuffix: string;
+    pinOpenWith: string;
+    unpinOpenWith: string;
+    openWithExplorer: string;
+    openWithVscode: string;
+    openWithCursor: string;
+    openWithZed: string;
+    openWithSettingsSshTitle: string;
+    openWithSettingsSshDesc: string;
+    openWithSettingsSshPlaceholder: string;
+    openWithSettingsCustomTitle: string;
+    openWithSettingsCustomDesc: string;
+    openWithSettingsAdd: string;
+    openWithSettingsName: string;
+    openWithSettingsTemplate: string;
+    openWithSettingsFamily: string;
+    openWithSettingsFamilyDesc: string;
+    openWithSettingsRemove: string;
+    openWithSettingsInvalidHint: string;
     newTab: string;
     openExplorer: string;
     brokenSymlink: string;
@@ -36,6 +68,12 @@ export declare const zh: {
     newTerminal: string;
     terminalLimit: string;
     close: string;
+    closeOtherTabs: string;
+    closeLeftTabs: string;
+    closeRightTabs: string;
+    moveToFreeWindow: string;
+    floatDropHint: string;
+    dockToSidebar: string;
     collapse: string;
     expand: string;
     collapseBottomPanel: string;
@@ -47,6 +85,7 @@ export declare const zh: {
     terminalDepsHint: string;
     terminalDepsProfile: string;
     preview: string;
+    toc: string;
     edit: string;
     mermaidError: string;
     mermaidZoomIn: string;
@@ -54,6 +93,7 @@ export declare const zh: {
     mermaidZoomReset: string;
     mermaidZoomHint: string;
     refresh: string;
+    refreshUnsavedConfirm: string;
     save: string;
     saved: string;
     unsaved: string;
@@ -77,6 +117,7 @@ export declare const zh: {
     commit: string;
     commitError: string;
     branch: string;
+    worktree: string;
     checkoutError: string;
     history: string;
     changes: string;
@@ -112,6 +153,7 @@ export declare const zh: {
     historyLoadError: string;
     produced: string;
     producedOpen: string;
+    showInFolder: string;
     disconnected: string;
     exited: string;
     noSession: string;
@@ -128,6 +170,19 @@ export declare const zh: {
     copyRelative: string;
     copyAbsolute: string;
     download: string;
+    uploadFiles: string;
+    uploadFolder: string;
+    uploadHere: string;
+    uploadDropHint: string;
+    uploadDropChat: string;
+    uploadTo: string;
+    uploadingTo: string;
+    uploadProgress: string;
+    uploadDone: string;
+    uploadFailed: string;
+    uploadFailedUnknown: string;
+    uploadTooLarge: string;
+    uploadCancelled: string;
     settingsNav: string;
     settingsIntro: string;
     settingsPopupDesc: string;
@@ -139,10 +194,22 @@ export declare const zh: {
     settingsWidthSuffix: string;
     settingsOpenPathTitle: string;
     settingsOpenPathDesc: string;
+    settingsOpenToolsTitle: string;
+    settingsOpenToolsDesc: string;
     settingsTitleBarTitle: string;
     settingsTitleBarDesc: string;
     settingsTitleBarStripTitle: string;
     settingsTitleBarStripDesc: string;
+    settingsSchemeAutoTitle: string;
+    settingsSchemeAutoDesc: string;
+    settingsSchemeWebTitle: string;
+    settingsSchemeWebDesc: string;
+    settingsSchemeCustomTitle: string;
+    settingsSchemeCustomDesc: string;
+    settingsSchemeDetectedSuffix: string;
+    settingsCustomCssTitle: string;
+    settingsCustomCssDesc: string;
+    settingsCustomCssPlaceholder: string;
     settingsSaveFailed: string;
     settingsConflict: string;
     binaryNoPreview: string;
@@ -204,6 +271,9 @@ export declare const zh: {
     settingsBrowserHttpDesc: string;
     settingsBrowserHttpsTitle: string;
     settingsBrowserHttpsDesc: string;
+    settingsBrowserLoopbackTitle: string;
+    settingsBrowserLoopbackDesc: string;
+    settingsBrowserLoopbackPlaceholder: string;
     browserOpenExternal: string;
     browserEmbedBlocked: string;
     browserEmbedBlockedDesc: string;
@@ -223,6 +293,30 @@ export declare const zh: {
     subagentDiagUnsupported: string;
     subagentDiagUnavailable: string;
     subagentThinking: string;
+    sideChat: string;
+    sideChatNew: string;
+    sideChatUntitled: string;
+    sideChatEmpty: string;
+    sideChatEmptyDesc: string;
+    sideChatCreating: string;
+    sideChatRetry: string;
+    sideChatThreads: string;
+    sideChatSave: string;
+    sideChatSaveTitle: string;
+    sideChatSaved: string;
+    sideChatNoTurn: string;
+    sideChatPendingDrop: string;
+    sideChatFirstPlaceholder: string;
+    sideChatComposerPlaceholder: string;
+    sideChatThinking: string;
+    sideChatThink: string;
+    sideChatInjection: string;
+    sideChatSend: string;
+    sideChatCancel: string;
+    sideChatCancelTitle: string;
+    sideChatClose: string;
+    sideChatCloseTitle: string;
+    sideChatError: string;
     jobs: string;
     jobsCount: string;
     jobsCountRunning: string;
@@ -257,10 +351,16 @@ export declare const zh: {
     openPlugin: string;
     copyInstall: string;
     pluginOfficeDesc: string;
+    pluginFlowglassDesc: string;
+    pluginGitForgeDesc: string;
     pluginGitRemotesDesc: string;
     pluginSentinelDesc: string;
     pluginSidebarQaDesc: string;
+    pluginSshTunnelDesc: string;
+    pluginTurnReviewDesc: string;
     pluginVideoPreviewDesc: string;
+    pluginDocsPanelDesc: string;
+    pluginEgoBrowserDesc: string;
 };
 /** The en dictionary (key-set-equal to zh, enforced by the type annotation). */
 export declare const en: Record<keyof typeof zh, string>;
@@ -269,6 +369,43 @@ export declare const en: Record<keyof typeof zh, string>;
  * (`'sidebar'` is taken by DSH's own ui-sidebar, hence this distinct name).
  */
 export declare const LOCALE_NS = "betterSidebar";
+/** The ja dictionary (key-set-equal to zh, enforced by the type annotation). */
+export declare const ja: Record<keyof typeof zh, string>;
+export declare const de: Record<keyof typeof zh, string>;
+export declare const fr: Record<keyof typeof zh, string>;
+export declare const pt: Record<keyof typeof zh, string>;
+export declare const ko: Record<keyof typeof zh, string>;
+export declare const ar: Record<keyof typeof zh, string>;
+export declare const hi: Record<keyof typeof zh, string>;
+export declare const id: Record<keyof typeof zh, string>;
+export declare const tr: Record<keyof typeof zh, string>;
+export declare const vi: Record<keyof typeof zh, string>;
+export declare const th: Record<keyof typeof zh, string>;
+export declare const ru: Record<keyof typeof zh, string>;
+export declare const it: Record<keyof typeof zh, string>;
+export declare const nl: Record<keyof typeof zh, string>;
+export declare const sv: Record<keyof typeof zh, string>;
+export declare const pl: Record<keyof typeof zh, string>;
+export declare const zhHK: Record<keyof typeof zh, string>;
+export declare const zhTW: Record<keyof typeof zh, string>;
+export declare const zhMO: Record<keyof typeof zh, string>;
+/**
+ * The better-locale override store attached by the client apply
+ * (absent → no override; the zh/en chain runs). The store's `active`
+ * field holds the user's chosen override id (e.g. `'ja'`); `undefined`
+ * means "no override, use DSH native zh/en".
+ *
+ * The override only takes effect when DSH's active locale is `'en'`
+ * (it borrows DSH's English slot to render a third language). While
+ * DSH is on `'zh'` the override is inert — `getOverride` returns
+ * `undefined` and `isOverrideActive` returns `false` — so `t()` and
+ * `isZh()` fall through to the native zh/en chain unchanged.
+ */
+declare let betterLocaleStore: {
+    readonly active: string | undefined;
+    getOverride(dshActive: string, ns: string, key: string): string | undefined;
+    isOverrideActive(dshActive: string): boolean;
+} | undefined;
 /**
  * Attach (or detach, with undefined) the DSH locale service. The sidebar
  * mounts its own React root outside the slot system's locale seat, so the
@@ -281,6 +418,20 @@ export declare function attachLocale(service: {
         active: string;
     };
 } | undefined): void;
+/**
+ * Attach (or detach, with undefined) the better-locale override store.
+ * When attached with an active override, `t()` consults the store's
+ * `getOverride(active, LOCALE_NS, key)` first; if it returns a string,
+ * that text wins over the zh/en chain. Detaching (or the store's active
+ * being `undefined`) restores the zh/en chain unchanged.
+ *
+ * The Sidebar root subscribes to the store separately (see Sidebar.tsx)
+ * so an override change re-renders the whole tree — the locale service's
+ * own revision bump (which better-locale triggers via `publish(active, true)`)
+ * does NOT fire the existing `localeRevision` uSES because that snapshot
+ * reads `getSnapshot().active` (unchanged) rather than `revision`.
+ */
+export declare function attachBetterLocale(store: typeof betterLocaleStore): void;
 /** Translate a copy key in the active locale (zh → zh, else en). */
 export type CopyKey = keyof typeof zh;
 /** Translate a copy key; `{name}` placeholders interpolate from `params`. */
@@ -289,3 +440,4 @@ export declare function t(key: CopyKey, params?: Record<string, string | number>
 export declare function isZh(): boolean;
 /** Format an ISO 8601 author date relative to now (刚刚 / N 分钟前 / N 小时前 / 昨天 / date). */
 export declare function relativeTime(iso: string): string;
+export {};

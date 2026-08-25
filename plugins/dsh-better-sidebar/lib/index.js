@@ -1,15 +1,18 @@
 import { createRequire } from "node:module";
-import { mkdir, open, opendir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, opendir, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { WebSocket, WebSocketServer } from "ws";
 import z from "schemastery";
 import { createHash, randomUUID } from "node:crypto";
+import { once } from "node:events";
+import { chmodSync, createWriteStream, existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { SettingsConflictError, settingsNamespace } from "@deepseek-ai/dsh-settings";
-import { chmodSync, existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { defineTool } from "@deepseek-ai/dsh-tools";
+import { createUserMessage } from "@deepseek-ai/dsh-llm";
+import { snapshotSubagentDescriptor } from "@deepseek-ai/dsh-subagent";
 //#region src/prefs-shared.ts
 /**
 * Shared "Side card" preference vocabulary (types + constants), consumed by
@@ -20,6 +23,37 @@ import { defineTool } from "@deepseek-ai/dsh-tools";
 */
 /** The user-settings namespace holding the side card preferences. */
 const SIDEBAR_PREFS_NS = "dsh-better-sidebar";
+/** Fallback prefs used whenever the settings document is unreachable or malformed. */
+const SIDEBAR_PREFS_DEFAULTS = {
+	openByDefault: false,
+	defaultWidthPercent: 35,
+	autoOpenSubagent: true,
+	autoOpenJobs: true,
+	agentTerminalTools: false,
+	agentOpenTools: false,
+	bottomPanelAutoTerminal: true,
+	terminalFontFamily: "",
+	terminalFontSize: 13,
+	interceptOpenPath: true,
+	editorExplorer: false,
+	terminalShell: "",
+	terminalShellArgs: "",
+	titleBarScheme: "auto",
+	titleBarPresetId: "",
+	customCss: "",
+	titleBarCompat: false,
+	titleBarStripPx: 40,
+	htmlViewerNoSandbox: false,
+	htmlViewerDefaultUnsafe: false,
+	browserNoSandbox: false,
+	browserInterceptLinks: true,
+	browserInterceptHttp: true,
+	browserInterceptHttps: false,
+	browserAllowedLoopback: "",
+	tabsEnabled: {},
+	viewersEnabled: {},
+	pluginSettings: {}
+};
 //#endregion
 //#region src/config.ts
 /**
@@ -32,6 +66,7 @@ const SIDEBAR_PREFS_NS = "dsh-better-sidebar";
 const Config = z.object({
 	readLimit: z.number().step(1).min(1).default(524288),
 	mediaLimit: z.number().step(1).min(1).default(20971520),
+	uploadLimit: z.number().step(1).min(1).default(134217728),
 	listLimit: z.number().step(1).min(1).default(1e3),
 	terminalsPerSession: z.number().step(1).min(1).default(3),
 	reconnectGraceMs: z.number().step(1).min(0).default(3e4),
@@ -48,6 +83,7 @@ function resolveSidebarConfig(config) {
 	return {
 		readLimit: config?.readLimit ?? 524288,
 		mediaLimit: config?.mediaLimit ?? 20971520,
+		uploadLimit: config?.uploadLimit ?? 134217728,
 		listLimit: config?.listLimit ?? 1e3,
 		terminalsPerSession: config?.terminalsPerSession ?? 3,
 		reconnectGraceMs: config?.reconnectGraceMs ?? 3e4,
@@ -62,6 +98,7 @@ const PrefsSchema = z.object({
 	autoOpenSubagent: z.boolean().default(true),
 	autoOpenJobs: z.boolean().default(true),
 	agentTerminalTools: z.boolean().default(false),
+	agentOpenTools: z.boolean().default(false),
 	bottomPanelAutoTerminal: z.boolean().default(true),
 	terminalFontFamily: z.string().default(""),
 	terminalFontSize: z.number().step(1).min(9).max(32).default(13),
@@ -69,6 +106,14 @@ const PrefsSchema = z.object({
 	editorExplorer: z.boolean().default(false),
 	terminalShell: z.string().default(""),
 	terminalShellArgs: z.string().default(""),
+	titleBarScheme: z.union([
+		z.const("auto"),
+		z.const("web"),
+		z.const("preset"),
+		z.const("custom")
+	]),
+	titleBarPresetId: z.string(),
+	customCss: z.string(),
 	titleBarCompat: z.boolean().default(false),
 	titleBarStripPx: z.number().step(1).min(0).max(120).default(40),
 	htmlViewerNoSandbox: z.boolean().default(false),
@@ -77,6 +122,7 @@ const PrefsSchema = z.object({
 	browserInterceptLinks: z.boolean().default(true),
 	browserInterceptHttp: z.boolean().default(true),
 	browserInterceptHttps: z.boolean().default(false),
+	browserAllowedLoopback: z.string().default(""),
 	tabsEnabled: z.dict(z.boolean()).default({}),
 	viewersEnabled: z.dict(z.boolean()).default({}),
 	pluginSettings: z.dict(z.dict(z.any())).default({})
@@ -275,23 +321,177 @@ function messageOf(error) {
 	return error instanceof Error ? error.message : String(error);
 }
 //#endregion
+//#region src/path-security.ts
+/** Filesystem path guards shared by sidebar APIs that access a session workspace. */
+/** Resolve a path and convert filesystem resolution failures to an API error. */
+async function resolveRealPath(path, label) {
+	try {
+		return await realpath(path);
+	} catch (error) {
+		throw new SidebarError("fs-error", `cannot resolve ${label} "${path}": ${error instanceof Error ? error.message : String(error)}`, 400);
+	}
+}
+/** Reject a resolved path whose real filesystem target escapes the workspace. */
+function assertWithinWorkspace(workspace, target) {
+	if (!isWithin(workspace, target)) throw new SidebarError("forbidden", `path "${target}" is outside workspace`, 403);
+}
+/**
+* Resolve an existing workspace path through symlinks and enforce containment.
+*
+* @param cwd - Session workspace directory.
+* @param target - Client-supplied absolute path.
+* @returns The canonical absolute path used for the filesystem operation.
+*/
+async function ensureWorkspacePath(cwd, target) {
+	const absolute = requireAbsolute(target);
+	const [realCwd, realTarget] = await Promise.all([resolveRealPath(cwd, "workspace"), resolveRealPath(absolute, "target")]);
+	assertWithinWorkspace(realCwd, realTarget);
+	return realTarget;
+}
+/**
+* Validate a write destination, including destinations that do not exist yet.
+* Existing targets are resolved to catch symlinks; missing targets are checked
+* against the nearest existing ancestor before the caller creates or renames.
+* The returned path is rebuilt from that canonical ancestor, so an existing
+* symlink is never left in the path passed to the write operation.
+*
+* @param cwd - Session workspace directory.
+* @param target - Client-supplied absolute destination path.
+* @returns A canonical path for an existing target or its nearest existing ancestor.
+*/
+async function ensureWorkspaceWritePath(cwd, target) {
+	const absolute = requireAbsolute(target);
+	const realCwd = await resolveRealPath(cwd, "workspace");
+	let existingPath = absolute;
+	const missingSegments = [];
+	for (;;) try {
+		const realTarget = await realpath(existingPath);
+		assertWithinWorkspace(realCwd, realTarget);
+		return missingSegments.reduce((path, segment) => join(path, segment), realTarget);
+	} catch (error) {
+		if (error.code !== "ENOENT") {
+			if (error instanceof SidebarError) throw error;
+			throw new SidebarError("fs-error", `cannot resolve target "${existingPath}": ${error instanceof Error ? error.message : String(error)}`, 400);
+		}
+		const parent = dirname(existingPath);
+		if (parent === existingPath) throw new SidebarError("fs-error", `cannot resolve target "${absolute}"`, 400);
+		missingSegments.unshift(basename(existingPath));
+		existingPath = parent;
+	}
+}
+//#endregion
+//#region src/fs-operations.ts
+/**
+* Workspace-safe file mutations for the sidebar (the upload route today).
+*
+* Every write is confined to the real session workspace: the upload
+* directory is resolved absolute and its target is checked through existing
+* filesystem ancestors, the relative path is sanitized (absolute paths, '.',
+* '..' and empty segments are refused), and the final target must stay inside
+* the workspace after symlink resolution. Bytes stream from the request body
+* to a uniquely named temp sibling
+* and are renamed into place, so a failed, aborted, or oversized upload never
+* leaves a partial file at the target path.
+*/
+/**
+* Stream `chunks` into `dir/relativePath` atomically: a uniquely named temp
+* sibling receives the bytes, then is renamed over the target. The parent
+* directory is created on demand (recursive), so folder uploads work before
+* any level exists. The unique temp name keeps concurrent uploads to the same
+* target independent (each writes and renames its own file; the last rename
+* wins) and never blocks later uploads after a crashed process.
+*
+* @throws SidebarError with a wire code for containment, shape, and size
+* failures; the temp file is always removed on failure.
+*/
+async function writeWorkspaceUpload(input) {
+	const { cwd, dir, relativePath, chunks, limit } = input;
+	const base = requireAbsolute(dir);
+	await ensureWorkspacePath(cwd, base);
+	if (relativePath === "" || relativePath.startsWith("/") || relativePath.startsWith("\\")) throw new SidebarError("bad-request", "relativePath must stay below the upload directory", 400);
+	const segments = relativePath.split(/[\\/]/);
+	if (segments.some((part) => part === "" || part === "." || part === "..")) throw new SidebarError("bad-request", "relativePath must stay below the upload directory", 400);
+	const target = join(base, ...segments);
+	const safeTarget = await ensureWorkspaceWritePath(cwd, target);
+	const tmp = join(dirname(safeTarget), `.${basename(safeTarget)}.dsh-upload-${randomUUID()}.tmp`);
+	await mkdir(dirname(safeTarget), { recursive: true });
+	const stream = createWriteStream(tmp, { flags: "wx" });
+	const closed = new Promise((resolve) => {
+		stream.once("close", () => resolve());
+	});
+	let size = 0;
+	let streamError;
+	stream.on("error", (error) => {
+		streamError = error;
+	});
+	try {
+		for await (const chunk of chunks) {
+			const buffer = Buffer.from(chunk);
+			size += buffer.length;
+			if (size > limit) throw new SidebarError("too-large", `upload exceeds the ${limit} byte limit`, 413);
+			if (!stream.write(buffer)) await once(stream, "drain");
+			if (streamError !== void 0) throw streamError;
+		}
+		await new Promise((resolve, reject) => {
+			stream.end((error) => error === void 0 || error === null ? resolve() : reject(error));
+		});
+		if (streamError !== void 0) throw streamError;
+		await rename(tmp, safeTarget);
+		return {
+			path: target,
+			size: (await stat(safeTarget)).size
+		};
+	} catch (error) {
+		stream.destroy();
+		await closed.catch(() => {});
+		await rm(tmp, { force: true }).catch(() => {});
+		throw error;
+	}
+}
+//#endregion
 //#region src/fs-search.ts
 /**
 * Recursive file-name search for the editor's merged-mode side panel.
 * Streams the tree with opendir and matches the query as a case-insensitive
 * substring of each entry's NAME (paths stay relative to the search root —
 * the client resolves them against the session cwd). No .gitignore semantics
-* (this is a name lookup, not a code search), but `.git` directories are
-* skipped outright (VCS internals are never useful results) and symlink
-* directories are NOT descended (cycle safety).
+* (this is a name lookup, not a code search), but known noise directories
+* (`.git`, `node_modules`, package-manager stores, build caches) are
+* skipped outright and symlink directories are NOT descended (cycle safety).
 *
 * Two performance budgets bound the walk: `maxMatches` (the client renders
-* the flat list) and `maxVisited` (a runaway tree — a home directory root,
-* a node_modules forest — must not stall the host). Exceeding either stops
-* early with `truncated: true`.
+* the flat list) and `maxVisited` (a runaway tree — a home directory root
+* — must not stall the host). Exceeding either stops early with
+* `truncated: true`.
 */
 const DEFAULT_MAX_MATCHES = 200;
 const DEFAULT_MAX_VISITED = 1e5;
+/**
+* Directory names that are never useful filename-search results and would
+* burn the visit budget before the walk reaches project files. Compared
+* case-insensitively so `Node_Modules` / `.GIT` stay skipped on every
+* platform. The directory itself is neither matched nor descended.
+*/
+const SEARCH_SKIP_DIRS = /* @__PURE__ */ new Set([
+	".git",
+	"node_modules",
+	".pnpm-store",
+	".yarn",
+	".turbo",
+	".turbopack",
+	".next",
+	".nuxt",
+	".output",
+	".cache",
+	".parcel-cache",
+	"coverage",
+	"dist",
+	"build",
+	"out",
+	".umi",
+	".umi-production",
+	".dumi"
+]);
 /**
 * Search `root` recursively for entries whose name contains `query`
 * (case-insensitive).
@@ -323,7 +523,7 @@ async function searchFiles(root, query, opts = {}) {
 				truncated = true;
 				return;
 			}
-			if (dirent.isDirectory() && dirent.name === ".git") continue;
+			if (dirent.isDirectory() && SEARCH_SKIP_DIRS.has(dirent.name.toLowerCase())) continue;
 			if (dirent.name.toLowerCase().includes(needle)) {
 				matches.push(join(relative(root, dir), dirent.name));
 				if (matches.length >= maxMatches) {
@@ -347,7 +547,7 @@ async function searchFiles(root, query, opts = {}) {
 * Decode a route pathname into the session + absolute file path. Rejects
 * a wrong prefix (404), an empty path, malformed percent encoding, and a
 * missing sessionId or file path (400). The caller still must bound the
-* decoded path with requireAbsolute + isWithin(cwd) — a decoded `..`
+* decoded path with the workspace real-path guard — a decoded `..`
 * segment resolves outside the cwd and is refused there.
 */
 function decodeHtmlUrl(pathname) {
@@ -472,7 +672,7 @@ function isTrustedApiRequest(request, trustedHosts) {
 	const origin = header(request.headers, "origin");
 	if (origin === void 0) return true;
 	try {
-		return new URL(origin).host === hostUrl.host;
+		return new URL(origin).hostname === hostUrl.hostname;
 	} catch {
 		return false;
 	}
@@ -591,6 +791,84 @@ function registerBundleRoute(ctx, fence) {
 	});
 }
 //#endregion
+//#region src/open-external.ts
+/**
+* External open actions for the file tree's "open with" menu: hand a path to
+* the OS file manager (reveal/select) or launch a URL scheme's registered
+* handler (vscode://, cursor://, zed://, custom schemes).
+*
+* The client runs in a browser / DSH Desktop renderer where a raw `vscode://`
+* navigation is unreliable, so both actions fan out through this host route
+* and spawn the platform opener with an argv array (no shell interpolation).
+* The command builders are pure — the platform is injectable — so every
+* per-platform branch is unit-testable without spawning anything.
+*/
+/** Reveal/select a path in the OS file manager. On Linux there is no common
+*  select protocol — the containing directory is opened instead (KISS). */
+function revealCommand(path, platform = process.platform) {
+	switch (platform) {
+		case "darwin": return {
+			command: "open",
+			args: ["-R", path]
+		};
+		case "win32": return {
+			command: "explorer.exe",
+			args: ["/select,", path]
+		};
+		default: return {
+			command: "xdg-open",
+			args: [parentOf(path) ?? path]
+		};
+	}
+}
+/** Hand a custom-scheme URL to the OS protocol handler. */
+function urlCommand(url, platform = process.platform) {
+	switch (platform) {
+		case "darwin": return {
+			command: "open",
+			args: [url]
+		};
+		case "win32": return {
+			command: "rundll32.exe",
+			args: ["url.dll,FileProtocolHandler", url]
+		};
+		default: return {
+			command: "xdg-open",
+			args: [url]
+		};
+	}
+}
+/** Validate a URL-scheme open target: a parseable custom-scheme URL (never
+*  http/https — those would only dump the URL into a browser tab). */
+function validateExternalUrl(raw) {
+	if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) throw new SidebarError("bad-request", "url must be a custom-scheme URL");
+	let url;
+	try {
+		url = new URL(raw);
+	} catch {
+		throw new SidebarError("bad-request", "invalid url");
+	}
+	if (url.protocol === "http:" || url.protocol === "https:") throw new SidebarError("bad-request", "only custom-scheme urls can be opened externally");
+	return raw;
+}
+/**
+* Launch one external open action and return immediately (detached, no
+* stdio). Spawn failures are reported through the child's 'error' event —
+* by then the route already returned, so the event is swallowed (the OS
+* dialog about a missing handler is the user-visible outcome either way).
+*/
+function launchExternal(action, value) {
+	const platform = process.platform;
+	const spec = action === "reveal" ? revealCommand(requireAbsolute(value), platform) : urlCommand(validateExternalUrl(value), platform);
+	const child = spawn(spec.command, spec.args, {
+		detached: true,
+		stdio: "ignore"
+	});
+	child.on("error", () => {});
+	child.unref();
+	return { started: true };
+}
+//#endregion
 //#region src/git.ts
 /**
 * Git operations for the sidebar source-control panel. Everything goes
@@ -632,6 +910,36 @@ function parsePorcelainZ(output) {
 	}
 	return entries;
 }
+/** Parse `git worktree list --porcelain` records. Production requests use
+* `-z` so even newlines and non-ASCII bytes in checkout paths stay lossless;
+* newline framing remains accepted for small fixtures and older Git output. */
+function parseWorktreeList(output) {
+	const rows = [];
+	let path;
+	let branch = "HEAD";
+	let locked = false;
+	let prunable = false;
+	const flush = () => {
+		if (path !== void 0) rows.push({
+			path,
+			branch,
+			locked,
+			prunable
+		});
+		path = void 0;
+		branch = "HEAD";
+		locked = false;
+		prunable = false;
+	};
+	const sep = output.includes("\0") ? "\0" : "\n";
+	const framed = output.endsWith(sep) ? output : `${output}${sep}`;
+	for (const line of framed.split(sep)) if (line === "") flush();
+	else if (line.startsWith("worktree ")) path = line.slice(9);
+	else if (line.startsWith("branch refs/heads/")) branch = line.slice(18);
+	else if (line === "locked" || line.startsWith("locked ")) locked = true;
+	else if (line === "prunable" || line.startsWith("prunable ")) prunable = true;
+	return rows;
+}
 /** Parse `git log --pretty=format:%h%x1f%s%x1f%an%x1f%ai%x1f%H%x1f%D` rows. */
 function parseLogLines(output) {
 	const rows = [];
@@ -667,6 +975,7 @@ function runGit(cwd, args, timeoutMs = 3e4) {
 				"pipe",
 				"pipe"
 			],
+			windowsHide: true,
 			env: {
 				...process.env,
 				GIT_OPTIONAL_LOCKS: "0"
@@ -704,8 +1013,33 @@ async function isGitRepo(cwd) {
 	}
 }
 /** The repository top level containing `cwd` (`git rev-parse --show-toplevel`). */
-async function repoRoot(cwd) {
+async function directRepoRoot(cwd) {
 	return (await runGit(cwd, ["rev-parse", "--show-toplevel"])).trim();
+}
+/** Discover the current repository or direct child repositories. */
+async function repoRoots(cwd) {
+	try {
+		return [await directRepoRoot(cwd)];
+	} catch {
+		const entries = await readdir(cwd, { withFileTypes: true }).catch(() => []);
+		const roots = [];
+		for (const entry of entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules").sort((left, right) => left.name.localeCompare(right.name))) try {
+			const root = await directRepoRoot(join(cwd, entry.name));
+			if (!roots.some((existing) => pathIdentity(existing) === pathIdentity(root))) roots.push(root);
+		} catch {}
+		return roots;
+	}
+}
+/** Resolve the selected repository, defaulting to the first discovered root. */
+async function repoRoot(cwd, selected) {
+	const roots = await repoRoots(cwd);
+	if (roots.length === 0) throw new GitCommandError("not a git repository", "not-repo", "rev-parse");
+	if (selected !== void 0) {
+		const identity = pathIdentity(selected);
+		const match = roots.find((root) => pathIdentity(root) === identity);
+		if (match !== void 0) return match;
+	}
+	return roots[0];
 }
 /** The current branch name (`git rev-parse --abbrev-ref HEAD`; 'HEAD' when detached). */
 async function currentBranch(cwd) {
@@ -715,26 +1049,76 @@ async function currentBranch(cwd) {
 		"HEAD"
 	])).trim();
 }
-/** Working-tree status (untracked included). */
-async function status(cwd) {
-	if (!await isGitRepo(cwd)) return {
+/**
+* Working-tree status (untracked included). `--untracked-files=all` lists
+* the contents of new directories as individual entries, while preserving
+* repository discovery and explicit repository selection for workspace roots.
+*/
+async function status(cwd, selected) {
+	const repositories = await repoRoots(cwd);
+	if (repositories.length === 0) return {
 		isRepo: false,
-		entries: []
+		entries: [],
+		repositories: []
 	};
-	const [branch, raw] = await Promise.all([currentBranch(cwd).catch(() => "HEAD"), runGit(cwd, [
+	const root = await repoRoot(cwd, selected);
+	const [branch, raw] = await Promise.all([currentBranch(root).catch(() => "HEAD"), runGit(root, [
 		"status",
 		"--porcelain=v1",
 		"-z",
-		"--untracked-files=normal"
+		"--untracked-files=all"
 	])]);
 	return {
 		isRepo: true,
 		branch,
-		entries: parsePorcelainZ(raw)
+		entries: parsePorcelainZ(raw),
+		root,
+		repositories
 	};
 }
+/** Platform-aware identity used only for comparing absolute checkout roots. */
+function pathIdentity(path) {
+	const absolute = resolve(path).replace(/[\\/]+$/, "");
+	return process.platform === "win32" ? absolute.toLowerCase() : absolute;
+}
+/** Raw usable checkout records, shared by inventory and target validation.
+* Prunable records point at missing paths and are deliberately excluded from
+* both the selector and the command-target allowlist. */
+async function listedWorktrees(cwd) {
+	return parseWorktreeList(await runGit(cwd, [
+		"worktree",
+		"list",
+		"--porcelain",
+		"-z"
+	])).filter((entry) => !entry.prunable);
+}
+/** All linked checkouts of the repository containing `cwd`, enriched with a
+* live change count. The current checkout is first so a single-worktree repo
+* preserves the old UI ordering. */
+async function worktrees(cwd) {
+	if (!await isGitRepo(cwd)) return [];
+	const currentRoot = await repoRoot(cwd);
+	const listed = await listedWorktrees(cwd);
+	return (await Promise.all(listed.map(async (entry) => ({
+		path: entry.path,
+		branch: entry.branch,
+		current: pathIdentity(entry.path) === pathIdentity(currentRoot),
+		changes: await status(entry.path).then((result) => result.entries.length, () => 0)
+	})))).sort((left, right) => Number(right.current) - Number(left.current));
+}
+/** Resolve an optional client-selected linked checkout. A caller may never use
+* this seam to point Git operations at an unrelated repository: the target
+* must occur in the authoritative session repository's worktree list. */
+async function resolveWorktree(cwd, requested) {
+	if (requested === void 0 || requested === "") return cwd;
+	const identity = pathIdentity(requested);
+	const match = (await listedWorktrees(cwd)).find((entry) => pathIdentity(entry.path) === identity);
+	if (match === void 0) throw new GitCommandError(`unknown linked worktree: ${requested}`, "git-worktree", "worktree list");
+	return match.path;
+}
 /** Diff text of the worktree (unstaged) or the index (staged). */
-async function diff(cwd, path, staged) {
+async function diff(cwd, path, staged, selected) {
+	const root = await repoRoot(cwd, selected);
 	const args = [
 		"diff",
 		"--no-ext-diff",
@@ -743,35 +1127,36 @@ async function diff(cwd, path, staged) {
 	];
 	if (staged) args.push("--cached");
 	if (path !== void 0) args.push("--", path);
-	return runGit(cwd, args);
+	return runGit(root, args);
 }
 /** Stage paths (all when path is undefined). */
-async function stage(cwd, path) {
-	await runGit(cwd, [
+async function stage(cwd, path, selected) {
+	await runGit(await repoRoot(cwd, selected), [
 		"add",
 		"-A",
 		...path !== void 0 ? ["--", path] : []
 	]);
 }
 /** Unstage paths (all when path is undefined). */
-async function unstage(cwd, path) {
-	await runGit(cwd, [
+async function unstage(cwd, path, selected) {
+	await runGit(await repoRoot(cwd, selected), [
 		"reset",
 		"-q",
 		...path !== void 0 ? ["--", path] : []
 	]);
 }
 /** Commit the staged changes with a message (global identity untouched). */
-async function commit(cwd, message) {
-	await runGit(cwd, [
+async function commit(cwd, message, selected) {
+	await runGit(await repoRoot(cwd, selected), [
 		"commit",
 		"-m",
 		message
 	]);
 }
 /** Branch names (current first). */
-async function branches(cwd) {
-	const [current, raw] = await Promise.all([currentBranch(cwd).catch(() => "HEAD"), runGit(cwd, [
+async function branches(cwd, selected) {
+	const root = await repoRoot(cwd, selected);
+	const [current, raw] = await Promise.all([currentBranch(root).catch(() => "HEAD"), runGit(root, [
 		"for-each-ref",
 		"--format=%(refname:short)",
 		"refs/heads"
@@ -783,12 +1168,12 @@ async function branches(cwd) {
 	};
 }
 /** Switch to an existing branch. */
-async function checkout(cwd, branch) {
-	await runGit(cwd, ["checkout", branch]);
+async function checkout(cwd, branch, selected) {
+	await runGit(await repoRoot(cwd, selected), ["checkout", branch]);
 }
 /** Recent commit history (newest first), lazily pageable via skip/count. */
-async function log(cwd, count = 30, skip = 0) {
-	return parseLogLines(await runGit(cwd, [
+async function log(cwd, count = 30, skip = 0, selected) {
+	return parseLogLines(await runGit(await repoRoot(cwd, selected), [
 		"log",
 		"-n",
 		String(count),
@@ -802,9 +1187,9 @@ async function log(cwd, count = 30, skip = 0) {
 * Content of a file at a revision (`git show <rev>:<path>`), or null when the
 * revision has no such path (a new/untracked file has no HEAD side).
 */
-async function show(cwd, rev, path) {
+async function show(cwd, rev, path, selected) {
 	try {
-		return await runGit(cwd, ["show", `${rev}:${path}`]);
+		return await runGit(await repoRoot(cwd, selected), ["show", `${rev}:${path}`]);
 	} catch {
 		return null;
 	}
@@ -812,8 +1197,8 @@ async function show(cwd, rev, path) {
 /** Full patch text of one commit (`git show` with the commit header suppressed).
 *  Merge commits show their diff against the first parent (`-m --first-parent`
 *  is a no-op for regular commits), so a history click always has content. */
-async function commitDiff(cwd, hash) {
-	return runGit(cwd, [
+async function commitDiff(cwd, hash, selected) {
+	return runGit(await repoRoot(cwd, selected), [
 		"show",
 		"--no-ext-diff",
 		"--no-color",
@@ -824,24 +1209,24 @@ async function commitDiff(cwd, hash) {
 	]);
 }
 /** Discard the worktree changes of one path (`git checkout -- <path>`; the index is untouched). */
-async function discard(cwd, path) {
-	await runGit(cwd, [
+async function discard(cwd, path, selected) {
+	await runGit(await repoRoot(cwd, selected), [
 		"checkout",
 		"--",
 		path
 	]);
 }
 /** Revert one commit onto the current branch with an auto-generated message. */
-async function revert(cwd, hash) {
-	await runGit(cwd, [
+async function revert(cwd, hash, selected) {
+	await runGit(await repoRoot(cwd, selected), [
 		"revert",
 		"--no-edit",
 		hash
 	]);
 }
 /** Cherry-pick one commit onto the current branch. */
-async function cherryPick(cwd, hash) {
-	await runGit(cwd, ["cherry-pick", hash]);
+async function cherryPick(cwd, hash, selected) {
+	await runGit(await repoRoot(cwd, selected), ["cherry-pick", hash]);
 }
 //#endregion
 //#region src/pty-deps.ts
@@ -1047,6 +1432,22 @@ function ensureSpawnHelper() {
 /**
 * The terminal registry. `maxPerSession` bounds concurrent processes per
 * conversation (the client caps tabs at the same number).
+*
+* Lifecycle of a UI-tab pty when its WebSocket drops:
+* - **Close frame** (`{type:'close'}`): the user closed the tab → schedule a
+*   0-ms close (quota released immediately).
+* - **Park frame** (`{type:'park'}`): the user switched to another
+*   conversation; the tab is still open in its session's persisted state but
+*   its view unmounted → mark the pty as parked (no auto-close countdown).
+*   The pty stays alive until the user switches back (a reconnecting view
+*   calls `open()` which clears the parked state) or the tab is later closed
+*   (a `{type:'close'}` frame from a fresh connection). Without `park`, a
+*   bare socket drop would start the reconnect-grace countdown and kill the
+*   shell after `reconnectGraceMs` — wrong for a session switch, where the
+*   user is still actively using the app, just in another conversation.
+* - **Bare socket drop** (no frame): page refresh, crash, plugin teardown →
+*   schedule a close after `reconnectGraceMs` so a quick reconnect reattaches
+*   the same shell.
 */
 var PtyManager = class {
 	shell;
@@ -1055,6 +1456,12 @@ var PtyManager = class {
 	nodePty;
 	sessions = /* @__PURE__ */ new Map();
 	pendingCloses = /* @__PURE__ */ new Map();
+	/** Tabs whose view unmounted because the user switched conversations — the
+	*  tab is still open in its session's state, so the pty must NOT enter the
+	*  reconnect-grace countdown. Cleared by `cancelClose` (a reconnecting
+	*  view's `open()` cancels it) or by `scheduleClose` (an explicit close
+	*  frame still kills a parked pty). */
+	parked = /* @__PURE__ */ new Set();
 	constructor(shell, maxPerSession, shellArgs = [], nodePty = loadRequiredNodePty()) {
 		this.shell = shell;
 		this.maxPerSession = maxPerSession;
@@ -1123,7 +1530,9 @@ var PtyManager = class {
 	* Schedule the terminal's destruction after `delayMs`. A tab close sends
 	* delay 0 (release the quota immediately); a bare socket drop (refresh,
 	* crash) uses the grace period so a quick reconnect keeps the process.
-	* `open()` cancels any pending close.
+	* `open()` cancels any pending close. Clears the parked state — an explicit
+	* close frame on a parked pty (the user switched back and closed the tab)
+	* still kills it.
 	*/
 	scheduleClose(key, delayMs) {
 		if (this.sessions.get(key) === void 0) return;
@@ -1133,13 +1542,34 @@ var PtyManager = class {
 		}, delayMs);
 		this.pendingCloses.set(key, timer);
 	}
-	/** Cancel a pending scheduled close (the terminal is being reopened). */
+	/**
+	* Park a terminal: the owning tab's view unmounted because the user
+	* switched to another conversation, but the tab is still open in its
+	* session's persisted state. Cancels any pending grace close and marks
+	* the pty so the host's `ws.on('close')` handler does NOT start the
+	* reconnect-grace countdown — the pty stays alive until the user switches
+	* back (a reconnecting view's `open()` clears this) or explicitly closes
+	* the tab (a `{type:'close'}` frame's `scheduleClose` clears this).
+	*/
+	park(key) {
+		if (this.sessions.get(key) === void 0) return;
+		this.cancelClose(key);
+		this.parked.add(key);
+	}
+	/** Whether this pty was parked (its view unmounted for a session switch). */
+	isParked(key) {
+		return this.parked.has(key);
+	}
+	/** Cancel a pending scheduled close (the terminal is being reopened).
+	*  Also clears the parked state — a reconnecting view reattaches a parked
+	*  pty and resumes normal lifecycle. */
 	cancelClose(key) {
 		const timer = this.pendingCloses.get(key);
 		if (timer !== void 0) {
 			clearTimeout(timer);
 			this.pendingCloses.delete(key);
 		}
+		this.parked.delete(key);
 	}
 	/** Resolve a live handle by key, or undefined. */
 	get(key) {
@@ -1660,20 +2090,20 @@ function boundBytes(text, maxBytes) {
 	};
 }
 /** Pure text projection helper (the canonical value is already structured). */
-function textRender(fn) {
+function textRender$1(fn) {
 	return (_args, value) => [{
 		type: "text",
 		text: fn(value)
 	}];
 }
 /** Extract the calling agent or throw the canonical "no agent" error. */
-function requireAgent(agent) {
+function requireAgent$1(agent) {
 	if (agent === void 0) throw new Error("sidebar terminal tools require an initiating agent");
 	return agent;
 }
 /** Resolve the calling agent's session id (the registry scope + ownership key). */
-function sessionIdOf(exec) {
-	return requireAgent(exec.agent).session.id;
+function sessionIdOf$1(exec) {
+	return requireAgent$1(exec.agent).session.id;
 }
 /**
 * Register the eight terminal tools against the host tool registry. The
@@ -1726,11 +2156,11 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 					}
 				}
 			},
-			render: textRender((v) => `Opened terminal "${v.title}" (uuid: ${v.uuid}). The sidebar tab appears automatically; use terminal_read to see output and terminal_send (with submit=true) to run more commands.`)
+			render: textRender$1((v) => `Opened terminal "${v.title}" (uuid: ${v.uuid}). The sidebar tab appears automatically; use terminal_read to see output and terminal_send (with submit=true) to run more commands.`)
 		},
 		execute: (args, exec) => {
 			exec.signal.throwIfAborted();
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			const cwd = resolveCwd(sessionId);
 			const { shell, shellArgs } = readShellOverrides();
 			const uuid = registry.create(sessionId, args.title, args.command, cwd, 80, 24, shell, shellArgs);
@@ -1788,7 +2218,7 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 			}
 		},
 		execute: (_args, exec) => {
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			return Promise.resolve(registry.list(sessionId));
 		}
 	}));
@@ -1827,11 +2257,11 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 					}
 				}
 			},
-			render: textRender((v) => `Sent ${v.bytes} byte(s) to terminal ${v.uuid}.`)
+			render: textRender$1((v) => `Sent ${v.bytes} byte(s) to terminal ${v.uuid}.`)
 		},
 		execute: (args, exec) => {
 			exec.signal.throwIfAborted();
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			registry.assertOwned(args.uuid, sessionId);
 			const payload = args.submit === true ? `${args.text}\r` : args.text;
 			registry.send(args.uuid, payload);
@@ -1901,7 +2331,7 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 		},
 		execute: (args, exec) => {
 			exec.signal.throwIfAborted();
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			registry.assertOwned(args.uuid, sessionId);
 			const result = registry.read(args.uuid, args.offset, args.count);
 			const bounded = boundBytes(result.text, READ_BYTE_LIMIT);
@@ -2033,7 +2463,7 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 		},
 		async execute(args, exec) {
 			exec.signal.throwIfAborted();
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			registry.assertOwned(args.uuid, sessionId);
 			const timeoutMs = args.timeout_ms ?? 1e4;
 			return await registry.waitFor(args.uuid, args.needle, timeoutMs, exec.signal);
@@ -2078,11 +2508,11 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 					}
 				}
 			},
-			render: textRender((v) => `Resized terminal ${v.uuid} to ${v.cols}×${v.rows}.`)
+			render: textRender$1((v) => `Resized terminal ${v.uuid} to ${v.cols}×${v.rows}.`)
 		},
 		execute: (args, exec) => {
 			exec.signal.throwIfAborted();
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			registry.assertOwned(args.uuid, sessionId);
 			const dims = registry.resize(args.uuid, args.cols, args.rows);
 			return Promise.resolve({
@@ -2122,11 +2552,11 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 					}
 				}
 			},
-			render: textRender((v) => `Sent ${v.signal} to terminal ${v.uuid}.`)
+			render: textRender$1((v) => `Sent ${v.signal} to terminal ${v.uuid}.`)
 		},
 		execute: (args, exec) => {
 			exec.signal.throwIfAborted();
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			registry.assertOwned(args.uuid, sessionId);
 			registry.signal(args.uuid, args.signal);
 			return Promise.resolve({
@@ -2159,11 +2589,11 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 					}
 				}
 			},
-			render: textRender((v) => v.closed ? `Closed terminal ${v.uuid}.` : `Terminal ${v.uuid} was already closed.`)
+			render: textRender$1((v) => v.closed ? `Closed terminal ${v.uuid}.` : `Terminal ${v.uuid} was already closed.`)
 		},
 		execute: (args, exec) => {
 			exec.signal.throwIfAborted();
-			const sessionId = sessionIdOf(exec);
+			const sessionId = sessionIdOf$1(exec);
 			registry.assertOwned(args.uuid, sessionId);
 			const closed = registry.close(args.uuid);
 			return Promise.resolve({
@@ -2175,6 +2605,239 @@ function registerTools(ctx, registry, resolveCwd, readShellOverrides) {
 	return () => {
 		for (const dispose of disposers) dispose();
 	};
+}
+//#endregion
+//#region src/agent-opens.ts
+/**
+* The model-facing `sidebar_open` tool and its delivery registry.
+*
+* One tool lets the model actively open a local file, a local folder (as a
+* tree rooted there), or an HTTP(S) page in the CALLING session's sidebar.
+* Mirroring the agent-terminal tools, the tool binds to the calling agent's
+* session through `exec.agent.session.id` — the model never passes a
+* sessionId, and opens for non-active sessions are queued until that
+* session's sidebar view is next connected.
+*
+* Delivery is a host→browser push over the dedicated `/sidebar/ws/agent-opens`
+* endpoint (the same pattern as `/sidebar/ws/agent-terminals`): the registry
+* keeps a per-session queue; a push is consumed on send (`delivered: true`
+* means a sidebar view was attached at call time), otherwise the request
+* stays queued and is replayed when a view for that session attaches.
+*
+* Conventions (per plugin-development-guide.md §3):
+*   C1 — parameters schema-validated before `execute` runs.
+*   C4 — `execute` returns one canonical JSON value; `render` is a separate
+*        pure text projection.
+*   C6 — `exec.signal.throwIfAborted()` before any fs work.
+*   C10 — no UI/transport vocabulary in the canonical value.
+*/
+/**
+* Per-session queue of open requests plus the connected sidebar views.
+*
+* Lifecycle: `enqueue` adds a request and — when at least one view for the
+* session is attached — pushes it immediately and removes it from the queue
+* (consume-on-send: a reconnect must never replay an open the client already
+* applied, and the browser tab type has no per-URL dedupe, so replaying
+* would mint duplicate tabs). With no attached view the request stays queued
+* and `attach` replays it on connect. `drainAll` drops every queued request
+* (the feature was turned off); `dispose` also drops every subscriber.
+*/
+var AgentOpenRegistry = class {
+	pending = /* @__PURE__ */ new Map();
+	subscribers = /* @__PURE__ */ new Map();
+	/** Queue one open and deliver it immediately when a view is attached.
+	* @returns the request id and whether a connected view received it now. */
+	enqueue(sessionId, kind, target, title) {
+		const request = {
+			id: randomUUID(),
+			sessionId,
+			kind,
+			target,
+			title
+		};
+		const list = this.pending.get(sessionId) ?? [];
+		list.push(request);
+		this.pending.set(sessionId, list);
+		const views = this.subscribers.get(sessionId);
+		if (views !== void 0 && views.size > 0) {
+			for (const send of views) send(request);
+			this.pending.delete(sessionId);
+			return {
+				id: request.id,
+				delivered: true
+			};
+		}
+		return {
+			id: request.id,
+			delivered: false
+		};
+	}
+	/** Attach one sidebar view (replays queued requests; consume-on-send).
+	* @returns the disposer detaching the view. */
+	attach(sessionId, send) {
+		let views = this.subscribers.get(sessionId);
+		if (views === void 0) {
+			views = /* @__PURE__ */ new Set();
+			this.subscribers.set(sessionId, views);
+		}
+		views.add(send);
+		const queued = this.pending.get(sessionId) ?? [];
+		if (queued.length > 0) {
+			for (const request of queued) send(request);
+			this.pending.delete(sessionId);
+		}
+		return () => {
+			const current = this.subscribers.get(sessionId);
+			current?.delete(send);
+			if (current !== void 0 && current.size === 0) this.subscribers.delete(sessionId);
+		};
+	}
+	/** Drop every queued request (the feature was turned off mid-session). */
+	drainAll() {
+		this.pending.clear();
+	}
+	/** Drop the queue and every subscriber (plugin teardown). */
+	dispose() {
+		this.pending.clear();
+		this.subscribers.clear();
+	}
+};
+/** Extract the calling agent or throw the canonical "no agent" error. */
+function requireAgent(agent) {
+	if (agent === void 0) throw new Error("sidebar_open requires an initiating agent");
+	return agent;
+}
+/** Resolve the calling agent's session id (the queue scope + ownership key). */
+function sessionIdOf(exec) {
+	return requireAgent(exec.agent).session.id;
+}
+/** Pure text projection helper (the canonical value is already structured). */
+function textRender(fn) {
+	return (_args, value) => [{
+		type: "text",
+		text: fn(value)
+	}];
+}
+/** Classify a raw target: http(s) URL or a local path (stat-driven). */
+async function classifyTarget(raw, cwd) {
+	if (/^https?:\/\//i.test(raw)) {
+		let parsed;
+		try {
+			parsed = new URL(raw);
+		} catch {
+			throw new Error(`"${raw}" is not a valid URL`);
+		}
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("sidebar_open only accepts http:// and https:// URLs");
+		return {
+			kind: "url",
+			target: raw,
+			title: parsed.hostname !== "" ? parsed.hostname : raw
+		};
+	}
+	if (!isWindowsDrivePrefix(raw) && /^[a-z][a-z0-9+.-]*:/i.test(raw)) throw new Error("sidebar_open only accepts http:// and https:// URLs; use a local path for files");
+	const target = resolve(isAbsolute(raw) ? raw : join(cwd, raw));
+	let info;
+	try {
+		info = await stat(target);
+	} catch (error) {
+		const code = error.code;
+		if (code === "ENOENT") throw new Error(`"${raw}" does not exist (resolved to "${target}")`);
+		if (code === "EACCES" || code === "EPERM") throw new Error(`"${target}" is not readable`);
+		throw new Error(`cannot open "${target}": ${error instanceof Error ? error.message : String(error)}`);
+	}
+	const title = basenameOf(target);
+	return {
+		kind: info.isDirectory() ? "folder" : "file",
+		target,
+		title: title === "" ? raw : title
+	};
+}
+/** The last path segment (mirror of the client's FileTree baseName). */
+function basenameOf(path) {
+	const trimmed = path.replace(/[\\/]+$/, "");
+	const at = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+	return at === -1 ? trimmed : trimmed.slice(at + 1);
+}
+/** Whether a raw target starts with a Windows drive prefix (`C:\` / `C:/`). */
+function isWindowsDrivePrefix(raw) {
+	return /^[a-zA-Z]:[\\/]/.test(raw);
+}
+/**
+* Register the `sidebar_open` tool against the host tool registry. The tool
+* is gated by the side-card setting `agentOpenTools` (the caller registers
+* and unregisters it); `readPrefs` supplies the live prefs so a disabled
+* target tab type (editor/browser) is reported to the model instead of
+* silently no-oping on the client. `resolveCwd` threads the calling
+* session's live cwd so relative paths resolve the same way the sidebar's
+* own routes do.
+* @param ctx - host plugin context (carries the tools service).
+* @param registry - the open-request registry (per-session queue + views).
+* @param resolveCwd - live cwd resolver for one session id.
+* @param readPrefs - live resolved side card prefs (for tab enable gates).
+* @returns a disposer that unregisters the tool.
+*/
+function registerOpenTool(ctx, registry, resolveCwd, readPrefs) {
+	return ctx.tools.register(defineTool({
+		name: "sidebar_open",
+		description: "Open a local file, a local folder, or an HTTP(S) page in the sidebar of the calling conversation. A file opens in the sidebar editor (per-path dedupe: an already-open file is focused); a folder opens a file window whose tree is rooted at that folder; a URL opens in the sidebar browser (sandboxed iframe). The panel auto-expands for content opens and the tab title defaults to the file/folder name or the URL hostname. The path may be absolute or relative to the session working directory. The open lands in the CALLING session's sidebar: while that session's sidebar view is not connected (e.g. the session is not the active one), the open is queued and delivered when the session sidebar is next shown — the result reports `delivered` so you know whether it is visible right now. The side card setting \"model opens files/folders/pages in the sidebar\" must be on, and the target tab type must be enabled in that session's settings.",
+		parameters: {
+			target: {
+				type: "string",
+				required: true,
+				description: "Absolute or session-cwd-relative local path, or an http:// / https:// URL."
+			},
+			title: {
+				type: "string",
+				description: "Optional tab title (defaults to the file/folder name or the URL hostname)."
+			}
+		},
+		output: {
+			schema: {
+				type: "object",
+				additionalProperties: false,
+				properties: {
+					kind: {
+						type: "string",
+						required: true,
+						description: "What was opened: file | folder | url."
+					},
+					target: {
+						type: "string",
+						required: true,
+						description: "The absolute path or URL the open was requested for."
+					},
+					title: {
+						type: "string",
+						required: true,
+						description: "The tab title used (provided title, basename, or hostname)."
+					},
+					delivered: {
+						type: "boolean",
+						required: true,
+						description: "Whether the open was pushed to a connected sidebar at call time (false = queued until the session sidebar is next shown)."
+					}
+				}
+			},
+			render: textRender((v) => v.delivered ? `Opened ${v.kind} "${v.title}" (${v.target}) in the sidebar.` : `Requested opening ${v.kind} "${v.title}" (${v.target}) in the sidebar — the session sidebar is not connected yet, so the open is queued and will appear when it is next shown.`)
+		},
+		execute: async (args, exec) => {
+			exec.signal.throwIfAborted();
+			const sessionId = sessionIdOf(exec);
+			const cwd = resolveCwd(sessionId);
+			const { kind, target, title: defaultTitle } = await classifyTarget(args.target, cwd);
+			const prefs = readPrefs();
+			const tab = kind === "url" ? "browser" : "editor";
+			if (prefs.tabsEnabled[tab] === false) throw new Error(`the built-in ${tab} tab is disabled in the side card settings; ask the user to enable it (or disable this tool)`);
+			const title = args.title !== void 0 && args.title.trim() !== "" ? args.title : defaultTitle;
+			const { delivered } = registry.enqueue(sessionId, kind, target, title);
+			return {
+				kind,
+				target,
+				title,
+				delivered
+			};
+		}
+	}));
 }
 //#endregion
 //#region src/jobs-routes.ts
@@ -2353,6 +3016,622 @@ function buildJobsApi(ctx, outputLimit) {
 	};
 }
 //#endregion
+//#region src/sidechat-core.ts
+/** The durable thread-label prefix (also the row filter in the client list). */
+const SIDE_LABEL_PREFIX = "Side: ";
+/** The pinned label of a freshly created thread that no prompt has reached
+*  yet (Codex-style immediate create: the tab opens an EMPTY thread, the
+*  first composer message carries the boundary and earns the real label).
+*  The client renders it localized; the prefix keeps the row filter honest. */
+const SIDE_NEW_THREAD_TITLE = "Side: New thread";
+/** The plugin identity stamped on the source of context-injection messages
+*  (boundary prompt + parked snapshot), so the transcript recognizes them
+*  structurally — not by text prefix. */
+const SIDE_INJECTION_PLUGIN = "dsh-better-sidebar";
+/**
+* The boundary prompt delivered as the thread's first user message: the
+* inherited seed is reference context only, never active instruction.
+* Model-facing contract — change only with intent, tests pin the sentences.
+*/
+const SIDE_BOUNDARY_PROMPT = `Side conversation boundary.
+
+Everything before this boundary is inherited history from the parent session: its completed turns, its pending question, and — if the parent was mid-turn — its in-progress output frozen at the moment this side conversation started. It is reference context only. It is not your current task.
+
+Do not continue, execute, or complete any instructions, plans, tool calls, approvals, edits, or requests from before this boundary. Only messages submitted after this boundary are active user instructions for this side conversation.
+
+Mode: this is a continuable side conversation. Your answers stay in this side thread and are viewed in the side panel; they are never delivered into the parent session.`;
+/** The data record of one event (narrowed from the loose face). */
+function dataOf(event) {
+	return event.data;
+}
+/** Copy parent events verbatim (their live seq === array index contract).
+*  The FULL envelope is preserved — stripping `surfaceOp` would make the
+*  seed validator reject every surface-eligible message event. */
+function copyEvents(events) {
+	return events.map((event) => {
+		const source = event;
+		return {
+			type: source.type,
+			seq: source.seq,
+			time: source.time,
+			data: dataOf(source),
+			...source.surfaceOp === void 0 ? {} : { surfaceOp: source.surfaceOp },
+			...source.sourceEventSeqs === void 0 ? {} : { sourceEventSeqs: source.sourceEventSeqs },
+			...source.ignorable === void 0 ? {} : { ignorable: source.ignorable }
+		};
+	});
+}
+/** Index of the last `turn/start` or `turn/end`, or -1. */
+function lastTurnBoundary(events) {
+	for (let index = events.length - 1; index >= 0; index--) {
+		const type = events[index]?.type;
+		if (type === "turn/start" || type === "turn/end") return index;
+	}
+	return -1;
+}
+/** Numeric field of an event's data (turn / step numbers). */
+function numberAt(data, key) {
+	const value = data[key];
+	return typeof value === "number" && Number.isSafeInteger(value) ? value : 0;
+}
+/** The step number still open at the log tail inside the turn starting at
+*  `turnStart` (undefined when no step is open). */
+function openStepInTurn(events, turnStart) {
+	let open;
+	for (let index = turnStart + 1; index < events.length; index++) {
+		const event = events[index];
+		if (event === void 0) continue;
+		if (event.type === "step/start") open = numberAt(dataOf(event), "step");
+		else if (event.type === "step/end") open = void 0;
+	}
+	return open;
+}
+/**
+* Whether the open turn ending the log has a `tool/call` without its paired
+* `tool/result` in the CURRENT open step. Providers reject dangling
+* assistant calls, so such a turn cannot be honestly closed and the
+* inheritance must fall back to the snapshot.
+*/
+function hasDanglingToolCall(events, turnStart) {
+	const pending = /* @__PURE__ */ new Set();
+	for (let index = turnStart + 1; index < events.length; index++) {
+		const event = events[index];
+		if (event === void 0) continue;
+		const data = dataOf(event);
+		if (event.type === "step/end") {
+			pending.clear();
+			continue;
+		}
+		if (event.type === "tool/call") {
+			const callId = data.callId;
+			if (typeof callId === "string") pending.add(callId);
+			continue;
+		}
+		if (event.type === "tool/result") {
+			const callId = data.message?.source?.callId;
+			if (typeof callId === "string") pending.delete(callId);
+		}
+	}
+	return pending.size > 0;
+}
+/** The plain text of one tool/result message (text blocks inside its
+*  `tool-result` content block). */
+function toolResultText(data) {
+	const content = data.message?.content;
+	if (!Array.isArray(content)) return "";
+	const parts = [];
+	for (const block of content) {
+		if (block === null || typeof block !== "object") continue;
+		const candidate = block;
+		if (candidate.type !== "tool-result") continue;
+		const inner = candidate.content;
+		if (!Array.isArray(inner)) continue;
+		for (const item of inner) {
+			if (item === null || typeof item !== "object") continue;
+			const textItem = item;
+			if (textItem.type === "text" && typeof textItem.text === "string") parts.push(textItem.text);
+		}
+	}
+	return parts.join("\n");
+}
+/** Cap applied to one tool-result's text inside a snapshot (prompt budget). */
+const SNAPSHOT_RESULT_CAP = 2e3;
+/** Cap applied to the whole snapshot (prompt budget). */
+const SNAPSHOT_TOTAL_CAP = 8e3;
+/**
+* Build the side-thread inheritance for one parent log: the full event log
+* up to the click moment, honestly closed when it ends inside an open turn.
+*/
+function buildSidechatInheritance(events) {
+	if (events.length === 0) return {
+		seed: [],
+		snapshot: null
+	};
+	const boundary = lastTurnBoundary(events);
+	if (boundary < 0 || events[boundary]?.type === "turn/end") return {
+		seed: copyEvents(events),
+		snapshot: null
+	};
+	if (hasDanglingToolCall(events, boundary)) return {
+		seed: copyEvents(events.slice(0, boundary)),
+		snapshot: buildOpenTurnSnapshot(events)
+	};
+	const seed = copyEvents(events);
+	const last = events[events.length - 1];
+	const turn = numberAt(dataOf(events[boundary]), "turn");
+	const now = last?.time ?? 0;
+	const openStep = openStepInTurn(events, boundary);
+	if (openStep !== void 0) seed.push({
+		type: "step/end",
+		seq: seed.length,
+		time: now,
+		data: {
+			turn,
+			step: openStep
+		}
+	});
+	seed.push({
+		type: "turn/end",
+		seq: seed.length,
+		time: now,
+		data: {
+			turn,
+			reason: { kind: "interrupted" }
+		}
+	});
+	return {
+		seed,
+		snapshot: null
+	};
+}
+/**
+* Structured text snapshot of the parent's OPEN turn (from its `turn/start`
+* to the log tail): the accumulated assistant/reasoning output verbatim
+* (code blocks ride the raw deltas) and the tool activity — executed tools
+* with their result text, the still-executing one marked. Returns null when
+* there is no open turn or nothing to show.
+*/
+function buildOpenTurnSnapshot(events) {
+	const boundary = lastTurnBoundary(events);
+	if (boundary < 0 || events[boundary]?.type !== "turn/start") return null;
+	let text = "";
+	let reasoning = "";
+	const tools = [];
+	const pendingCalls = /* @__PURE__ */ new Map();
+	let total = 0;
+	for (let index = boundary + 1; index < events.length; index++) {
+		const event = events[index];
+		if (event === void 0) continue;
+		const data = dataOf(event);
+		if (event.type === "step/end") {
+			pendingCalls.clear();
+			continue;
+		}
+		if (event.type === "assistant/chunk") {
+			const chunk = data.chunk;
+			if (chunk === null || typeof chunk !== "object") continue;
+			if (chunk.type === "text-delta" && typeof chunk.text === "string") text += chunk.text;
+			else if (chunk.type === "reasoning-delta" && typeof chunk.text === "string") reasoning += chunk.text;
+			continue;
+		}
+		if (event.type === "tool/call") {
+			const callId = data.callId;
+			if (typeof callId === "string") pendingCalls.set(callId, {
+				name: typeof data.name === "string" ? data.name : "tool",
+				args: typeof data.arguments === "string" ? data.arguments : ""
+			});
+			continue;
+		}
+		if (event.type === "tool/result") {
+			const source = data.message;
+			const callId = typeof source?.source?.callId === "string" ? source.source.callId : void 0;
+			const name = callId !== void 0 ? pendingCalls.get(callId)?.name : void 0;
+			const args = callId !== void 0 ? pendingCalls.get(callId)?.args : void 0;
+			if (callId !== void 0) pendingCalls.delete(callId);
+			const result = toolResultText(data).slice(0, SNAPSHOT_RESULT_CAP);
+			const failed = data.error !== void 0;
+			const line = [`- \`${name ?? "tool"}\`${failed ? " (failed)" : ""}` + (args !== void 0 && args !== "" ? ` — arguments: \`${args}\`` : ""), ...result === "" ? [] : [`  Result: ${result}`]].join("\n");
+			tools.push(line);
+			total += line.length;
+		}
+	}
+	for (const [, call] of pendingCalls) {
+		const line = `- \`${call.name}\` (executing) — arguments: \`${call.args}\``;
+		tools.push(line);
+		total += line.length;
+	}
+	const sections = [];
+	if (text.trim() !== "") sections.push(`Assistant output so far:\n\n${text}`);
+	if (reasoning.trim() !== "") sections.push(`Reasoning so far:\n\n${reasoning}`);
+	if (tools.length > 0) sections.push(`Tool activity:\n${tools.join("\n")}`);
+	if (sections.length === 0) return null;
+	const body = sections.join("\n\n");
+	return body.length > SNAPSHOT_TOTAL_CAP ? `Parent session in-progress turn (reference only):\n\n${body.slice(0, SNAPSHOT_TOTAL_CAP)}…` : `Parent session in-progress turn (reference only):\n\n${body}`;
+}
+/** Truncate + prefix a question into a durable thread label. */
+function sideLabel(question) {
+	const flat = question.replace(/\s+/g, " ").trim();
+	const max = Math.max(1, 42);
+	const body = flat.length > max ? `${flat.slice(0, 41)}…` : flat;
+	return `${SIDE_LABEL_PREFIX}${body}`;
+}
+/**
+* Whether the thread log already carries the side boundary message — i.e.
+* the first prompt was delivered. Tolerant to the content shape (block
+* array or bare string) and to inherited seed messages (only an OWN
+* boundary message starts with the prefix; seed messages came from the
+* parent's log, which never contains one).
+*/
+function boundaryDelivered(events) {
+	for (const event of events) {
+		if (event.type !== "user/message") continue;
+		if (messageLeadText(dataOf(event)).startsWith("Side conversation boundary")) return true;
+	}
+	return false;
+}
+/** The leading text of a user/message's content (block array or bare string). */
+function messageLeadText(data) {
+	const content = data.content;
+	const first = Array.isArray(content) ? content[0] : content;
+	return typeof first === "string" ? first : typeof first === "object" && first !== null && "text" in first ? String(first.text) : "";
+}
+/**
+* The agent preset a session actually runs: newest `agent-preset/selected`
+* event wins, else the creation header (mirror of the dsh-agent-presets
+* resolveSessionPreset helper — replicated here to avoid a host dependency
+* on that package).
+*/
+function resolvePresetId(header, events) {
+	for (let index = events.length - 1; index >= 0; index--) {
+		const event = events[index];
+		if (event?.type !== "agent-preset/selected") continue;
+		const preset = dataOf(event).agentPreset;
+		if (typeof preset === "string") return preset;
+	}
+	return header.agentPreset;
+}
+//#endregion
+//#region src/subagent-activity.ts
+/**
+* Extract the concatenated plain text of a content-block list (the durable
+* `ContentBlock[]` shape, structurally: blocks with `type: 'text'` carry
+* `text`; anything else — tool_use, image, … — contributes nothing).
+* @param content - the raw `content` field of a message event.
+* @returns the joined text, or undefined when the message carries no text.
+*/
+function contentText(content) {
+	if (!Array.isArray(content)) return void 0;
+	const parts = [];
+	for (const block of content) {
+		if (block === null || typeof block !== "object") continue;
+		const candidate = block;
+		if (candidate.type === "text" && typeof candidate.text === "string") parts.push(candidate.text);
+	}
+	return parts.length > 0 ? parts.join("\n") : void 0;
+}
+/**
+* Fold a session event log into the last text output + last tool call (each
+* is the LAST occurrence in event order). Lifecycle events and raw
+* `assistant/chunk` rows are ignored — the card shows what the subagent is
+* doing right now, not its plumbing. The scan runs BACKWARD from the newest
+* event and stops once both fields are found, so a long history costs only
+* the recent tail in the common case.
+* @param events - the session's append-only event log (oldest → newest).
+* @param maxMessages - optional message-boundary window: only the tail's
+*   last `maxMessages` surface messages (`user/message`, `assistant/message`)
+*   and the events between them are considered, mirroring the old
+*   `subagents.history({ maxMessages })` window. Stale activity older than
+*   the window is never surfaced, and a long log is never scanned in full.
+* @returns the last text and/or tool call; an empty object when the log has neither.
+*/
+function lastActivity(events, maxMessages = Infinity) {
+	let text;
+	let tool;
+	let messagesSeen = 0;
+	for (let index = events.length - 1; index >= 0; index -= 1) {
+		if (text !== void 0 && tool !== void 0) break;
+		const event = events[index];
+		if (event === void 0) continue;
+		const { type, data } = event;
+		if (type === "user/message" || type === "assistant/message") {
+			messagesSeen += 1;
+			if (messagesSeen > maxMessages) break;
+		} else if (messagesSeen >= maxMessages) continue;
+		if (text === void 0 && type === "assistant/message") {
+			const message = data.message;
+			const extracted = contentText(message?.content);
+			if (extracted !== void 0) text = extracted;
+		} else if (tool === void 0 && type === "tool/call") tool = {
+			name: typeof data.name === "string" ? data.name : "tool",
+			args: typeof data.arguments === "string" ? data.arguments : ""
+		};
+	}
+	if (text === void 0 && tool === void 0) return {};
+	return {
+		...text === void 0 ? {} : { text },
+		...tool === void 0 ? {} : { tool }
+	};
+}
+/**
+* Build the live-preview routes bound to the plugin context.
+* @param ctx - host plugin context.
+*/
+function buildSubagentLiveApi(ctx) {
+	return { async live(payload) {
+		const rootSessionId = requireString(payload, "rootSessionId");
+		const subagents = ctx.get("subagents");
+		if (subagents === void 0 || typeof subagents.listDescendants !== "function") throw new SidebarError("subagents-unavailable", "the subagent service is not mounted in this deployment", 503);
+		let descendants;
+		try {
+			descendants = await subagents.listDescendants(rootSessionId);
+		} catch (error) {
+			throw new SidebarError("subagents-unavailable", `subagent catalog read failed: ${error instanceof Error ? error.message : String(error)}`, 503);
+		}
+		const live = {};
+		for (const entry of descendants) {
+			if (entry.kind !== "child" || entry.activity !== "running") continue;
+			if (entry.label?.startsWith("Side: ") ?? false) continue;
+			try {
+				const activity = lastActivity(ctx.sessions.get(entry.id)?.events ?? [], 12);
+				if (activity.text !== void 0 || activity.tool !== void 0) live[entry.id] = activity;
+			} catch {}
+		}
+		return { live };
+	} };
+}
+//#endregion
+//#region src/sidechat-routes.ts
+/**
+* Side Chat routes of the /sidebar JSON API ('sidechat.start' /
+* 'sidechat.prompt' / 'sidechat.cancel' / 'sidechat.dispose').
+*
+* A side thread is a child session the plugin creates ITSELF with a custom
+* seed — the parent's full event log up to the click moment, honestly closed
+* at an in-progress turn (see sidechat-core.ts). The child is marked
+* `origin: 'subagent'` so the main session list hides it, and EVERY
+* operation goes through these routes because the generic session RPCs are
+* fenced away from subagent-origin identities (the api-remotes
+* agent-lookup ownership fence). No DSH source is touched:
+*
+* - creation uses the public AgentRegistry.create seam (the same one
+*   api-proxy's session.fork and the subagent fork provider use), with the
+*   parent's preset composition and provider/model selection so the child's
+*   first request shares the parent's token prefix (provider-side prefix
+*   cache reuse);
+* - the first prompt (boundary + question) and every follow-up are admitted
+*   with the stock `agent.followup`;
+* - a cold thread (DSH restart, or a closed thread) is resumed with
+*   AgentRegistry.resume, composing the preset the child recorded.
+*/
+/** Timeout guarding the create call (the registry detaches it before the
+*  handle becomes visible, so the child is never cancelled by it). */
+const CREATE_TIMEOUT_MS = 15e3;
+/** Per-activation disposers of created thread agents (the dispose route
+*  releases them; the session and its history always stay persisted). */
+const threadDisposers = /* @__PURE__ */ new Map();
+/** The in-progress-turn snapshot captured at creation of an EMPTY thread,
+*  waiting to ride the first prompt (lost on a host restart — the boundary
+*  prompt is then delivered alone, a logged degradation). */
+const pendingSnapshots = /* @__PURE__ */ new Map();
+/** Resolve the parent's preset and build the child's composition setup
+*  (mirror of api-proxy's composeAgent minus the model-selection install —
+*  the child carries the parent's provider/model in agentOptions). */
+async function composeChildSetup(ctx, presetId) {
+	const presets = ctx.get("agentPresets");
+	if (presets === void 0) return { setup: () => Promise.resolve() };
+	const resolved = await presets.resolve(presetId);
+	return {
+		agentPreset: resolved.id,
+		setup: async (agentCtx) => {
+			await presets.mount(agentCtx, resolved.id);
+		}
+	};
+}
+/** Build the cold-resume setup from the thread's PERSISTED record (the
+*  recorded preset wins, newest selection event first). */
+async function composePersistedSetup(ctx, childId) {
+	const persistence = ctx.get("sessionPersistence");
+	if (persistence === void 0) return () => Promise.resolve();
+	const inspected = await persistence.inspect(childId);
+	const presetId = resolvePresetId(inspected.meta, inspected.events);
+	const presets = ctx.get("agentPresets");
+	if (presets === void 0 || presetId === void 0) return () => Promise.resolve();
+	const resolved = await presets.resolve(presetId);
+	return async (agentCtx) => {
+		await presets.mount(agentCtx, resolved.id);
+	};
+}
+/** One text-block prompt (the thread boundary + question, or a follow-up). */
+function textPrompt(text) {
+	return [{
+		type: "text",
+		text
+	}];
+}
+/** Admit one user message to a live agent through the stock followup path. */
+function admitFollowup(agent, blocks) {
+	const message = createUserMessage({
+		content: blocks,
+		source: { kind: "user" }
+	});
+	agent.followup(message);
+}
+/**
+* Deliver the thread's FIRST contact as TWO log-separated messages: the
+* boundary prompt (+ the parked in-progress snapshot) rides `agent.inject`
+* — queued model-facing context that does NOT wake the driver and is
+* claimed FIRST at the opening step (Inbox.claim drains next-step before
+* next-turn) — and the user's question is the follow-up that wakes it. The
+* log therefore records two user/message events (injection, then question)
+* instead of one wrapped blob: the transcript shows the question as a user
+* bubble and collapses the injection as a context row. The injection source
+* is stamped `kind: 'plugin'` so recognition is structural; its text still
+* opens with SIDE_BOUNDARY_PREFIX, keeping boundaryDelivered intact.
+*/
+function admitFirstContact(agent, injectionText, question) {
+	agent.inject(createUserMessage({
+		content: textPrompt(injectionText),
+		source: {
+			kind: "plugin",
+			plugin: SIDE_INJECTION_PLUGIN
+		}
+	}));
+	admitFollowup(agent, textPrompt(question));
+}
+/** The live thread agent, or undefined (cold — the caller resumes). */
+function liveThreadAgent(ctx, childId) {
+	return ctx.get("agents")?.get(childId);
+}
+/** Build the Side Chat routes (all optional services degrade to a wire
+*  error the tab surfaces inline). The record keys are the FULL wire method
+*  names the /sidebar/api dispatcher looks up (`api[method]`). */
+function buildSidechatApi(ctx) {
+	return {
+		"sidechat.start": async (payload) => {
+			const sessionId = requireString(payload, "sessionId");
+			const rawQuestion = payload.question;
+			const question = typeof rawQuestion === "string" ? rawQuestion.trim() : "";
+			const parent = liveThreadAgent(ctx, sessionId);
+			if (parent === void 0) throw new SidebarError("sidechat-error", `parent session "${sessionId}" is not running`, 409);
+			const parentSession = parent.session;
+			const inheritance = buildSidechatInheritance(parentSession.events);
+			const { agentPreset, setup } = await composeChildSetup(ctx, resolvePresetId(parentSession.header, parentSession.events));
+			const childId = `session-${randomUUID()}`;
+			const label = question === "" ? SIDE_NEW_THREAD_TITLE : sideLabel(question);
+			const descriptor = snapshotSubagentDescriptor({
+				mode: "continuable",
+				provider: "sidechat",
+				label,
+				...parent.options.provider === void 0 ? {} : { agentProvider: parent.options.provider },
+				...parent.options.model === void 0 ? {} : { agentModel: parent.options.model }
+			});
+			const descriptorEvent = {
+				type: "subagent/descriptor",
+				seq: inheritance.seed.length,
+				time: Date.now(),
+				data: descriptor
+			};
+			const seed = [...inheritance.seed, descriptorEvent];
+			const options = {
+				sessionId: childId,
+				meta: {
+					...parentSession.header.cwd === void 0 ? {} : { cwd: parentSession.header.cwd },
+					parentSession: parentSession.id,
+					seedLength: seed.length,
+					origin: "subagent",
+					delegationDepth: (parentSession.header.delegationDepth ?? 0) + 1,
+					...agentPreset === void 0 ? {} : { agentPreset }
+				},
+				seed,
+				agentOptions: { ...parent.options },
+				setup,
+				signal: AbortSignal.timeout(CREATE_TIMEOUT_MS)
+			};
+			const agents = ctx.get("agents");
+			if (agents?.create === void 0) throw new SidebarError("sidechat-error", "the agents service is unavailable", 503);
+			let handle;
+			try {
+				handle = await agents.create(options);
+			} catch (error) {
+				throw new SidebarError("sidechat-error", `thread creation failed: ${error instanceof Error ? error.message : String(error)}`, 500);
+			}
+			threadDisposers.set(childId, () => handle.dispose());
+			const titles = ctx.get("sessionTitle");
+			const pinTitle = (label) => {
+				if (titles === void 0) return;
+				try {
+					titles.rename(handle.agent.session, label);
+				} catch {}
+			};
+			if (question === "") {
+				if (inheritance.snapshot !== null) pendingSnapshots.set(childId, inheritance.snapshot);
+				pinTitle(SIDE_NEW_THREAD_TITLE);
+			} else {
+				const promptParts = [SIDE_BOUNDARY_PROMPT];
+				if (inheritance.snapshot !== null) promptParts.push(inheritance.snapshot);
+				admitFirstContact(handle.agent, promptParts.join("\n\n"), question);
+				pinTitle(sideLabel(question));
+			}
+			return { childId };
+		},
+		"sidechat.prompt": async (payload) => {
+			const childId = requireString(payload, "childId");
+			const text = requireString(payload, "text").trim();
+			if (text === "") throw new SidebarError("bad-request", "text is required");
+			let agent = liveThreadAgent(ctx, childId);
+			if (agent === void 0) {
+				const agents = ctx.get("agents");
+				if (agents?.resume === void 0) throw new SidebarError("sidechat-error", "the agents service is unavailable", 503);
+				const setup = await composePersistedSetup(ctx, childId);
+				try {
+					const handle = await agents.resume({
+						resumeSessionId: childId,
+						setup
+					});
+					threadDisposers.set(childId, () => handle.dispose());
+					agent = handle.agent;
+				} catch (error) {
+					throw new SidebarError("sidechat-error", `thread resume failed: ${error instanceof Error ? error.message : String(error)}`, 500);
+				}
+			}
+			if (boundaryDelivered(agent.session.events)) admitFollowup(agent, textPrompt(text));
+			else {
+				const parts = [SIDE_BOUNDARY_PROMPT];
+				const snapshot = pendingSnapshots.get(childId);
+				pendingSnapshots.delete(childId);
+				if (snapshot !== void 0) parts.push(snapshot);
+				admitFirstContact(agent, parts.join("\n\n"), text);
+				const titles = ctx.get("sessionTitle");
+				if (titles !== void 0) try {
+					titles.rename(agent.session, sideLabel(text));
+				} catch {}
+			}
+			return { accepted: true };
+		},
+		"sidechat.cancel": async (payload) => {
+			const agent = liveThreadAgent(ctx, requireString(payload, "childId"));
+			if (agent !== void 0) agent.cancel({ kind: "user" }, { keepInbox: true });
+			return { accepted: true };
+		},
+		"sidechat.dispose": async (payload) => {
+			const childId = requireString(payload, "childId");
+			pendingSnapshots.delete(childId);
+			const dispose = threadDisposers.get(childId);
+			if (dispose !== void 0) {
+				threadDisposers.delete(childId);
+				try {
+					await dispose();
+				} catch {}
+			}
+			return { accepted: true };
+		},
+		"sidechat.info": async (payload) => {
+			const childId = requireString(payload, "childId");
+			const agent = liveThreadAgent(ctx, childId);
+			if (agent !== void 0) {
+				const preset = agent.session.header.agentPreset;
+				return {
+					live: true,
+					status: agent.status,
+					...agent.options.provider === void 0 ? {} : { provider: agent.options.provider },
+					...agent.options.model === void 0 ? {} : { model: agent.options.model },
+					...preset === void 0 ? {} : { preset }
+				};
+			}
+			const persistence = ctx.get("sessionPersistence");
+			if (persistence !== void 0) try {
+				const inspected = await persistence.inspect(childId);
+				const preset = resolvePresetId(inspected.meta, inspected.events);
+				return {
+					live: false,
+					...preset === void 0 ? {} : { preset }
+				};
+			} catch {}
+			return { live: false };
+		}
+	};
+}
+//#endregion
 //#region src/index.ts
 /**
 * dsh-better-sidebar host half: the /sidebar JSON API (explorer listing, file
@@ -2417,6 +3696,11 @@ function sessionCwdOf(ctx, sessionId, clientCwd) {
 	}
 	return process.cwd();
 }
+/** Optional repository selected by the Git panel when cwd is a container. */
+function selectedRepoOf(payload) {
+	if (payload.repoRoot === void 0) return void 0;
+	return requireAbsolute(requireString(payload, "repoRoot"));
+}
 /**
 * Resolve a path that a git command reported — `git status`/`git diff`
 * print paths RELATIVE TO THE REPO TOP LEVEL, which may sit above the
@@ -2424,9 +3708,11 @@ function sessionCwdOf(ctx, sessionId, clientCwd) {
 * paths pass through; relative ones join the repo root (falling back to the
 * cwd when the root cannot be resolved, e.g. a bare directory).
 */
-async function resolveGitPath(cwd, raw) {
+async function resolveGitPath(cwd, raw, selected) {
 	if (isAbsolute(raw)) return requireAbsolute(raw);
-	const root = await repoRoot(cwd).catch(() => cwd);
+	const sessionPath = requireAbsolute(join(cwd, raw));
+	if (await stat(sessionPath).then(() => true).catch(() => false)) return sessionPath;
+	const root = await repoRoot(cwd, selected).catch(() => cwd);
 	return requireAbsolute(join(root, raw));
 }
 /** How many leading bytes a binary read returns for client-side detect sniffing. */
@@ -2480,6 +3766,23 @@ function shellOverridesOf(getSettings) {
 		shellArgs: args === "" ? void 0 : args.split(/\s+/).filter(Boolean)
 	};
 }
+/**
+* Parse the browser tab's `browserAllowedLoopback` allowlist into a matcher
+* over host:port (same contract as the client-side helper in
+* src/client/browser.ts — kept in sync). Bare hosts (`localhost`,
+* `127.0.0.1`) match every port; `host:port` entries match exactly.
+*/
+function parseLoopbackAllowlist(allowlist) {
+	const entries = allowlist.split(",").map((entry) => entry.trim().toLowerCase()).filter((entry) => entry !== "");
+	const exact = new Set(entries);
+	const hosts = /* @__PURE__ */ new Set();
+	for (const entry of entries) if (!entry.includes(":")) hosts.add(entry.replace(/^\[|\]$/g, ""));
+	return (host, port) => {
+		const key = `${host}:${port}`;
+		if (exact.has(key) || exact.has(host)) return true;
+		return port !== "" && hosts.has(host);
+	};
+}
 function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, getSettings) {
 	const cwdOf = (payload) => {
 		const sessionId = requireString(payload, "sessionId");
@@ -2489,7 +3792,19 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 			cwd: sessionCwdOf(ctx, sessionId, typeof record?.cwd === "string" && record.cwd !== "" ? record.cwd : void 0)
 		};
 	};
+	/** Resolve the optional Git-panel checkout selector against the authoritative
+	* session repository. Unlike `cwd`, `worktree` is never trusted directly. */
+	const gitCwdOf = async (payload) => {
+		const base = cwdOf(payload);
+		const record = payload;
+		const requested = typeof record?.worktree === "string" && record.worktree !== "" ? record.worktree : void 0;
+		return {
+			sessionId: base.sessionId,
+			cwd: await resolveWorktree(base.cwd, requested)
+		};
+	};
 	const jobsApi = buildJobsApi(ctx, resolved.readLimit);
+	const subagentLiveApi = buildSubagentLiveApi(ctx);
 	return {
 		"session.cwd": (payload) => {
 			const { sessionId, cwd } = cwdOf(payload);
@@ -2502,7 +3817,7 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 		},
 		"fs.tree": async (payload) => {
 			const { cwd } = cwdOf(payload);
-			return listDirectory(payload.path === void 0 ? cwd : requireAbsolute(requireString(payload, "path")), resolved.listLimit);
+			return listDirectory(payload.path === void 0 ? cwd : await ensureWorkspacePath(cwd, requireString(payload, "path")), resolved.listLimit);
 		},
 		"fs.search": async (payload) => {
 			const { cwd } = cwdOf(payload);
@@ -2510,7 +3825,8 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 		},
 		"fs.read": async (payload) => {
 			const { cwd } = cwdOf(payload);
-			const { content, truncated, binary, size, head } = await readText(await resolveGitPath(cwd, requireString(payload, "path")), resolved.readLimit);
+			const selected = selectedRepoOf(payload);
+			const { content, truncated, binary, size, head } = await readText(await ensureWorkspacePath(cwd, await resolveGitPath(cwd, requireString(payload, "path"), selected)), resolved.readLimit);
 			if (binary) return {
 				kind: "binary",
 				size,
@@ -2525,7 +3841,7 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 		},
 		"fs.write": async (payload) => {
 			const { cwd } = cwdOf(payload);
-			const path = requireAbsolute(requireString(payload, "path"));
+			const path = await ensureWorkspaceWritePath(cwd, requireString(payload, "path"));
 			const content = requireString(payload, "content");
 			const tmp = `${path}.dsh-sidebar-tmp-${process.pid}`;
 			try {
@@ -2538,67 +3854,75 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 			}
 			return { ok: true };
 		},
+		"git.worktrees": async (payload) => {
+			const { cwd } = await gitCwdOf(payload);
+			const selected = selectedRepoOf(payload);
+			return worktrees(selected !== void 0 ? await repoRoot(cwd, selected).catch(() => cwd) : cwd);
+		},
 		"git.status": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			return status(cwd);
+			const { cwd } = await gitCwdOf(payload);
+			return status(cwd, selectedRepoOf(payload));
 		},
 		"git.diff": async (payload) => {
-			const { cwd } = cwdOf(payload);
+			const { cwd } = await gitCwdOf(payload);
 			const record = payload;
-			return { diff: await diff(cwd, record.path === void 0 ? void 0 : await resolveGitPath(cwd, requireString(payload, "path")), record.staged === true) };
+			const repoRoot = selectedRepoOf(payload);
+			return { diff: await diff(cwd, record.path === void 0 ? void 0 : await resolveGitPath(cwd, requireString(payload, "path"), repoRoot), record.staged === true, repoRoot) };
 		},
 		"git.stage": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			await stage(cwd, payload.path === void 0 ? void 0 : requireString(payload, "path"));
+			const { cwd } = await gitCwdOf(payload);
+			await stage(cwd, payload.path === void 0 ? void 0 : requireString(payload, "path"), selectedRepoOf(payload));
 			return { ok: true };
 		},
 		"git.unstage": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			await unstage(cwd, payload.path === void 0 ? void 0 : requireString(payload, "path"));
+			const { cwd } = await gitCwdOf(payload);
+			await unstage(cwd, payload.path === void 0 ? void 0 : requireString(payload, "path"), selectedRepoOf(payload));
 			return { ok: true };
 		},
 		"git.commit": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			await commit(cwd, requireString(payload, "message"));
+			const { cwd } = await gitCwdOf(payload);
+			await commit(cwd, requireString(payload, "message"), selectedRepoOf(payload));
 			return { ok: true };
 		},
 		"git.branch": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			return branches(cwd);
+			const { cwd } = await gitCwdOf(payload);
+			return branches(cwd, selectedRepoOf(payload));
 		},
 		"git.checkout": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			await checkout(cwd, requireString(payload, "branch"));
+			const { cwd } = await gitCwdOf(payload);
+			await checkout(cwd, requireString(payload, "branch"), selectedRepoOf(payload));
 			return { ok: true };
 		},
 		"git.log": async (payload) => {
-			const { cwd } = cwdOf(payload);
+			const { cwd } = await gitCwdOf(payload);
 			const record = payload;
-			return log(cwd, typeof record.count === "number" && Number.isInteger(record.count) && record.count > 0 ? record.count : void 0, typeof record.skip === "number" && Number.isInteger(record.skip) && record.skip >= 0 ? record.skip : void 0);
+			return log(cwd, typeof record.count === "number" && Number.isInteger(record.count) && record.count > 0 ? record.count : void 0, typeof record.skip === "number" && Number.isInteger(record.skip) && record.skip >= 0 ? record.skip : void 0, selectedRepoOf(payload));
 		},
 		"git.commit-diff": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			return { diff: await commitDiff(cwd, requireString(payload, "hash")) };
+			const { cwd } = await gitCwdOf(payload);
+			return { diff: await commitDiff(cwd, requireString(payload, "hash"), selectedRepoOf(payload)) };
 		},
 		"git.discard": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			await discard(cwd, await resolveGitPath(cwd, requireString(payload, "path")));
+			const { cwd } = await gitCwdOf(payload);
+			const repoRoot = selectedRepoOf(payload);
+			await discard(cwd, await resolveGitPath(cwd, requireString(payload, "path"), repoRoot), repoRoot);
 			return { ok: true };
 		},
 		"git.revert": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			await revert(cwd, requireString(payload, "hash"));
+			const { cwd } = await gitCwdOf(payload);
+			await revert(cwd, requireString(payload, "hash"), selectedRepoOf(payload));
 			return { ok: true };
 		},
 		"git.cherry-pick": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			await cherryPick(cwd, requireString(payload, "hash"));
+			const { cwd } = await gitCwdOf(payload);
+			await cherryPick(cwd, requireString(payload, "hash"), selectedRepoOf(payload));
 			return { ok: true };
 		},
 		"git.show": async (payload) => {
-			const { cwd } = cwdOf(payload);
-			const path = await resolveGitPath(cwd, requireString(payload, "path"));
-			return { content: await show(cwd, requireString(payload, "rev"), path) };
+			const { cwd } = await gitCwdOf(payload);
+			const repoRoot = selectedRepoOf(payload);
+			const path = await resolveGitPath(cwd, requireString(payload, "path"), repoRoot);
+			return { content: await show(cwd, requireString(payload, "rev"), path, repoRoot) };
 		},
 		"pty.close": (payload) => {
 			const sessionId = requireString(payload, "sessionId");
@@ -2614,6 +3938,7 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 		"terminal.deps": () => depsStatus(),
 		"jobs.output": (payload) => jobsApi.output(payload),
 		"jobs.kill": (payload) => jobsApi.kill(payload),
+		"subagents.live": (payload) => subagentLiveApi.live(payload),
 		"shell.get": () => ({
 			shell: terminalShell,
 			name: shellDisplayName(terminalShell)
@@ -2652,7 +3977,11 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 				throw new SidebarError("bad-request", "invalid url", 400);
 			}
 			if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new SidebarError("bad-request", "only http/https urls can be probed", 400);
-			if (isLoopbackHostname(parsed.hostname)) throw new SidebarError("bad-request", "local addresses are not probed", 400);
+			if (isLoopbackHostname(parsed.hostname)) {
+				const prefs = getSettings()?.get()?.value;
+				const allowlist = typeof prefs?.browserAllowedLoopback === "string" ? prefs.browserAllowedLoopback : "";
+				if (!(allowlist.trim() !== "" && parseLoopbackAllowlist(allowlist)(parsed.hostname, parsed.port))) throw new SidebarError("bad-request", "local addresses are not probed", 400);
+			}
 			const controller = new AbortController();
 			const timer = setTimeout(() => controller.abort(), 8e3);
 			try {
@@ -2661,13 +3990,23 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 					redirect: "follow",
 					signal: controller.signal
 				});
-				if (response.status === 405 || response.status === 501) response = await fetch(parsed, {
+				let retriedFromHeadRejection = false;
+				if (response.status === 405 || response.status === 501) {
+					response = await fetch(parsed, {
+						method: "GET",
+						redirect: "follow",
+						signal: controller.signal
+					});
+					retriedFromHeadRejection = true;
+				}
+				if (!(response.headers.get("content-security-policy") !== null || response.headers.get("x-frame-options") !== null) && !retriedFromHeadRejection && response.status !== 405 && response.status !== 501) response = await fetch(parsed, {
 					method: "GET",
 					redirect: "follow",
 					signal: controller.signal
 				});
 				const frameAncestors = extractFrameAncestors(response.headers.get("content-security-policy"));
 				const xFrameOptions = response.headers.get("x-frame-options");
+				response.body?.cancel();
 				return {
 					reachable: true,
 					url: response.url,
@@ -2680,7 +4019,14 @@ function buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, ge
 			} finally {
 				clearTimeout(timer);
 			}
-		}
+		},
+		"open.external": (payload) => {
+			const action = payload?.action;
+			if (action === "reveal") return launchExternal("reveal", requireString(payload, "path"));
+			if (action === "url") return launchExternal("url", requireString(payload, "url"));
+			throw new SidebarError("bad-request", "action must be \"reveal\" or \"url\"");
+		},
+		...buildSidechatApi(ctx)
 	};
 }
 /**
@@ -2703,8 +4049,10 @@ function apply(ctx, config) {
 	}
 	const ptyManager = nodePty !== null ? new PtyManager(terminalShell, resolved.terminalsPerSession, resolved.shellArgs, nodePty) : null;
 	const agentPtyRegistry = nodePty !== null ? new AgentPtyRegistry(terminalShell, resolved.shellArgs, nodePty) : null;
+	const agentOpenRegistry = new AgentOpenRegistry();
 	let settingsFace;
 	let toolsDisposers = null;
+	let openToolsDisposers = null;
 	const syncToolsGate = (scope) => {
 		if (scope.get().agentTerminalTools) {
 			if (toolsDisposers === null) {
@@ -2742,8 +4090,22 @@ function apply(ctx, config) {
 			}
 		};
 		syncToolsGate(scope);
+		const syncOpenToolsGate = () => {
+			if (scope.get().agentOpenTools) {
+				if (openToolsDisposers === null) openToolsDisposers = registerOpenTool(ctx, agentOpenRegistry, (sessionId) => sessionCwdOf(ctx, sessionId), () => {
+					const value = (settingsFace?.get())?.value;
+					return value !== null && typeof value === "object" ? value : SIDEBAR_PREFS_DEFAULTS;
+				});
+			} else if (openToolsDisposers !== null) {
+				openToolsDisposers();
+				openToolsDisposers = null;
+				agentOpenRegistry.drainAll();
+			}
+		};
+		syncOpenToolsGate();
 		scope.watch(() => {
 			syncToolsGate(scope);
+			syncOpenToolsGate();
 		});
 	});
 	const api = buildApi(ctx, ptyManager, agentPtyRegistry, resolved, terminalShell, () => settingsFace);
@@ -2787,6 +4149,52 @@ function apply(ctx, config) {
 			}
 		}
 	}), "dsh-better-sidebar: /sidebar/api routes");
+	ctx.effect(() => ctx.webServer.register({
+		kind: "exact",
+		path: "/sidebar/upload",
+		handler: async (req, res) => {
+			if (!fence(req)) {
+				writeJson(res, 403, {
+					ok: false,
+					error: {
+						code: "forbidden",
+						message: "forbidden"
+					}
+				});
+				return;
+			}
+			if (req.method !== "POST") {
+				writeJson(res, 405, {
+					ok: false,
+					error: {
+						code: "method-error",
+						message: "method not allowed"
+					}
+				});
+				return;
+			}
+			try {
+				const url = new URL(req.url ?? "/", "http://dsh.internal");
+				const sessionId = url.searchParams.get("sessionId");
+				const dir = url.searchParams.get("dir");
+				const relativePath = url.searchParams.get("relativePath");
+				if (sessionId === null || dir === null || relativePath === null || relativePath.trim() === "") throw new SidebarError("bad-request", "sessionId, dir, and relativePath are required");
+				const { path, size } = await writeWorkspaceUpload({
+					cwd: sessionCwdOf(ctx, sessionId, url.searchParams.get("cwd") ?? void 0),
+					dir,
+					relativePath,
+					chunks: req,
+					limit: resolved.uploadLimit
+				});
+				writeOk(res, {
+					path,
+					size
+				});
+			} catch (error) {
+				writeError(res, error);
+			}
+		}
+	}), "dsh-better-sidebar: /sidebar/upload route");
 	ctx.effect(() => registerBundleRoute(ctx, fence), "dsh-better-sidebar: /sidebar/bundle chunk route");
 	ctx.effect(() => ctx.webServer.register({
 		kind: "prefix",
@@ -2807,9 +4215,7 @@ function apply(ctx, config) {
 				const sessionId = url.searchParams.get("sessionId");
 				const raw = url.searchParams.get("path");
 				if (sessionId === null || raw === null) throw new SidebarError("bad-request", "sessionId and path are required");
-				const cwd = sessionCwdOf(ctx, sessionId, url.searchParams.get("cwd") ?? void 0);
-				const path = requireAbsolute(raw);
-				if (!isWithin(cwd, path)) throw new SidebarError("fs-error", "media path outside the session working directory", 403);
+				const path = await ensureWorkspacePath(sessionCwdOf(ctx, sessionId, url.searchParams.get("cwd") ?? void 0), raw);
 				const info = await stat(path);
 				if (!info.isFile() || info.size > resolved.mediaLimit) throw new SidebarError("fs-error", "not a file or too large", 400);
 				const type = mediaTypeForPath(path);
@@ -2847,15 +4253,13 @@ function apply(ctx, config) {
 					return;
 				}
 				const { sessionId, path } = decoded.ref;
-				const cwd = sessionCwdOf(ctx, sessionId);
-				const absolute = requireAbsolute(path);
-				if (!isWithin(cwd, absolute)) throw new SidebarError("fs-error", "html path outside the session working directory", 403);
+				const absolute = await ensureWorkspacePath(sessionCwdOf(ctx, sessionId), path);
 				const info = await stat(absolute);
 				if (!info.isFile() || info.size > resolved.mediaLimit) throw new SidebarError("fs-error", "not a file or too large", 400);
 				const type = mediaTypeForPath(absolute);
 				const body = await readFile(absolute);
 				res.writeHead(200, {
-					"content-type": type,
+					"content-type": type === "text/html" ? "text/html; charset=utf-8" : type,
 					"cache-control": "no-cache",
 					"x-content-type-options": "nosniff",
 					"referrer-policy": "no-referrer",
@@ -2893,13 +4297,51 @@ function apply(ctx, config) {
 			});
 		}
 	}), "dsh-better-sidebar: agent-terminals push WebSocket");
+	const agentOpenWss = new WebSocketServer({ noServer: true });
+	ctx.effect(() => ctx.webServer.registerUpgrade({
+		path: "/sidebar/ws/agent-opens",
+		handler: (req, socket, head) => {
+			if (!fence(req)) {
+				socket.destroy();
+				return;
+			}
+			agentOpenWss.handleUpgrade(req, socket, head, (ws) => {
+				attachAgentOpen(agentOpenRegistry, ws, req);
+			});
+		}
+	}), "dsh-better-sidebar: agent-opens push WebSocket");
 	ctx.effect(() => () => {
 		toolsDisposers?.();
+		openToolsDisposers?.();
 		ptyManager?.disposeAll();
 		agentPtyRegistry?.disposeAll();
+		agentOpenRegistry.dispose();
 		wss.close();
 		agentListWss.close();
+		agentOpenWss.close();
 	}, "dsh-better-sidebar: teardown");
+}
+/** Push queued `sidebar_open` requests for one session to a connected view. */
+async function attachAgentOpen(registry, ws, req) {
+	try {
+		const sessionId = new URL(req.url ?? "/", "http://dsh.internal").searchParams.get("sessionId");
+		if (sessionId === null) {
+			ws.close(1008, "sessionId is required");
+			return;
+		}
+		const send = (request) => {
+			if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(request));
+		};
+		const unsubscribe = registry.attach(sessionId, send);
+		ws.on("close", () => {
+			unsubscribe();
+		});
+		ws.on("error", () => {
+			unsubscribe();
+		});
+	} catch (error) {
+		ws.close(1011, error instanceof Error ? error.message : String(error));
+	}
 }
 /** Push the live agent-terminal list for one session to a connected sidebar view. */
 async function attachAgentList(registry, ws, req) {
@@ -2935,6 +4377,10 @@ async function attachAgentList(registry, ws, req) {
 * - `?tab=...&sessionId=...` attaches to a UI-tab terminal (the user
 *   created it from the + menu). The close frame schedules a 0-ms close
 *   (the host's reconnect grace keeps the shell alive across a refresh).
+*   The park frame (sent when the user switches to another conversation)
+*   marks the pty as parked so the upcoming bare socket drop does NOT start
+*   the grace countdown — the tab is still open in its session's state, so
+*   the shell must survive until the user switches back or closes the tab.
 */
 async function attachTerminal(ctx, ptyManager, agentPtyRegistry, ws, req, resolved, getSettings) {
 	try {
@@ -2986,6 +4432,10 @@ async function attachTerminal(ctx, ptyManager, agentPtyRegistry, ws, req, resolv
 				ptyManager.scheduleClose(handle.key, 0);
 				return;
 			}
+			if (control !== null && control.type === "park") {
+				ptyManager.park(handle.key);
+				return;
+			}
 			if (handle.exited) return;
 			if (control !== null && control.type === "resize" && typeof control.cols === "number" && typeof control.rows === "number") {
 				const dims = clampDims(control.cols, control.rows);
@@ -2995,7 +4445,7 @@ async function attachTerminal(ctx, ptyManager, agentPtyRegistry, ws, req, resolv
 		ws.on("close", () => {
 			dataSub.dispose();
 			exitSub.dispose();
-			ptyManager.scheduleClose(handle.key, resolved.reconnectGraceMs);
+			if (!ptyManager.isParked(handle.key)) ptyManager.scheduleClose(handle.key, resolved.reconnectGraceMs);
 		});
 	} catch (error) {
 		ws.close(1011, error instanceof Error ? error.message : String(error));

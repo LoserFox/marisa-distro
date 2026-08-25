@@ -42,6 +42,8 @@ export interface SidebarConfig {
   readLimit?: number
   /** Media route cap (bytes); larger binaries are refused. */
   mediaLimit?: number
+  /** Upload route cap (bytes); larger files are refused without touching disk. */
+  uploadLimit?: number
   /** Explorer row bound of one level. */
   listLimit?: number
   /** Terminals per session. */
@@ -70,6 +72,7 @@ export interface SidebarConfig {
 export const Config: z<SidebarConfig> = z.object({
   readLimit: z.number().step(1).min(1).default(512 * 1024),
   mediaLimit: z.number().step(1).min(1).default(20 * 1024 * 1024),
+  uploadLimit: z.number().step(1).min(1).default(128 * 1024 * 1024),
   listLimit: z.number().step(1).min(1).default(1000),
   terminalsPerSession: z.number().step(1).min(1).default(3),
   reconnectGraceMs: z.number().step(1).min(0).default(30_000),
@@ -81,6 +84,7 @@ export const Config: z<SidebarConfig> = z.object({
 export interface ResolvedSidebarConfig {
   readLimit: number
   mediaLimit: number
+  uploadLimit: number
   listLimit: number
   terminalsPerSession: number
   reconnectGraceMs: number
@@ -100,6 +104,7 @@ export function resolveSidebarConfig(config: SidebarConfig | undefined): Resolve
   return {
     readLimit: config?.readLimit ?? 512 * 1024,
     mediaLimit: config?.mediaLimit ?? 20 * 1024 * 1024,
+    uploadLimit: config?.uploadLimit ?? 128 * 1024 * 1024,
     listLimit: config?.listLimit ?? 1000,
     terminalsPerSession: config?.terminalsPerSession ?? 3,
     reconnectGraceMs: config?.reconnectGraceMs ?? 30_000,
@@ -117,6 +122,7 @@ export const PrefsSchema: z<SidebarPrefs> = z.object({
   autoOpenSubagent: z.boolean().default(true),
   autoOpenJobs: z.boolean().default(true),
   agentTerminalTools: z.boolean().default(false),
+  agentOpenTools: z.boolean().default(false),
   bottomPanelAutoTerminal: z.boolean().default(true),
   terminalFontFamily: z.string().default(''),
   terminalFontSize: z.number().step(1).min(TERMINAL_FONT_SIZE_MIN).max(TERMINAL_FONT_SIZE_MAX).default(TERMINAL_FONT_SIZE_DEFAULT),
@@ -124,6 +130,9 @@ export const PrefsSchema: z<SidebarPrefs> = z.object({
   editorExplorer: z.boolean().default(false),
   terminalShell: z.string().default(''),
   terminalShellArgs: z.string().default(''),
+  titleBarScheme: z.union([z.const('auto'), z.const('web'), z.const('preset'), z.const('custom')]),
+  titleBarPresetId: z.string(),
+  customCss: z.string(),
   titleBarCompat: z.boolean().default(false),
   titleBarStripPx: z.number().step(1).min(TITLE_BAR_STRIP_MIN).max(TITLE_BAR_STRIP_MAX).default(TITLE_BAR_STRIP_DEFAULT),
   htmlViewerNoSandbox: z.boolean().default(false),
@@ -132,6 +141,7 @@ export const PrefsSchema: z<SidebarPrefs> = z.object({
   browserInterceptLinks: z.boolean().default(true),
   browserInterceptHttp: z.boolean().default(true),
   browserInterceptHttps: z.boolean().default(false),
+  browserAllowedLoopback: z.string().default(''),
   // Per-feature enable switches are OPEN maps (any tab/viewer id, built-in or
   // external): an absent key means enabled, so old documents resolve to {}
   // (everything on) with no migration. Non-boolean values fail validation.

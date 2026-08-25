@@ -25,11 +25,17 @@ function isInitialVendorImport(path) {
   }
 }
 
+// 组件路径匹配：vendored 树是目录前缀（plugins/<id>/、harness/），submodule
+// 是 gitlink（diff --name-only 输出裸路径 plugins/<id>、harness，无尾斜杠）。
+function componentPathChanged(changed, prefix) {
+  return changed.some(path => path === prefix || path.startsWith(prefix + '/'))
+}
+
 for (const plugin of manifest.plugins) {
-  const prefix = `plugins/${plugin.id}/`
-  if (!changed.some(path => path.startsWith(prefix))) continue
+  const prefix = `plugins/${plugin.id}`
+  if (!componentPathChanged(changed, prefix)) continue
   if (plugin.mode === 'mirror') {
-    const initialImport = isInitialVendorImport(`plugins/${plugin.id}`)
+    const initialImport = isInitialVendorImport(prefix)
     assert.ok(
       upstreamSync || initialImport,
       `${plugin.id} is a mirror; only a maintainer-labelled upstream-sync PR may modify it`,
@@ -42,7 +48,7 @@ for (const plugin of manifest.plugins) {
   // 与 dsh-ego-browser 等人的登记约定一致。
 }
 
-if (changed.some(path => path.startsWith('harness/'))) {
+if (componentPathChanged(changed, 'harness')) {
   assert.ok(changedSet.has('docs/upstream-diff.md'), 'harness changes must update docs/upstream-diff.md')
   assert.ok(changedSet.has('maintenance/upstreams.json'), 'harness changes must update or reaffirm the recorded upstream baseline')
 }

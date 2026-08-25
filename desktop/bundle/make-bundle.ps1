@@ -330,6 +330,13 @@ if (-not $SkipBodies) {
   # (harness/node_modules/.pnpm ~1.2 GB). The staged install must resolve the
   # WHOLE tree as ONE root workspace, so both nested files are not staged.
   Copy-DerefTree "$repo\harness" "$stage\marisa-distro\harness" 'node_modules' @('pnpm-workspace.yaml', 'pnpm-lock.yaml')
+  # Marisa 发行版增量（品牌兜底字符串 + anchored-standard 预设）不存放在 harness
+  # 源码树（submodule 语义下必须 pristine），由 overlay 在暂存副本上应用。
+  # 品牌字符串同时已由构建期 overlay 固化进 lib/ 产物；此处补源文件与运行时
+  # 预设目录，保证 stage 树自洽。
+  Write-Host 'applying marisa harness overlays (brand fallbacks + anchored-standard preset) ...'
+  & $node (Join-Path $repo 'scripts\apply-harness-overlays.mjs') apply --tree "$stage\marisa-distro\harness"
+  if ($LASTEXITCODE -ne 0) { throw 'harness overlay apply failed on staged harness tree' }
   Write-Host 'copying plugins body (node_modules excluded) ...'
   Copy-DerefTree "$repo\plugins" "$stage\marisa-distro\plugins" 'node_modules'
   Write-Host 'copying bundles body (node_modules excluded) ...'

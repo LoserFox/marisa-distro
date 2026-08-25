@@ -19,11 +19,12 @@ modlens config set <provider>.<field> <value>   # 字段：apiKey、baseUrl、mo
 
 ## 配置文件的完整形状
 
-所有内容都在六个顶层键之下，全部可选。下面的示例一次性展示了所有支持的键和字段（真实文件只需要写你用到的部分）。文件不存在就全用默认值。provider 的设置放在 `providers.<name>` 下面，不在顶层，手工编辑最常犯的就是这个错。
+所有内容都在七个顶层键之下，全部可选。下面的示例一次性展示了所有支持的键和字段（真实文件只需要写你用到的部分）。文件不存在就全用默认值。provider 的设置放在 `providers.<name>` 下面，不在顶层，手工编辑最常犯的就是这个错。
 
 ```json
 {
   "provider": "gemini-api",
+  "cooldown": "on",
   "proxy": "http://127.0.0.1:7890",
   "reuse": { "claude": true, "codex": true, "opencode": false, "pi": true, "grok": true },
   "saved": {
@@ -64,7 +65,8 @@ modlens config set <provider>.<field> <value>   # 字段：apiKey、baseUrl、mo
 字段含义：
 
 - `provider`：不传 `-p` 时由哪个 provider 执行。标准名和别名都行（`agy`/`antigravity` 对应 `antigravity-cli`，`gemini` 对应 `gemini-api`，`openai-compat` 对应 `openai`，`claude` 对应 `anthropic`，`kimi`/`kimi-code` 对应 `kimi-cli`，`claude-code` 对应 `claude-cli`）。留空或缺失表示不钉任何一个：由失败切换链决定，已配置的 API provider 先于 agent CLI 被尝试。
-- `providers.<name>.<field>`：共六个字段，`apiKey`、`baseUrl`、`model`、`proxy`、`extraBody`、`structuredOutput`（仅 openai 路线）。每个 provider 条目都可选，条目里的每个字段也都可选。别名键同样会被读取（存在 `gemini` 下的设置在解析到 `gemini-api` 时也能找到），冲突时标准键胜出。
+- `cooldown`：`'on'`（默认）或 `'off'`。打开时，配额耗尽的密钥会记入 `~/.modlens/state.json`，恢复前放到队尾再试（默认 45 分钟，月度 HTTP 432/433 为 24 小时，引擎回报的 `Resets in` 子句优先）。关闭时不读也不写那个文件。`modlens state clear` 会忘掉全部冷却。
+- `providers.<name>.<field>`：共六个字段，`apiKey`、`baseUrl`、`model`、`proxy`、`extraBody`、`structuredOutput`（仅 openai 路线）。每个 provider 条目都可选，条目里的每个字段也都可选。别名键同样会被读取（存在 `gemini` 下的设置在解析到 `gemini-api` 时也能找到），冲突时标准键胜出。`apiKey` 接受英文逗号分隔的列表。请求按配置顺序使用，只在鉴权、限流或配额失败后轮换。其他失败会跳过剩余密钥，并继续走现有的 provider 故障转移。
 - `providers.<name>.extraBody`：一个 JSON 对象，合并进 API provider（`gemini-api`、`openai`、`anthropic`）的请求体，用来传厂商有而 modlens 没有对应参数的开关。最常见的用途是关掉思考，见下文小节。嵌套对象逐键合并，所以加一个开关不会动到该块里的其他内容。承载图片、提示词和各路线自身强制机制的字段会被拒绝，报错会点名该字段。`openai` 路线上的 `response_format` 不在此列：在那里设置它就是有意替换掉 modlens 本来会发的那份 schema。三个 CLI provider 不发请求体，所以在 `antigravity-cli`、`claude-cli` 或 `kimi-cli` 上运行时它会被忽略，并在 `meta.warnings` 里说明。
 - `providers.openai.structuredOutput`：设为 `true` 时，让 OpenAI 兼容网关自己强制执行视觉契约，以 `response_format: json_schema` 的严格形式发出。默认关闭，因为不支持结构化输出的网关会对这个字段返回 400。你在 `extraBody` 里设的 `response_format` 优先级更高。
 - `saved.openai.<标签>`：openai 槽的命名存档，只有 `modlens config save openai <标签>` 写入、`modlens config use openai <标签>` 整包换入。切换网关不再丢上一个端点的 key：`use` 拒绝覆盖没有任何标签保存过的活跃槽（`--discard` 表示明确放弃）。解析、guard、failover、环境变量规则都不读这个区，活跃槽始终是唯一生效的 openai 路由。
@@ -73,7 +75,7 @@ modlens config set <provider>.<field> <value>   # 字段：apiKey、baseUrl、mo
   - `allowModels` 非空（白名单模式）：只有列出的模型运行引擎，其他所有已识别的模型一律拒绝。适合 2026 年的实际格局，纯文本模型才是那份短名单。deny 模式仍然优先于 allow 匹配，所以宽泛的 allow 可以把视觉变体剔出去，正如上面的示例：`glm-5.*` 放行文本系列，`glm-*v*` 抓住 `glm-5v-turbo`。allow 模式要锚定得紧一些（写 `deepseek-v4-*` 而不是 `deepseek*`），这样厂商下一代多模态型号会自动掉出名单，等你检查过再上场。
   - 按真正抵达模型的内容来列名单，而不是按它本来能看到什么：多模态模型如果躲在一个剥离图片的网关后面，照样需要 modlens，而你的会话记录里存的是网关上报的模型名。`modlens doctor` 的 Guard 一节会显示规则和一条实时判定，方便核对结果。
   - `denyWhenUnknown`（默认 `false`）决定在两种模式下，当没有任何信号能识别当前模型时怎么办：`false` 放行，`true` 拒绝。当前模型的检测来源从强到弱依次是：`MODLENS_MODEL` 环境变量（`none` 表示「按未知处理」）、harness 的会话存储、`--model` 自报。
-- `GEMINI_API_KEY`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`ANTHROPIC_API_KEY`、`ANTHROPIC_BASE_URL` 用来配置本文件只字未提的 provider；本文件提到过的，它们完全不生效。过去它们逐字段覆盖，拼出的组合在哪儿都不存在：地址和密钥本是一副凭据。modlens 仍然读取 `MODLENS_HARNESS`（粘贴恢复和 guard 的作用范围）、`MODLENS_MODEL`（guard 覆盖，见 `guards`），以及各 harness 自己注入的指纹，它们把 guard 的存储查询钉在当前 session 上：`CLAUDE_CODE_SESSION_ID`、`CODEX_THREAD_ID`，加上 harness 检测依赖的存在性标记（`CLAUDECODE`、`PI_CODING_AGENT`、`CODEX_SANDBOX`）。
+- `GEMINI_API_KEY`、`GEMINI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`ANTHROPIC_API_KEY`、`ANTHROPIC_BASE_URL` 用来配置本文件只字未提的 provider。本文件提到过的，它们完全不生效。过去它们逐字段覆盖，拼出的组合在哪儿都不存在：地址和密钥本是一副凭据。密钥变量和文件字段一样接受英文逗号分隔的列表。modlens 仍然读取 `MODLENS_HARNESS`（粘贴恢复和 guard 的作用范围）、`MODLENS_MODEL`（guard 覆盖，见 `guards`），以及各 harness 自己注入的指纹，它们把 guard 的存储查询钉在当前 session 上：`CLAUDE_CODE_SESSION_ID`、`CODEX_THREAD_ID`，加上 harness 检测依赖的存在性标记（`CLAUDECODE`、`PI_CODING_AGENT`、`CODEX_SANDBOX`）。
 - `reuse.<claude|codex|opencode|pi|grok>`：按 harness 记录的授权，决定能否花费本机其他登录态，由引导对话（`references/onboard.md`）写入。`true` 允许读图时复用该 harness（pi 的凭据加入 inline 区且所有 guard 照常生效，已登录的 Codex、OpenCode 的视觉模型或直接驱动的 pi 加入 agent 区，排在 `claude-cli` 之前），`false` 记下一次拒绝，用户不会被再次询问，缺失表示从未问过，什么都不会运行。`claude` 缺失视为已授权：`claude-cli` 作为内置 provider 早于这套模型存在，`reuse.claude false` 会把它移出链条（`-p claude-cli` 仍可钉死）。复用来的引擎不比用户自己的优先：分区只按速度档次排序。每个复用得来的答案都会在 `meta.warnings` 里加一行，说明花的是谁的额度，`modlens doctor` 的 Reuse 一节会显示每个 harness 的决定和探测发现的结果（探测结果在 `~/.modlens/auto-cache.json` 里缓存 6 小时，doctor 每次都重新探测）。用 `modlens config set reuse.codex true` 设置（传空恢复为从未问过）。
 - 未知的顶层键和未知的 provider 名会被忽略而不是报错，所以敲错字会无声失败：手工编辑后跑一下 `modlens doctor`，它会显示哪些文件值和环境变量真正生效。
 

@@ -11,7 +11,13 @@ export declare function producedPaths(view: unknown): readonly string[];
 export declare function producedForClosing(nodes: readonly unknown[], seq: number): readonly string[];
 /**
  * Claim the turn-tail chain only when the closing turn produced files.
- * @param owner - the turn-tail owner currency ({nodes, seq}).
+ *
+ * The authoritative source is the engine Turn data — the same value
+ * ui-deliverables reads (`owner.turn.data.get('deliverables')`): a
+ * `{ produced: [{ seq, path }, ...] }` record accumulated per Turn. The
+ * node-based replica below stays as a fallback for compositions that do not
+ * publish it.
+ * @param owner - the turn-tail owner currency ({turn, seq, openFile}).
  * @returns produced paths as the matched value, or null to decline.
  */
 export declare function selectProducedFiles(owner: unknown): readonly string[] | null;

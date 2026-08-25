@@ -1,6 +1,6 @@
 {
   "name": "@liustack/modlens",
-  "version": "3.22.1",
+  "version": "3.24.2",
   "description": "Plug-in vision for text-only LLMs, powered by the free Antigravity CLI",
   "type": "module",
   "bin": {
@@ -11,13 +11,13 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:seed": "node --test tests/seed-config.spec.mjs",
     "coverage": "vitest run --coverage",
     "lint": "biome check src scripts dsh",
     "format": "biome check --write src scripts",
     "eval": "node evals/run.mjs",
     "release": "node scripts/release.mjs",
-    "docs:list": "node scripts/docs-list.js"
+    "docs:list": "node scripts/docs-list.js",
+    "test:seed": "node --test tests/"
   },
   "files": [
     "dist",

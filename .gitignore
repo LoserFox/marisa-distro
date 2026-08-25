@@ -8,6 +8,8 @@ release/
 profiles/marisa/runtime/
 
 # harness、plugins 和 desktop 都由本仓库直接纳管；不允许重新嵌套 Git。
+# harness 现在是 git submodule（.git 是 gitlink 元数据文件，不受目录规则影响）；
+# 若未来 mirror 插件转 submodule，plugins/*/.git/ 规则同样只拦嵌套仓库目录。
 harness/.git/
 plugins/*/.git/
 desktop/.git/

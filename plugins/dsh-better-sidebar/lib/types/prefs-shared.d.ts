@@ -32,6 +32,14 @@ export interface SidebarPrefs {
      */
     agentTerminalTools: boolean;
     /**
+     * Whether the model-facing `sidebar_open` tool is injected into the
+     * model's toolset — one tool that lets the model actively open a local
+     * file, a local folder (as a tree rooted there), or an HTTP(S) page in
+     * the calling session's sidebar. Off by default: the feature stays
+     * dormant until the user explicitly enables it in the side card settings.
+     */
+    agentOpenTools: boolean;
+    /**
      * Custom terminal font-family stack (a CSS font-family value, e.g.
      * `'JetBrains Mono', monospace`). Empty string follows the app's theme
      * monospace font (`--ds-font-family-code`). Applied live to every
@@ -83,17 +91,43 @@ export interface SidebarPrefs {
      */
     terminalShellArgs: string;
     /**
-     * Position compatibility mode: reserves space at the top for the native
-     * Windows title bar (drawn at the window's top-right corner over the web
-     * content in frameless/hidden-title-bar windows). When on, the toggle
-     * cluster drops below the strip and the right panel's content starts
-     * below it. Off by default — the sidebar layout is untouched.
+     * Title-bar / shell compatibility scheme (the "位置兼容模式" setting):
+     * - `auto` (default): CONSERVATIVE — only the standard Window Controls
+     *   Overlay API (present in frameless Chromium shells that draw the
+     *   native caption buttons over web content) contributes real geometry;
+     *   without it nothing is modified, so plain-browser (web) behavior is
+     *   untouched.
+     * - `web`: EXPLICIT "DSH official web" — never adapt, not even WCO
+     *   geometry (the user declares they run the plain web UI).
+     * - `preset`: apply the built-in shell preset named by
+     *   `titleBarPresetId` (data-driven, opt-in — see shell-presets.ts).
+     * - `custom`: apply the free-form `customCss` (and the legacy
+     *   `titleBarStripPx` strip).
+     */
+    titleBarScheme: TitleBarScheme;
+    /**
+     * The built-in shell preset id applied while `titleBarScheme` is
+     * `preset` ('' = no preset — nothing extra is applied).
+     */
+    titleBarPresetId: string;
+    /**
+     * Free-form CSS injected into the page (last in the cascade, so it can
+     * override the plugin's styles; use `!important` to override JS-written
+     * inline CSS variables). Applied while `titleBarScheme` is `custom`.
+     */
+    customCss: string;
+    /**
+     * LEGACY (kept for read-migration and downgrade mirroring only): position
+     * compatibility mode flag. The UI writes `titleBarScheme` instead; a
+     * stored `true` without a scheme migrates to the `custom` scheme (with
+     * `titleBarStripPx` preserved).
      */
     titleBarCompat: boolean;
     /**
-     * The reserved top strip height in px when `titleBarCompat` is on
-     * (0–120, default 40). Drives the `--dsh-title-bar-strip` CSS variable:
-     * the toggle cluster drops `strip + 3px` and the right panel's content
+     * LEGACY (kept for read-migration and downgrade mirroring only): the
+     * reserved top strip height in px used by the `custom` scheme (0–120,
+     * default 40). Drives the `--dsh-title-bar-strip` CSS variable: the
+     * toggle cluster drops `strip + 3px` and the right panel's content
      * starts `strip` px below its top edge.
      */
     titleBarStripPx: number;
@@ -148,6 +182,16 @@ export interface SidebarPrefs {
      */
     browserInterceptHttps: boolean;
     /**
+     * Comma-separated allowlist of local (loopback) authorities the browser
+     * tab may navigate to — `localhost`, `127.0.0.1`, `127.0.0.1:5174`, or
+     * host:port pairs. Empty by default: loopback addresses stay blocked so a
+     * browsed page cannot probe local services. Each entry is either a bare
+     * hostname (all ports) or host:port; the GUI's own origin is always
+     * allowed regardless. The iframe sandbox still renders allowed local
+     * pages in an opaque origin, exactly like any other site.
+     */
+    browserAllowedLoopback: string;
+    /**
      * Per-tab enable switches, keyed by tab descriptor id (`'explorer'`,
      * `'my-plugin:db'`). An ABSENT key means enabled — only an explicit
      * `false` disables a tab type (hidden from the + menu, `openTab` refuses,
@@ -186,6 +230,9 @@ export declare const TERMINAL_FONT_SIZE_DEFAULT = 13;
 export declare const TITLE_BAR_STRIP_MIN = 0;
 export declare const TITLE_BAR_STRIP_MAX = 120;
 export declare const TITLE_BAR_STRIP_DEFAULT = 40;
+/** The title-bar / shell compatibility schemes (see {@link SidebarPrefs.titleBarScheme}). */
+export declare const TITLE_BAR_SCHEMES: readonly ["auto", "web", "preset", "custom"];
+export type TitleBarScheme = typeof TITLE_BAR_SCHEMES[number];
 /** Fallback prefs used whenever the settings document is unreachable or malformed. */
 export declare const SIDEBAR_PREFS_DEFAULTS: SidebarPrefs;
 /** Clamp one width percent into the contract range (shared by schema and client reads). */

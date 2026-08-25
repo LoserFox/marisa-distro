@@ -1,5 +1,0 @@
-# whale-girl bundle patch：向 web 组合挂载 whale-girl（Node half 读写状态/资产，
-# client half 由 __ModuleLoader__ 内核挂载渲染宠物）。
-- insert:
-    - id: whale-girl
-      name: whale-girl

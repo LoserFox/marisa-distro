@@ -776,7 +776,7 @@ importers:
         version: file:plugins/ya-workspace-sidebar(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-conversation@harness+packages+client+ui-conversation)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-sidebar@harness+packages+client+ui-sidebar)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(cordis@4.0.0-rc.7)(react@18.3.1)
       '@huanlin/dsh-plugin-yet-another-subagent':
         specifier: file:./plugins/yet-another-subagent
-        version: file:plugins/yet-another-subagent(765e5f2317493f2a8d781fb0225c9cf0)
+        version: file:plugins/yet-another-subagent(3a726ca91dad9842d322ce5491ae4f13)
       '@liustack/modlens':
         specifier: workspace:^
         version: link:plugins/modlens
@@ -809,7 +809,7 @@ importers:
         version: file:dsh-mygo/packages/loaders/mygo-loader-profile(@deepseek-ai/cordis@harness+vendor+cordis)
       dsh-better-sidebar:
         specifier: file:./plugins/dsh-better-sidebar
-        version: file:plugins/dsh-better-sidebar(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-conversation@harness+packages+client+ui-conversation)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-host-webserver@harness+packages+host+webserver)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(cordis@4.0.0-rc.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: file:plugins/dsh-better-sidebar(8b4a76ebf635c51572b9981d83890444)
       dsh-examples:
         specifier: workspace:^
         version: link:harness/examples
@@ -837,9 +837,6 @@ importers:
       pnpm:
         specifier: 11.9.0
         version: 11.9.0
-      whale-girl:
-        specifier: workspace:^
-        version: link:plugins/whale-girl
     devDependencies:
       '@types/node':
         specifier: ^22.20.1
@@ -937,9 +934,6 @@ importers:
       dsh-whale-widget:
         specifier: file:../../plugins/dsh-whale-widget
         version: link:../../plugins/dsh-whale-widget
-      whale-girl:
-        specifier: file:../../plugins/whale-girl
-        version: link:../../plugins/whale-girl
 
   dsh-mygo/packages/cordis/mygo:
     dependencies:
@@ -10263,6 +10257,9 @@ importers:
       '@codemirror/lang-sql':
         specifier: ^6.10.0
         version: 6.10.0
+      '@codemirror/lang-vue':
+        specifier: ^0.1.3
+        version: 0.1.3
       '@codemirror/lang-xml':
         specifier: ^6.1.0
         version: 6.1.0
@@ -10285,7 +10282,7 @@ importers:
         specifier: ^6.43.8
         version: 6.43.9
       '@deepseek-ai/cordis':
-        specifier: ^4.0.1
+        specifier: workspace:^
         version: link:../../harness/vendor/cordis
       '@lezer/highlight':
         specifier: ^1.2.3
@@ -10293,12 +10290,18 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      dompurify:
+        specifier: ^3.4.14
+        version: 3.4.14
       mermaid:
         specifier: ^11.16.1
         version: 11.17.0
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0
+      react-icons:
+        specifier: 5.7.0
+        version: 5.7.0(react@18.3.1)
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -10348,9 +10351,15 @@ importers:
       '@deepseek-ai/dsh-settings':
         specifier: workspace:^
         version: link:../../harness/packages/settings/settings
+      '@deepseek-ai/dsh-subagent':
+        specifier: workspace:^
+        version: link:../../harness/packages/subagent/subagent
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../harness/packages/core/tools
+      '@huanlin/dsh-plugin-better-locale':
+        specifier: ^0.1.0
+        version: 0.1.0(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(react-dom@18.2.0(react@18.3.1))(react@18.3.1)
       '@playwright/test':
         specifier: ^1.62.1
         version: 1.62.1
@@ -10393,6 +10402,9 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+      unrun:
+        specifier: ^0.2.39
+        version: 0.2.39
       vitest:
         specifier: ^4.1.8
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1(@noble/hashes@2.2.0))(vite@6.4.3(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.0))
@@ -10780,6 +10792,25 @@ importers:
       vitest:
         specifier: ^4.1.8
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1(@noble/hashes@2.2.0))(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.0))
+
+  plugins/dsh-model-proxy:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: ^3.18.1
+        version: link:../../harness/vendor/schemastery
+      undici:
+        specifier: ^7.29.0
+        version: 7.29.0
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      cordis:
+        specifier: 4.0.0-rc.7
+        version: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   plugins/dsh-multimedia-webui-input: {}
 
@@ -11292,7 +11323,7 @@ importers:
         version: 3.18.0
     devDependencies:
       '@deepseek-ai/cordis':
-        specifier: ^4.0.1-rc.1
+        specifier: workspace:^
         version: link:../../harness/vendor/cordis
       '@deepseek-ai/dsh-client-connection':
         specifier: workspace:^
@@ -11459,16 +11490,6 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.2.0))(lightningcss@1.33.0)(tsx@4.23.12)(yaml@2.9.0)
 
-  plugins/whale-girl:
-    dependencies:
-      schemastery:
-        specifier: ^3.18.0
-        version: 3.18.0
-    devDependencies:
-      esbuild:
-        specifier: ^0.28.1
-        version: 0.28.2
-
   plugins/ya-workspace-sidebar:
     devDependencies:
       '@deepseek-ai/dsh-client-locale':
@@ -11519,9 +11540,6 @@ importers:
 
   plugins/yet-another-subagent:
     dependencies:
-      '@deepseek-ai/cordis':
-        specifier: ^4.0.0-rc.7
-        version: link:../../harness/vendor/cordis
       '@deepseek-ai/dsh-agent':
         specifier: workspace:^
         version: link:../../harness/packages/core/agent
@@ -11573,6 +11591,9 @@ importers:
       '@deepseek-ai/dsh-tools':
         specifier: workspace:^
         version: link:../../harness/packages/core/tools
+      cordis:
+        specifier: 4.0.0-rc.7
+        version: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -11630,7 +11651,7 @@ importers:
         version: file:plugins/ya-workspace-sidebar(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-conversation@harness+packages+client+ui-conversation)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-sidebar@harness+packages+client+ui-sidebar)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(cordis@4.0.0-rc.7)(react@18.3.1)
       '@huanlin/dsh-plugin-yet-another-subagent':
         specifier: file:../../../plugins/yet-another-subagent
-        version: file:plugins/yet-another-subagent(765e5f2317493f2a8d781fb0225c9cf0)
+        version: file:plugins/yet-another-subagent(3a726ca91dad9842d322ce5491ae4f13)
       '@liustack/modlens':
         specifier: file:../../../plugins/modlens
         version: link:../../../plugins/modlens
@@ -11660,7 +11681,7 @@ importers:
         version: file:plugins/dsh-bash-terminal(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-shell@harness+packages+shell+shell)(@deepseek-ai/dsh-timeout@harness+packages+util+timeout)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)
       dsh-better-sidebar:
         specifier: file:../../../plugins/dsh-better-sidebar
-        version: file:plugins/dsh-better-sidebar(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-conversation@harness+packages+client+ui-conversation)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-host-webserver@harness+packages+host+webserver)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(cordis@4.0.0-rc.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: file:plugins/dsh-better-sidebar(8b4a76ebf635c51572b9981d83890444)
       dsh-llm-fallbacks:
         specifier: file:../../../plugins/dsh-llm-fallbacks
         version: file:plugins/dsh-llm-fallbacks(743b41c021bd1c02ac92923b3e2fa846)
@@ -12172,6 +12193,9 @@ packages:
 
   '@codemirror/lang-sql@6.10.0':
     resolution: {integrity: sha512-6ayPkEd/yRw0XKBx5uAiToSgGECo/GY2NoJIHXIIQh1EVwLuKoU8BP/qK0qH5NLXAbtJRLuT73hx7P9X34iO4w==}
+
+  '@codemirror/lang-vue@0.1.3':
+    resolution: {integrity: sha512-QSKdtYTDRhEHCfo5zOShzxCmqKJvgGrZwDQSdbvCRJ5pRLWBS7pD/8e/tH44aVQT6FKm0t6RVNoSUWHOI5vNug==}
 
   '@codemirror/lang-xml@6.1.0':
     resolution: {integrity: sha512-3z0blhicHLfwi2UgkZYRPioSgVTo9PV5GP5ducFH6FaHy0IAJRg+ixj5gTR1gnT/glAIC8xv4w2VL1LoZfs+Jg==}
@@ -13112,11 +13136,42 @@ packages:
     peerDependencies:
       hono: ^4
 
+  '@huanlin/dsh-plugin-better-locale@0.1.0':
+    resolution: {integrity: sha512-fGXDgVq1R3gVTi2M9TMn2x5ROqiaYkhEsFJqYF5xiVUFfs9KjwIpOF0ZbhUyK6vFBOeYP4uetc/ZVknQb38WrQ==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@deepseek-ai/cordis': ^4.0.1-rc.1
+      '@deepseek-ai/dsh-client-locale': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-runtime': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-ui-primitives': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-ui-settings': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-client-ui-slots': ^0.1.0-rc.8
+      '@deepseek-ai/dsh-invariants': ^0.1.0-rc.8
+      react: ^18.2.0
+      react-dom: ^18.2.0
+    peerDependenciesMeta:
+      '@deepseek-ai/dsh-client-locale':
+        optional: true
+      '@deepseek-ai/dsh-client-runtime':
+        optional: true
+      '@deepseek-ai/dsh-client-ui-primitives':
+        optional: true
+      '@deepseek-ai/dsh-client-ui-settings':
+        optional: true
+      '@deepseek-ai/dsh-client-ui-slots':
+        optional: true
+      '@deepseek-ai/dsh-invariants':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
   '@huanlin/dsh-plugin-interpreters@file:plugins/interpreters':
     resolution: {directory: plugins/interpreters, type: directory}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      '@deepseek-ai/cordis': ^4.0.1-rc.1
+      '@deepseek-ai/cordis': workspace:^
       '@deepseek-ai/dsh-client-connection': workspace:^
       '@deepseek-ai/dsh-client-locale': workspace:^
       '@deepseek-ai/dsh-client-runtime': workspace:^
@@ -13158,13 +13213,13 @@ packages:
     resolution: {directory: plugins/ya-workspace-sidebar, type: directory}
     engines: {node: '>=22.0.0'}
     peerDependencies:
-      '@deepseek-ai/dsh-client-locale': ^0.0.1-rc.1
-      '@deepseek-ai/dsh-client-runtime': ^0.0.1-rc.1
-      '@deepseek-ai/dsh-client-ui-conversation': ^0.0.1-rc.1
-      '@deepseek-ai/dsh-client-ui-primitives': ^0.0.1-rc.1
-      '@deepseek-ai/dsh-client-ui-sidebar': ^0.0.1-rc.1
-      '@deepseek-ai/dsh-client-ui-slots': ^0.0.1-rc.1
-      '@deepseek-ai/dsh-invariants': ^0.0.1-rc.1
+      '@deepseek-ai/dsh-client-locale': workspace:^
+      '@deepseek-ai/dsh-client-runtime': workspace:^
+      '@deepseek-ai/dsh-client-ui-conversation': workspace:^
+      '@deepseek-ai/dsh-client-ui-primitives': workspace:^
+      '@deepseek-ai/dsh-client-ui-sidebar': workspace:^
+      '@deepseek-ai/dsh-client-ui-slots': workspace:^
+      '@deepseek-ai/dsh-invariants': workspace:^
       cordis: 4.0.0-rc.7
       react: ^18.2.0
     peerDependenciesMeta:
@@ -13191,7 +13246,6 @@ packages:
     resolution: {directory: plugins/yet-another-subagent, type: directory}
     engines: {node: '>=22.0.0'}
     peerDependencies:
-      '@deepseek-ai/cordis': ^4.0.0-rc.7
       '@deepseek-ai/dsh-agent': workspace:^
       '@deepseek-ai/dsh-client-connection': workspace:^
       '@deepseek-ai/dsh-client-locale': workspace:^
@@ -13209,11 +13263,10 @@ packages:
       '@deepseek-ai/dsh-session-projection': workspace:^
       '@deepseek-ai/dsh-subagent': workspace:^
       '@deepseek-ai/dsh-tools': workspace:^
+      cordis: 4.0.0-rc.7
       react: ^18.2.0
       schemastery: ^3.18.0
     peerDependenciesMeta:
-      '@deepseek-ai/cordis':
-        optional: true
       '@deepseek-ai/dsh-agent':
         optional: true
       '@deepseek-ai/dsh-client-connection':
@@ -13247,6 +13300,8 @@ packages:
       '@deepseek-ai/dsh-subagent':
         optional: true
       '@deepseek-ai/dsh-tools':
+        optional: true
+      cordis:
         optional: true
       react:
         optional: true
@@ -16029,6 +16084,9 @@ packages:
   dompurify@3.4.13:
     resolution: {integrity: sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==}
 
+  dompurify@3.4.14:
+    resolution: {integrity: sha512-dVoH9z+MY+C9IilgGCk3YfFqjLi3fChm2OiKJMzh6axrJ5qwxqWaZamgmHrpv22CN/KdbZJuGEGgfQoL00LTdg==}
+
   dsh-bash-terminal@file:plugins/dsh-bash-terminal:
     resolution: {directory: plugins/dsh-bash-terminal, type: directory}
     engines: {node: '>=20'}
@@ -16050,7 +16108,7 @@ packages:
     resolution: {directory: plugins/dsh-better-sidebar, type: directory}
     engines: {node: '>=20'}
     peerDependencies:
-      '@deepseek-ai/cordis': ^4.0.1
+      '@deepseek-ai/cordis': workspace:^
       '@deepseek-ai/dsh-agent': workspace:^
       '@deepseek-ai/dsh-client-locale': workspace:^
       '@deepseek-ai/dsh-client-runtime': workspace:^
@@ -16063,12 +16121,13 @@ packages:
       '@deepseek-ai/dsh-llm': workspace:^
       '@deepseek-ai/dsh-session': workspace:^
       '@deepseek-ai/dsh-settings': workspace:^
+      '@deepseek-ai/dsh-subagent': workspace:^
       '@deepseek-ai/dsh-tools': workspace:^
-      cordis: 4.0.0-rc.7
+      '@huanlin/dsh-plugin-better-locale': ^0.1.0
       react: ^18.2.0
       react-dom: ^18.2.0
     peerDependenciesMeta:
-      cordis:
+      '@huanlin/dsh-plugin-better-locale':
         optional: true
 
   dsh-llm-fallbacks@file:plugins/dsh-llm-fallbacks:
@@ -17674,6 +17733,11 @@ packages:
     resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
     peerDependencies:
       react: ^18.3.1
+
+  react-icons@5.7.0:
+    resolution: {integrity: sha512-LBLy340Rzqy6+/yVhZKT3B/QpP1BZaesGqasf09HPOBzRarcDIFH0WwXlXQfE7q7ipxK4MSiC5DIBWURCny6fw==}
+    peerDependencies:
+      react: '*'
 
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
@@ -19460,6 +19524,15 @@ snapshots:
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.10
 
+  '@codemirror/lang-vue@0.1.3':
+    dependencies:
+      '@codemirror/lang-html': 6.4.12
+      '@codemirror/lang-javascript': 6.2.5
+      '@codemirror/language': 6.12.4
+      '@lezer/common': 1.5.2
+      '@lezer/highlight': 1.2.3
+      '@lezer/lr': 1.4.10
+
   '@codemirror/lang-xml@6.1.0':
     dependencies:
       '@codemirror/autocomplete': 6.20.3
@@ -20141,6 +20214,33 @@ snapshots:
     dependencies:
       hono: 4.13.2
 
+  '@huanlin/dsh-plugin-better-locale@0.1.0(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(react-dom@18.2.0(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@deepseek-ai/cordis': link:harness/vendor/cordis
+    optionalDependencies:
+      '@deepseek-ai/dsh-client-locale': link:harness/packages/client/locale
+      '@deepseek-ai/dsh-client-runtime': link:harness/packages/client/runtime
+      '@deepseek-ai/dsh-client-ui-primitives': link:harness/packages/client/ui-primitives
+      '@deepseek-ai/dsh-client-ui-settings': link:harness/packages/client/ui-settings
+      '@deepseek-ai/dsh-client-ui-slots': link:harness/packages/client/ui-slots
+      '@deepseek-ai/dsh-invariants': link:harness/packages/runtime-diagnostics/invariants
+      react: 18.3.1
+      react-dom: 18.2.0(react@18.3.1)
+
+  '@huanlin/dsh-plugin-better-locale@0.1.0(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@deepseek-ai/cordis': link:harness/vendor/cordis
+    optionalDependencies:
+      '@deepseek-ai/dsh-client-locale': link:harness/packages/client/locale
+      '@deepseek-ai/dsh-client-runtime': link:harness/packages/client/runtime
+      '@deepseek-ai/dsh-client-ui-primitives': link:harness/packages/client/ui-primitives
+      '@deepseek-ai/dsh-client-ui-settings': link:harness/packages/client/ui-settings
+      '@deepseek-ai/dsh-client-ui-slots': link:harness/packages/client/ui-slots
+      '@deepseek-ai/dsh-invariants': link:harness/packages/runtime-diagnostics/invariants
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    optional: true
+
   '@huanlin/dsh-plugin-interpreters@file:plugins/interpreters(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-client-connection@harness+packages+client+connection)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings-plugins@harness+packages+client+ui-settings-plugins)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-host-webserver@harness+packages+host+webserver)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1)(schemastery@3.18.0)':
     optionalDependencies:
       '@deepseek-ai/cordis': link:harness/vendor/cordis
@@ -20168,9 +20268,8 @@ snapshots:
       cordis: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
       react: 18.3.1
 
-  '@huanlin/dsh-plugin-yet-another-subagent@file:plugins/yet-another-subagent(765e5f2317493f2a8d781fb0225c9cf0)':
+  '@huanlin/dsh-plugin-yet-another-subagent@file:plugins/yet-another-subagent(3a726ca91dad9842d322ce5491ae4f13)':
     optionalDependencies:
-      '@deepseek-ai/cordis': link:harness/vendor/cordis
       '@deepseek-ai/dsh-agent': link:harness/packages/core/agent
       '@deepseek-ai/dsh-client-connection': link:harness/packages/client/connection
       '@deepseek-ai/dsh-client-locale': link:harness/packages/client/locale
@@ -20188,6 +20287,7 @@ snapshots:
       '@deepseek-ai/dsh-session-projection': link:harness/packages/session/session-projection
       '@deepseek-ai/dsh-subagent': link:harness/packages/subagent/subagent
       '@deepseek-ai/dsh-tools': link:harness/packages/core/tools
+      cordis: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
       react: 18.3.1
       schemastery: 3.18.0
 
@@ -22682,6 +22782,10 @@ snapshots:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
+  dompurify@3.4.14:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
+
   dsh-bash-terminal@file:plugins/dsh-bash-terminal(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-shell@harness+packages+shell+shell)(@deepseek-ai/dsh-timeout@harness+packages+util+timeout)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(react@18.3.1):
     dependencies:
       '@deepseek-ai/cordis': link:harness/vendor/cordis
@@ -22698,7 +22802,7 @@ snapshots:
       '@deepseek-ai/schemastery': 3.18.1
       react: 18.3.1
 
-  dsh-better-sidebar@file:plugins/dsh-better-sidebar(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-agent@harness+packages+core+agent)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-conversation@harness+packages+client+ui-conversation)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-host-webserver@harness+packages+host+webserver)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-llm@harness+packages+llm+llm)(@deepseek-ai/dsh-session@harness+packages+core+session)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/dsh-tools@harness+packages+core+tools)(cordis@4.0.0-rc.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  dsh-better-sidebar@file:plugins/dsh-better-sidebar(8b4a76ebf635c51572b9981d83890444):
     dependencies:
       '@codemirror/commands': 6.11.0
       '@codemirror/lang-cpp': 6.0.3
@@ -22713,6 +22817,7 @@ snapshots:
       '@codemirror/lang-python': 6.2.1
       '@codemirror/lang-rust': 6.0.2
       '@codemirror/lang-sql': 6.10.0
+      '@codemirror/lang-vue': 0.1.3
       '@codemirror/lang-xml': 6.1.0
       '@codemirror/lang-yaml': 6.1.3
       '@codemirror/language': 6.12.4
@@ -22733,18 +22838,21 @@ snapshots:
       '@deepseek-ai/dsh-llm': link:harness/packages/llm/llm
       '@deepseek-ai/dsh-session': link:harness/packages/core/session
       '@deepseek-ai/dsh-settings': link:harness/packages/settings/settings
+      '@deepseek-ai/dsh-subagent': link:harness/packages/subagent/subagent
       '@deepseek-ai/dsh-tools': link:harness/packages/core/tools
       '@lezer/highlight': 1.2.3
       clsx: 2.1.1
+      dompurify: 3.4.14
       mermaid: 11.17.0
       node-pty: 1.1.0
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
+      react-icons: 5.7.0(react@18.3.1)
       rxjs: 7.8.2
       schemastery: 3.18.0
       ws: 8.21.3
     optionalDependencies:
-      cordis: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
+      '@huanlin/dsh-plugin-better-locale': 0.1.0(@deepseek-ai/cordis@harness+vendor+cordis)(@deepseek-ai/dsh-client-locale@harness+packages+client+locale)(@deepseek-ai/dsh-client-runtime@harness+packages+client+runtime)(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@harness+packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@harness+packages+client+ui-slots)(@deepseek-ai/dsh-invariants@harness+packages+runtime-diagnostics+invariants)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -24066,7 +24174,7 @@ snapshots:
       d3-sankey: 0.12.3
       dagre-d3-es: 7.0.14
       dayjs: 1.11.21
-      dompurify: 3.4.13
+      dompurify: 3.4.14
       es-toolkit: 1.50.0
       fastdom: 1.0.12
       katex: 0.16.47
@@ -24736,6 +24844,10 @@ snapshots:
       loose-envify: 1.4.0
       react: 18.3.1
       scheduler: 0.23.2
+
+  react-icons@5.7.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
 
   react-is@17.0.2: {}
 

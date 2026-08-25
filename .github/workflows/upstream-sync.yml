@@ -40,6 +40,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
+          submodules: recursive
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

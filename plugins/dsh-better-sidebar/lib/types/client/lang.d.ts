@@ -8,5 +8,7 @@ import { Language, LanguageSupport } from '@codemirror/language';
 export declare function extOf(path: string): string;
 /** Language key for an extension, or null for plain text. Pure (tested). */
 export declare function languageKeyForExt(ext: string): string | null;
+/** Every language key the extension table can produce (test seam). */
+export declare function supportedLanguageKeys(): readonly string[];
 /** The CodeMirror language support for a path, or null for plain text. */
 export declare function languageForPath(path: string): Language | LanguageSupport | null;

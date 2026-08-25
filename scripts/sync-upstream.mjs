@@ -41,14 +41,14 @@ function writeCandidateIfChanged(candidatePath, candidate) {
   return true
 }
 
-function writeCandidate({ available, source, currentVersion }) {
+function writeCandidate({ available, source, currentVersion, mode = component.mode, action }) {
   const candidateDirectory = join(root, 'maintenance', 'candidates')
   const candidatePath = join(candidateDirectory, `${id}.json`)
   const candidate = source === 'npm'
     ? {
         component: id,
         source,
-        mode: component.mode,
+        mode,
         package: currentVersion.package,
         currentVersion: currentVersion.version,
         available,
@@ -60,13 +60,13 @@ function writeCandidate({ available, source, currentVersion }) {
     : {
         component: id,
         source,
-        mode: 'fork',
+        mode,
         baseline: component.baseline,
         available,
         repository: component.repository,
         diffDocument: component.diffDocument,
         checkedAt: new Date().toISOString(),
-        action: 'Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix.',
+        action: action ?? 'Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix.',
       }
 
   const changed = writeCandidateIfChanged(candidatePath, candidate)
@@ -123,6 +123,21 @@ setOutput('head', head)
 if (!upstreamChanged) {
   console.log(`${id}: already at ${head}`)
   setOutput('changed', 'false')
+  process.exit(0)
+}
+
+// harness 是 git submodule：同步 = 人工 pin bump（git submodule update 到新
+// HEAD + 根依赖升级 + minimumReleaseAgeExclude + 品牌 overlay 重基线 + 换树
+// 验证），bot 不自动改树。只写 review 候选。
+if (id === 'harness') {
+  writeCandidate({
+    available: head,
+    source: 'git',
+    mode: 'mirror',
+    currentVersion: { package: 'harness', version: manifest.harness.dshVersion },
+    action: 'Manual harness pin bump: update the harness gitlink to the new upstream HEAD, bump root deps and minimumReleaseAgeExclude, re-baseline the brand overlay if upstream strings changed, then run the release-level test matrix.',
+  })
+  setOutput('changed', 'true')
   process.exit(0)
 }
 

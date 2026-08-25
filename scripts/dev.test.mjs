@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, utimesSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -116,5 +117,72 @@ test('desktop shell build command pins -C first and an absolute -o', async () =>
     assert.deepEqual(build.args, ['build', '-C', layout.desktopDir, '-o', layout.desktopShell, '.'])
   } finally {
     await rm(root, { recursive: true, force: true })
+  }
+})
+
+// ── harness overlays ──────────────────────────────────────────────────────────
+// overlays/harness 的发行版增量（品牌兜底字符串 + anchored-standard 预设）由
+// scripts/apply-harness-overlays.mjs 在构建/打包阶段应用；harness 工作树必须
+// 保持上游 pristine。测试用模拟上游文件验证 apply/revert/verify 的幂等与保护。
+
+import { fileURLToPath } from 'node:url'
+
+const overlayScript = fileURLToPath(new URL('./apply-harness-overlays.mjs', import.meta.url))
+const overlayUpstreamFiles = {
+  'apps/web/index.html': '<!doctype html><html lang="en"><head><title>DSH Local Build</title></head></html>\n',
+  'apps/web/vite.config.ts': "const DEFAULT_CLIENT_TITLE = 'DSH Local Build'\nhtml.replace('<title>DSH Local Build</title>', `<title>${title}</title>`)\n",
+  'packages/client/ui-renderer/src/client/DocumentTitle.tsx': "const DEFAULT_CLIENT_TITLE = 'DSH Local Build'\n",
+  'packages/client/ui-sidebar/src/client/SidebarRoot.tsx': '<span className={css.fallbackBrandName}>DSH Local Build</span>\n',
+}
+
+function runOverlay(...args) {
+  return execFileSync(process.execPath, [overlayScript, ...args], { encoding: 'utf8' })
+}
+
+async function seedUpstreamTree(tree) {
+  for (const [rel, content] of Object.entries(overlayUpstreamFiles)) {
+    const target = path.join(tree, rel)
+    mkdirSync(path.dirname(target), { recursive: true })
+    writeFileSync(target, content)
+  }
+}
+
+test('harness overlays apply/revert/verify on a pristine tree', async () => {
+  const tree = await mkdtemp(path.join(tmpdir(), 'marisa-overlay-'))
+  try {
+    await seedUpstreamTree(tree)
+    const anchoredDir = path.join(tree, 'apps', 'cli', 'config', 'agent-presets', 'anchored-standard')
+
+    runOverlay('apply', '--tree', tree)
+    assert.match(readFileSync(path.join(tree, 'apps/web/index.html'), 'utf8'), /<html lang="zh-CN"><head><title>Marisa DSH<\/title>/u)
+    assert.match(readFileSync(path.join(tree, 'packages/client/ui-renderer/src/client/DocumentTitle.tsx'), 'utf8'), /'Marisa DSH'/u)
+    assert.ok(existsSync(path.join(anchoredDir, 'agent.cordis.yml')), 'anchored-standard preset must be materialized')
+
+    runOverlay('apply', '--tree', tree) // 幂等
+    assert.throws(() => runOverlay('verify', '--tree', tree), (error) => String(error.stderr ?? '').includes('not pristine'))
+
+    runOverlay('revert', '--tree', tree)
+    assert.match(readFileSync(path.join(tree, 'apps/web/index.html'), 'utf8'), /<html lang="en"><head><title>DSH Local Build<\/title>/u)
+    assert.match(readFileSync(path.join(tree, 'packages/client/ui-renderer/src/client/DocumentTitle.tsx'), 'utf8'), /'DSH Local Build'/u)
+    assert.ok(!existsSync(anchoredDir), 'anchored-standard must be removed on revert')
+
+    runOverlay('revert', '--tree', tree) // 幂等
+    runOverlay('verify', '--tree', tree)
+  } finally {
+    await rm(tree, { recursive: true, force: true })
+  }
+})
+
+test('harness overlay revert refuses foreign edits under anchored-standard', async () => {
+  const tree = await mkdtemp(path.join(tmpdir(), 'marisa-overlay-foreign-'))
+  try {
+    await seedUpstreamTree(tree)
+    runOverlay('apply', '--tree', tree)
+    const foreign = path.join(tree, 'apps', 'cli', 'config', 'agent-presets', 'anchored-standard', 'FOREIGN.md')
+    writeFileSync(foreign, 'x')
+    assert.throws(() => runOverlay('revert', '--tree', tree), (error) => String(error.stderr ?? '').includes('refusing to remove'))
+    assert.ok(existsSync(foreign), 'foreign file must survive a refused revert')
+  } finally {
+    await rm(tree, { recursive: true, force: true })
   }
 })

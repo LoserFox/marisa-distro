@@ -8,17 +8,17 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
 	let react_jsx_runtime = require("react/jsx-runtime");
 	//#region node_modules/.pnpm/clsx@2.1.1/node_modules/clsx/dist/clsx.mjs
-	function r(e) {
+	function r$1(e) {
 		var t, f, n = "";
 		if ("string" == typeof e || "number" == typeof e) n += e;
 		else if ("object" == typeof e) if (Array.isArray(e)) {
 			var o = e.length;
-			for (t = 0; t < o; t++) e[t] && (f = r(e[t])) && (n && (n += " "), n += f);
+			for (t = 0; t < o; t++) e[t] && (f = r$1(e[t])) && (n && (n += " "), n += f);
 		} else for (f in e) e[f] && (n && (n += " "), n += f);
 		return n;
 	}
 	function clsx() {
-		for (var e, t, f = 0, n = "", o = arguments.length; f < o; f++) (e = arguments[f]) && (t = r(e)) && (n && (n += " "), n += t);
+		for (var e, t, f = 0, n = "", o = arguments.length; f < o; f++) (e = arguments[f]) && (t = r$1(e)) && (n && (n += " "), n += t);
 		return n;
 	}
 	//#endregion
@@ -2324,10 +2324,10 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			for (let i = 0; i < this.config.dynamicSlots.length; i++) ensureAddr(this, i << 1);
 			this.computeSlot = null;
 		}
-		field(field, require = true) {
+		field(field, require$1 = true) {
 			let addr = this.config.address[field.id];
 			if (addr == null) {
-				if (require) throw new RangeError("Field is not present in this state");
+				if (require$1) throw new RangeError("Field is not present in this state");
 				return;
 			}
 			ensureAddr(this, addr);
@@ -3556,7 +3556,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	};
 	//#endregion
 	//#region node_modules/.pnpm/w3c-keyname@2.2.8/node_modules/w3c-keyname/index.js
-	var base = {
+	var base$1 = {
 		8: "Backspace",
 		9: "Tab",
 		10: "Enter",
@@ -3638,15 +3638,15 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	};
 	var mac = typeof navigator != "undefined" && /Mac/.test(navigator.platform);
 	var ie$1 = typeof navigator != "undefined" && /MSIE \d|Trident\/(?:[7-9]|\d{2,})\..*rv:(\d+)/.exec(navigator.userAgent);
-	for (var i = 0; i < 10; i++) base[48 + i] = base[96 + i] = String(i);
-	for (var i = 1; i <= 24; i++) base[i + 111] = "F" + i;
+	for (var i = 0; i < 10; i++) base$1[48 + i] = base$1[96 + i] = String(i);
+	for (var i = 1; i <= 24; i++) base$1[i + 111] = "F" + i;
 	for (var i = 65; i <= 90; i++) {
-		base[i] = String.fromCharCode(i + 32);
+		base$1[i] = String.fromCharCode(i + 32);
 		shift[i] = String.fromCharCode(i);
 	}
-	for (var code in base) if (!shift.hasOwnProperty(code)) shift[code] = base[code];
+	for (var code$1 in base$1) if (!shift.hasOwnProperty(code$1)) shift[code$1] = base$1[code$1];
 	function keyName(event) {
-		var name = !(mac && event.metaKey && event.shiftKey && !event.ctrlKey && !event.altKey || ie$1 && event.shiftKey && event.key && event.key.length == 1 || event.key == "Unidentified") && event.key || (event.shiftKey ? shift : base)[event.keyCode] || event.key || "Unidentified";
+		var name = !(mac && event.metaKey && event.shiftKey && !event.ctrlKey && !event.altKey || ie$1 && event.shiftKey && event.key && event.key.length == 1 || event.key == "Unidentified") && event.key || (event.shiftKey ? shift : base$1)[event.keyCode] || event.key || "Unidentified";
 		if (name == "Esc") name = "Escape";
 		if (name == "Del") name = "Delete";
 		if (name == "Left") name = "ArrowLeft";
@@ -4458,7 +4458,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		}
 		return true;
 	}
-	const types$1 = [];
+	const types$2 = [];
 	function computeCharTypes(line, rFrom, rTo, isolates, outerType) {
 		for (let iI = 0; iI <= isolates.length; iI++) {
 			let from = iI ? isolates[iI - 1].to : rFrom, to = iI < isolates.length ? isolates[iI].from : rTo;
@@ -4467,22 +4467,22 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				let type = charType(line.charCodeAt(i));
 				if (type == 512) type = prev;
 				else if (type == 8 && prevStrong == 4) type = 16;
-				types$1[i] = type == 4 ? 2 : type;
+				types$2[i] = type == 4 ? 2 : type;
 				if (type & 7) prevStrong = type;
 				prev = type;
 			}
 			for (let i = from, prev = prevType, prevStrong = prevType; i < to; i++) {
-				let type = types$1[i];
+				let type = types$2[i];
 				if (type == 128) {
-					if (i < to - 1 && prev == types$1[i + 1] && prev & 24) type = types$1[i] = prev;
-					else types$1[i] = 256;
+					if (i < to - 1 && prev == types$2[i + 1] && prev & 24) type = types$2[i] = prev;
+					else types$2[i] = 256;
 				} else if (type == 64) {
 					let end = i + 1;
-					while (end < to && types$1[end] == 64) end++;
-					let replace = i && prev == 8 || end < rTo && types$1[end] == 8 ? prevStrong == 1 ? 1 : 8 : 256;
-					for (let j = i; j < end; j++) types$1[j] = replace;
+					while (end < to && types$2[end] == 64) end++;
+					let replace = i && prev == 8 || end < rTo && types$2[end] == 8 ? prevStrong == 1 ? 1 : 8 : 256;
+					for (let j = i; j < end; j++) types$2[j] = replace;
 					i = end - 1;
-				} else if (type == 8 && prevStrong == 1) types$1[i] = 1;
+				} else if (type == 8 && prevStrong == 1) types$2[i] = 1;
 				prev = type;
 				if (type & 7) prevStrong = type;
 			}
@@ -4497,7 +4497,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 					for (let sJ = sI - 3; sJ >= 0; sJ -= 3) if (BracketStack[sJ + 1] == -br) {
 						let flags = BracketStack[sJ + 2];
 						let type = flags & 2 ? outerType : !(flags & 4) ? 0 : flags & 1 ? oppositeType : outerType;
-						if (type) types$1[i] = types$1[BracketStack[sJ]] = type;
+						if (type) types$2[i] = types$2[BracketStack[sJ]] = type;
 						sI = sJ;
 						break;
 					}
@@ -4507,7 +4507,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 					BracketStack[sI++] = ch;
 					BracketStack[sI++] = context;
 				}
-			} else if ((type = types$1[i]) == 2 || type == 1) {
+			} else if ((type = types$2[i]) == 2 || type == 1) {
 				let embed = type == outerType;
 				context = embed ? 0 : 1;
 				for (let sJ = sI - 3; sJ >= 0; sJ -= 3) {
@@ -4526,23 +4526,23 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		for (let iI = 0, prev = outerType; iI <= isolates.length; iI++) {
 			let from = iI ? isolates[iI - 1].to : rFrom, to = iI < isolates.length ? isolates[iI].from : rTo;
 			for (let i = from; i < to;) {
-				let type = types$1[i];
+				let type = types$2[i];
 				if (type == 256) {
 					let end = i + 1;
 					for (;;) if (end == to) {
 						if (iI == isolates.length) break;
 						end = isolates[iI++].to;
 						to = iI < isolates.length ? isolates[iI].from : rTo;
-					} else if (types$1[end] == 256) end++;
+					} else if (types$2[end] == 256) end++;
 					else break;
 					let beforeL = prev == 1;
-					let replace = beforeL == ((end < rTo ? types$1[end] : outerType) == 1) ? beforeL ? 1 : 2 : outerType;
+					let replace = beforeL == ((end < rTo ? types$2[end] : outerType) == 1) ? beforeL ? 1 : 2 : outerType;
 					for (let j = end, jI = iI, fromJ = jI ? isolates[jI - 1].to : rFrom; j > i;) {
 						if (j == fromJ) {
 							j = isolates[--jI].from;
 							fromJ = jI ? isolates[jI - 1].to : rFrom;
 						}
-						types$1[--j] = replace;
+						types$2[--j] = replace;
 					}
 					i = end;
 				} else {
@@ -4557,7 +4557,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		if (level % 2 == baseLevel % 2) for (let iCh = from, iI = 0; iCh < to;) {
 			let sameDir = true, isNum = false;
 			if (iI == isolates.length || iCh < isolates[iI].from) {
-				let next = types$1[iCh];
+				let next = types$2[iCh];
 				if (next != ourType) {
 					sameDir = false;
 					isNum = next == 16;
@@ -4572,7 +4572,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				if (!sameDir) for (let upto = iso.to, jI = iI + 1;;) {
 					if (upto == to) break run;
 					if (jI < isolates.length && isolates[jI].from == upto) upto = isolates[jI++].to;
-					else if (types$1[upto] == ourType) break run;
+					else if (types$2[upto] == ourType) break run;
 					else break;
 				}
 				iI++;
@@ -4583,7 +4583,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 					iCh = iso.to;
 				}
 				iScan = iso.to;
-			} else if (iScan == to || (sameDir ? types$1[iScan] != ourType : types$1[iScan] == ourType)) break;
+			} else if (iScan == to || (sameDir ? types$2[iScan] != ourType : types$2[iScan] == ourType)) break;
 			else iScan++;
 			if (recurse) emitSpans(line, iCh, iScan, level + 1, baseLevel, recurse, order);
 			else if (iCh < iScan) order.push(new BidiSpan(iCh, iScan, localLevel));
@@ -4592,7 +4592,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		else for (let iCh = to, iI = isolates.length; iCh > from;) {
 			let sameDir = true, isNum = false;
 			if (!iI || iCh > isolates[iI - 1].to) {
-				let next = types$1[iCh - 1];
+				let next = types$2[iCh - 1];
 				if (next != ourType) {
 					sameDir = false;
 					isNum = next == 16;
@@ -4607,7 +4607,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				if (!sameDir) for (let upto = iso.from, jI = iI;;) {
 					if (upto == from) break run;
 					if (jI && isolates[jI - 1].to == upto) upto = isolates[--jI].from;
-					else if (types$1[upto - 1] == ourType) break run;
+					else if (types$2[upto - 1] == ourType) break run;
 					else break;
 				}
 				if (recurse) recurse.push(iso);
@@ -4617,7 +4617,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 					iCh = iso.from;
 				}
 				iScan = iso.from;
-			} else if (iScan == from || (sameDir ? types$1[iScan - 1] != ourType : types$1[iScan - 1] == ourType)) break;
+			} else if (iScan == from || (sameDir ? types$2[iScan - 1] != ourType : types$2[iScan - 1] == ourType)) break;
 			else iScan--;
 			if (recurse) emitSpans(line, iScan, iCh, level + 1, baseLevel, recurse, order);
 			else if (iScan < iCh) order.push(new BidiSpan(iScan, iCh, localLevel));
@@ -4634,7 +4634,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	function computeOrder(line, direction, isolates) {
 		if (!line) return [new BidiSpan(0, 0, direction == RTL ? 1 : 0)];
 		if (direction == LTR && !isolates.length && !BidiRE.test(line)) return trivialOrder(line.length);
-		if (isolates.length) while (line.length > types$1.length) types$1[types$1.length] = 256;
+		if (isolates.length) while (line.length > types$2.length) types$2[types$2.length] = 256;
 		let order = [], level = direction == LTR ? 0 : 1;
 		computeSectionOrder(line, level, level, isolates, 0, line.length, order);
 		return order;
@@ -11294,7 +11294,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		let scopeObj = map[scope], baseName, shiftName;
 		if (scopeObj) {
 			if (runFor(scopeObj[prefix + modifiers(name, event, !isChar)])) handled = true;
-			else if (isChar && (event.altKey || event.metaKey || event.ctrlKey) && !(browser.windows && event.ctrlKey && event.altKey) && !(browser.mac && event.altKey && !(event.ctrlKey || event.metaKey)) && (baseName = base[event.keyCode]) && baseName != name) {
+			else if (isChar && (event.altKey || event.metaKey || event.ctrlKey) && !(browser.windows && event.ctrlKey && event.altKey) && !(browser.mac && event.altKey && !(event.ctrlKey || event.metaKey)) && (baseName = base$1[event.keyCode]) && baseName != name) {
 				if (runFor(scopeObj[prefix + modifiers(baseName, event, true)])) handled = true;
 				else if (event.shiftKey && (shiftName = shift[event.keyCode]) != name && shiftName != baseName && runFor(scopeObj[prefix + modifiers(shiftName, event, false)])) handled = true;
 			} else if (isChar && event.shiftKey && runFor(scopeObj[prefix + modifiers(name, event, true)])) handled = true;
@@ -13950,12 +13950,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		return rule || null;
 	}
 	const t$1 = Tag$1.define;
-	const comment = t$1();
+	const comment$2 = t$1();
 	const name = t$1();
 	const typeName = t$1(name);
 	const propertyName = t$1(name);
 	const literal = t$1();
-	const string = t$1(literal);
+	const string$1 = t$1(literal);
 	const number = t$1(literal);
 	const content = t$1();
 	const heading = t$1(content);
@@ -13988,19 +13988,19 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		/**
 		A comment.
 		*/
-		comment,
+		comment: comment$2,
 		/**
 		A line [comment](#highlight.tags.comment).
 		*/
-		lineComment: t$1(comment),
+		lineComment: t$1(comment$2),
 		/**
 		A block [comment](#highlight.tags.comment).
 		*/
-		blockComment: t$1(comment),
+		blockComment: t$1(comment$2),
 		/**
 		A documentation [comment](#highlight.tags.comment).
 		*/
-		docComment: t$1(comment),
+		docComment: t$1(comment$2),
 		/**
 		Any kind of identifier.
 		*/
@@ -14048,19 +14048,19 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		/**
 		A string [literal](#highlight.tags.literal).
 		*/
-		string,
+		string: string$1,
 		/**
 		A documentation [string](#highlight.tags.string).
 		*/
-		docString: t$1(string),
+		docString: t$1(string$1),
 		/**
 		A character literal (subtag of [string](#highlight.tags.string)).
 		*/
-		character: t$1(string),
+		character: t$1(string$1),
 		/**
 		An attribute value (subtag of [string](#highlight.tags.string)).
 		*/
-		attributeValue: t$1(string),
+		attributeValue: t$1(string$1),
 		/**
 		A number [literal](#highlight.tags.literal).
 		*/
@@ -15854,14 +15854,14 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			token: spec.token,
 			blankLine: spec.blankLine || (() => {}),
 			startState: spec.startState || (() => true),
-			copyState: spec.copyState || defaultCopyState,
+			copyState: spec.copyState || defaultCopyState$1,
 			indent: spec.indent || (() => null),
 			languageData: spec.languageData || {},
 			tokenTable: spec.tokenTable || noTokens,
 			mergeTokens: spec.mergeTokens !== false
 		};
 	}
-	function defaultCopyState(state) {
+	function defaultCopyState$1(state) {
 		if (typeof state != "object") return state;
 		let newState = {};
 		for (let prop in state) {
@@ -17927,7 +17927,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			this.code = code;
 		}
 	};
-	async function call(method, payload, signal) {
+	async function call$1(method, payload, signal) {
 		let response;
 		try {
 			response = await fetch(`/sidebar/api/${method}`, {
@@ -17943,82 +17943,154 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		if (!response.ok || parsed === null || parsed.ok !== true || parsed.value === void 0) throw new SidebarApiError(parsed?.error?.code ?? "http", parsed?.error?.message ?? `HTTP ${response.status}`);
 		return parsed.value;
 	}
+	/**
+	* Upload one file to the sidebar's raw upload route: the File goes straight
+	* into the POST body (no JSON/base64 re-encoding — the host streams it into
+	* the workspace). Failure surfaces as {@link SidebarApiError} with the wire
+	* code, exactly like every `/sidebar/api` call. An aborted `signal` rejects
+	* with the DOMException as-is (the caller decides whether that is an error).
+	*/
+	async function fetchUpload(scope, dir, relativePath, body, signal) {
+		const params = new URLSearchParams({
+			sessionId: scope.sessionId,
+			dir,
+			relativePath
+		});
+		if (scope.cwd !== void 0 && scope.cwd !== "") params.set("cwd", scope.cwd);
+		let response;
+		try {
+			response = await fetch(`/sidebar/upload?${params.toString()}`, {
+				method: "POST",
+				headers: { "content-type": "application/octet-stream" },
+				body,
+				signal
+			});
+		} catch (error) {
+			if (error instanceof DOMException && error.name === "AbortError") throw error;
+			throw new SidebarApiError("network", error instanceof Error ? error.message : String(error));
+		}
+		const parsed = await response.json().catch(() => null);
+		if (!response.ok || parsed === null || parsed.ok !== true || parsed.value === void 0) throw new SidebarApiError(parsed?.error?.code ?? "http", parsed?.error?.message ?? `HTTP ${response.status}`);
+		return parsed.value;
+	}
 	/** Fold a scope into a JSON payload ({cwd} only when present). */
 	function scopePayload(scope, extra) {
 		return {
 			sessionId: scope.sessionId,
 			...scope.cwd !== void 0 && scope.cwd !== "" ? { cwd: scope.cwd } : {},
+			...scope.repoRoot !== void 0 && scope.repoRoot !== "" ? { repoRoot: scope.repoRoot } : {},
 			...extra
 		};
 	}
+	/** Add a linked-worktree selection to a scoped Git request. The host validates
+	* membership before using it as a command cwd. */
+	function gitPayload(scope, worktree, extra) {
+		return scopePayload(scope, {
+			...worktree !== void 0 && worktree !== "" ? { worktree } : {},
+			...extra
+		});
+	}
 	/** The sidebar API surface (session scope threaded through every call). */
 	const api = {
-		sessionCwd: (scope, signal) => call("session.cwd", scopePayload(scope, {}), signal),
-		fsTree: (scope, path, signal) => call("fs.tree", scopePayload(scope, { path }), signal),
+		sessionCwd: (scope, signal) => call$1("session.cwd", scopePayload(scope, {}), signal),
+		fsTree: (scope, path, signal) => call$1("fs.tree", scopePayload(scope, { path }), signal),
 		/** Global recursive file-name search rooted at the session cwd (the editor
 		*  side panel's search box); matches are cwd-relative '/'-separated paths. */
-		fsSearch: (scope, query, signal) => call("fs.search", scopePayload(scope, { query }), signal),
-		fsRead: (scope, path, signal) => call("fs.read", scopePayload(scope, { path }), signal),
-		fsWrite: (scope, path, content) => call("fs.write", scopePayload(scope, {
+		fsSearch: (scope, query, signal) => call$1("fs.search", scopePayload(scope, { query }), signal),
+		fsRead: (scope, path, signal) => call$1("fs.read", scopePayload(scope, { path }), signal),
+		fsWrite: (scope, path, content) => call$1("fs.write", scopePayload(scope, {
 			path,
 			content
 		})),
-		gitStatus: (scope, signal) => call("git.status", scopePayload(scope, {}), signal),
-		gitDiff: (scope, path, staged, signal) => call("git.diff", scopePayload(scope, {
+		/** Upload one file's raw bytes into `dir` (keeps the folder tree via
+		*  `relativePath`); the host streams it under the session workspace. */
+		uploadFile: (scope, dir, relativePath, body, signal) => fetchUpload(scope, dir, relativePath, body, signal),
+		gitWorktrees: (scope, signal) => call$1("git.worktrees", scopePayload(scope, {}), signal),
+		gitStatus: (scope, worktree, signal) => call$1("git.status", gitPayload(scope, worktree, {}), signal),
+		gitDiff: (scope, path, staged, worktree, signal) => call$1("git.diff", gitPayload(scope, worktree, {
 			...path !== void 0 ? { path } : {},
 			staged
 		}), signal),
-		gitStage: (scope, path) => call("git.stage", scopePayload(scope, { ...path !== void 0 ? { path } : {} })),
-		gitUnstage: (scope, path) => call("git.unstage", scopePayload(scope, { ...path !== void 0 ? { path } : {} })),
-		gitCommit: (scope, message) => call("git.commit", scopePayload(scope, { message })),
-		gitBranch: (scope, signal) => call("git.branch", scopePayload(scope, {}), signal),
-		gitCheckout: (scope, branch) => call("git.checkout", scopePayload(scope, { branch })),
+		gitStage: (scope, path, worktree) => call$1("git.stage", gitPayload(scope, worktree, { ...path !== void 0 ? { path } : {} })),
+		gitUnstage: (scope, path, worktree) => call$1("git.unstage", gitPayload(scope, worktree, { ...path !== void 0 ? { path } : {} })),
+		gitCommit: (scope, message, worktree) => call$1("git.commit", gitPayload(scope, worktree, { message })),
+		gitBranch: (scope, worktree, signal) => call$1("git.branch", gitPayload(scope, worktree, {}), signal),
+		gitCheckout: (scope, branch, worktree) => call$1("git.checkout", gitPayload(scope, worktree, { branch })),
 		/** Recent commit history, lazily pageable (skip/count; defaults 0/30). */
-		gitLog: (scope, count, skip, signal) => call("git.log", scopePayload(scope, {
+		gitLog: (scope, count, skip, worktree, signal) => call$1("git.log", gitPayload(scope, worktree, {
 			...count !== void 0 ? { count } : {},
 			...skip !== void 0 ? { skip } : {}
 		}), signal),
 		/** Full patch text of one commit (diff display for the history rows). */
-		gitCommitDiff: (scope, hash, signal) => call("git.commit-diff", scopePayload(scope, { hash }), signal),
+		gitCommitDiff: (scope, hash, worktree, signal) => call$1("git.commit-diff", gitPayload(scope, worktree, { hash }), signal),
 		/** Discard the worktree changes of one file (the index is untouched). */
-		gitDiscard: (scope, path) => call("git.discard", scopePayload(scope, { path })),
+		gitDiscard: (scope, path, worktree) => call$1("git.discard", gitPayload(scope, worktree, { path })),
 		/** Revert one commit onto the current branch. */
-		gitRevert: (scope, hash) => call("git.revert", scopePayload(scope, { hash })),
+		gitRevert: (scope, hash, worktree) => call$1("git.revert", gitPayload(scope, worktree, { hash })),
 		/** Cherry-pick one commit onto the current branch. */
-		gitCherryPick: (scope, hash) => call("git.cherry-pick", scopePayload(scope, { hash })),
+		gitCherryPick: (scope, hash, worktree) => call$1("git.cherry-pick", gitPayload(scope, worktree, { hash })),
 		/** Release a terminal's process immediately (tab closed; the WS close frame
 		*  may be unreachable while the socket is down, so the host also accepts
 		*  this explicit route). */
-		ptyClose: (scope, tab) => call("pty.close", scopePayload(scope, { tab })),
+		ptyClose: (scope, tab) => call$1("pty.close", scopePayload(scope, { tab })),
 		/** Release an agent terminal by uuid (tab closed while WS was down). */
-		agentPtyClose: (uuid) => call("agent-pty.close", { uuid }),
+		agentPtyClose: (uuid) => call$1("agent-pty.close", { uuid }),
 		/** Terminal dependency status (issue #140): after a WS close 1011 with
 		*  reason `pty-deps-missing` the view fetches the full repair details here
 		*  (the close reason itself is capped at 123 bytes). */
-		terminalDeps: () => call("terminal.deps", {}),
+		terminalDeps: () => call$1("terminal.deps", {}),
 		/**
 		* The output the model has read so far for one background job (replayed
 		* from the owner session's event log — never the model's job_output
 		* cursor). The scope MUST be the job's OWNER session.
 		*/
-		jobOutput: (scope, id, signal) => call("jobs.output", scopePayload(scope, { id }), signal),
+		jobOutput: (scope, id, signal) => call$1("jobs.output", scopePayload(scope, { id }), signal),
 		/** Request cancellation of one background job (live jobs flip to stopping). */
-		jobKill: (scope, id, reason) => call("jobs.kill", scopePayload(scope, {
+		jobKill: (scope, id, reason) => call$1("jobs.kill", scopePayload(scope, {
 			id,
 			...reason !== void 0 ? { reason } : {}
 		})),
+		/**
+		* One batch live-preview fetch for the whole Subagent tree. The payload is
+		* the already-resolved topology ROOT (not a session scope); the host
+		* enumerates descendants once and folds running children's activity.
+		*/
+		subagentsLive: (rootSessionId, signal) => call$1("subagents.live", { rootSessionId }, signal),
+		/** Create a Side Chat thread: a child session seeded with the parent's
+		*  full log up to now. Empty question = immediate create (Codex-style):
+		*  the thread opens empty, the first prompt carries the boundary. */
+		sidechatStart: (sessionId, question) => call$1("sidechat.start", {
+			sessionId,
+			question: question ?? ""
+		}),
+		/** Deliver one follow-up message to a Side Chat thread. */
+		sidechatPrompt: (childId, text) => call$1("sidechat.prompt", {
+			childId,
+			text
+		}),
+		/** Abort a Side Chat thread's running turn (queued work is preserved). */
+		sidechatCancel: (childId) => call$1("sidechat.cancel", { childId }),
+		/** Release a Side Chat thread's live agent (history stays persisted). */
+		sidechatDispose: (childId) => call$1("sidechat.dispose", { childId }),
+		/** Live state + agent identity (provider/model/preset) of a thread. */
+		sidechatInfo: (childId) => call$1("sidechat.info", { childId }),
 		/** The effective terminal shell and its display name (plugin-global). */
-		shellGet: () => call("shell.get", {}),
+		shellGet: () => call$1("shell.get", {}),
 		/** Read the side card preferences (plugin-global, no session scope). */
-		settingsGet: () => call("settings.get", {}),
+		settingsGet: () => call$1("settings.get", {}),
 		/** Merge a patch into the side card preferences (revision-guarded). */
-		settingsUpdate: (patch, expectedRevision) => call("settings.update", {
+		settingsUpdate: (patch, expectedRevision) => call$1("settings.update", {
 			patch,
 			...expectedRevision !== void 0 ? { expectedRevision } : {}
 		}),
 		/** Probe a URL's response headers (the sidebar browser's embeddability
 		*  check; see the host's browser.probe route). */
-		browserProbe: (url, signal) => call("browser.probe", { url }, signal)
+		browserProbe: (url, signal) => call$1("browser.probe", { url }, signal),
+		/** External open for the file tree's "open with" menu: reveal a path in
+		*  the OS file manager, or hand a custom-scheme URL (vscode://, cursor://,
+		*  zed://, custom editors) to its registered handler. The host launches
+		*  the platform opener (argv, no shell). */
+		openExternal: (payload) => call$1("open.external", payload)
 	};
 	/**
 	* Absolute URL of the HTML preview route (see html-route.ts): the path is
@@ -18030,6 +18102,154 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	function htmlUrl(scope, path) {
 		return encodeHtmlUrl(scope.sessionId, path);
+	}
+	//#endregion
+	//#region src/client/paths.ts
+	/**
+	* Path projection helpers shared by the explorer rows: a path relative to
+	* the session cwd (for the @-reference button and "copy relative path").
+	* The fs-tree joins with '/' even on Windows, so both separators normalize
+	* to '/' before comparison.
+	*
+	* This module is dependency-free (no node:path in the client bundle): the
+	* host is the authority for path semantics, so this mirror deliberately
+	* accepts a SUPERSET of absolute forms — anything a Windows host would emit
+	* (drive letters, UNC) plus POSIX roots. A form the host would reject
+	* (e.g. a backslash UNC path on a POSIX host) passes through here and then
+	* fails loudly in the host's requireAbsolute instead of being silently
+	* joined onto the cwd.
+	*/
+	/**
+	* Mirror of the host's absolute-path notion (see fs-tree.requireAbsolute):
+	* POSIX roots, Windows drive letters, and Windows UNC network shares in
+	* both backslash (`\\server\share\...`) and forward-slash
+	* (`//server/share/...`) form. Deliberately a superset — see the module
+	* comment — so a produced UNC path is never joined onto the cwd.
+	*/
+	function isAbsolutePath(path) {
+		return path.startsWith("/") || /^[A-Za-z]:[\\/]/.test(path) || /^[\\/]{2}[^\\/]/.test(path);
+	}
+	/**
+	* The path relative to the session's working directory.
+	* @param cwd - the explorer root (absolute).
+	* @param path - an absolute entry path from the fs-tree.
+	* @returns the relative path with '/' separators ('.' for the cwd itself),
+	* or `path` unchanged when it lies outside the cwd.
+	*
+	* The prefix test is case-insensitive: Windows paths (and macOS's
+	* case-insensitive volumes) may arrive with different casing than the cwd
+	* row, and the containment decision must not depend on it. The returned
+	* relative text keeps the caller's own casing.
+	*/
+	function relativeTo(cwd, path) {
+		const base = cwd.replace(/[\\/]+$/, "");
+		const norm = (value) => value.replace(/\\/g, "/");
+		const nBase = norm(base);
+		const nPath = norm(path);
+		if (nPath === nBase) return ".";
+		if (nPath.toLowerCase().startsWith(`${nBase.toLowerCase()}/`)) return nPath.slice(nBase.length + 1);
+		return path;
+	}
+	//#endregion
+	//#region src/client/markdown-images.ts
+	/**
+	* True for a destination that is a remote URL — an absolute `scheme:` URL
+	* that is not a Windows drive path (`C:\...`). http/https/data/mailto etc.
+	* all match here and are handed back to `MarkdownText` untouched.
+	*/
+	function isRemoteUrl(dest) {
+		return /^[a-z][a-z0-9+.-]*:/i.test(dest) && !/^[A-Za-z]:[\\/]/.test(dest);
+	}
+	/**
+	* Collapse `.`/`..` segments of an absolute local path, preserving its root
+	* (POSIX `/`), its Windows drive (`C:\`), or its UNC `\\server\share`
+	* prefix. The host's `requireAbsolute` (`path.resolve`) normalizes anyway,
+	* but producing a canonical path here keeps the `/sidebar/file` URL clean.
+	*/
+	function normalizeLocalPath(path) {
+		const drive = /^([A-Za-z]:)[\\/]/.exec(path)?.[1];
+		const parts = (drive !== void 0 ? path.slice(drive.length) : path).split(/[\\/]+/).filter((segment) => segment !== "" && segment !== ".");
+		const out = [];
+		for (const part of parts) {
+			if (part === "..") {
+				out.pop();
+				continue;
+			}
+			out.push(part);
+		}
+		if (drive !== void 0) return `${drive}\\${out.join("\\")}`;
+		const separator = path.startsWith("\\") ? "\\" : "/";
+		return `${path.startsWith("/") ? "/" : path.startsWith("\\") ? "\\\\" : ""}${out.join(separator)}`;
+	}
+	/**
+	* Rewrite markdown image destinations that point at local files into
+	* absolute `/sidebar/file` media URLs. Relative destinations resolve against
+	* the opened file's directory (normalizing `.`/`..` segments); absolute
+	* local paths pass through. Remote (http/https/data/mailto) and `#`-anchor
+	* destinations are left untouched for `MarkdownText`. Reference-style images
+	* (`![x][id]` + `[id]: url`) are covered by rewriting their definition lines.
+	*
+	* Code spans (`` `...` ``) and fenced code blocks (``` ```...``` ```) are
+	* masked before rewriting so documentation that demonstrates `![alt](./img.png)`
+	* is not mutated into a `/sidebar/file` URL. Reference definitions are only
+	* rewritten when their label is actually referenced by an image (collapsed
+	* `[![][id]]`, full `![alt][id]`, or shortcut `![]` referencing the next
+	* definition) — a plain link `[text][id]` must not have its destination
+	* redirected to the media route.
+	* @param text - The raw markdown source (inline + reference images).
+	* @param scope - The session scope (sessionId + cwd) for the media route.
+	* @param filePath - The absolute path of the opened `.md` file.
+	* @param origin - The GUI's own origin (`window.location.origin`); injected
+	* so the core rewrite stays pure and unit-testable.
+	* @returns The markdown with local image destinations rewritten in place.
+	*/
+	/**
+	* Resolve one media destination against the session's media route: local
+	* (relative or absolute) paths become absolute `/sidebar/file` URLs (prefixed
+	* with the GUI's own origin so the shared MarkdownText http(s) allowlist
+	* accepts them), while remote URLs, `#`-anchors and empty destinations are
+	* returned untouched. Shared by the markdown image rewriter below and by the
+	* preview's raw-HTML sanitizer (`markdown-html.tsx`, which meets the same
+	* allowlist when rendering `<img src="./x.png">` inside HTML blocks).
+	*/
+	function resolveLocalMediaDest(dest, scope, filePath, origin) {
+		const trimmed = dest.trim();
+		if (trimmed === "" || trimmed.startsWith("#")) return dest;
+		if (isRemoteUrl(trimmed)) return dest;
+		const slash = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
+		const directory = slash === -1 ? "/" : filePath.slice(0, slash + 1);
+		const candidate = isAbsolutePath(trimmed) ? trimmed : directory + trimmed;
+		const params = new URLSearchParams({
+			sessionId: scope.sessionId,
+			path: normalizeLocalPath(candidate)
+		});
+		if (scope.cwd !== void 0 && scope.cwd !== "") params.set("cwd", scope.cwd);
+		return `${origin}/sidebar/file?${params.toString()}`;
+	}
+	function rewriteLocalImageUrls(text, scope, filePath, origin) {
+		const resolve = (dest) => resolveLocalMediaDest(dest, scope, filePath, origin);
+		const masks = [];
+		const inline = text.replace(/```[\s\S]*?```/g, (block) => {
+			masks.push(block);
+			return `\u0000${masks.length - 1}\u0000`;
+		}).replace(/`[^`\n]*`/g, (span) => {
+			masks.push(span);
+			return `\u0000${masks.length - 1}\u0000`;
+		}).replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_match, alt, dest) => {
+			return `![${alt}](${resolve(dest)})`;
+		});
+		const imageLabels = /* @__PURE__ */ new Set();
+		const labelRe = /!\[([^\]]*)\](?:\[((?:[^\][]|\[[^\]]*\])*)\])?/g;
+		let labelMatch;
+		while ((labelMatch = labelRe.exec(inline)) !== null) {
+			const alt = labelMatch[1] ?? "";
+			const ref = labelMatch[2];
+			imageLabels.add(ref !== void 0 && ref !== "" ? ref.toLowerCase() : alt.toLowerCase());
+		}
+		return inline.replace(/^(\s*\[([^\]]+)\]:\s*)(<[^>]+>|[^\s]+)/gm, (match, head, label, dest) => {
+			if (!imageLabels.has(label.toLowerCase())) return match;
+			return `${head}${resolve(dest.replace(/^<|>$/g, ""))}`;
+		}).replace(/\u0000(\d+)\u0000/g, (_m, index) => masks[Number(index)] ?? "");
 	}
 	//#endregion
 	//#region node_modules/.pnpm/@lezer+lr@1.4.10/node_modules/@lezer/lr/dist/index.js
@@ -19233,7 +19453,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return !this.disabled || this.disabled[term] == 0;
 		}
 	};
-	const id = (x) => x;
+	const id$1 = (x) => x;
 	/**
 	Context trackers are used to track stateful context (such as
 	indentation in the Python grammar, or parent elements in the XML
@@ -19252,9 +19472,9 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		*/
 		constructor(spec) {
 			this.start = spec.start;
-			this.shift = spec.shift || id;
-			this.reduce = spec.reduce || id;
-			this.reuse = spec.reuse || id;
+			this.shift = spec.shift || id$1;
+			this.reduce = spec.reduce || id$1;
+			this.reuse = spec.reuse || id$1;
 			this.hash = spec.hash || (() => 0);
 			this.strict = spec.strict !== false;
 		}
@@ -19572,7 +19792,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	const lt = 60;
 	const comma = 44;
 	const question$1 = 63;
-	const dot$1 = 46;
+	const dot$2 = 46;
 	const bracketL$1 = 91;
 	const trackNewline = new ContextTracker({
 		start: false,
@@ -19606,7 +19826,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				let mayPostfix = !stack.context && stack.canShift(incdec);
 				input.acceptToken(mayPostfix ? incdec : incdecPrefix);
 			}
-		} else if (next == question$1 && input.peek(1) == dot$1) {
+		} else if (next == question$1 && input.peek(1) == dot$2) {
 			input.advance();
 			input.advance();
 			if (input.next < 48 || input.next > 57) input.acceptToken(questionDot);
@@ -19793,7 +20013,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		__proto__: null,
 		"<": 193
 	};
-	const parser$14 = LRParser.deserialize({
+	const parser$15 = LRParser.deserialize({
 		version: 14,
 		states: "$F|Q%TQlOOO%[QlOOO'_QpOOP(lO`OOO*zQ!0MxO'#CiO+RO#tO'#CjO+aO&jO'#CjO+oO#@ItO'#DaO.QQlO'#DgO.bQlO'#DrO%[QlO'#DzO0fQlO'#ESOOQ!0Lf'#E['#E[O1PQ`O'#EXOOQO'#Ep'#EpOOQO'#Il'#IlO1XQ`O'#GsO1dQ`O'#EoO1iQ`O'#EoO3hQ!0MxO'#JrO6[Q!0MxO'#JsO6uQ`O'#F]O6zQ,UO'#FtOOQ!0Lf'#Ff'#FfO7VO7dO'#FfO9XQMhO'#F|O9`Q`O'#F{OOQ!0Lf'#Js'#JsOOQ!0Lb'#Jr'#JrO9eQ`O'#GwOOQ['#K_'#K_O9pQ`O'#IYO9uQ!0LrO'#IZOOQ['#J`'#J`OOQ['#I_'#I_Q`QlOOQ`QlOOO9}Q!L^O'#DvO:UQlO'#EOO:]QlO'#EQO9kQ`O'#GsO:dQMhO'#CoO:rQ`O'#EnO:}Q`O'#EyO;hQMhO'#FeO;xQ`O'#GsOOQO'#K`'#K`O;}Q`O'#K`O<]Q`O'#G{O<]Q`O'#G|O<]Q`O'#HOO9kQ`O'#HRO=SQ`O'#HUO>kQ`O'#CeO>{Q`O'#HcO?TQ`O'#HiO?TQ`O'#HkO`QlO'#HmO?TQ`O'#HoO?TQ`O'#HrO?YQ`O'#HxO?_Q!0LsO'#IOO%[QlO'#IQO?jQ!0LsO'#ISO?uQ!0LsO'#IUO9uQ!0LrO'#IWO@QQ!0MxO'#CiOASQpO'#DlQOQ`OOO%[QlO'#EQOAjQ`O'#ETO:dQMhO'#EnOAuQ`O'#EnOBQQ!bO'#FeOOQ['#Cg'#CgOOQ!0Lb'#Dq'#DqOOQ!0Lb'#Jv'#JvO%[QlO'#JvOOQO'#Jy'#JyOOQO'#Ih'#IhOCQQpO'#EgOOQ!0Lb'#Ef'#EfOOQ!0Lb'#J}'#J}OC|Q!0MSO'#EgODWQpO'#EWOOQO'#Jx'#JxODlQpO'#JyOEyQpO'#EWODWQpO'#EgPFWO&2DjO'#CbPOOO)CD})CD}OOOO'#I`'#I`OFcO#tO,59UOOQ!0Lh,59U,59UOOOO'#Ia'#IaOFqO&jO,59UOGPQ!L^O'#DcOOOO'#Ic'#IcOGWO#@ItO,59{OOQ!0Lf,59{,59{OGfQlO'#IdOGyQ`O'#JtOIxQ!fO'#JtO+}QlO'#JtOJPQ`O,5:ROJgQ`O'#EpOJtQ`O'#KTOKPQ`O'#KSOKPQ`O'#KSOKXQ`O,5;^OK^Q`O'#KROOQ!0Ln,5:^,5:^OKeQlO,5:^OMcQ!0MxO,5:fONSQ`O,5:nONmQ!0LrO'#KQONtQ`O'#KPO9eQ`O'#KPO! YQ`O'#KPO! bQ`O,5;]O! gQ`O'#KPO!#lQ!fO'#JsOOQ!0Lh'#Ci'#CiO%[QlO'#ESO!$[Q!fO,5:sOOQS'#Jz'#JzOOQO-E<j-E<jO9kQ`O,5=_O!$rQ`O,5=_O!$wQlO,5;ZO!&zQMhO'#EkO!(eQ`O,5;ZO!(jQlO'#DyO!(tQpO,5;dO!(|QpO,5;dO%[QlO,5;dOOQ['#FT'#FTOOQ['#FV'#FVO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eO%[QlO,5;eOOQ['#FZ'#FZO!)[QlO,5;tOOQ!0Lf,5;y,5;yOOQ!0Lf,5;z,5;zOOQ!0Lf,5;|,5;|O%[QlO'#IpO!+_Q!0LrO,5<iO%[QlO,5;eO!&zQMhO,5;eO!+|QMhO,5;eO!-nQMhO'#E^O%[QlO,5;wOOQ!0Lf,5;{,5;{O!-uQ,UO'#FjO!.rQ,UO'#KXO!.^Q,UO'#KXO!.yQ,UO'#KXOOQO'#KX'#KXO!/_Q,UO,5<SOOOW,5<`,5<`O!/pQlO'#FvOOOW'#Io'#IoO7VO7dO,5<QO!/wQ,UO'#FxOOQ!0Lf,5<Q,5<QO!0hQ$IUO'#CyOOQ!0Lh'#C}'#C}O!0{O#@ItO'#DRO!1iQMjO,5<eO!1pQ`O,5<hO!3YQ(CWO'#GXO!3jQ`O'#GYO!3oQ`O'#GYO!5_Q(CWO'#G^O!6dQpO'#GbOOQO'#Gn'#GnO!,TQMhO'#GmOOQO'#Gp'#GpO!,TQMhO'#GoO!7VQ$IUO'#JlOOQ!0Lh'#Jl'#JlO!7aQ`O'#JkO!7oQ`O'#JjO!7wQ`O'#CuOOQ!0Lh'#C{'#C{O!8YQ`O'#C}OOQ!0Lh'#DV'#DVOOQ!0Lh'#DX'#DXO!8_Q`O,5<eO1SQ`O'#DZO!,TQMhO'#GPO!,TQMhO'#GRO!8gQ`O'#GTO!8lQ`O'#GUO!3oQ`O'#G[O!,TQMhO'#GaO<]Q`O'#JkO!8qQ`O'#EqO!9`Q`O,5<gOOQ!0Lb'#Cr'#CrO!9hQ`O'#ErO!:bQpO'#EsOOQ!0Lb'#KR'#KRO!:iQ!0LrO'#KaO9uQ!0LrO,5=cO`QlO,5>tOOQ['#Jh'#JhOOQ[,5>u,5>uOOQ[-E<]-E<]O!<hQ!0MxO,5:bO!:]QpO,5:`O!?RQ!0MxO,5:jO%[QlO,5:jO!AiQ!0MxO,5:lOOQO,5@z,5@zO!BYQMhO,5=_O!BhQ!0LrO'#JiO9`Q`O'#JiO!ByQ!0LrO,59ZO!CUQpO,59ZO!C^QMhO,59ZO:dQMhO,59ZO!CiQ`O,5;ZO!CqQ`O'#HbO!DVQ`O'#KdO%[QlO,5;}O!:]QpO,5<PO!D_Q`O,5=zO!DdQ`O,5=zO!DiQ`O,5=zO!DwQ`O,5=zO9uQ!0LrO,5=zO<]Q`O,5=jOOQO'#Cy'#CyO!EOQpO,5=gO!EWQMhO,5=hO!EcQ`O,5=jO!EhQ!bO,5=mO!EpQ`O'#K`O?YQ`O'#HWO9kQ`O'#HYO!EuQ`O'#HYO:dQMhO'#H[O!EzQ`O'#H[OOQ[,5=p,5=pO!FPQ`O'#H]O!FbQ`O'#CoO!FgQ`O,59PO!FqQ`O,59PO!HvQlO,59POOQ[,59P,59PO!IWQ!0LrO,59PO%[QlO,59PO!KcQlO'#HeOOQ['#Hf'#HfOOQ['#Hg'#HgO`QlO,5=}O!KyQ`O,5=}O`QlO,5>TO`QlO,5>VO!LOQ`O,5>XO`QlO,5>ZO!LTQ`O,5>^O!LYQlO,5>dOOQ[,5>j,5>jO%[QlO,5>jO9uQ!0LrO,5>lOOQ[,5>n,5>nO#!dQ`O,5>nOOQ[,5>p,5>pO#!dQ`O,5>pOOQ[,5>r,5>rO##QQpO'#D_O%[QlO'#JvO##sQpO'#JvO##}QpO'#DmO#$`QpO'#DmO#&qQlO'#DmO#&xQ`O'#JuO#'QQ`O,5:WO#'VQ`O'#EtO#'eQ`O'#KUO#'mQ`O,5;_O#'rQpO'#DmO#(PQpO'#EVOOQ!0Lf,5:o,5:oO%[QlO,5:oO#(WQ`O,5:oO?YQ`O,5;YO!CUQpO,5;YO!C^QMhO,5;YO:dQMhO,5;YO#(`Q`O,5@bO#(eQ07dO,5:sOOQO-E<f-E<fO#)kQ!0MSO,5;RODWQpO,5:rO#)uQpO,5:rODWQpO,5;RO!ByQ!0LrO,5:rOOQ!0Lb'#Ej'#EjOOQO,5;R,5;RO%[QlO,5;RO#*SQ!0LrO,5;RO#*_Q!0LrO,5;RO!CUQpO,5:rOOQO,5;X,5;XO#*mQ!0LrO,5;RPOOO'#I^'#I^P#+RO&2DjO,58|POOO,58|,58|OOOO-E<^-E<^OOQ!0Lh1G.p1G.pOOOO-E<_-E<_OOOO,59},59}O#+^Q!bO,59}OOOO-E<a-E<aOOQ!0Lf1G/g1G/gO#+cQ!fO,5?OO+}QlO,5?OOOQO,5?U,5?UO#+mQlO'#IdOOQO-E<b-E<bO#+zQ`O,5@`O#,SQ!fO,5@`O#,ZQ`O,5@nOOQ!0Lf1G/m1G/mO%[QlO,5@oO#,cQ`O'#IjOOQO-E<h-E<hO#,ZQ`O,5@nOOQ!0Lb1G0x1G0xOOQ!0Ln1G/x1G/xOOQ!0Ln1G0Y1G0YO%[QlO,5@lO#,wQ!0LrO,5@lO#-YQ!0LrO,5@lO#-aQ`O,5@kO9eQ`O,5@kO#-iQ`O,5@kO#-wQ`O'#ImO#-aQ`O,5@kOOQ!0Lb1G0w1G0wO!(tQpO,5:uO!)PQpO,5:uOOQS,5:w,5:wO#.iQdO,5:wO#.qQMhO1G2yO9kQ`O1G2yOOQ!0Lf1G0u1G0uO#/PQ!0MxO1G0uO#0UQ!0MvO,5;VOOQ!0Lh'#GW'#GWO#0rQ!0MzO'#JlO!$wQlO1G0uO#2}Q!fO'#JwO%[QlO'#JwO#3XQ`O,5:eOOQ!0Lh'#D_'#D_OOQ!0Lf1G1O1G1OO%[QlO1G1OOOQ!0Lf1G1f1G1fO#3^Q`O1G1OO#5rQ!0MxO1G1PO#5yQ!0MxO1G1PO#8aQ!0MxO1G1PO#8hQ!0MxO1G1PO#;OQ!0MxO1G1PO#=fQ!0MxO1G1PO#=mQ!0MxO1G1PO#=tQ!0MxO1G1PO#@[Q!0MxO1G1PO#@cQ!0MxO1G1PO#BpQ?MtO'#CiO#DkQ?MtO1G1`O#DrQ?MtO'#JsO#EVQ!0MxO,5?[OOQ!0Lb-E<n-E<nO#GdQ!0MxO1G1PO#HaQ!0MzO1G1POOQ!0Lf1G1P1G1PO#IdQMjO'#J|O#InQ`O,5:xO#IsQ!0MxO1G1cO#JgQ,UO,5<WO#JoQ,UO,5<XO#JwQ,UO'#FoO#K`Q`O'#FnOOQO'#KY'#KYOOQO'#In'#InO#KeQ,UO1G1nOOQ!0Lf1G1n1G1nOOOW1G1y1G1yO#KvQ?MtO'#JrO#LQQ`O,5<bO!)[QlO,5<bOOOW-E<m-E<mOOQ!0Lf1G1l1G1lO#LVQpO'#KXOOQ!0Lf,5<d,5<dO#L_QpO,5<dO#LdQMhO'#DTOOOO'#Ib'#IbO#LkO#@ItO,59mOOQ!0Lh,59m,59mO%[QlO1G2PO!8lQ`O'#IrO#LvQ`O,5<zOOQ!0Lh,5<w,5<wO!,TQMhO'#IuO#MdQMjO,5=XO!,TQMhO'#IwO#NVQMjO,5=ZO!&zQMhO,5=]OOQO1G2S1G2SO#NaQ!dO'#CrO#NtQ(CWO'#ErO$ |QpO'#GbO$!dQ!dO,5<sO$!kQ`O'#K[O9eQ`O'#K[O$!yQ`O,5<uO$#aQ!dO'#C{O!,TQMhO,5<tO$#kQ`O'#GZO$$PQ`O,5<tO$$UQ!dO'#GWO$$cQ!dO'#K]O$$mQ`O'#K]O!&zQMhO'#K]O$$rQ`O,5<xO$$wQlO'#JvO$%RQpO'#GcO#$`QpO'#GcO$%dQ`O'#GgO!3oQ`O'#GkO$%iQ!0LrO'#ItO$%tQpO,5<|OOQ!0Lp,5<|,5<|O$%{QpO'#GcO$&YQpO'#GdO$&kQpO'#GdO$&pQMjO,5=XO$'QQMjO,5=ZOOQ!0Lh,5=^,5=^O!,TQMhO,5@VO!,TQMhO,5@VO$'bQ`O'#IyO$'vQ`O,5@UO$(OQ`O,59aOOQ!0Lh,59i,59iO$(TQ`O,5@VO$)TQ$IYO,59uOOQ!0Lh'#Jp'#JpO$)vQMjO,5<kO$*iQMjO,5<mO@zQ`O,5<oOOQ!0Lh,5<p,5<pO$*sQ`O,5<vO$*xQMjO,5<{O$+YQ`O'#KPO!$wQlO1G2RO$+_Q`O1G2RO9eQ`O'#KSO9eQ`O'#EtO%[QlO'#EtO9eQ`O'#I{O$+dQ!0LrO,5@{OOQ[1G2}1G2}OOQ[1G4`1G4`OOQ!0Lf1G/|1G/|OOQ!0Lf1G/z1G/zO$-fQ!0MxO1G0UOOQ[1G2y1G2yO!&zQMhO1G2yO%[QlO1G2yO#.tQ`O1G2yO$/jQMhO'#EkOOQ!0Lb,5@T,5@TO$/wQ!0LrO,5@TOOQ[1G.u1G.uO!ByQ!0LrO1G.uO!CUQpO1G.uO!C^QMhO1G.uO$0YQ`O1G0uO$0_Q`O'#CiO$0jQ`O'#KeO$0rQ`O,5=|O$0wQ`O'#KeO$0|Q`O'#KeO$1[Q`O'#JRO$1jQ`O,5AOO$1rQ!fO1G1iOOQ!0Lf1G1k1G1kO9kQ`O1G3fO@zQ`O1G3fO$1yQ`O1G3fO$2OQ`O1G3fO!DiQ`O1G3fO9uQ!0LrO1G3fOOQ[1G3f1G3fO!EcQ`O1G3UO!&zQMhO1G3RO$2TQ`O1G3ROOQ[1G3S1G3SO!&zQMhO1G3SO$2YQ`O1G3SO$2bQpO'#HQOOQ[1G3U1G3UO!6_QpO'#I}O!EhQ!bO1G3XOOQ[1G3X1G3XOOQ[,5=r,5=rO$2jQMhO,5=tO9kQ`O,5=tO$%dQ`O,5=vO9`Q`O,5=vO!CUQpO,5=vO!C^QMhO,5=vO:dQMhO,5=vO$2xQ`O'#KcO$3TQ`O,5=wOOQ[1G.k1G.kO$3YQ!0LrO1G.kO@zQ`O1G.kO$3eQ`O1G.kO9uQ!0LrO1G.kO$5mQ!fO,5AQO$5zQ`O,5AQO9eQ`O,5AQO$6VQlO,5>PO$6^Q`O,5>POOQ[1G3i1G3iO`QlO1G3iOOQ[1G3o1G3oOOQ[1G3q1G3qO?TQ`O1G3sO$6cQlO1G3uO$:gQlO'#HtOOQ[1G3x1G3xO$:tQ`O'#HzO?YQ`O'#H|OOQ[1G4O1G4OO$:|QlO1G4OO9uQ!0LrO1G4UOOQ[1G4W1G4WOOQ!0Lb'#G_'#G_O9uQ!0LrO1G4YO9uQ!0LrO1G4[O$?TQ`O,5@bO!)[QlO,5;`O9eQ`O,5;`O?YQ`O,5:XO!)[QlO,5:XO!CUQpO,5:XO$?YQ?MtO,5:XOOQO,5;`,5;`O$?dQpO'#IeO$?zQ`O,5@aOOQ!0Lf1G/r1G/rO$@SQpO'#IkO$@^Q`O,5@pOOQ!0Lb1G0y1G0yO#$`QpO,5:XOOQO'#Ig'#IgO$@fQpO,5:qOOQ!0Ln,5:q,5:qO#(ZQ`O1G0ZOOQ!0Lf1G0Z1G0ZO%[QlO1G0ZOOQ!0Lf1G0t1G0tO?YQ`O1G0tO!CUQpO1G0tO!C^QMhO1G0tOOQ!0Lb1G5|1G5|O!ByQ!0LrO1G0^OOQO1G0m1G0mO%[QlO1G0mO$@mQ!0LrO1G0mO$@xQ!0LrO1G0mO!CUQpO1G0^ODWQpO1G0^O$AWQ!0LrO1G0mOOQO1G0^1G0^O$AlQ!0MxO1G0mPOOO-E<[-E<[POOO1G.h1G.hOOOO1G/i1G/iO$AvQ!bO,5<iO$BOQ!fO1G4jOOQO1G4p1G4pO%[QlO,5?OO$BYQ`O1G5zO$BbQ`O1G6YO$BjQ!fO1G6ZO9eQ`O,5?UO$BtQ!0MxO1G6WO%[QlO1G6WO$CUQ!0LrO1G6WO$CgQ`O1G6VO$CgQ`O1G6VO9eQ`O1G6VO$CoQ`O,5?XO9eQ`O,5?XOOQO,5?X,5?XO$DTQ`O,5?XO$+YQ`O,5?XOOQO-E<k-E<kOOQS1G0a1G0aOOQS1G0c1G0cO#.lQ`O1G0cOOQ[7+(e7+(eO!&zQMhO7+(eO%[QlO7+(eO$DcQ`O7+(eO$DnQMhO7+(eO$D|Q!0MzO,5=XO$GXQ!0MzO,5=ZO$IdQ!0MzO,5=XO$KuQ!0MzO,5=ZO$NWQ!0MzO,59uO%!]Q!0MzO,5<kO%$hQ!0MzO,5<mO%&sQ!0MzO,5<{OOQ!0Lf7+&a7+&aO%)UQ!0MxO7+&aO%)xQlO'#IfO%*VQ`O,5@cO%*_Q!fO,5@cOOQ!0Lf1G0P1G0PO%*iQ`O7+&jOOQ!0Lf7+&j7+&jO%*nQ?MtO,5:fO%[QlO7+&zO%*xQ?MtO,5:bO%+VQ?MtO,5:jO%+aQ?MtO,5:lO%+kQMhO'#IiO%+uQ`O,5@hOOQ!0Lh1G0d1G0dOOQO1G1r1G1rOOQO1G1s1G1sO%+}Q!jO,5<ZO!)[QlO,5<YOOQO-E<l-E<lOOQ!0Lf7+'Y7+'YOOOW7+'e7+'eOOOW1G1|1G1|O%,YQ`O1G1|OOQ!0Lf1G2O1G2OOOOO,59o,59oO%,_Q!dO,59oOOOO-E<`-E<`OOQ!0Lh1G/X1G/XO%,fQ!0MxO7+'kOOQ!0Lh,5?^,5?^O%-YQMhO1G2fP%-aQ`O'#IrPOQ!0Lh-E<p-E<pO%-}QMjO,5?aOOQ!0Lh-E<s-E<sO%.pQMjO,5?cOOQ!0Lh-E<u-E<uO%.zQ!dO1G2wO%/RQ!dO'#CrO%/iQMhO'#KSO$$wQlO'#JvOOQ!0Lh1G2_1G2_O%/sQ`O'#IqO%0[Q`O,5@vO%0[Q`O,5@vO%0dQ`O,5@vO%0oQ`O,5@vOOQO1G2a1G2aO%0}QMjO1G2`O$+YQ`O'#K[O!,TQMhO1G2`O%1_Q(CWO'#IsO%1lQ`O,5@wO!&zQMhO,5@wO%1tQ!dO,5@wOOQ!0Lh1G2d1G2dO%4UQ!fO'#CiO%4`Q`O,5=POOQ!0Lb,5<},5<}O%4hQpO,5<}OOQ!0Lb,5=O,5=OOCwQ`O,5<}O%4sQpO,5<}OOQ!0Lb,5=R,5=RO$+YQ`O,5=VOOQO,5?`,5?`OOQO-E<r-E<rOOQ!0Lp1G2h1G2hO#$`QpO,5<}O$$wQlO,5=PO%5RQ`O,5=OO%5^QpO,5=OO!,TQMhO'#IuO%6WQMjO1G2sO!,TQMhO'#IwO%6yQMjO1G2uO%7TQMjO1G5qO%7_QMjO1G5qOOQO,5?e,5?eOOQO-E<w-E<wOOQO1G.{1G.{O!,TQMhO1G5qO!,TQMhO1G5qO!:]QpO,59wO%[QlO,59wOOQ!0Lh,5<j,5<jO%7lQ`O1G2ZO!,TQMhO1G2bO%7qQ!0MxO7+'mOOQ!0Lf7+'m7+'mO!$wQlO7+'mO%8eQ`O,5;`OOQ!0Lb,5?g,5?gOOQ!0Lb-E<y-E<yO%8jQ!dO'#K^O#(ZQ`O7+(eO4UQ!fO7+(eO$DfQ`O7+(eO%8tQ!0MvO'#CiO%9XQ!0MvO,5=SO%9lQ`O,5=SO%9tQ`O,5=SOOQ!0Lb1G5o1G5oOOQ[7+$a7+$aO!ByQ!0LrO7+$aO!CUQpO7+$aO!$wQlO7+&aO%9yQ`O'#JQO%:bQ`O,5APOOQO1G3h1G3hO9kQ`O,5APO%:bQ`O,5APO%:jQ`O,5APOOQO,5?m,5?mOOQO-E=P-E=POOQ!0Lf7+'T7+'TO%:oQ`O7+)QO9uQ!0LrO7+)QO9kQ`O7+)QO@zQ`O7+)QO%:tQ`O7+)QOOQ[7+)Q7+)QOOQ[7+(p7+(pO%:yQ!0MvO7+(mO!&zQMhO7+(mO!E^Q`O7+(nOOQ[7+(n7+(nO!&zQMhO7+(nO%;TQ`O'#KbO%;`Q`O,5=lOOQO,5?i,5?iOOQO-E<{-E<{OOQ[7+(s7+(sO%<rQpO'#HZOOQ[1G3`1G3`O!&zQMhO1G3`O%[QlO1G3`O%<yQ`O1G3`O%=UQMhO1G3`O9uQ!0LrO1G3bO$%dQ`O1G3bO9`Q`O1G3bO!CUQpO1G3bO!C^QMhO1G3bO%=dQ`O'#JPO%=xQ`O,5@}O%>QQpO,5@}OOQ!0Lb1G3c1G3cOOQ[7+$V7+$VO@zQ`O7+$VO9uQ!0LrO7+$VO%>]Q`O7+$VO%[QlO1G6lO%[QlO1G6mO%>bQ!0LrO1G6lO%>lQlO1G3kO%>sQ`O1G3kO%>xQlO1G3kOOQ[7+)T7+)TO9uQ!0LrO7+)_O`QlO7+)aOOQ['#Kh'#KhOOQ['#JS'#JSO%?PQlO,5>`OOQ[,5>`,5>`O%[QlO'#HuO%?^Q`O'#HwOOQ[,5>f,5>fO9eQ`O,5>fOOQ[,5>h,5>hOOQ[7+)j7+)jOOQ[7+)p7+)pOOQ[7+)t7+)tOOQ[7+)v7+)vO%?cQpO1G5|O%?}Q?MtO1G0zO%@XQ`O1G0zOOQO1G/s1G/sO%@dQ?MtO1G/sO?YQ`O1G/sO!)[QlO'#DmOOQO,5?P,5?POOQO-E<c-E<cOOQO,5?V,5?VOOQO-E<i-E<iO!CUQpO1G/sOOQO-E<e-E<eOOQ!0Ln1G0]1G0]OOQ!0Lf7+%u7+%uO#(ZQ`O7+%uOOQ!0Lf7+&`7+&`O?YQ`O7+&`O!CUQpO7+&`OOQO7+%x7+%xO$AlQ!0MxO7+&XOOQO7+&X7+&XO%[QlO7+&XO%@nQ!0LrO7+&XO!ByQ!0LrO7+%xO!CUQpO7+%xO%@yQ!0LrO7+&XO%AXQ!0MxO7++rO%[QlO7++rO%AiQ`O7++qO%AiQ`O7++qOOQO1G4s1G4sO9eQ`O1G4sO%AqQ`O1G4sOOQS7+%}7+%}O#(ZQ`O<<LPO4UQ!fO<<LPO%BPQ`O<<LPOOQ[<<LP<<LPO!&zQMhO<<LPO%[QlO<<LPO%BXQ`O<<LPO%BdQ!0MzO,5?aO%DoQ!0MzO,5?cO%FzQ!0MzO1G2`O%I]Q!0MzO1G2sO%KhQ!0MzO1G2uO%MsQ!fO,5?QO%[QlO,5?QOOQO-E<d-E<dO%M}Q`O1G5}OOQ!0Lf<<JU<<JUO%NVQ?MtO1G0uO&!^Q?MtO1G1PO&!eQ?MtO1G1PO&$fQ?MtO1G1PO&$mQ?MtO1G1PO&&nQ?MtO1G1PO&(oQ?MtO1G1PO&(vQ?MtO1G1PO&(}Q?MtO1G1PO&+OQ?MtO1G1PO&+VQ?MtO1G1PO&+^Q!0MxO<<JfO&-UQ?MtO1G1PO&.RQ?MvO1G1PO&/UQ?MvO'#JlO&1[Q?MtO1G1cO&1iQ?MtO1G0UO&1sQMjO,5?TOOQO-E<g-E<gO!)[QlO'#FqOOQO'#KZ'#KZOOQO1G1u1G1uO&1}Q`O1G1tO&2SQ?MtO,5?[OOOW7+'h7+'hOOOO1G/Z1G/ZO&2^Q!dO1G4xOOQ!0Lh7+(Q7+(QP!&zQMhO,5?^O!,TQMhO7+(cO&2eQ`O,5?]O9eQ`O,5?]O$+YQ`O,5?]OOQO-E<o-E<oO&2sQ`O1G6bO&2sQ`O1G6bO&2{Q`O1G6bO&3WQMjO7+'zO&3hQ!dO,5?_O&3rQ`O,5?_O!&zQMhO,5?_OOQO-E<q-E<qO&3wQ!dO1G6cO&4RQ`O1G6cO&4ZQ`O1G2kO!&zQMhO1G2kOOQ!0Lb1G2i1G2iOOQ!0Lb1G2j1G2jO%4hQpO1G2iO!CUQpO1G2iOCwQ`O1G2iOOQ!0Lb1G2q1G2qO&4`QpO1G2iO&4nQ`O1G2kO$+YQ`O1G2jOCwQ`O1G2jO$$wQlO1G2kO&4vQ`O1G2jO&5jQMjO,5?aOOQ!0Lh-E<t-E<tO&6]QMjO,5?cOOQ!0Lh-E<v-E<vO!,TQMhO7++]O&6gQMjO7++]O&6qQMjO7++]OOQ!0Lh1G/c1G/cO&7OQ`O1G/cOOQ!0Lh7+'u7+'uO&7TQMjO7+'|O&7eQ!0MxO<<KXOOQ!0Lf<<KX<<KXO&8XQ`O1G0zO!&zQMhO'#IzO&8^Q`O,5@xO&:`Q!fO<<LPO!&zQMhO1G2nO&:gQ!0LrO1G2nOOQ[<<G{<<G{O!ByQ!0LrO<<G{O&:xQ!0MxO<<I{OOQ!0Lf<<I{<<I{OOQO,5?l,5?lO&;lQ`O,5?lO&;qQ`O,5?lOOQO-E=O-E=OO&<PQ`O1G6kO&<PQ`O1G6kO9kQ`O1G6kO@zQ`O<<LlOOQ[<<Ll<<LlO&<XQ`O<<LlO9uQ!0LrO<<LlO9kQ`O<<LlOOQ[<<LX<<LXO%:yQ!0MvO<<LXOOQ[<<LY<<LYO!E^Q`O<<LYO&<^QpO'#I|O&<iQ`O,5@|O!)[QlO,5@|OOQ[1G3W1G3WOOQO'#JO'#JOO9uQ!0LrO'#JOO&<qQpO,5=uOOQ[,5=u,5=uO&<xQpO'#EgO&=PQpO'#GeO&=UQ`O7+(zO&=ZQ`O7+(zOOQ[7+(z7+(zO!&zQMhO7+(zO%[QlO7+(zO&=cQ`O7+(zOOQ[7+(|7+(|O9uQ!0LrO7+(|O$%dQ`O7+(|O9`Q`O7+(|O!CUQpO7+(|O&=nQ`O,5?kOOQO-E<}-E<}OOQO'#H^'#H^O&=yQ`O1G6iO9uQ!0LrO<<GqOOQ[<<Gq<<GqO@zQ`O<<GqO&>RQ`O7+,WO&>WQ`O7+,XO%[QlO7+,WO%[QlO7+,XOOQ[7+)V7+)VO&>]Q`O7+)VO&>bQlO7+)VO&>iQ`O7+)VOOQ[<<Ly<<LyOOQ[<<L{<<L{OOQ[-E=Q-E=QOOQ[1G3z1G3zO&>nQ`O,5>aOOQ[,5>c,5>cO&>sQ`O1G4QO9eQ`O7+&fO!)[QlO7+&fOOQO7+%_7+%_O&>xQ?MtO1G6ZO?YQ`O7+%_OOQ!0Lf<<Ia<<IaOOQ!0Lf<<Iz<<IzO?YQ`O<<IzOOQO<<Is<<IsO$AlQ!0MxO<<IsO%[QlO<<IsOOQO<<Id<<IdO!ByQ!0LrO<<IdO&?SQ!0LrO<<IsO&?_Q!0MxO<= ^O&?oQ`O<= ]OOQO7+*_7+*_O9eQ`O7+*_OOQ[ANAkANAkO&?wQ!fOANAkO!&zQMhOANAkO#(ZQ`OANAkO4UQ!fOANAkO&@OQ`OANAkO%[QlOANAkO&@WQ!0MzO7+'zO&BiQ!0MzO,5?aO&DtQ!0MzO,5?cO&GPQ!0MzO7+'|O&IbQ!fO1G4lO&IlQ?MtO7+&aO&KpQ?MvO,5=XO&MwQ?MvO,5=ZO&NXQ?MvO,5=XO&NiQ?MvO,5=ZO&NyQ?MvO,59uO'#PQ?MvO,5<kO'%SQ?MvO,5<mO''hQ?MvO,5<{O')^Q?MtO7+'kO')kQ?MtO7+'mO')xQ`O,5<]OOQO7+'`7+'`OOQ!0Lh7+*d7+*dO')}QMjO<<K}OOQO1G4w1G4wO'*UQ`O1G4wO'*aQ`O1G4wO'*oQ`O7++|O'*oQ`O7++|O!&zQMhO1G4yO'*wQ!dO1G4yO'+RQ`O7++}O'+ZQ`O7+(VO'+fQ!dO7+(VOOQ!0Lb7+(T7+(TOOQ!0Lb7+(U7+(UO!CUQpO7+(TOCwQ`O7+(TO'+pQ`O7+(VO!&zQMhO7+(VO$+YQ`O7+(UO'+uQ`O7+(VOCwQ`O7+(UO'+}QMjO<<NwO!,TQMhO<<NwOOQ!0Lh7+$}7+$}O',XQ!dO,5?fOOQO-E<x-E<xO',cQ!0MvO7+(YO!&zQMhO7+(YOOQ[AN=gAN=gO9kQ`O1G5WOOQO1G5W1G5WO',sQ`O1G5WO',xQ`O7+,VO',xQ`O7+,VO9uQ!0LrOANBWO@zQ`OANBWOOQ[ANBWANBWO'-QQ`OANBWOOQ[ANAsANAsOOQ[ANAtANAtO'-VQ`O,5?hOOQO-E<z-E<zO'-bQ?MtO1G6hOOQO,5?j,5?jOOQO-E<|-E<|OOQ[1G3a1G3aO'-lQ`O,5=POOQ[<<Lf<<LfO!&zQMhO<<LfO&=UQ`O<<LfO'-qQ`O<<LfO%[QlO<<LfOOQ[<<Lh<<LhO9uQ!0LrO<<LhO$%dQ`O<<LhO9`Q`O<<LhO'-yQpO1G5VO'.UQ`O7+,TOOQ[AN=]AN=]O9uQ!0LrOAN=]OOQ[<= r<= rOOQ[<= s<= sO'.^Q`O<= rO'.cQ`O<= sOOQ[<<Lq<<LqO'.hQ`O<<LqO'.mQlO<<LqOOQ[1G3{1G3{O?YQ`O7+)lO'.tQ`O<<JQO'/PQ?MtO<<JQOOQO<<Hy<<HyOOQ!0LfAN?fAN?fOOQOAN?_AN?_O$AlQ!0MxOAN?_OOQOAN?OAN?OO%[QlOAN?_OOQO<<My<<MyOOQ[G27VG27VO!&zQMhOG27VO#(ZQ`OG27VO'/ZQ!fOG27VO4UQ!fOG27VO'/bQ`OG27VO'/jQ?MtO<<JfO'/wQ?MvO1G2`O'1mQ?MvO,5?aO'3pQ?MvO,5?cO'5sQ?MvO1G2sO'7vQ?MvO1G2uO'9yQ?MtO<<KXO':WQ?MtO<<I{OOQO1G1w1G1wO!,TQMhOANAiOOQO7+*c7+*cO':eQ`O7+*cO':pQ`O<= hO':xQ!dO7+*eOOQ!0Lb<<Kq<<KqO$+YQ`O<<KqOCwQ`O<<KqO';SQ`O<<KqO!&zQMhO<<KqOOQ!0Lb<<Ko<<KoO!CUQpO<<KoO';_Q!dO<<KqOOQ!0Lb<<Kp<<KpO';iQ`O<<KqO!&zQMhO<<KqO$+YQ`O<<KpO';nQMjOANDcO';xQ!0MvO<<KtOOQO7+*r7+*rO9kQ`O7+*rO'<YQ`O<= qOOQ[G27rG27rO9uQ!0LrOG27rO@zQ`OG27rO!)[QlO1G5SO'<bQ`O7+,SO'<jQ`O1G2kO&=UQ`OANBQOOQ[ANBQANBQO!&zQMhOANBQO'<oQ`OANBQOOQ[ANBSANBSO9uQ!0LrOANBSO$%dQ`OANBSOOQO'#H_'#H_OOQO7+*q7+*qOOQ[G22wG22wOOQ[ANE^ANE^OOQ[ANE_ANE_OOQ[ANB]ANB]O'<wQ`OANB]OOQ[<<MW<<MWO!)[QlOAN?lOOQOG24yG24yO$AlQ!0MxOG24yO#(ZQ`OLD,qOOQ[LD,qLD,qO!&zQMhOLD,qO'<|Q!fOLD,qO'=TQ?MvO7+'zO'>yQ?MvO,5?aO'@|Q?MvO,5?cO'CPQ?MvO7+'|O'DuQMjOG27TOOQO<<M}<<M}OOQ!0LbANA]ANA]O$+YQ`OANA]OCwQ`OANA]O'EVQ!dOANA]OOQ!0LbANAZANAZO'E^Q`OANA]O!&zQMhOANA]O'EiQ!dOANA]OOQ!0LbANA[ANA[OOQO<<N^<<N^OOQ[LD-^LD-^O9uQ!0LrOLD-^O'EsQ?MtO7+*nOOQO'#Gf'#GfOOQ[G27lG27lO&=UQ`OG27lO!&zQMhOG27lOOQ[G27nG27nO9uQ!0LrOG27nOOQ[G27wG27wO'E}Q?MtOG25WOOQOLD*eLD*eOOQ[!$(!]!$(!]O#(ZQ`O!$(!]O!&zQMhO!$(!]O'FXQ!0MzOG27TOOQ!0LbG26wG26wO$+YQ`OG26wO'HjQ`OG26wOCwQ`OG26wO'HuQ!dOG26wO!&zQMhOG26wOOQ[!$(!x!$(!xOOQ[LD-WLD-WO&=UQ`OLD-WOOQ[LD-YLD-YOOQ[!)9Ew!)9EwO#(ZQ`O!)9EwOOQ!0LbLD,cLD,cO$+YQ`OLD,cOCwQ`OLD,cO'H|Q`OLD,cO'IXQ!dOLD,cOOQ[!$(!r!$(!rOOQ[!.K;c!.K;cO'I`Q?MvOG27TOOQ!0Lb!$( }!$( }O$+YQ`O!$( }OCwQ`O!$( }O'KUQ`O!$( }OOQ!0Lb!)9Ei!)9EiO$+YQ`O!)9EiOCwQ`O!)9EiOOQ!0Lb!.K;T!.K;TO$+YQ`O!.K;TOOQ!0Lb!4/0o!4/0oO!)[QlO'#DzO1PQ`O'#EXO'KaQ!fO'#JrO'KhQ!L^O'#DvO'KoQlO'#EOO'KvQ!fO'#CiO'N^Q!fO'#CiO!)[QlO'#EQO'NnQlO,5;ZO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO,5;eO!)[QlO'#IpO(!qQ`O,5<iO!)[QlO,5;eO(!yQMhO,5;eO($dQMhO,5;eO!)[QlO,5;wO!&zQMhO'#GmO(!yQMhO'#GmO!&zQMhO'#GoO(!yQMhO'#GoO1SQ`O'#DZO1SQ`O'#DZO!&zQMhO'#GPO(!yQMhO'#GPO!&zQMhO'#GRO(!yQMhO'#GRO!&zQMhO'#GaO(!yQMhO'#GaO!)[QlO,5:jO($kQpO'#D_O($uQpO'#JvO!)[QlO,5@oO'NnQlO1G0uO(%PQ?MtO'#CiO!)[QlO1G2PO!&zQMhO'#IuO(!yQMhO'#IuO!&zQMhO'#IwO(!yQMhO'#IwO(%ZQ!dO'#CrO!&zQMhO,5<tO(!yQMhO,5<tO'NnQlO1G2RO!)[QlO7+&zO!&zQMhO1G2`O(!yQMhO1G2`O!&zQMhO'#IuO(!yQMhO'#IuO!&zQMhO'#IwO(!yQMhO'#IwO!&zQMhO1G2bO(!yQMhO1G2bO'NnQlO7+'mO'NnQlO7+&aO!&zQMhOANAiO(!yQMhOANAiO(%nQ`O'#EoO(%sQ`O'#EoO(%{Q`O'#F]O(&QQ`O'#EyO(&VQ`O'#KTO(&bQ`O'#KRO(&mQ`O,5;ZO(&rQMjO,5<eO(&yQ`O'#GYO('OQ`O'#GYO('TQ`O,5<eO(']Q`O,5<gO('eQ`O,5;ZO('mQ?MtO1G1`O('tQ`O,5<tO('yQ`O,5<tO((OQ`O,5<vO((TQ`O,5<vO((YQ`O1G2RO((_Q`O1G0uO((dQMjO<<K}O((kQMjO<<K}O((rQMhO'#F|O9`Q`O'#F{OAuQ`O'#EnO!)[QlO,5;tO!3oQ`O'#GYO!3oQ`O'#GYO!3oQ`O'#G[O!3oQ`O'#G[O!,TQMhO7+(cO!,TQMhO7+(cO%.zQ!dO1G2wO%.zQ!dO1G2wO!&zQMhO,5=]O!&zQMhO,5=]",
 		stateData: "()x~O'|OS'}OSTOS(ORQ~OPYOQYOSfOY!VOaqOdzOeyOl!POpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_XO!iuO!lZO!oYO!pYO!qYO!svO!uwO!xxO!|]O$W|O$niO%h}O%j!QO%l!OO%m!OO%n!OO%q!RO%s!SO%v!TO%w!TO%y!UO&W!WO&^!XO&`!YO&b!ZO&d![O&g!]O&m!^O&s!_O&u!`O&w!aO&y!bO&{!cO(TSO(VTO(YUO(aVO(o[O~OWtO~P`OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$W!kO$niO(T!dO(VTO(YUO(aVO(o[O~Oa!wOs!nO!S!oO!b!yO!c!vO!d!vO!|<VO#T!pO#U!pO#V!xO#W!pO#X!pO#[!zO#]!zO(U!lO(VTO(YUO(e!mO(o!sO~O(O!{O~OP]XR]X[]Xa]Xj]Xr]X!Q]X!S]X!]]X!l]X!p]X#R]X#S]X#`]X#kfX#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#x]X#z]X#{]X$Q]X'z]X(a]X(r]X(y]X(z]X~O!g%RX~P(qO_!}O(V#PO(W!}O(X#PO~O_#QO(X#PO(Y#PO(Z#QO~Ox#SO!U#TO(b#TO(c#VO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$W!kO$niO(T<ZO(VTO(YUO(aVO(o[O~O![#ZO!]#WO!Y(hP!Y(vP~P+}O!^#cO~P`OPYOQYOSfOd!jOe!iOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$W!kO$niO(VTO(YUO(aVO(o[O~Op#mO![#iO!|]O#i#lO#j#iO(T<[O!k(sP~P.iO!l#oO(T#nO~O!x#sO!|]O%h#tO~O#k#uO~O!g#vO#k#uO~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!]$_O!l#xO!p$[O#R$RO#n$OO#o$PO#p$PO#q$PO#r$QO#s$RO#t$RO#u$bO#v$SO#x$UO#z$WO#{$XO(aVO(r$YO(y#|O(z#}O~Oa(fX'z(fX'w(fX!k(fX!Y(fX!_(fX%i(fX!g(fX~P1qO#S$dO#`$eO$Q$eOP(gXR(gX[(gXj(gXr(gX!Q(gX!S(gX!](gX!l(gX!p(gX#R(gX#n(gX#o(gX#p(gX#q(gX#r(gX#s(gX#t(gX#u(gX#v(gX#x(gX#z(gX#{(gX(a(gX(r(gX(y(gX(z(gX!_(gX%i(gX~Oa(gX'z(gX'w(gX!Y(gX!k(gXv(gX!g(gX~P4UO#`$eO~O$]$hO$_$gO$f$mO~OSfO!_$nO$i$oO$k$qO~Oh%VOj%dOk%dOp%WOr%XOs$tOt$tOz%YO|%ZO!O%]O!S${O!_$|O!i%bO!l$xO#j%cO$W%`O$t%^O$v%_O$y%aO(T$sO(VTO(YUO(a$uO(y$}O(z%POg(^P~Ol%[O~P7eO!l%eO~O!S%hO!_%iO(T%gO~O!g%mO~Oa%nO'z%nO~O!Q%rO~P%[O(U!lO~P%[O%n%vO~P%[Oh%VO!l%eO(T%gO(U!lO~Oe%}O!l%eO(T%gO~Oj$RO~O!_&PO(T%gO(U!lO(VTO(YUO`)WP~O!Q&SO!l&RO%j&VO&T&WO~P;SO!x#sO~O%s&YO!S)SX!_)SX(T)SX~O(T&ZO~Ol!PO!u&`O%j!QO%l!OO%m!OO%n!OO%q!RO%s!SO%v!TO%w!TO~Od&eOe&dO!x&bO%h&cO%{&aO~P<bOd&hOeyOl!PO!_&gO!u&`O!xxO!|]O%h}O%l!OO%m!OO%n!OO%q!RO%s!SO%v!TO%w!TO%y!UO~Ob&kO#`&nO%j&iO(U!lO~P=gO!l&oO!u&sO~O!l#oO~O!_XO~Oa%nO'x&{O'z%nO~Oa%nO'x'OO'z%nO~Oa%nO'x'QO'z%nO~O'w]X!Y]Xv]X!k]X&[]X!_]X%i]X!g]X~P(qO!b'_O!c'WO!d'WO(U!lO(VTO(YUO~Os'UO!S'TO!['XO(e'SO!^(iP!^(xP~P@nOn'bO!_'`O(T%gO~Oe'gO!l%eO(T%gO~O!Q&SO!l&RO~Os!nO!S!oO!|<VO#T!pO#U!pO#W!pO#X!pO(U!lO(VTO(YUO(e!mO(o!sO~O!b'mO!c'lO!d'lO#V!pO#['nO#]'nO~PBYOa%nOh%VO!g#vO!l%eO'z%nO(r'pO~O!p'tO#`'rO~PChOs!nO!S!oO(VTO(YUO(e!mO(o!sO~O!_XOs(mX!S(mX!b(mX!c(mX!d(mX!|(mX#T(mX#U(mX#V(mX#W(mX#X(mX#[(mX#](mX(U(mX(V(mX(Y(mX(e(mX(o(mX~O!c'lO!d'lO(U!lO~PDWO(P'xO(Q'xO(R'zO~O_!}O(V'|O(W!}O(X'|O~O_#QO(X'|O(Y'|O(Z#QO~Ov(OO~P%[Ox#SO!U#TO(b#TO(c(RO~O![(TO!Y'WX!Y'^X!]'WX!]'^X~P+}O!](VO!Y(hX~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!](VO!l#xO!p$[O#R$RO#n$OO#o$PO#p$PO#q$PO#r$QO#s$RO#t$RO#u$bO#v$SO#x$UO#z$WO#{$XO(aVO(r$YO(y#|O(z#}O~O!Y(hX~PHRO!Y([O~O!Y(uX!](uX!g(uX!k(uX(r(uX~O#`(uX#k#dX!^(uX~PJUO#`(]O!Y(wX!](wX~O!](^O!Y(vX~O!Y(aO~O#`$eO~PJUO!^(bO~P`OR#zO!Q#yO!S#{O!l#xO(aVOP!na[!naj!nar!na!]!na!p!na#R!na#n!na#o!na#p!na#q!na#r!na#s!na#t!na#u!na#v!na#x!na#z!na#{!na(r!na(y!na(z!na~Oa!na'z!na'w!na!Y!na!k!nav!na!_!na%i!na!g!na~PKlO!k(cO~O!g#vO#`(dO(r'pO!](tXa(tX'z(tX~O!k(tX~PNXO!S%hO!_%iO!|]O#i(iO#j(hO(T%gO~O!](jO!k(sX~O!k(lO~O!S%hO!_%iO#j(hO(T%gO~OP(gXR(gX[(gXj(gXr(gX!Q(gX!S(gX!](gX!l(gX!p(gX#R(gX#n(gX#o(gX#p(gX#q(gX#r(gX#s(gX#t(gX#u(gX#v(gX#x(gX#z(gX#{(gX(a(gX(r(gX(y(gX(z(gX~O!g#vO!k(gX~P! uOR(nO!Q(mO!l#xO#S$dO!|!{a!S!{a~O!x!{a%h!{a!_!{a#i!{a#j!{a(T!{a~P!#vO!x(rO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_XO!iuO!lZO!oYO!pYO!qYO!svO!u!gO!x!hO$W!kO$niO(T!dO(VTO(YUO(aVO(o[O~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<sO!S${O!_$|O!i>VO!l$xO#j<yO$W%`O$t<uO$v<wO$y%aO(T(vO(VTO(YUO(a$uO(y$}O(z%PO~O#k(xO~O![(zO!k(kP~P%[O(e(|O(o[O~O!S)OO!l#xO(e(|O(o[O~OP<UOQ<UOSfOd>ROe!iOpkOr<UOskOtkOzkO|<UO!O<UO!SWO!WkO!XkO!_!eO!i<XO!lZO!o<UO!p<UO!q<UO!s<YO!u<]O!x!hO$W!kO$n>PO(T)]O(VTO(YUO(aVO(o[O~O!]$_Oa$qa'z$qa'w$qa!k$qa!Y$qa!_$qa%i$qa!g$qa~Ol)dO~P!&zOh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O%]O!S${O!_$|O!i%bO!l$xO#j%cO$W%`O$t%^O$v%_O$y%aO(T(vO(VTO(YUO(a$uO(y$}O(z%PO~Og(pP~P!,TO!Q)iO!g)hO!_$^X$Z$^X$]$^X$_$^X$f$^X~O!g)hO!_({X$Z({X$]({X$_({X$f({X~O!Q)iO~P!.^O!Q)iO!_({X$Z({X$]({X$_({X$f({X~O!_)kO$Z)oO$])jO$_)jO$f)pO~O![)sO~P!)[O$]$hO$_$gO$f)wO~On$zX!Q$zX#S$zX'y$zX(y$zX(z$zX~OgmXg$zXnmX!]mX#`mX~P!0SOx)yO(b)zO(c)|O~On*VO!Q*OO'y*PO(y$}O(z%PO~Og)}O~P!1WOg*WO~Oh%VOr%XOs$tOt$tOz%YO|%ZO!O<sO!S*YO!_*ZO!i>VO!l$xO#j<yO$W%`O$t<uO$v<wO$y%aO(VTO(YUO(a$uO(y$}O(z%PO~Op*`O![*^O(T*XO!k)OP~P!1uO#k*aO~O!l*bO~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<sO!S${O!_$|O!i>VO!l$xO#j<yO$W%`O$t<uO$v<wO$y%aO(T*dO(VTO(YUO(a$uO(y$}O(z%PO~O![*gO!Y)PP~P!3tOr*sOs!nO!S*iO!b*qO!c*kO!d*kO!l*bO#[*rO%`*mO(U!lO(VTO(YUO(e!mO~O!^*pO~P!5iO#S$dOn(`X!Q(`X'y(`X(y(`X(z(`X!](`X#`(`X~Og(`X$O(`X~P!6kOn*xO#`*wOg(_X!](_X~O!]*yOg(^X~Oj%dOk%dOl%dO(T&ZOg(^P~Os*|O~Og)}O(T&ZO~O!l+SO~O(T(vO~Op+WO!S%hO![#iO!_%iO!|]O#i#lO#j#iO(T%gO!k(sP~O!g#vO#k+XO~O!S%hO![+ZO!](^O!_%iO(T%gO!Y(vP~Os'[O!S+]O![+[O(VTO(YUO(e(|O~O!^(xP~P!9|O!]+^Oa)TX'z)TX~OP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#n$OO#o$PO#p$PO#q$PO#r$QO#s$RO#t$RO#u$bO#v$SO#x$UO#z$WO#{$XO(aVO(r$YO(y#|O(z#}O~Oa!ja!]!ja'z!ja'w!ja!Y!ja!k!jav!ja!_!ja%i!ja!g!ja~P!:tOR#zO!Q#yO!S#{O!l#xO(aVOP!ra[!raj!rar!ra!]!ra!p!ra#R!ra#n!ra#o!ra#p!ra#q!ra#r!ra#s!ra#t!ra#u!ra#v!ra#x!ra#z!ra#{!ra(r!ra(y!ra(z!ra~Oa!ra'z!ra'w!ra!Y!ra!k!rav!ra!_!ra%i!ra!g!ra~P!=[OR#zO!Q#yO!S#{O!l#xO(aVOP!ta[!taj!tar!ta!]!ta!p!ta#R!ta#n!ta#o!ta#p!ta#q!ta#r!ta#s!ta#t!ta#u!ta#v!ta#x!ta#z!ta#{!ta(r!ta(y!ta(z!ta~Oa!ta'z!ta'w!ta!Y!ta!k!tav!ta!_!ta%i!ta!g!ta~P!?rOh%VOn+gO!_'`O%i+fO~O!g+iOa(]X!_(]X'z(]X!](]X~Oa%nO!_XO'z%nO~Oh%VO!l%eO~Oh%VO!l%eO(T%gO~O!g#vO#k(xO~Ob+tO%j+uO(T+qO(VTO(YUO!^)XP~O!]+vO`)WX~O[+zO~O`+{O~O!_&PO(T%gO(U!lO`)WP~O%j,OO~P;SOh%VO#`,SO~Oh%VOn,VO!_$|O~O!_,XO~O!Q,ZO!_XO~O%n%vO~O!x,`O~Oe,eO~Ob,fO(T#nO(VTO(YUO!^)VP~Oe%}O~O%j!QO(T&ZO~P=gO[,kO`,jO~OPYOQYOSfOdzOeyOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!iuO!lZO!oYO!pYO!qYO!svO!xxO!|]O$niO%h}O(VTO(YUO(aVO(o[O~O!_!eO!u!gO$W!kO(T!dO~P!FyO`,jOa%nO'z%nO~OPYOQYOSfOd!jOe!iOpkOrYOskOtkOzkO|YO!OYO!SWO!WkO!XkO!_!eO!iuO!lZO!oYO!pYO!qYO!svO!x!hO$W!kO$niO(T!dO(VTO(YUO(aVO(o[O~Oa,pOl!OO!uwO%l!OO%m!OO%n!OO~P!IcO!l&oO~O&^,vO~O!_,xO~O&o,zO&q,{OP&laQ&laS&laY&laa&lad&lae&lal&lap&lar&las&lat&laz&la|&la!O&la!S&la!W&la!X&la!_&la!i&la!l&la!o&la!p&la!q&la!s&la!u&la!x&la!|&la$W&la$n&la%h&la%j&la%l&la%m&la%n&la%q&la%s&la%v&la%w&la%y&la&W&la&^&la&`&la&b&la&d&la&g&la&m&la&s&la&u&la&w&la&y&la&{&la'w&la(T&la(V&la(Y&la(a&la(o&la!^&la&e&lab&la&j&la~O(T-QO~Oh!eX!]!RX!^!RX!g!RX!g!eX!l!eX#`!RX~O!]!eX!^!eX~P#!iO!g-VO#`-UOh(jX!]#hX!^#hX!g(jX!l(jX~O!](jX!^(jX~P##[Oh%VO!g-XO!l%eO!]!aX!^!aX~Os!nO!S!oO(VTO(YUO(e!mO~OP<UOQ<UOSfOd>ROe!iOpkOr<UOskOtkOzkO|<UO!O<UO!SWO!WkO!XkO!_!eO!i<XO!lZO!o<UO!p<UO!q<UO!s<YO!u<]O!x!hO$W!kO$n>PO(VTO(YUO(aVO(o[O~O(T=QO~P#$qO!]-]O!^(iX~O!^-_O~O!g-VO#`-UO!]#hX!^#hX~O!]-`O!^(xX~O!^-bO~O!c-cO!d-cO(U!lO~P#$`O!^-fO~P'_On-iO!_'`O~O!Y-nO~Os!{a!b!{a!c!{a!d!{a#T!{a#U!{a#V!{a#W!{a#X!{a#[!{a#]!{a(U!{a(V!{a(Y!{a(e!{a(o!{a~P!#vO!p-sO#`-qO~PChO!c-uO!d-uO(U!lO~PDWOa%nO#`-qO'z%nO~Oa%nO!g#vO#`-qO'z%nO~Oa%nO!g#vO!p-sO#`-qO'z%nO(r'pO~O(P'xO(Q'xO(R-zO~Ov-{O~O!Y'Wa!]'Wa~P!:tO![.PO!Y'WX!]'WX~P%[O!](VO!Y(ha~O!Y(ha~PHRO!](^O!Y(va~O!S%hO![.TO!_%iO(T%gO!Y'^X!]'^X~O#`.VO!](ta!k(taa(ta'z(ta~O!g#vO~P#,wO!](jO!k(sa~O!S%hO!_%iO#j.ZO(T%gO~Op.`O!S%hO![.]O!_%iO!|]O#i._O#j.]O(T%gO!]'aX!k'aX~OR.dO!l#xO~Oh%VOn.gO!_'`O%i.fO~Oa#ci!]#ci'z#ci'w#ci!Y#ci!k#civ#ci!_#ci%i#ci!g#ci~P!:tOn>]O!Q*OO'y*PO(y$}O(z%PO~O#k#_aa#_a#`#_a'z#_a!]#_a!k#_a!_#_a!Y#_a~P#/sO#k(`XP(`XR(`X[(`Xa(`Xj(`Xr(`X!S(`X!l(`X!p(`X#R(`X#n(`X#o(`X#p(`X#q(`X#r(`X#s(`X#t(`X#u(`X#v(`X#x(`X#z(`X#{(`X'z(`X(a(`X(r(`X!k(`X!Y(`X'w(`Xv(`X!_(`X%i(`X!g(`X~P!6kO!].tO!k(kX~P!:tO!k.wO~O!Y.yO~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O(aVO[#mia#mij#mir#mi!]#mi#R#mi#o#mi#p#mi#q#mi#r#mi#s#mi#t#mi#u#mi#v#mi#x#mi#z#mi#{#mi'z#mi(r#mi(y#mi(z#mi'w#mi!Y#mi!k#miv#mi!_#mi%i#mi!g#mi~O#n#mi~P#3cO#n$OO~P#3cOP$[OR#zOr$aO!Q#yO!S#{O!l#xO!p$[O#n$OO#o$PO#p$PO#q$PO(aVO[#mia#mij#mi!]#mi#R#mi#s#mi#t#mi#u#mi#v#mi#x#mi#z#mi#{#mi'z#mi(r#mi(y#mi(z#mi'w#mi!Y#mi!k#miv#mi!_#mi%i#mi!g#mi~O#r#mi~P#6QO#r$QO~P#6QOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#n$OO#o$PO#p$PO#q$PO#r$QO#s$RO#t$RO#u$bO(aVOa#mi!]#mi#x#mi#z#mi#{#mi'z#mi(r#mi(y#mi(z#mi'w#mi!Y#mi!k#miv#mi!_#mi%i#mi!g#mi~O#v#mi~P#8oOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#n$OO#o$PO#p$PO#q$PO#r$QO#s$RO#t$RO#u$bO#v$SO(aVO(z#}Oa#mi!]#mi#z#mi#{#mi'z#mi(r#mi(y#mi'w#mi!Y#mi!k#miv#mi!_#mi%i#mi!g#mi~O#x$UO~P#;VO#x#mi~P#;VO#v$SO~P#8oOP$[OR#zO[$cOj$ROr$aO!Q#yO!S#{O!l#xO!p$[O#R$RO#n$OO#o$PO#p$PO#q$PO#r$QO#s$RO#t$RO#u$bO#v$SO#x$UO(aVO(y#|O(z#}Oa#mi!]#mi#{#mi'z#mi(r#mi'w#mi!Y#mi!k#miv#mi!_#mi%i#mi!g#mi~O#z#mi~P#={O#z$WO~P#={OP]XR]X[]Xj]Xr]X!Q]X!S]X!l]X!p]X#R]X#S]X#`]X#kfX#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#x]X#z]X#{]X$Q]X(a]X(r]X(y]X(z]X!]]X!^]X~O$O]X~P#@jOP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#n<_O#o<`O#p<`O#q<`O#r<aO#s<bO#t<bO#u<lO#v<cO#x<eO#z<gO#{<hO(aVO(r$YO(y#|O(z#}O~O$O.{O~P#BwO#S$dO#`<nO$Q<nO$O(gX!^(gX~P! uOa'da!]'da'z'da'w'da!k'da!Y'dav'da!_'da%i'da!g'da~P!:tO[#mia#mij#mir#mi!]#mi#R#mi#r#mi#s#mi#t#mi#u#mi#v#mi#x#mi#z#mi#{#mi'z#mi(r#mi'w#mi!Y#mi!k#miv#mi!_#mi%i#mi!g#mi~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O#n$OO#o$PO#p$PO#q$PO(aVO(y#mi(z#mi~P#EyOn>]O!Q*OO'y*PO(y$}O(z%POP#miR#mi!S#mi!l#mi!p#mi#n#mi#o#mi#p#mi#q#mi(a#mi~P#EyO!]/POg(pX~P!1WOg/RO~Oa$Pi!]$Pi'z$Pi'w$Pi!Y$Pi!k$Piv$Pi!_$Pi%i$Pi!g$Pi~P!:tO$]/SO$_/SO~O$]/TO$_/TO~O!g)hO#`/UO!_$cX$Z$cX$]$cX$_$cX$f$cX~O![/VO~O!_)kO$Z/XO$])jO$_)jO$f/YO~O!]<iO!^(fX~P#BwO!^/ZO~O!g)hO$f({X~O$f/]O~Ov/^O~P!&zOx)yO(b)zO(c/aO~O!S/dO~O(y$}On%aa!Q%aa'y%aa(z%aa!]%aa#`%aa~Og%aa$O%aa~P#L{O(z%POn%ca!Q%ca'y%ca(y%ca!]%ca#`%ca~Og%ca$O%ca~P#MnO!]fX!gfX!kfX!k$zX(rfX~P!0SOp%WO![/mO!](^O(T/lO!Y(vP!Y)PP~P!1uOr*sO!b*qO!c*kO!d*kO!l*bO#[*rO%`*mO(U!lO(VTO(YUO~Os<}O!S/nO![+[O!^*pO(e<|O!^(xP~P$ [O!k/oO~P#/sO!]/pO!g#vO(r'pO!k)OX~O!k/uO~OnoX!QoX'yoX(yoX(zoX~O!g#vO!koX~P$#OOp/wO!S%hO![*^O!_%iO(T%gO!k)OP~O#k/xO~O!Y$zX!]$zX!g%RX~P!0SO!]/yO!Y)PX~P#/sO!g/{O~O!Y/}O~OpkO(T0OO~P.iOh%VOr0TO!g#vO!l%eO(r'pO~O!g+iO~Oa%nO!]0XO'z%nO~O!^0ZO~P!5iO!c0[O!d0[O(U!lO~P#$`Os!nO!S0]O(VTO(YUO(e!mO~O#[0_O~Og%aa!]%aa#`%aa$O%aa~P!1WOg%ca!]%ca#`%ca$O%ca~P!1WOj%dOk%dOl%dO(T&ZOg'mX!]'mX~O!]*yOg(^a~Og0hO~On0jO#`0iOg(_a!](_a~OR0kO!Q0kO!S0lO#S$dOn}a'y}a(y}a(z}a!]}a#`}a~Og}a$O}a~P$(cO!Q*OO'y*POn$sa(y$sa(z$sa!]$sa#`$sa~Og$sa$O$sa~P$)_O!Q*OO'y*POn$ua(y$ua(z$ua!]$ua#`$ua~Og$ua$O$ua~P$*QO#k0oO~Og%Ta!]%Ta#`%Ta$O%Ta~P!1WO!g#vO~O#k0rO~O!]+^Oa)Ta'z)Ta~OR#zO!Q#yO!S#{O!l#xO(aVOP!ri[!rij!rir!ri!]!ri!p!ri#R!ri#n!ri#o!ri#p!ri#q!ri#r!ri#s!ri#t!ri#u!ri#v!ri#x!ri#z!ri#{!ri(r!ri(y!ri(z!ri~Oa!ri'z!ri'w!ri!Y!ri!k!riv!ri!_!ri%i!ri!g!ri~P$+oOh%VOr%XOs$tOt$tOz%YO|%ZO!O<sO!S${O!_$|O!i>VO!l$xO#j<yO$W%`O$t<uO$v<wO$y%aO(VTO(YUO(a$uO(y$}O(z%PO~Op0{O%]0|O(T0zO~P$.VO!g+iOa(]a!_(]a'z(]a!](]a~O#k1SO~O[]X!]fX!^fX~O!]1TO!^)XX~O!^1VO~O[1WO~Ob1YO(T+qO(VTO(YUO~O!_&PO(T%gO`'uX!]'uX~O!]+vO`)Wa~O!k1]O~P!:tO[1`O~O`1aO~O#`1fO~On1iO!_$|O~O(e(|O!^)UP~Oh%VOn1rO!_1oO%i1qO~O[1|O!]1zO!^)VX~O!^1}O~O`2POa%nO'z%nO~O(T#nO(VTO(YUO~O#S$dO#`$eO$Q$eOP(gXR(gX[(gXr(gX!Q(gX!S(gX!](gX!l(gX!p(gX#R(gX#n(gX#o(gX#p(gX#q(gX#r(gX#s(gX#t(gX#u(gX#v(gX#x(gX#z(gX#{(gX(a(gX(r(gX(y(gX(z(gX~Oj2SO&[2TOa(gX~P$3pOj2SO#`$eO&[2TO~Oa2VO~P%[Oa2XO~O&e2[OP&ciQ&ciS&ciY&cia&cid&cie&cil&cip&cir&cis&cit&ciz&ci|&ci!O&ci!S&ci!W&ci!X&ci!_&ci!i&ci!l&ci!o&ci!p&ci!q&ci!s&ci!u&ci!x&ci!|&ci$W&ci$n&ci%h&ci%j&ci%l&ci%m&ci%n&ci%q&ci%s&ci%v&ci%w&ci%y&ci&W&ci&^&ci&`&ci&b&ci&d&ci&g&ci&m&ci&s&ci&u&ci&w&ci&y&ci&{&ci'w&ci(T&ci(V&ci(Y&ci(a&ci(o&ci!^&cib&ci&j&ci~Ob2bO!^2`O&j2aO~P`O!_XO!l2dO~O&q,{OP&liQ&liS&liY&lia&lid&lie&lil&lip&lir&lis&lit&liz&li|&li!O&li!S&li!W&li!X&li!_&li!i&li!l&li!o&li!p&li!q&li!s&li!u&li!x&li!|&li$W&li$n&li%h&li%j&li%l&li%m&li%n&li%q&li%s&li%v&li%w&li%y&li&W&li&^&li&`&li&b&li&d&li&g&li&m&li&s&li&u&li&w&li&y&li&{&li'w&li(T&li(V&li(Y&li(a&li(o&li!^&li&e&lib&li&j&li~O!Y2jO~O!]!aa!^!aa~P#BwOs!nO!S!oO![2pO(e!mO!]'XX!^'XX~P@nO!]-]O!^(ia~O!]'_X!^'_X~P!9|O!]-`O!^(xa~O!^2wO~P'_Oa%nO#`3QO'z%nO~Oa%nO!g#vO#`3QO'z%nO~Oa%nO!g#vO!p3UO#`3QO'z%nO(r'pO~Oa%nO'z%nO~P!:tO!]$_Ov$qa~O!Y'Wi!]'Wi~P!:tO!](VO!Y(hi~O!](^O!Y(vi~O!Y(wi!](wi~P!:tO!](ti!k(tia(ti'z(ti~P!:tO#`3WO!](ti!k(tia(ti'z(ti~O!](jO!k(si~O!S%hO!_%iO!|]O#i3]O#j3[O(T%gO~O!S%hO!_%iO#j3[O(T%gO~On3dO!_'`O%i3cO~Oh%VOn3dO!_'`O%i3cO~O#k%aaP%aaR%aa[%aaa%aaj%aar%aa!S%aa!l%aa!p%aa#R%aa#n%aa#o%aa#p%aa#q%aa#r%aa#s%aa#t%aa#u%aa#v%aa#x%aa#z%aa#{%aa'z%aa(a%aa(r%aa!k%aa!Y%aa'w%aav%aa!_%aa%i%aa!g%aa~P#L{O#k%caP%caR%ca[%caa%caj%car%ca!S%ca!l%ca!p%ca#R%ca#n%ca#o%ca#p%ca#q%ca#r%ca#s%ca#t%ca#u%ca#v%ca#x%ca#z%ca#{%ca'z%ca(a%ca(r%ca!k%ca!Y%ca'w%cav%ca!_%ca%i%ca!g%ca~P#MnO#k%aaP%aaR%aa[%aaa%aaj%aar%aa!S%aa!]%aa!l%aa!p%aa#R%aa#n%aa#o%aa#p%aa#q%aa#r%aa#s%aa#t%aa#u%aa#v%aa#x%aa#z%aa#{%aa'z%aa(a%aa(r%aa!k%aa!Y%aa'w%aa#`%aav%aa!_%aa%i%aa!g%aa~P#/sO#k%caP%caR%ca[%caa%caj%car%ca!S%ca!]%ca!l%ca!p%ca#R%ca#n%ca#o%ca#p%ca#q%ca#r%ca#s%ca#t%ca#u%ca#v%ca#x%ca#z%ca#{%ca'z%ca(a%ca(r%ca!k%ca!Y%ca'w%ca#`%cav%ca!_%ca%i%ca!g%ca~P#/sO#k}aP}a[}aa}aj}ar}a!l}a!p}a#R}a#n}a#o}a#p}a#q}a#r}a#s}a#t}a#u}a#v}a#x}a#z}a#{}a'z}a(a}a(r}a!k}a!Y}a'w}av}a!_}a%i}a!g}a~P$(cO#k$saP$saR$sa[$saa$saj$sar$sa!S$sa!l$sa!p$sa#R$sa#n$sa#o$sa#p$sa#q$sa#r$sa#s$sa#t$sa#u$sa#v$sa#x$sa#z$sa#{$sa'z$sa(a$sa(r$sa!k$sa!Y$sa'w$sav$sa!_$sa%i$sa!g$sa~P$)_O#k$uaP$uaR$ua[$uaa$uaj$uar$ua!S$ua!l$ua!p$ua#R$ua#n$ua#o$ua#p$ua#q$ua#r$ua#s$ua#t$ua#u$ua#v$ua#x$ua#z$ua#{$ua'z$ua(a$ua(r$ua!k$ua!Y$ua'w$uav$ua!_$ua%i$ua!g$ua~P$*QO#k%TaP%TaR%Ta[%Taa%Taj%Tar%Ta!S%Ta!]%Ta!l%Ta!p%Ta#R%Ta#n%Ta#o%Ta#p%Ta#q%Ta#r%Ta#s%Ta#t%Ta#u%Ta#v%Ta#x%Ta#z%Ta#{%Ta'z%Ta(a%Ta(r%Ta!k%Ta!Y%Ta'w%Ta#`%Tav%Ta!_%Ta%i%Ta!g%Ta~P#/sOa#cq!]#cq'z#cq'w#cq!Y#cq!k#cqv#cq!_#cq%i#cq!g#cq~P!:tO![3lO!]'YX!k'YX~P%[O!].tO!k(ka~O!].tO!k(ka~P!:tO!Y3oO~O$O!na!^!na~PKlO$O!ja!]!ja!^!ja~P#BwO$O!ra!^!ra~P!=[O$O!ta!^!ta~P!?rOg']X!]']X~P!,TO!]/POg(pa~OSfO!_4TO$d4UO~O!^4YO~Ov4ZO~P#/sOa$mq!]$mq'z$mq'w$mq!Y$mq!k$mqv$mq!_$mq%i$mq!g$mq~P!:tO!Y4]O~P!&zO!S4^O~O!Q*OO'y*PO(z%POn'ia(y'ia!]'ia#`'ia~Og'ia$O'ia~P%-fO!Q*OO'y*POn'ka(y'ka(z'ka!]'ka#`'ka~Og'ka$O'ka~P%.XO(r$YO~P#/sO!YfX!Y$zX!]fX!]$zX!g%RX#`fX~P!0SOp%WO(T=WO~P!1uOp4bO!S%hO![4aO!_%iO(T%gO!]'eX!k'eX~O!]/pO!k)Oa~O!]/pO!g#vO!k)Oa~O!]/pO!g#vO(r'pO!k)Oa~Og$|i!]$|i#`$|i$O$|i~P!1WO![4jO!Y'gX!]'gX~P!3tO!]/yO!Y)Pa~O!]/yO!Y)Pa~P#/sOP]XR]X[]Xj]Xr]X!Q]X!S]X!Y]X!]]X!l]X!p]X#R]X#S]X#`]X#kfX#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#x]X#z]X#{]X$Q]X(a]X(r]X(y]X(z]X~Oj%YX!g%YX~P%2OOj4oO!g#vO~Oh%VO!g#vO!l%eO~Oh%VOr4tO!l%eO(r'pO~Or4yO!g#vO(r'pO~Os!nO!S4zO(VTO(YUO(e!mO~O(y$}On%ai!Q%ai'y%ai(z%ai!]%ai#`%ai~Og%ai$O%ai~P%5oO(z%POn%ci!Q%ci'y%ci(y%ci!]%ci#`%ci~Og%ci$O%ci~P%6bOg(_i!](_i~P!1WO#`5QOg(_i!](_i~P!1WO!k5VO~Oa$oq!]$oq'z$oq'w$oq!Y$oq!k$oqv$oq!_$oq%i$oq!g$oq~P!:tO!Y5ZO~O!]5[O!_)QX~P#/sOa$zX!_$zX%^]X'z$zX!]$zX~P!0SO%^5_OaoX!_oX'zoX!]oX~P$#OOp5`O(T#nO~O%^5_O~Ob5fO%j5gO(T+qO(VTO(YUO!]'tX!^'tX~O!]1TO!^)Xa~O[5kO~O`5lO~O[5pO~Oa%nO'z%nO~P#/sO!]5uO#`5wO!^)UX~O!^5xO~Or6OOs!nO!S*iO!b!yO!c!vO!d!vO!|<VO#T!pO#U!pO#V!pO#W!pO#X!pO#[5}O#]!zO(U!lO(VTO(YUO(e!mO(o!sO~O!^5|O~P%;eOn6TO!_1oO%i6SO~Oh%VOn6TO!_1oO%i6SO~Ob6[O(T#nO(VTO(YUO!]'sX!^'sX~O!]1zO!^)Va~O(VTO(YUO(e6^O~O`6bO~Oj6eO&[6fO~PNXO!k6gO~P%[Oa6iO~Oa6iO~P%[Ob2bO!^6nO&j2aO~P`O!g6pO~O!g6rOh(ji!](ji!^(ji!g(ji!l(jir(ji(r(ji~O!]#hi!^#hi~P#BwO#`6sO!]#hi!^#hi~O!]!ai!^!ai~P#BwOa%nO#`6|O'z%nO~Oa%nO!g#vO#`6|O'z%nO~O!](tq!k(tqa(tq'z(tq~P!:tO!](jO!k(sq~O!S%hO!_%iO#j7TO(T%gO~O!_'`O%i7WO~On7[O!_'`O%i7WO~O#k'iaP'iaR'ia['iaa'iaj'iar'ia!S'ia!l'ia!p'ia#R'ia#n'ia#o'ia#p'ia#q'ia#r'ia#s'ia#t'ia#u'ia#v'ia#x'ia#z'ia#{'ia'z'ia(a'ia(r'ia!k'ia!Y'ia'w'iav'ia!_'ia%i'ia!g'ia~P%-fO#k'kaP'kaR'ka['kaa'kaj'kar'ka!S'ka!l'ka!p'ka#R'ka#n'ka#o'ka#p'ka#q'ka#r'ka#s'ka#t'ka#u'ka#v'ka#x'ka#z'ka#{'ka'z'ka(a'ka(r'ka!k'ka!Y'ka'w'kav'ka!_'ka%i'ka!g'ka~P%.XO#k$|iP$|iR$|i[$|ia$|ij$|ir$|i!S$|i!]$|i!l$|i!p$|i#R$|i#n$|i#o$|i#p$|i#q$|i#r$|i#s$|i#t$|i#u$|i#v$|i#x$|i#z$|i#{$|i'z$|i(a$|i(r$|i!k$|i!Y$|i'w$|i#`$|iv$|i!_$|i%i$|i!g$|i~P#/sO#k%aiP%aiR%ai[%aia%aij%air%ai!S%ai!l%ai!p%ai#R%ai#n%ai#o%ai#p%ai#q%ai#r%ai#s%ai#t%ai#u%ai#v%ai#x%ai#z%ai#{%ai'z%ai(a%ai(r%ai!k%ai!Y%ai'w%aiv%ai!_%ai%i%ai!g%ai~P%5oO#k%ciP%ciR%ci[%cia%cij%cir%ci!S%ci!l%ci!p%ci#R%ci#n%ci#o%ci#p%ci#q%ci#r%ci#s%ci#t%ci#u%ci#v%ci#x%ci#z%ci#{%ci'z%ci(a%ci(r%ci!k%ci!Y%ci'w%civ%ci!_%ci%i%ci!g%ci~P%6bO!]'Ya!k'Ya~P!:tO!].tO!k(ki~O$O#ci!]#ci!^#ci~P#BwOP$[OR#zO!Q#yO!S#{O!l#xO!p$[O(aVO[#mij#mir#mi#R#mi#o#mi#p#mi#q#mi#r#mi#s#mi#t#mi#u#mi#v#mi#x#mi#z#mi#{#mi$O#mi(r#mi(y#mi(z#mi!]#mi!^#mi~O#n#mi~P%NdO#n<_O~P%NdOP$[OR#zOr<kO!Q#yO!S#{O!l#xO!p$[O#n<_O#o<`O#p<`O#q<`O(aVO[#mij#mi#R#mi#s#mi#t#mi#u#mi#v#mi#x#mi#z#mi#{#mi$O#mi(r#mi(y#mi(z#mi!]#mi!^#mi~O#r#mi~P&!lO#r<aO~P&!lOP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#n<_O#o<`O#p<`O#q<`O#r<aO#s<bO#t<bO#u<lO(aVO#x#mi#z#mi#{#mi$O#mi(r#mi(y#mi(z#mi!]#mi!^#mi~O#v#mi~P&$tOP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#n<_O#o<`O#p<`O#q<`O#r<aO#s<bO#t<bO#u<lO#v<cO(aVO(z#}O#z#mi#{#mi$O#mi(r#mi(y#mi!]#mi!^#mi~O#x<eO~P&&uO#x#mi~P&&uO#v<cO~P&$tOP$[OR#zO[<mOj<bOr<kO!Q#yO!S#{O!l#xO!p$[O#R<bO#n<_O#o<`O#p<`O#q<`O#r<aO#s<bO#t<bO#u<lO#v<cO#x<eO(aVO(y#|O(z#}O#{#mi$O#mi(r#mi!]#mi!^#mi~O#z#mi~P&)UO#z<gO~P&)UOa#|y!]#|y'z#|y'w#|y!Y#|y!k#|yv#|y!_#|y%i#|y!g#|y~P!:tO[#mij#mir#mi#R#mi#r#mi#s#mi#t#mi#u#mi#v#mi#x#mi#z#mi#{#mi$O#mi(r#mi!]#mi!^#mi~OP$[OR#zO!Q#yO!S#{O!l#xO!p$[O#n<_O#o<`O#p<`O#q<`O(aVO(y#mi(z#mi~P&,QOn>^O!Q*OO'y*PO(y$}O(z%POP#miR#mi!S#mi!l#mi!p#mi#n#mi#o#mi#p#mi#q#mi(a#mi~P&,QO#S$dOP(`XR(`X[(`Xj(`Xn(`Xr(`X!Q(`X!S(`X!l(`X!p(`X#R(`X#n(`X#o(`X#p(`X#q(`X#r(`X#s(`X#t(`X#u(`X#v(`X#x(`X#z(`X#{(`X$O(`X'y(`X(a(`X(r(`X(y(`X(z(`X!](`X!^(`X~O$O$Pi!]$Pi!^$Pi~P#BwO$O!ri!^!ri~P$+oOg']a!]']a~P!1WO!^7nO~O!]'da!^'da~P#BwO!Y7oO~P#/sO!g#vO(r'pO!]'ea!k'ea~O!]/pO!k)Oi~O!]/pO!g#vO!k)Oi~Og$|q!]$|q#`$|q$O$|q~P!1WO!Y'ga!]'ga~P#/sO!g7vO~O!]/yO!Y)Pi~P#/sO!]/yO!Y)Pi~O!Y7yO~Oh%VOr8OO!l%eO(r'pO~Oj8QO!g#vO~Or8TO!g#vO(r'pO~O!Q*OO'y*PO(z%POn'ja(y'ja!]'ja#`'ja~Og'ja$O'ja~P&5RO!Q*OO'y*POn'la(y'la(z'la!]'la#`'la~Og'la$O'la~P&5tOg(_q!](_q~P!1WO#`8VOg(_q!](_q~P!1WO!Y8WO~Og%Oq!]%Oq#`%Oq$O%Oq~P!1WOa$oy!]$oy'z$oy'w$oy!Y$oy!k$oyv$oy!_$oy%i$oy!g$oy~P!:tO!g6rO~O!]5[O!_)Qa~O!_'`OP$TaR$Ta[$Taj$Tar$Ta!Q$Ta!S$Ta!]$Ta!l$Ta!p$Ta#R$Ta#n$Ta#o$Ta#p$Ta#q$Ta#r$Ta#s$Ta#t$Ta#u$Ta#v$Ta#x$Ta#z$Ta#{$Ta(a$Ta(r$Ta(y$Ta(z$Ta~O%i7WO~P&8fO%^8[Oa%[i!_%[i'z%[i!]%[i~Oa#cy!]#cy'z#cy'w#cy!Y#cy!k#cyv#cy!_#cy%i#cy!g#cy~P!:tO[8^O~Ob8`O(T+qO(VTO(YUO~O!]1TO!^)Xi~O`8dO~O(e(|O!]'pX!^'pX~O!]5uO!^)Ua~O!^8nO~P%;eO(o!sO~P$&YO#[8oO~O!_1oO~O!_1oO%i8qO~On8tO!_1oO%i8qO~O[8yO!]'sa!^'sa~O!]1zO!^)Vi~O!k8}O~O!k9OO~O!k9RO~O!k9RO~P%[Oa9TO~O!g9UO~O!k9VO~O!](wi!^(wi~P#BwOa%nO#`9_O'z%nO~O!](ty!k(tya(ty'z(ty~P!:tO!](jO!k(sy~O%i9bO~P&8fO!_'`O%i9bO~O#k$|qP$|qR$|q[$|qa$|qj$|qr$|q!S$|q!]$|q!l$|q!p$|q#R$|q#n$|q#o$|q#p$|q#q$|q#r$|q#s$|q#t$|q#u$|q#v$|q#x$|q#z$|q#{$|q'z$|q(a$|q(r$|q!k$|q!Y$|q'w$|q#`$|qv$|q!_$|q%i$|q!g$|q~P#/sO#k'jaP'jaR'ja['jaa'jaj'jar'ja!S'ja!l'ja!p'ja#R'ja#n'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#v'ja#x'ja#z'ja#{'ja'z'ja(a'ja(r'ja!k'ja!Y'ja'w'jav'ja!_'ja%i'ja!g'ja~P&5RO#k'laP'laR'la['laa'laj'lar'la!S'la!l'la!p'la#R'la#n'la#o'la#p'la#q'la#r'la#s'la#t'la#u'la#v'la#x'la#z'la#{'la'z'la(a'la(r'la!k'la!Y'la'w'lav'la!_'la%i'la!g'la~P&5tO#k%OqP%OqR%Oq[%Oqa%Oqj%Oqr%Oq!S%Oq!]%Oq!l%Oq!p%Oq#R%Oq#n%Oq#o%Oq#p%Oq#q%Oq#r%Oq#s%Oq#t%Oq#u%Oq#v%Oq#x%Oq#z%Oq#{%Oq'z%Oq(a%Oq(r%Oq!k%Oq!Y%Oq'w%Oq#`%Oqv%Oq!_%Oq%i%Oq!g%Oq~P#/sO!]'Yi!k'Yi~P!:tO$O#cq!]#cq!^#cq~P#BwO(y$}OP%aaR%aa[%aaj%aar%aa!S%aa!l%aa!p%aa#R%aa#n%aa#o%aa#p%aa#q%aa#r%aa#s%aa#t%aa#u%aa#v%aa#x%aa#z%aa#{%aa$O%aa(a%aa(r%aa!]%aa!^%aa~On%aa!Q%aa'y%aa(z%aa~P&IyO(z%POP%caR%ca[%caj%car%ca!S%ca!l%ca!p%ca#R%ca#n%ca#o%ca#p%ca#q%ca#r%ca#s%ca#t%ca#u%ca#v%ca#x%ca#z%ca#{%ca$O%ca(a%ca(r%ca!]%ca!^%ca~On%ca!Q%ca'y%ca(y%ca~P&LQOn>^O!Q*OO'y*PO(z%PO~P&IyOn>^O!Q*OO'y*PO(y$}O~P&LQOR0kO!Q0kO!S0lO#S$dOP}a[}aj}an}ar}a!l}a!p}a#R}a#n}a#o}a#p}a#q}a#r}a#s}a#t}a#u}a#v}a#x}a#z}a#{}a$O}a'y}a(a}a(r}a(y}a(z}a!]}a!^}a~O!Q*OO'y*POP$saR$sa[$saj$san$sar$sa!S$sa!l$sa!p$sa#R$sa#n$sa#o$sa#p$sa#q$sa#r$sa#s$sa#t$sa#u$sa#v$sa#x$sa#z$sa#{$sa$O$sa(a$sa(r$sa(y$sa(z$sa!]$sa!^$sa~O!Q*OO'y*POP$uaR$ua[$uaj$uan$uar$ua!S$ua!l$ua!p$ua#R$ua#n$ua#o$ua#p$ua#q$ua#r$ua#s$ua#t$ua#u$ua#v$ua#x$ua#z$ua#{$ua$O$ua(a$ua(r$ua(y$ua(z$ua!]$ua!^$ua~On>^O!Q*OO'y*PO(y$}O(z%PO~OP%TaR%Ta[%Taj%Tar%Ta!S%Ta!l%Ta!p%Ta#R%Ta#n%Ta#o%Ta#p%Ta#q%Ta#r%Ta#s%Ta#t%Ta#u%Ta#v%Ta#x%Ta#z%Ta#{%Ta$O%Ta(a%Ta(r%Ta!]%Ta!^%Ta~P''VO$O$mq!]$mq!^$mq~P#BwO$O$oq!]$oq!^$oq~P#BwO!^9oO~O$O9pO~P!1WO!g#vO!]'ei!k'ei~O!g#vO(r'pO!]'ei!k'ei~O!]/pO!k)Oq~O!Y'gi!]'gi~P#/sO!]/yO!Y)Pq~Or9wO!g#vO(r'pO~O[9yO!Y9xO~P#/sO!Y9xO~Oj:PO!g#vO~Og(_y!](_y~P!1WO!]'na!_'na~P#/sOa%[q!_%[q'z%[q!]%[q~P#/sO[:UO~O!]1TO!^)Xq~O`:YO~O#`:ZO!]'pa!^'pa~O!]5uO!^)Ui~P#BwO!S:]O~O!_1oO%i:`O~O(VTO(YUO(e:eO~O!]1zO!^)Vq~O!k:hO~O!k:iO~O!k:jO~O!k:jO~P%[O#`:mO!]#hy!^#hy~O!]#hy!^#hy~P#BwO%i:rO~P&8fO!_'`O%i:rO~O$O#|y!]#|y!^#|y~P#BwOP$|iR$|i[$|ij$|ir$|i!S$|i!l$|i!p$|i#R$|i#n$|i#o$|i#p$|i#q$|i#r$|i#s$|i#t$|i#u$|i#v$|i#x$|i#z$|i#{$|i$O$|i(a$|i(r$|i!]$|i!^$|i~P''VO!Q*OO'y*PO(z%POP'iaR'ia['iaj'ian'iar'ia!S'ia!l'ia!p'ia#R'ia#n'ia#o'ia#p'ia#q'ia#r'ia#s'ia#t'ia#u'ia#v'ia#x'ia#z'ia#{'ia$O'ia(a'ia(r'ia(y'ia!]'ia!^'ia~O!Q*OO'y*POP'kaR'ka['kaj'kan'kar'ka!S'ka!l'ka!p'ka#R'ka#n'ka#o'ka#p'ka#q'ka#r'ka#s'ka#t'ka#u'ka#v'ka#x'ka#z'ka#{'ka$O'ka(a'ka(r'ka(y'ka(z'ka!]'ka!^'ka~O(y$}OP%aiR%ai[%aij%ain%air%ai!Q%ai!S%ai!l%ai!p%ai#R%ai#n%ai#o%ai#p%ai#q%ai#r%ai#s%ai#t%ai#u%ai#v%ai#x%ai#z%ai#{%ai$O%ai'y%ai(a%ai(r%ai(z%ai!]%ai!^%ai~O(z%POP%ciR%ci[%cij%cin%cir%ci!Q%ci!S%ci!l%ci!p%ci#R%ci#n%ci#o%ci#p%ci#q%ci#r%ci#s%ci#t%ci#u%ci#v%ci#x%ci#z%ci#{%ci$O%ci'y%ci(a%ci(r%ci(y%ci!]%ci!^%ci~O$O$oy!]$oy!^$oy~P#BwO$O#cy!]#cy!^#cy~P#BwO!g#vO!]'eq!k'eq~O!]/pO!k)Oy~O!Y'gq!]'gq~P#/sOr:|O!g#vO(r'pO~O[;QO!Y;PO~P#/sO!Y;PO~Og(_!R!](_!R~P!1WOa%[y!_%[y'z%[y!]%[y~P#/sO!]1TO!^)Xy~O!]5uO!^)Uq~O(T;XO~O!_1oO%i;[O~O!k;_O~O%i;dO~P&8fOP$|qR$|q[$|qj$|qr$|q!S$|q!l$|q!p$|q#R$|q#n$|q#o$|q#p$|q#q$|q#r$|q#s$|q#t$|q#u$|q#v$|q#x$|q#z$|q#{$|q$O$|q(a$|q(r$|q!]$|q!^$|q~P''VO!Q*OO'y*PO(z%POP'jaR'ja['jaj'jan'jar'ja!S'ja!l'ja!p'ja#R'ja#n'ja#o'ja#p'ja#q'ja#r'ja#s'ja#t'ja#u'ja#v'ja#x'ja#z'ja#{'ja$O'ja(a'ja(r'ja(y'ja!]'ja!^'ja~O!Q*OO'y*POP'laR'la['laj'lan'lar'la!S'la!l'la!p'la#R'la#n'la#o'la#p'la#q'la#r'la#s'la#t'la#u'la#v'la#x'la#z'la#{'la$O'la(a'la(r'la(y'la(z'la!]'la!^'la~OP%OqR%Oq[%Oqj%Oqr%Oq!S%Oq!l%Oq!p%Oq#R%Oq#n%Oq#o%Oq#p%Oq#q%Oq#r%Oq#s%Oq#t%Oq#u%Oq#v%Oq#x%Oq#z%Oq#{%Oq$O%Oq(a%Oq(r%Oq!]%Oq!^%Oq~P''VOg%e!Z!]%e!Z#`%e!Z$O%e!Z~P!1WO!Y;hO~P#/sOr;iO!g#vO(r'pO~O[;kO!Y;hO~P#/sO!]'pq!^'pq~P#BwO!]#h!Z!^#h!Z~P#BwO#k%e!ZP%e!ZR%e!Z[%e!Za%e!Zj%e!Zr%e!Z!S%e!Z!]%e!Z!l%e!Z!p%e!Z#R%e!Z#n%e!Z#o%e!Z#p%e!Z#q%e!Z#r%e!Z#s%e!Z#t%e!Z#u%e!Z#v%e!Z#x%e!Z#z%e!Z#{%e!Z'z%e!Z(a%e!Z(r%e!Z!k%e!Z!Y%e!Z'w%e!Z#`%e!Zv%e!Z!_%e!Z%i%e!Z!g%e!Z~P#/sOr;tO!g#vO(r'pO~O!Y;uO~P#/sOr;|O!g#vO(r'pO~O!Y;}O~P#/sOP%e!ZR%e!Z[%e!Zj%e!Zr%e!Z!S%e!Z!l%e!Z!p%e!Z#R%e!Z#n%e!Z#o%e!Z#p%e!Z#q%e!Z#r%e!Z#s%e!Z#t%e!Z#u%e!Z#v%e!Z#x%e!Z#z%e!Z#{%e!Z$O%e!Z(a%e!Z(r%e!Z!]%e!Z!^%e!Z~P''VOr<QO!g#vO(r'pO~Ov(fX~P1qO!Q%rO~P!)[O(U!lO~P!)[O!YfX!]fX#`fX~P%2OOP]XR]X[]Xj]Xr]X!Q]X!S]X!]]X!]fX!l]X!p]X#R]X#S]X#`]X#`fX#kfX#n]X#o]X#p]X#q]X#r]X#s]X#t]X#u]X#v]X#x]X#z]X#{]X$Q]X(a]X(r]X(y]X(z]X~O!gfX!k]X!kfX(rfX~P'LTOP<UOQ<UOSfOd>ROe!iOpkOr<UOskOtkOzkO|<UO!O<UO!SWO!WkO!XkO!_XO!i<XO!lZO!o<UO!p<UO!q<UO!s<YO!u<]O!x!hO$W!kO$n>PO(T)]O(VTO(YUO(aVO(o[O~O!]<iO!^$qa~Oh%VOp%WOr%XOs$tOt$tOz%YO|%ZO!O<tO!S${O!_$|O!i>WO!l$xO#j<zO$W%`O$t<vO$v<xO$y%aO(T(vO(VTO(YUO(a$uO(y$}O(z%PO~Ol)dO~P(!yOr!eX(r!eX~P#!iOr(jX(r(jX~P##[O!^]X!^fX~P'LTO!YfX!Y$zX!]fX!]$zX#`fX~P!0SO#k<^O~O!g#vO#k<^O~O#`<nO~Oj<bO~O#`=OO!](wX!^(wX~O#`<nO!](uX!^(uX~O#k=PO~Og=RO~P!1WO#k=XO~O#k=YO~Og=RO(T&ZO~O!g#vO#k=ZO~O!g#vO#k=PO~O$O=[O~P#BwO#k=]O~O#k=^O~O#k=cO~O#k=dO~O#k=eO~O#k=fO~O$O=gO~P!1WO$O=hO~P!1WOl=sO~P7eOk#S#T#U#W#X#[#i#j#u$n$t$v$y%]%^%h%i%j%q%s%v%w%y%{~(OT#o!X'|(U#ps#n#qr!Q'}$]'}(T$_(e~",
@@ -20694,7 +20914,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const javascriptLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "javascript",
-		parser: /*@__PURE__*/ parser$14.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$15.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			IfStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|else\b)/ }),
 			TryStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|catch\b|finally\b)/ }),
 			LabeledStatement: flatIndent,
@@ -20793,8 +21013,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		label: name,
 		type: "keyword"
 	});
-	const keywords$5 = /*@__PURE__*/ "break case const continue default delete export extends false finally in instanceof let new return static super switch this throw true typeof var yield".split(" ").map(kwCompletion$1);
-	const typescriptKeywords = /*@__PURE__*/ keywords$5.concat(/*@__PURE__*/ [
+	const keywords$16 = /*@__PURE__*/ "break case const continue default delete export extends false finally in instanceof let new return static super switch this throw true typeof var yield".split(" ").map(kwCompletion$1);
+	const typescriptKeywords = /*@__PURE__*/ keywords$16.concat(/*@__PURE__*/ [
 		"declare",
 		"implements",
 		"private",
@@ -20805,9 +21025,9 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	JavaScript support. Includes [snippet](https://codemirror.net/6/docs/ref/#lang-javascript.snippets)
 	and local variable completion.
 	*/
-	function javascript(config = {}) {
+	function javascript$1(config = {}) {
 		let lang = config.jsx ? config.typescript ? tsxLanguage : jsxLanguage : config.typescript ? typescriptLanguage : javascriptLanguage;
-		let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets$2.concat(keywords$5);
+		let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets$2.concat(keywords$16);
 		return new LanguageSupport(lang, [
 			javascriptLanguage.data.of({ autocomplete: ifNotIn(dontComplete$2, completeFromList(completions)) }),
 			javascriptLanguage.data.of({ autocomplete: localCompletionSource$2 }),
@@ -20888,7 +21108,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		"[ ]": tags$1.squareBracket,
 		"{ }": tags$1.brace
 	});
-	const parser$13 = LRParser.deserialize({
+	const parser$14 = LRParser.deserialize({
 		version: 14,
 		states: "$bOVQPOOOOQO'#Cb'#CbOnQPO'#CeOvQPO'#ClOOQO'#Cr'#CrQOQPOOOOQO'#Cg'#CgO}QPO'#CfO!SQPO'#CtOOQO,59P,59PO![QPO,59PO!aQPO'#CuOOQO,59W,59WO!iQPO,59WOVQPO,59QOqQPO'#CmO!nQPO,59`OOQO1G.k1G.kOVQPO'#CnO!vQPO,59aOOQO1G.r1G.rOOQO1G.l1G.lOOQO,59X,59XOOQO-E6k-E6kOOQO,59Y,59YOOQO-E6l-E6l",
 		stateData: "#O~OeOS~OQSORSOSSOTSOWQO_ROgPO~OVXOgUO~O^[O~PVO[^O~O]_OVhX~OVaO~O]bO^iX~O^dO~O]_OVha~O]bO^ia~O",
@@ -20933,7 +21153,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const jsonLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "json",
-		parser: /*@__PURE__*/ parser$13.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$14.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			Object: /*@__PURE__*/ continuedIndent({ except: /^\s*\}/ }),
 			Array: /*@__PURE__*/ continuedIndent({ except: /^\s*\]/ })
 		}), /*@__PURE__*/ foldNodeProp.add({ "Object Array": foldInside })] }),
@@ -20949,7 +21169,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	/**
 	JSON language support.
 	*/
-	function json() {
+	function json$1() {
 		return new LanguageSupport(jsonLanguage);
 	}
 	//#endregion
@@ -22564,7 +22784,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	/**
 	The default CommonMark parser.
 	*/
-	const parser$12 = new MarkdownParser(new NodeSet(nodeTypes).extend(markdownHighlighting), Object.keys(DefaultBlockParsers).map((n) => DefaultBlockParsers[n]), Object.keys(DefaultBlockParsers).map((n) => DefaultLeafBlocks[n]), Object.keys(DefaultBlockParsers), DefaultEndLeaf, DefaultSkipMarkup, Object.keys(DefaultInline).map((n) => DefaultInline[n]), Object.keys(DefaultInline), []);
+	const parser$13 = new MarkdownParser(new NodeSet(nodeTypes).extend(markdownHighlighting), Object.keys(DefaultBlockParsers).map((n) => DefaultBlockParsers[n]), Object.keys(DefaultBlockParsers).map((n) => DefaultLeafBlocks[n]), Object.keys(DefaultBlockParsers), DefaultEndLeaf, DefaultSkipMarkup, Object.keys(DefaultInline).map((n) => DefaultInline[n]), Object.keys(DefaultInline), []);
 	function leftOverSpace(node, from, to) {
 		let ranges = [];
 		for (let n = node.firstChild, pos = from;; n = n.nextSibling) {
@@ -23183,7 +23403,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		ProcessingInst: tags$1.processingInstruction,
 		DoctypeDecl: tags$1.documentMeta
 	});
-	const parser$11 = LRParser.deserialize({
+	const parser$12 = LRParser.deserialize({
 		version: 14,
 		states: ",xOVO!rOOO!ZQ#tO'#CrO!`Q#tO'#C{O!eQ#tO'#DOO!jQ#tO'#DRO!oQ#tO'#DTO!tOaO'#CqO#PObO'#CqO#[OdO'#CqO$kO!rO'#CqOOO`'#Cq'#CqO$rO$fO'#DUO$zQ#tO'#DWO%PQ#tO'#DXOOO`'#Dl'#DlOOO`'#DZ'#DZQVO!rOOO%UQ&rO,59^O%aQ&rO,59gO%lQ&rO,59jO%wQ&rO,59mO&SQ&rO,59oOOOa'#D_'#D_O&_OaO'#CyO&jOaO,59]OOOb'#D`'#D`O&rObO'#C|O&}ObO,59]OOOd'#Da'#DaO'VOdO'#DPO'bOdO,59]OOO`'#Db'#DbO'jO!rO,59]O'qQ#tO'#DSOOO`,59],59]OOOp'#Dc'#DcO'vO$fO,59pOOO`,59p,59pO(OQ#|O,59rO(TQ#|O,59sOOO`-E7X-E7XO(YQ&rO'#CtOOQW'#D['#D[O(hQ&rO1G.xOOOa1G.x1G.xOOO`1G/Z1G/ZO(sQ&rO1G/ROOOb1G/R1G/RO)OQ&rO1G/UOOOd1G/U1G/UO)ZQ&rO1G/XOOO`1G/X1G/XO)fQ&rO1G/ZOOOa-E7]-E7]O)qQ#tO'#CzOOO`1G.w1G.wOOOb-E7^-E7^O)vQ#tO'#C}OOOd-E7_-E7_O){Q#tO'#DQOOO`-E7`-E7`O*QQ#|O,59nOOOp-E7a-E7aOOO`1G/[1G/[OOO`1G/^1G/^OOO`1G/_1G/_O*VQ,UO,59`OOQW-E7Y-E7YOOOa7+$d7+$dOOO`7+$u7+$uOOOb7+$m7+$mOOOd7+$p7+$pOOO`7+$s7+$sO*bQ#|O,59fO*gQ#|O,59iO*lQ#|O,59lOOO`1G/Y1G/YO*qO7[O'#CwO+SOMhO'#CwOOQW1G.z1G.zOOO`1G/Q1G/QOOO`1G/T1G/TOOO`1G/W1G/WOOOO'#D]'#D]O+eO7[O,59cOOQW,59c,59cOOOO'#D^'#D^O+vOMhO,59cOOOO-E7Z-E7ZOOQW1G.}1G.}OOOO-E7[-E7[",
 		stateData: ",c~O!_OS~OUSOVPOWQOXROYTO[]O][O^^O_^Oa^Ob^Oc^Od^Oy^O|_O!eZO~OgaO~OgbO~OgcO~OgdO~OgeO~O!XfOPmP![mP~O!YiOQpP![pP~O!ZlORsP![sP~OUSOVPOWQOXROYTOZqO[]O][O^^O_^Oa^Ob^Oc^Od^Oy^O!eZO~O![rO~P#gO!]sO!fuO~OgvO~OgwO~OS|OT}OiyO~OS!POT}OiyO~OS!ROT}OiyO~OS!TOT}OiyO~OS}OT}OiyO~O!XfOPmX![mX~OP!WO![!XO~O!YiOQpX![pX~OQ!ZO![!XO~O!ZlORsX![sX~OR!]O![!XO~O![!XO~P#gOg!_O~O!]sO!f!aO~OS!bO~OS!cO~Oj!dOShXThXihX~OS!fOT!gOiyO~OS!hOT!gOiyO~OS!iOT!gOiyO~OS!jOT!gOiyO~OS!gOT!gOiyO~Og!kO~Og!lO~Og!mO~OS!nO~Ol!qO!a!oO!c!pO~OS!rO~OS!sO~OS!tO~Ob!uOc!uOd!uO!a!wO!b!uO~Ob!xOc!xOd!xO!c!wO!d!xO~Ob!uOc!uOd!uO!a!{O!b!uO~Ob!xOc!xOd!xO!c!{O!d!xO~OT~cbd!ey|!e~",
@@ -23411,7 +23631,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		8287,
 		12288
 	];
-	const colon = 58;
+	const colon$1 = 58;
 	const parenL = 40;
 	const underscore = 95;
 	const bracketL = 91;
@@ -23454,12 +23674,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			}
 		}
 	};
-	const identifiers = new ExternalTokenizer(identifierTokens(identifier$4, VariableName, callee), { contextual: true });
+	const identifiers$3 = new ExternalTokenizer(identifierTokens(identifier$4, VariableName, callee), { contextual: true });
 	const queryIdentifiers = new ExternalTokenizer(identifierTokens(queryIdentifier, queryVariableName, QueryCallee), { contextual: true });
 	const descendant = new ExternalTokenizer((input) => {
 		if (space$3.includes(input.peek(-1))) {
 			let { next } = input;
-			if (isAlpha$1(next) || next == underscore || next == hash$1 || next == period || next == asterisk || next == bracketL || next == colon && isAlpha$1(input.peek(1)) || next == dash || next == ampersand) input.acceptToken(descendantOp);
+			if (isAlpha$1(next) || next == underscore || next == hash$1 || next == period || next == asterisk || next == bracketL || next == colon$1 && isAlpha$1(input.peek(1)) || next == dash || next == ampersand) input.acceptToken(descendantOp);
 		}
 	});
 	const unitToken = new ExternalTokenizer((input) => {
@@ -23555,7 +23775,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		__proto__: null,
 		to: 249
 	};
-	const parser$10 = LRParser.deserialize({
+	const parser$11 = LRParser.deserialize({
 		version: 14,
 		states: "MrQYQdOOO#}QdOOP$UO`OOO%OQaO'#CfOOQP'#Ce'#CeO%VQdO'#CgO%[Q`O'#CgO%aQaO'#FqO&XQdO'#CkO&xQaO'#CcO'SQdO'#CnO'_QdO'#ERO'dQdO'#ETO'oQdO'#E[O'oQdO'#E_OOQP'#Fq'#FqO)RQhO'#FQOOQS'#Fp'#FpOOQS'#FT'#FTQYQdOOO)YQdO'#EeO*iQhO'#EkO)YQdO'#EmO*pQdO'#EoO*{QdO'#ErO)}QhO'#ExO+TQdO'#EzO+`QdO'#E}O+eQaO'#CfO+lQ`O'#EbO+qQ`O'#F}O+|QdO'#F}QOQ`OOP,WO&jO'#CaPOOO)CA`)CA`OOQP'#Ci'#CiOOQP,59R,59RO%VQdO,59ROOQP'#Cm'#CmOOQP,59V,59VO&XQdO,59VO,cQdO,59YO'_QdO,5:mO'dQdO,5:oO'oQdO,5:vO'oQdO,5:xO'oQdO,5:yO'oQdO'#F[O,nQ`O,58}O,vQdO'#EaOOQS,58},58}OOQP'#Cq'#CqOOQO'#EP'#EPOOQP,59Y,59YO,}Q`O,59YO-SQ`O,59YOOQP'#ES'#ESOOQP,5:m,5:mO-XQpO'#EUO-dQdO'#EVO-iQ`O'#EVO-nQpO,5:oO.XQaO,5:vO.oQaO,5:yOOQW'#D^'#D^O/nQhO'#DgO0RQhO,5;lO)}QhO'#DeO0`Q`O'#DnO0eQhO'#D{OOQW'#Fw'#FwOOQS,5;l,5;lO0jQ`O'#DhO0oQ`O'#DkOOQS-E9R-E9ROOQ['#Cv'#CvO0tQdO'#CwO1[QdO'#C}O1rQdO'#DQO2YQ!pO'#DSO4fQ!jO,5;POOQO'#DX'#DXO-SQ`O'#DWO4vQ!nO'#FtO6|Q`O'#DYO7RQ`O'#D|OOQ['#Ft'#FtO7WQhO'#GQO7fQ`O,5;VO7kQ!bO,5;XOOQS'#Eq'#EqO7sQ`O,5;ZO7xQdO,5;ZOOQO'#Et'#EtO8QQ`O,5;^O8VQhO,5;dO'oQdO'#DjOOQS,5;f,5;fO0jQ`O,5;fO8_QdO,5;fOOQS'#Fc'#FcO8gQdO'#FPO7fQ`O,5;iO8oQdO,5:|O9PQdO'#F^O9^Q`O,5<iO9^Q`O,5<iPOOO'#FS'#FSP9iO&jO,58{POOO,58{,58{OOQP1G.m1G.mOOQP1G.q1G.qOOQP1G.t1G.tO,}Q`O1G.tO-SQ`O1G.tOOQP1G0X1G0XO9tQpO1G0ZO9|QaO1G0bO:dQaO1G0dO:zQaO1G0eO;bQaO,5;vOOQO-E9Y-E9YOOQS1G.i1G.iO;lQ`O,5:{O;qQdO'#EQO;xQdO'#CuOOQO'#EX'#EXOOQO,5:q,5:qO-dQdO,5:qOOQP1G0Z1G0ZO)YQdO1G0ZO<PQ!jO'#D^O<_Q!bO,59yO<gQhO,5:ROOQO'#Fx'#FxO<bQ!bO,59}O<oQhO'#FdO)}QhO,59{O)}QhO'#FdO=gQhO1G1WOOQS1G1W1G1WO=qQhO,5:PO>lQhO'#DoOOQW,5:Y,5:YOOQW,5:g,5:gOOQW,5:S,5:SO>vQhO,5:VO?bQ!fO'#FuOOQS'#Fu'#FuOOQS'#FV'#FVO@rQdO,59cOOQ[,59c,59cOAYQdO,59iOOQ[,59i,59iOApQdO,59lOOQ[,59l,59lOOQ[,59n,59nO)YQdO,59pOBWQhO'#EgOOQW'#Eg'#EgOBuQ`O1G0kO4oQhO1G0kOOQ[,59r,59rO)}QhO'#D[OOQ[,59t,59tOBzQ#tO,5:hOCVQhO'#F`OCdQ`O,5<lOOQS1G0q1G0qOOQS1G0s1G0sOOQS1G0u1G0uOCoQ`O1G0uOCtQdO'#EuOOQS1G0x1G0xOOQS1G1O1G1OODPQaO,5:UO7fQ`O1G1QOOQS1G1Q1G1QO0jQ`O1G1QOOQS-E9a-E9aOOQS1G1T1G1TODWQ!fO1G0hODnQ`O'#EdOOQO1G0h1G0hOOQO,5;x,5;xODsQdO,5;xOOQO-E9[-E9[OEQQ`O1G2TPOOO-E9Q-E9QPOOO1G.g1G.gOOQP7+$`7+$`OOQP7+%u7+%uO)YQdO7+%uOOQS1G0g1G0gOE]QaO'#F|OEgQ`O,5:lOElQ!fO'#FUOFjQdO'#FsOFtQ`O,59aOOQO1G0]1G0]OFyQ!bO7+%uO)YQdO1G/eOGUQhO1G/iOOQW1G/m1G/mOOQW1G/g1G/gOGgQhO,5<OOOQW-E9b-E9bOOQS7+&r7+&rOH_QhO'#D^OHmQhO'#F{OHxQ`O'#F{OH}Q`O,5:ZOISQ!bO'#D`O>vQhO'#DmOI_QhO'#DsOIgQhO'#DuOIlQ!jO'#FzOOQO'#Fz'#FzOIwQ`O'#DxOJPQ!bO'#DzOOQO'#Fy'#FyOJUQ`O1G/qOOQS-E9T-E9TOOQ[1G.}1G.}OOQ[1G/T1G/TOOQ[1G/W1G/WOOQ[1G/[1G/[OJZQdO,5;ROOQS7+&V7+&VOJ`Q`O7+&VOJeQhO'#D]OJmQ`O,59vO)}QhO,59vOOQ[1G0S1G0SOJuQ`O1G0SOJzQhO,5;zOOQO-E9^-E9^OOQS7+&a7+&aOKYQbO'#DSOOQO'#Ew'#EwOKhQ`O'#EvOOQO'#Ev'#EvOKsQ`O'#FaOK{QdO,5;aOOQS,5;a,5;aOOQ[1G/p1G/pOOQS7+&l7+&lO7fQ`O7+&lOLWQ!fO'#F]O)YQdO'#F]OM_QdO7+&SOOQO7+&S7+&SOOQO,5;O,5;OOOQO1G1d1G1dOMrQ!bO<<IaOM}QdO'#FZONXQ`O,5<hOOQP1G0W1G0WOOQS-E9S-E9SONaQdO'#FYONkQ`O,5<_OOQ]1G.{1G.{OOQP<<Ia<<IaONsQ`O<<IaONxQdO7+%POOQO'#D`'#D`O! PQ!bO7+%TO! XQhO'#FXO! fQ`O,5<gO)YQdO,5<gOOQW1G/u1G/uO! nQ`O,5:XO>vQhO'#DtOOQO,5:_,5:_O! sQhO,5:aO! {QhO,5:fO)YQdO,5:dOOQW7+%]7+%]OOQO'#Ei'#EiO!!SQ`O1G0mOOQS<<Iq<<IqO)YQdO,59wO!!vQhO1G/bOOQ[1G/b1G/bO!!}Q`O1G/bOOQW-E9U-E9UOOQ[7+%n7+%nOOQO,5;b,5;bOCwQdO'#FbOKsQ`O,5;{OOQS,5;{,5;{OOQS-E9_-E9_OOQS1G0{1G0{OOQS<<JW<<JWO!#VQ!fO,5;wOOQS-E9Z-E9ZOOQO<<In<<InOOQPAN>{AN>{O!$^Q`OAN>{O!$cQaO,5;uOOQO-E9X-E9XO!$mQdO,5;tOOQO-E9W-E9WOOQW<<Hk<<HkOOQW<<Ho<<HoO!$wQhO<<HoO!%YQhO'#D^O!%hQhO,5;sO!%sQ`O,5;sOOQO-E9V-E9VO!%xQdO1G2RO!&SQhO1G/sO!&[Q`O,5:`O>vQhO'#DwOOQO1G/{1G/{O!&aQ!bO1G0QO!&iQdO1G0OOJZQdO'#F_O!&pQ`O7+&XOOQW7+&X7+&XO!&xQ!bO1G/cOOQ[7+$|7+$|O!'TQhO7+$|P!'[Q`O'#FWOOQO,5;|,5;|OOQO-E9`-E9`OOQS1G1g1G1gOOQPG24gG24gO!'aQ`OAN>ZO)YQdO1G1_O!'fQ`O7+'mOOQO1G/z1G/zO!'nQ`O,5:cO!'sQhO7+%lOOQO,5;y,5;yOOQO-E9]-E9]OOQW<<Is<<IsOOQ[<<Hh<<HhPOQW,5;r,5;rOOQWG23uG23uO!'zQdO7+&yOOQO1G/}1G/}OOQO<<IW<<IW",
 		stateData: "!(_~O$_OS$`QQ~OWVO^_O`WOcYOdYOl`OmZOp[O#P]O#S^O#YdO#`eO#bfO#dgO#ghO#miO#ojO#rkO$ZRO$fTO~OQmOWVO^_O`WOcYOdYOl`OmZOp[O#P]O#S^O#YdO#`eO#bfO#dgO#ghO#miO#ojO#rkO$ZlO$fTO~O$X$qP~P!jO$`qO~O`YXcYXdYXmYXpYXsYX!eYX#PYX#SYX$YYX$f[X~OgYX~P$ZO$ZsO~O$fuO~O$fuO`$eXc$eXd$eXm$eXp$eXs$eX!e$eX#P$eX#S$eX$Y$eXg$eX~O$ZvO~O`xOcyOdyOmzOp{O#P|O#S!OO$Y}O~Os!RO!e!PO~P&^Of!XO$Z!TO$[!UO~O$Z!YO~OW!^O$Z![O$f!]O~OWVO^_O`WOcYOdYOmZOp[O#P]O#S^O$ZRO$fTO~OS!fOc!gOd!gOh!cOs!RO!Y!eO!]!jO!`!kO$]!bO~On!iO~P(dOQ!uOh!nOp!oOs!pOu!xOw!xO}!vO!q!wO$Z!mO$[!sO$j!qO~OS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO$]!bO~Os$tP~P)}Ow!}O!q!wO$Z!|O~Ow#PO$Z#PO~Oh#SOs!RO#p#UO~O$Z#WO~Oc#VX~P$ZOc#ZO~On#[O$X$qXr$qX~O$X$qXr$qX~P!jO$a#_O$b#_O$c#aO~Of#fO$Z!TO$[!UO~Os!RO!e!PO~Or$qP~P!jOh#pO~Oh#qO~Oo!xX!|!xX$f!zX~O$Z#rO~O$f#tO~Oo#uO!|#vO~O`xOcyOdyOmzOp{O~Os#Oa!e#Oa#P#Oa#S#Oa$Y#Oag#Oa~P-vOs#Ra!e#Ra#P#Ra#S#Ra$Y#Rag#Ra~P-vOS!fOc!gOd!gOh!cO!Y!eO!]!jO!`!kO~OR#zOu#zOw#zO$]#wO$j!qO~P/VOn$QO!U#}O!e$OO~P(dOh$SO~O$]$UO~Oh#SO~Oh$WO~O`$YOc$YOg$]Ol$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo$_O~P)YO`$YOc$YOl$YOm$YOn$YOr$aO~P)YOP$bOSvXcvXdvXhvXnvXyvX!YvX!]vX!`vX#[vX#^vX$]vX!WvXQvX`vXgvXlvXmvXpvXsvXuvXwvX}vX!qvX$ZvX$[vX$jvXovXrvX!evX$XvX$svX!}vX~Oy$cO#[$dO#^$eOn$tP~P)}Oh#qOS$hXc$hXd$hXn$hXy$hX!Y$hX!]$hX!`$hX#[$hX#^$hX$]$hXQ$hX`$hXg$hXl$hXm$hXp$hXs$hXu$hXw$hX}$hX!q$hX$Z$hX$[$hX$j$hXo$hXr$hX!e$hX$X$hX$s$hX!}$hX~Oh$iO~Oh$kO~O!U#}O!e$lOs$tXn$tX~Os!RO~On$oOy$cO~On$pO~Ow$qO!q!wO~Os$rO~Os!RO!U#}O~Os!RO#p$xO~O$Z#WOs#sX~O$s$|On#Ua$X#Uar#Ua~P)YOn$QX$X$QXr$QX~P!jOn#[O$X$qar$qa~O$a#_O$b#_O$c%TO~Oo%VO!|%WO~Os#Oi!e#Oi#P#Oi#S#Oi$Y#Oig#Oi~P-vOs#Qi!e#Qi#P#Qi#S#Qi$Y#Qig#Qi~P-vOs#Ri!e#Ri#P#Ri#S#Ri$Y#Rig#Ri~P-vOs$Oa!e$Oa~P&^Or%XO~Og$pP~P'oOg$gP~P)YOc!SXg!QX!U!QX!W!SX~Oc%aO!W%bO~Og%cO!U#}O~O!U#}OS$WXc$WXd$WXh$WXn$WXs$WX!Y$WX!]$WX!`$WX!e$WX$]$WX~On%gO!e$OO~P(dO!U#}OS!Xac!Xad!Xah!Xan!Xas!Xa!Y!Xa!]!Xa!`!Xa!e!Xa$]!Xag!Xa~O$]%hOg$oP~P/VOR#zOS!fOh%mOu#zOw#zO!Y%nO$]%lO$j!qO~Oy$cOQ$iX`$iXc$iXg$iXh$iXl$iXm$iXn$iXp$iXs$iXu$iXw$iX}$iX!q$iX$Z$iX$[$iX$j$iXo$iXr$iX~O`$YOc$YOg%wOl$YOm$YOn$YO~P)YO`$YOc$YOl$YOm$YOn$YOo%xO~P)YO`$YOc$YOl$YOm$YOn$YOr%yO~P)YOh%{OS#ZXc#ZXd#ZXn#ZX!Y#ZX!]#ZX!`#ZX$]#ZX~On%|O~Og&ROw&SO!r&SO~Os$SX!e$SXn$SX~P)}O!e$lOs$tan$ta~On&VO~Or&^O$Z&XO$j&WO~Og&_O~P&^Oy$cO!e&cO$s$|On#Ui$X#Uir#Ui~P)YO$r&fO~On$Qa$X$Qar$Qa~P!jOn#[O$X$qir$qi~O!e&iOg$pX~P&^Og&kO~Oy$cOQ#xXg#xXh#xXp#xXs#xXu#xXw#xX}#xX!e#xX!q#xX$Z#xX$[#xX$j#xX~O!e&mOg$gX~P)YOg&oO~Oo&pOy$cO!}&qO~OR#zOu#zOw#zO$]&sO$j!qO~O!U#}OS$Wac$Wad$Wah$Wan$Was$Wa!Y$Wa!]$Wa!`$Wa!e$Wa$]$Wa~Oc!dXg!QX!U!QX!e!QX~O!U#}O!e&uOg$oX~Oc&wO~Og&xO~Oc!mXg!mX!W!SX~OS!fOh&zO~O!U&|O~O!U&|O!W&}Og$nX~Oc'OOg!lX~O!W&}O~Og'PO~O$Z'QO~On'SO~Oc'TO!U#}O~Og'VOn'UO~Og'YO~O!U#}Os$Sa!e$San$Sa~OP$bOsvX!evXgvX~O$j&WOs#jX!e#jX~Os!RO!e'[O~Or'`O$Z&XO$j&WO~Oy$cOQ$PXh$PXn$PXp$PXs$PXu$PXw$PX}$PX!e$PX!q$PX$X$PX$Z$PX$[$PX$j$PX$s$PXr$PX~O!e&cO$s$|On#Uq$X#Uqr#Uq~P)YOo'eOy$cO!}'fO~Og#}X!e#}X~P'oO!e&iOg$pa~Og#|X!e#|X~P)YO!e&mOg$ga~Oo'eO~Og'kO~P)YOg'lO!W'mO~O$]'nOg#{X!e#{X~P/VO!e&uOg$oa~Og'sO~OS!fOh'uO~OS!fO~PGUO`'yOg'{O~OS#zac#zad#zah#za!Y#za!]#za!`#za$]#za~Og'}O~P!![Og'}On(OO~Oy$cOQ$Pah$Pan$Pap$Pas$Pau$Paw$Pa}$Pa!e$Pa!q$Pa$X$Pa$Z$Pa$[$Pa$j$Pa$s$Par$Pa~Oo(TO~Og#}a!e#}a~P&^Og#|a!e#|a~P)YOR#zOu#zOw#zO$]&sO$j&WO~Oc!fXg!QX!U!QX!e!QX~O!U#}Og#{a!e#{a~Oc(VO~O!e&uOg$oi~P)YOg!ai!U!ji~Og(XO~O!W(ZOg!ni~Og!li~P)YO`'yOg(^O~Oy$cOg!Pin!Pi~Og(_O~P!![On(`O~Og(aO~O!e&uOg$oq~Og(cO~OS!fO~P!$wOg#{q!e#{q~P)YO$_!r$`$j`$jy#S~",
@@ -23600,7 +23820,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		tokenizers: [
 			descendant,
 			unitToken,
-			identifiers,
+			identifiers$3,
 			queryIdentifiers,
 			1,
 			2,
@@ -24530,7 +24750,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const cssLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "css",
-		parser: /*@__PURE__*/ parser$10.configure({ props: [/*@__PURE__*/ indentNodeProp.add({ Declaration: /*@__PURE__*/ continuedIndent() }), /*@__PURE__*/ foldNodeProp.add({ "Block KeyframeList": foldInside })] }),
+		parser: /*@__PURE__*/ parser$11.configure({ props: [/*@__PURE__*/ indentNodeProp.add({ Declaration: /*@__PURE__*/ continuedIndent() }), /*@__PURE__*/ foldNodeProp.add({ "Block KeyframeList": foldInside })] }),
 		languageData: {
 			commentTokens: { block: {
 				open: "/*",
@@ -24543,7 +24763,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	/**
 	Language support for CSS.
 	*/
-	function css$1() {
+	function css$2() {
 		return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
 	}
 	//#endregion
@@ -25419,7 +25639,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	})));
 	const htmlPlain = /*@__PURE__*/ LRLanguage.define({
 		name: "html",
-		parser: /*@__PURE__*/ parser$11.configure({ props: [
+		parser: /*@__PURE__*/ parser$12.configure({ props: [
 			/*@__PURE__*/ indentNodeProp.add({
 				Element(context) {
 					let after = /^(\s*)(<\/)?/.exec(context.textAfter);
@@ -25472,7 +25692,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	[`htmlCompletion`](https://codemirror.net/6/docs/ref/#lang-html.htmlCompletion) and JavaScript and
 	CSS support extensions.
 	*/
-	function html(config = {}) {
+	function html$2(config = {}) {
 		let dialect = "", wrap;
 		if (config.matchClosingTags === false) dialect = "noMatch";
 		if (config.selfClosingTags === true) dialect = (dialect ? dialect + " " : "") + "selfClosing";
@@ -25483,8 +25703,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		}) : dialect ? htmlLanguage.configure({ dialect }) : htmlLanguage, [
 			htmlLanguage.data.of({ autocomplete: htmlCompletionSourceWith(config) }),
 			config.autoCloseTags !== false ? autoCloseTags$1 : [],
-			javascript().support,
-			css$1().support
+			javascript$1().support,
+			css$2().support
 		]);
 	}
 	const selfClosers = /*@__PURE__*/ new Set(/*@__PURE__*/ "area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
@@ -25549,7 +25769,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		close: "-->"
 	} } });
 	const headingProp = /*@__PURE__*/ new NodeProp();
-	const commonmark = /*@__PURE__*/ parser$12.configure({ props: [
+	const commonmark = /*@__PURE__*/ parser$13.configure({ props: [
 		/*@__PURE__*/ foldNodeProp.add((type) => {
 			return !type.is("Block") || type.is("Document") || isHeading(type) != null || isList(type) ? void 0 : (tree, state) => ({
 				from: state.doc.lineAt(tree.from).to,
@@ -25623,7 +25843,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return defaultLanguage ? defaultLanguage.parser : null;
 		};
 	}
-	var Context$4 = class {
+	var Context$7 = class {
 		constructor(node, from, to, spaceBefore, spaceAfter, type, item) {
 			this.node = node;
 			this.from = from;
@@ -25657,14 +25877,14 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		for (let i = nodes.length - 1; i >= 0; i--) {
 			let node = nodes[i], match;
 			let line = doc.lineAt(node.from), startPos = node.from - line.from;
-			if (node.name == "Blockquote" && (match = /^ *>( ?)/.exec(line.text.slice(startPos)))) context.push(new Context$4(node, startPos, startPos + match[0].length, "", match[1], ">", null));
+			if (node.name == "Blockquote" && (match = /^ *>( ?)/.exec(line.text.slice(startPos)))) context.push(new Context$7(node, startPos, startPos + match[0].length, "", match[1], ">", null));
 			else if (node.name == "ListItem" && node.parent.name == "OrderedList" && (match = /^( *)\d+([.)])( *)/.exec(line.text.slice(startPos)))) {
 				let after = match[3], len = match[0].length;
 				if (after.length >= 4) {
 					after = after.slice(0, after.length - 4);
 					len -= 4;
 				}
-				context.push(new Context$4(node.parent, startPos, startPos + len, match[1], after, match[2], node));
+				context.push(new Context$7(node.parent, startPos, startPos + len, match[1], after, match[2], node));
 			} else if (node.name == "ListItem" && node.parent.name == "BulletList" && (match = /^( *)([-+*])( {1,4}\[[ xX]\])?( +)/.exec(line.text.slice(startPos)))) {
 				let after = match[4], len = match[0].length;
 				if (after.length > 4) {
@@ -25673,7 +25893,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				}
 				let type = match[2];
 				if (match[3]) type += match[3].replace(/[xX]/, " ");
-				context.push(new Context$4(node.parent, startPos, startPos + len, match[1], after, type, node));
+				context.push(new Context$7(node.parent, startPos, startPos + len, match[1], after, type, node));
 			}
 		}
 		return context;
@@ -25920,7 +26140,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		key: "Backspace",
 		run: deleteMarkupBackward
 	}];
-	const htmlNoMatch = /*@__PURE__*/ html({ matchClosingTags: false });
+	const htmlNoMatch = /*@__PURE__*/ html$2({ matchClosingTags: false });
 	/**
 	Markdown language support.
 	*/
@@ -26007,8 +26227,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	//#endregion
 	//#region node_modules/.pnpm/@lezer+python@1.1.19/node_modules/@lezer/python/dist/index.js
 	const printKeyword = 1;
-	const indent = 194;
-	const dedent = 195;
+	const indent$3 = 194;
+	const dedent$2 = 195;
 	const newline$1 = 196;
 	const blankLineStart = 197;
 	const newlineBracketed = 198;
@@ -26063,18 +26283,18 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	const tab$1 = 9;
 	const hash = 35;
 	const parenOpen = 40;
-	const dot = 46;
+	const dot$1 = 46;
 	const braceOpen = 123;
 	const braceClose = 125;
-	const singleQuote = 39;
-	const doubleQuote = 34;
+	const singleQuote$1 = 39;
+	const doubleQuote$1 = 34;
 	const backslash = 92;
 	const letter_o = 111;
 	const letter_x = 120;
 	const letter_N = 78;
 	const letter_u = 117;
 	const letter_U = 85;
-	const bracketed = /* @__PURE__ */ new Set([
+	const bracketed$1 = /* @__PURE__ */ new Set([
 		ParenthesizedExpression,
 		TupleExpression,
 		ComprehensionExpression,
@@ -26130,8 +26350,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				chars++;
 			}
 			if (depth != context.indent && input.next != newline$2 && input.next != carriageReturn$1 && input.next != hash) {
-				if (depth < context.indent) input.acceptToken(dedent, -chars);
-				else input.acceptToken(indent);
+				if (depth < context.indent) input.acceptToken(dedent$2, -chars);
+				else input.acceptToken(indent$3);
 			}
 		}
 	});
@@ -26141,13 +26361,13 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	const cx_Long = 8;
 	const cx_Raw = 16;
 	const cx_Format = 32;
-	function Context$3(parent, indent, flags) {
+	function Context$6(parent, indent, flags) {
 		this.parent = parent;
 		this.indent = indent;
 		this.flags = flags;
 		this.hash = (parent ? parent.hash + parent.hash << 8 : 0) + indent + (indent << 4) + flags + (flags << 6);
 	}
-	const topIndent = new Context$3(null, 0, 0);
+	const topIndent = new Context$6(null, 0, 0);
 	function countIndent(space) {
 		let depth = 0;
 		for (let i = 0; i < space.length; i++) depth += space.charCodeAt(i) == tab$1 ? 8 - depth % 8 : 1;
@@ -26174,14 +26394,14 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	const trackIndent = new ContextTracker({
 		start: topIndent,
 		reduce(context, term, _, input) {
-			if (context.flags & cx_Bracketed && bracketed.has(term) || (term == String$1$2 || term == FormatString) && context.flags & cx_String) return context.parent;
+			if (context.flags & cx_Bracketed && bracketed$1.has(term) || (term == String$1$2 || term == FormatString) && context.flags & cx_String) return context.parent;
 			return context;
 		},
 		shift(context, term, stack, input) {
-			if (term == indent) return new Context$3(context, countIndent(input.read(input.pos, stack.pos)), 0);
-			if (term == dedent) return context.parent;
-			if (term == ParenL$2 || term == BracketL$2 || term == BraceL$2 || term == replacementStart) return new Context$3(context, 0, cx_Bracketed);
-			if (stringFlags.has(term)) return new Context$3(context, 0, stringFlags.get(term) | context.flags & cx_Bracketed);
+			if (term == indent$3) return new Context$6(context, countIndent(input.read(input.pos, stack.pos)), 0);
+			if (term == dedent$2) return context.parent;
+			if (term == ParenL$2 || term == BracketL$2 || term == BraceL$2 || term == replacementStart) return new Context$6(context, 0, cx_Bracketed);
+			if (stringFlags.has(term)) return new Context$6(context, 0, stringFlags.get(term) | context.flags & cx_Bracketed);
 			return context;
 		},
 		hash(context) {
@@ -26197,13 +26417,13 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		for (let off = 0;; off++) {
 			let next = input.peek(off);
 			if (next == space$2 || next == tab$1) continue;
-			if (next != parenOpen && next != dot && next != newline$2 && next != carriageReturn$1 && next != hash) input.acceptToken(printKeyword);
+			if (next != parenOpen && next != dot$1 && next != newline$2 && next != carriageReturn$1 && next != hash) input.acceptToken(printKeyword);
 			return;
 		}
 	});
 	const strings = new ExternalTokenizer((input, stack) => {
 		let { flags } = stack.context;
-		let quote = flags & cx_DoubleQuote ? doubleQuote : singleQuote;
+		let quote = flags & cx_DoubleQuote ? doubleQuote$1 : singleQuote$1;
 		let long = (flags & cx_Long) > 0;
 		let escapes = !(flags & cx_Raw);
 		let format = (flags & cx_Format) > 0;
@@ -26255,7 +26475,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		else if (ch == letter_N) {
 			if (input.next == braceOpen) {
 				input.advance();
-				while (input.next >= 0 && input.next != braceClose && input.next != singleQuote && input.next != doubleQuote && input.next != newline$2) input.advance();
+				while (input.next >= 0 && input.next != braceClose && input.next != singleQuote$1 && input.next != doubleQuote$1 && input.next != newline$2) input.advance();
 				if (input.next == braceClose) input.advance();
 			}
 		}
@@ -26334,7 +26554,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		match: 279,
 		case: 285
 	};
-	const parser$9 = LRParser.deserialize({
+	const parser$10 = LRParser.deserialize({
 		version: 14,
 		states: "##jQ`QeOOP$}OSOOO&WQtO'#HUOOQS'#Co'#CoOOQS'#Cp'#CpO'vQdO'#CnO*UQtO'#HTOOQS'#HU'#HUOOQS'#DU'#DUOOQS'#HT'#HTO*rQdO'#D_O+VQdO'#DfO+gQdO'#DjO+zOWO'#DuO,VOWO'#DvO.[QtO'#GuOOQS'#Gu'#GuO'vQdO'#GtO0ZQtO'#GtOOQS'#Eb'#EbO0rQdO'#EcOOQS'#Gs'#GsO0|QdO'#GrOOQV'#Gr'#GrO1XQdO'#FYOOQS'#G^'#G^O1^QdO'#FXOOQV'#IS'#ISOOQV'#Gq'#GqOOQV'#Fq'#FqQ`QeOOO'vQdO'#CqO1lQdO'#C}O1sQdO'#DRO2RQdO'#HYO2cQtO'#EVO'vQdO'#EWOOQS'#EY'#EYOOQS'#E['#E[OOQS'#E^'#E^O2wQdO'#E`O3_QdO'#EdO3rQdO'#EfO3zQtO'#EfO1XQdO'#EiO0rQdO'#ElO1XQdO'#EnO0rQdO'#EtO0rQdO'#EwO4VQdO'#EyO4^QdO'#FOO4iQdO'#EzO0rQdO'#FOO1XQdO'#FQO1XQdO'#FVO4nQdO'#F[P4uOdO'#GpPOOO)CBd)CBdOOQS'#Ce'#CeOOQS'#Cf'#CfOOQS'#Cg'#CgOOQS'#Ch'#ChOOQS'#Ci'#CiOOQS'#Cj'#CjOOQS'#Cl'#ClO'vQdO,59OO'vQdO,59OO'vQdO,59OO'vQdO,59OO'vQdO,59OO'vQdO,59OO5TQdO'#DoOOQS,5:Y,5:YO5hQdO'#HdOOQS,5:],5:]O5uQ!fO,5:]O5zQtO,59YO1lQdO,59bO1lQdO,59bO1lQdO,59bO8jQdO,59bO8oQdO,59bO8vQdO,59jO8}QdO'#HTO:TQdO'#HSOOQS'#HS'#HSOOQS'#D['#D[O:lQdO,59aO'vQdO,59aO:zQdO,59aOOQS,59y,59yO;PQdO,5:RO'vQdO,5:ROOQS,5:Q,5:QO;_QdO,5:QO;dQdO,5:XO'vQdO,5:XO'vQdO,5:VOOQS,5:U,5:UO;uQdO,5:UO;zQdO,5:WOOOW'#Fy'#FyO<POWO,5:aOOQS,5:a,5:aO<[QdO'#HwOOOW'#Dw'#DwOOOW'#Fz'#FzO<lOWO,5:bOOQS,5:b,5:bOOQS'#F}'#F}O<zQtO,5:iO?lQtO,5=`O@VQ#xO,5=`O@vQtO,5=`OOQS,5:},5:}OA_QeO'#GWOBqQdO,5;^OOQV,5=^,5=^OB|QtO'#IPOCkQdO,5;tOOQS-E:[-E:[OOQV,5;s,5;sO4dQdO'#FQOOQV-E9o-E9oOCsQtO,59]OEzQtO,59iOFeQdO'#HVOFpQdO'#HVO1XQdO'#HVOF{QdO'#DTOGTQdO,59mOGYQdO'#HZO'vQdO'#HZO0rQdO,5=tOOQS,5=t,5=tO0rQdO'#EROOQS'#ES'#ESOGwQdO'#GPOHXQdO,58|OHXQdO,58|O*xQdO,5:oOHgQtO'#H]OOQS,5:r,5:rOOQS,5:z,5:zOHzQdO,5;OOI]QdO'#IOO1XQdO'#H}OOQS,5;Q,5;QOOQS'#GT'#GTOIqQtO,5;QOJPQdO,5;QOJUQdO'#IQOOQS,5;T,5;TOJdQdO'#H|OOQS,5;W,5;WOJuQdO,5;YO4iQdO,5;`O4iQdO,5;cOJ}QtO'#ITO'vQdO'#ITOKXQdO,5;eO4VQdO,5;eO0rQdO,5;jO1XQdO,5;lOK^QeO'#EuOLjQgO,5;fO!!kQdO'#IUO4iQdO,5;jO!!vQdO,5;lO!#OQdO,5;qO!#ZQtO,5;vO'vQdO,5;vPOOO,5=[,5=[P!#bOSO,5=[P!#jOdO,5=[O!&bQtO1G.jO!&iQtO1G.jO!)YQtO1G.jO!)dQtO1G.jO!+}QtO1G.jO!,bQtO1G.jO!,uQdO'#HcO!-TQtO'#GuO0rQdO'#HcO!-_QdO'#HbOOQS,5:Z,5:ZO!-gQdO,5:ZO!-lQdO'#HeO!-wQdO'#HeO!.[QdO,5>OOOQS'#Ds'#DsOOQS1G/w1G/wOOQS1G.|1G.|O!/[QtO1G.|O!/cQtO1G.|O1lQdO1G.|O!0OQdO1G/UOOQS'#DZ'#DZO0rQdO,59tOOQS1G.{1G.{O!0VQdO1G/eO!0gQdO1G/eO!0oQdO1G/fO'vQdO'#H[O!0tQdO'#H[O!0yQtO1G.{O!1ZQdO,59iO!2aQdO,5=zO!2qQdO,5=zO!2yQdO1G/mO!3OQtO1G/mOOQS1G/l1G/lO!3`QdO,5=uO!4VQdO,5=uO0rQdO1G/qO!4tQdO1G/sO!4yQtO1G/sO!5ZQtO1G/qOOQS1G/p1G/pOOQS1G/r1G/rOOOW-E9w-E9wOOQS1G/{1G/{O!5kQdO'#HxO0rQdO'#HxO!5|QdO,5>cOOOW-E9x-E9xOOQS1G/|1G/|OOQS-E9{-E9{O!6[Q#xO1G2zO!6{QtO1G2zO'vQdO,5<jOOQS,5<j,5<jOOQS-E9|-E9|OOQS,5<r,5<rOOQS-E:U-E:UOOQV1G0x1G0xO1XQdO'#GRO!7dQtO,5>kOOQS1G1`1G1`O!8RQdO1G1`OOQS'#DV'#DVO0rQdO,5=qOOQS,5=q,5=qO!8WQdO'#FrO!8cQdO,59oO!8kQdO1G/XO!8uQtO,5=uOOQS1G3`1G3`OOQS,5:m,5:mO!9fQdO'#GtOOQS,5<k,5<kOOQS-E9}-E9}O!9wQdO1G.hOOQS1G0Z1G0ZO!:VQdO,5=wO!:gQdO,5=wO0rQdO1G0jO0rQdO1G0jO!:xQdO,5>jO!;ZQdO,5>jO1XQdO,5>jO!;lQdO,5>iOOQS-E:R-E:RO!;qQdO1G0lO!;|QdO1G0lO!<RQdO,5>lO!<aQdO,5>lO!<oQdO,5>hO!=VQdO,5>hO!=hQdO'#EpO0rQdO1G0tO!=sQdO1G0tO!=xQgO1G0zO!AvQgO1G0}O!EqQdO,5>oO!E{QdO,5>oO!FTQtO,5>oO0rQdO1G1PO!F_QdO1G1PO4iQdO1G1UO!!vQdO1G1WOOQV,5;a,5;aO!FdQfO,5;aO!FiQgO1G1QO!JjQdO'#GZO4iQdO1G1QO4iQdO1G1QO!JzQdO,5>pO!KXQdO,5>pO1XQdO,5>pOOQV1G1U1G1UO!KaQdO'#FSO!KrQ!fO1G1WO!KzQdO1G1WOOQV1G1]1G1]O4iQdO1G1]O!LPQdO1G1]O!LXQdO'#F^OOQV1G1b1G1bO!#ZQtO1G1bPOOO1G2v1G2vP!L^OSO1G2vOOQS,5=},5=}OOQS'#Dp'#DpO0rQdO,5=}O!LfQdO,5=|O!LyQdO,5=|OOQS1G/u1G/uO!MRQdO,5>PO!McQdO,5>PO!MkQdO,5>PO!NOQdO,5>PO!N`QdO,5>POOQS1G3j1G3jOOQS7+$h7+$hO!8kQdO7+$pO#!RQdO1G.|O#!YQdO1G.|OOQS1G/`1G/`OOQS,5<`,5<`O'vQdO,5<`OOQS7+%P7+%PO#!aQdO7+%POOQS-E9r-E9rOOQS7+%Q7+%QO#!qQdO,5=vO'vQdO,5=vOOQS7+$g7+$gO#!vQdO7+%PO##OQdO7+%QO##TQdO1G3fOOQS7+%X7+%XO##eQdO1G3fO##mQdO7+%XOOQS,5<_,5<_O'vQdO,5<_O##rQdO1G3aOOQS-E9q-E9qO#$iQdO7+%]OOQS7+%_7+%_O#$wQdO1G3aO#%fQdO7+%_O#%kQdO1G3gO#%{QdO1G3gO#&TQdO7+%]O#&YQdO,5>dO#&sQdO,5>dO#&sQdO,5>dOOQS'#Dx'#DxO#'UO&jO'#DzO#'aO`O'#HyOOOW1G3}1G3}O#'fQdO1G3}O#'nQdO1G3}O#'yQ#xO7+(fO#(jQtO1G2UP#)TQdO'#GOOOQS,5<m,5<mOOQS-E:P-E:POOQS7+&z7+&zOOQS1G3]1G3]OOQS,5<^,5<^OOQS-E9p-E9pOOQS7+$s7+$sO#)bQdO,5=`O#){QdO,5=`O#*^QtO,5<aO#*qQdO1G3cOOQS-E9s-E9sOOQS7+&U7+&UO#+RQdO7+&UO#+aQdO,5<nO#+uQdO1G4UOOQS-E:Q-E:QO#,WQdO1G4UOOQS1G4T1G4TOOQS7+&W7+&WO#,iQdO7+&WOOQS,5<p,5<pO#,tQdO1G4WOOQS-E:S-E:SOOQS,5<l,5<lO#-SQdO1G4SOOQS-E:O-E:OO1XQdO'#EqO#-jQdO'#EqO#-uQdO'#IRO#-}QdO,5;[OOQS7+&`7+&`O0rQdO7+&`O#.SQgO7+&fO!JmQdO'#GXO4iQdO7+&fO4iQdO7+&iO#2QQtO,5<tO'vQdO,5<tO#2[QdO1G4ZOOQS-E:W-E:WO#2fQdO1G4ZO4iQdO7+&kO0rQdO7+&kOOQV7+&p7+&pO!KrQ!fO7+&rO!KzQdO7+&rO`QeO1G0{OOQV-E:X-E:XO4iQdO7+&lO4iQdO7+&lOOQV,5<u,5<uO#2nQdO,5<uO!JmQdO,5<uOOQV7+&l7+&lO#2yQgO7+&lO#6tQdO,5<vO#7PQdO1G4[OOQS-E:Y-E:YO#7^QdO1G4[O#7fQdO'#IWO#7tQdO'#IWO1XQdO'#IWOOQS'#IW'#IWO#8PQdO'#IVOOQS,5;n,5;nO#8XQdO,5;nO0rQdO'#FUOOQV7+&r7+&rO4iQdO7+&rOOQV7+&w7+&wO4iQdO7+&wO#8^QfO,5;xOOQV7+&|7+&|POOO7+(b7+(bO#8cQdO1G3iOOQS,5<c,5<cO#8qQdO1G3hOOQS-E9u-E9uO#9UQdO,5<dO#9aQdO,5<dO#9tQdO1G3kOOQS-E9v-E9vO#:UQdO1G3kO#:^QdO1G3kO#:nQdO1G3kO#:UQdO1G3kOOQS<<H[<<H[O#:yQtO1G1zOOQS<<Hk<<HkP#;WQdO'#FtO8vQdO1G3bO#;eQdO1G3bO#;jQdO<<HkOOQS<<Hl<<HlO#;zQdO7+)QOOQS<<Hs<<HsO#<[QtO1G1yP#<{QdO'#FsO#=YQdO7+)RO#=jQdO7+)RO#=rQdO<<HwO#=wQdO7+({OOQS<<Hy<<HyO#>nQdO,5<bO'vQdO,5<bOOQS-E9t-E9tOOQS<<Hw<<HwOOQS,5<g,5<gO0rQdO,5<gO#>sQdO1G4OOOQS-E9y-E9yO#?^QdO1G4OO<[QdO'#H{OOOO'#D{'#D{OOOO'#F|'#F|O#?oO&jO,5:fOOOW,5>e,5>eOOOW7+)i7+)iO#?zQdO7+)iO#@SQdO1G2zO#@mQdO1G2zP'vQdO'#FuO0rQdO<<IpO1XQdO1G2YP1XQdO'#GSO#AOQdO7+)pO#AaQdO7+)pOOQS<<Ir<<IrP1XQdO'#GUP0rQdO'#GQOOQS,5;],5;]O#ArQdO,5>mO#BQQdO,5>mOOQS1G0v1G0vOOQS<<Iz<<IzOOQV-E:V-E:VO4iQdO<<JQOOQV,5<s,5<sO4iQdO,5<sOOQV<<JQ<<JQOOQV<<JT<<JTO#BYQtO1G2`P#BdQdO'#GYO#BkQdO7+)uO#BuQgO<<JVO4iQdO<<JVOOQV<<J^<<J^O4iQdO<<J^O!KrQ!fO<<J^O#FpQgO7+&gOOQV<<JW<<JWO#FzQgO<<JWOOQV1G2a1G2aO1XQdO1G2aO#JuQdO1G2aO4iQdO<<JWO1XQdO1G2bP0rQdO'#G[O#KQQdO7+)vO#K_QdO7+)vOOQS'#FT'#FTO0rQdO,5>rO#KgQdO,5>rO#KrQdO,5>rO#K}QdO,5>qO#L`QdO,5>qOOQS1G1Y1G1YOOQS,5;p,5;pOOQV<<Jc<<JcO#LhQdO1G1dOOQS7+)T7+)TP#LmQdO'#FwO#L}QdO1G2OO#MbQdO1G2OO#MrQdO1G2OP#M}QdO'#FxO#N[QdO7+)VO#NlQdO7+)VO#NlQdO7+)VO#NtQdO7+)VO$ UQdO7+(|O8vQdO7+(|OOQSAN>VAN>VO$ oQdO<<LmOOQSAN>cAN>cO0rQdO1G1|O$!PQtO1G1|P$!ZQdO'#FvOOQS1G2R1G2RP$!hQdO'#F{O$!uQdO7+)jO$#`QdO,5>gOOOO-E9z-E9zOOOW<<MT<<MTO$#nQdO7+(fOOQSAN?[AN?[OOQS7+'t7+'tO$$XQdO<<M[OOQS,5<q,5<qO$$jQdO1G4XOOQS-E:T-E:TOOQVAN?lAN?lOOQV1G2_1G2_O4iQdOAN?qO$$xQgOAN?qOOQVAN?xAN?xO4iQdOAN?xOOQV<<JR<<JRO4iQdOAN?rO4iQdO7+'{OOQV7+'{7+'{O1XQdO7+'{OOQVAN?rAN?rOOQS7+'|7+'|O$(sQdO<<MbOOQS1G4^1G4^O0rQdO1G4^OOQS,5<w,5<wO$)QQdO1G4]OOQS-E:Z-E:ZOOQU'#G_'#G_O$)cQfO7+'OO$)nQdO'#F_O$*uQdO7+'jO$+VQdO7+'jOOQS7+'j7+'jO$+bQdO<<LqO$+rQdO<<LqO$+rQdO<<LqO$+zQdO'#H^OOQS<<Lh<<LhO$,UQdO<<LhOOQS7+'h7+'hOOQS'#D|'#D|OOOO1G4R1G4RO$,oQdO1G4RO$,wQdO1G4RP!=hQdO'#GVOOQVG25]G25]O4iQdOG25]OOQVG25dG25dOOQVG25^G25^OOQV<<Kg<<KgO4iQdO<<KgOOQS7+)x7+)xP$-SQdO'#G]OOQU-E:]-E:]OOQV<<Jj<<JjO$-vQtO'#FaOOQS'#Fc'#FcO$.WQdO'#FbO$.xQdO'#FbOOQS'#Fb'#FbO$.}QdO'#IYO$)nQdO'#FiO$)nQdO'#FiO$/fQdO'#FjO$)nQdO'#FkO$/mQdO'#IZOOQS'#IZ'#IZO$0[QdO,5;yOOQS<<KU<<KUO$0dQdO<<KUO$0tQdOANB]O$1UQdOANB]O$1^QdO'#H_OOQS'#H_'#H_O1sQdO'#DcO$1wQdO,5=xOOQSANBSANBSOOOO7+)m7+)mO$2`QdO7+)mOOQVLD*wLD*wOOQVANARANARO5uQ!fO'#GaO$2hQtO,5<SO$)nQdO'#FmOOQS,5<W,5<WOOQS'#Fd'#FdO$3YQdO,5;|O$3_QdO,5;|OOQS'#Fg'#FgO$)nQdO'#G`O$4PQdO,5<QO$4kQdO,5>tO$4{QdO,5>tO1XQdO,5<PO$5^QdO,5<TO$5cQdO,5<TO$)nQdO'#I[O$5hQdO'#I[O$5mQdO,5<UOOQS,5<V,5<VO0rQdO'#FpOOQU1G1e1G1eO4iQdO1G1eOOQSAN@pAN@pO$5rQdOG27wO$6SQdO,59}OOQS1G3d1G3dOOOO<<MX<<MXOOQS,5<{,5<{OOQS-E:_-E:_O$6XQtO'#FaO$6`QdO'#I]O$6nQdO'#I]O$6vQdO,5<XOOQS1G1h1G1hO$6{QdO1G1hO$7QQdO,5<zOOQS-E:^-E:^O$7lQdO,5=OO$8TQdO1G4`OOQS-E:b-E:bOOQS1G1k1G1kOOQS1G1o1G1oO$8eQdO,5>vO$)nQdO,5>vOOQS1G1p1G1pOOQS,5<[,5<[OOQU7+'P7+'PO$+zQdO1G/iO$)nQdO,5<YO$8sQdO,5>wO$8zQdO,5>wOOQS1G1s1G1sOOQS7+'S7+'SP$)nQdO'#GdO$9SQdO1G4bO$9^QdO1G4bO$9fQdO1G4bOOQS7+%T7+%TO$9tQdO1G1tO$:SQtO'#FaO$:ZQdO,5<}OOQS,5<},5<}O$:iQdO1G4cOOQS-E:a-E:aO$)nQdO,5<|O$:pQdO,5<|O$:uQdO7+)|OOQS-E:`-E:`O$;PQdO7+)|O$)nQdO,5<ZP$)nQdO'#GcO$;XQdO1G2hO$)nQdO1G2hP$;gQdO'#GbO$;nQdO<<MhO$;xQdO1G1uO$<WQdO7+(SO8vQdO'#C}O8vQdO,59bO8vQdO,59bO8vQdO,59bO$<fQtO,5=`O8vQdO1G.|O0rQdO1G/XO0rQdO7+$pP$<yQdO'#GOO'vQdO'#GtO$=WQdO,59bO$=]QdO,59bO$=dQdO,59mO$=iQdO1G/UO1sQdO'#DRO8vQdO,59j",
 		stateData: "$>S~O%cOS%^OSSOS%]PQ~OPdOVaOfoOhYOopOs!POvqO!PrO!Q{O!T!SO!U!RO!XZO!][O!h`O!r`O!s`O!t`O!{tO!}uO#PvO#RwO#TxO#XyO#ZzO#^|O#_|O#a}O#c!OO#l!QO#o!TO#s!UO#u!VO#z!WO#}hO$P!XO%oRO%pRO%tSO%uWO&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O&c^O&d^O&e^O&f^O&g^O&h^O&i^O&j^O~O%]!YO~OV!aO_!aOa!bOh!iO!X!kO!f!mO%j![O%k!]O%l!^O%m!_O%n!_O%o!`O%p!`O%q!aO%r!aO%s!aO~Ok%xXl%xXm%xXn%xXo%xXp%xXs%xXz%xX{%xX!x%xX#g%xX%[%xX%_%xX%z%xXg%xX!T%xX!U%xX%{%xX!W%xX![%xX!Q%xX#[%xXt%xX!m%xX~P%SOfoOhYO!XZO!][O!h`O!r`O!s`O!t`O%oRO%pRO%tSO%uWO&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O&c^O&d^O&e^O&f^O&g^O&h^O&i^O&j^O~Oz%wX{%wX#g%wX%[%wX%_%wX%z%wX~Ok!pOl!qOm!oOn!oOo!rOp!sOs!tO!x%wX~P)pOV!zOg!|Oo0cOv0qO!PrO~P'vOV#OOo0cOv0qO!W#PO~P'vOV#SOa#TOo0cOv0qO![#UO~P'vOQ#XO%`#XO%a#ZO~OQ#^OR#[O%`#^O%a#`O~OV%iX_%iXa%iXh%iXk%iXl%iXm%iXn%iXo%iXp%iXs%iXz%iX!X%iX!f%iX%j%iX%k%iX%l%iX%m%iX%n%iX%o%iX%p%iX%q%iX%r%iX%s%iXg%iX!T%iX!U%iX~O&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O&c^O&d^O&e^O&f^O&g^O&h^O&i^O&j^O{%iX!x%iX#g%iX%[%iX%_%iX%z%iX%{%iX!W%iX![%iX!Q%iX#[%iXt%iX!m%iX~P,eOz#dO{%hX!x%hX#g%hX%[%hX%_%hX%z%hX~Oo0cOv0qO~P'vO#g#gO%[#iO%_#iO~O%uWO~O!T#nO#u!VO#z!WO#}hO~OopO~P'vOV#sOa#tO%uWO{wP~OV#xOo0cOv0qO!Q#yO~P'vO{#{O!x$QO%z#|O#g!yX%[!yX%_!yX~OV#xOo0cOv0qO#g#SX%[#SX%_#SX~P'vOo0cOv0qO#g#WX%[#WX%_#WX~P'vOh$WO%uWO~O!f$YO!r$YO%uWO~OV$eO~P'vO!U$gO#s$hO#u$iO~O{$jO~OV$qO~P'vOS$sO%[$rO%_$rO%c$tO~OV$}Oa$}Og%POo0cOv0qO~P'vOo0cOv0qO{%SO~P'vO&Y%UO~Oa!bOh!iO!X!kO!f!mOVba_bakbalbambanbaobapbasbazba{ba!xba#gba%[ba%_ba%jba%kba%lba%mba%nba%oba%pba%qba%rba%sba%zbagba!Tba!Uba%{ba!Wba![ba!Qba#[batba!mba~On%ZO~Oo%ZO~P'vOo0cO~P'vOk0eOl0fOm0dOn0dOo0mOp0nOs0rOg%wX!T%wX!U%wX%{%wX!W%wX![%wX!Q%wX#[%wX!m%wX~P)pO%{%]Og%vXz%vX!T%vX!U%vX!W%vX{%vX~Og%_Oz%`O!T%dO!U%cO~Og%_O~Oz%gO!T%dO!U%cO!W&SX~O!W%kO~Oz%lO{%nO!T%dO!U%cO![%}X~O![%rO~O![%sO~OQ#XO%`#XO%a%uO~OV%wOo0cOv0qO!PrO~P'vOQ#^OR#[O%`#^O%a%zO~OV!qa_!qaa!qah!qak!qal!qam!qan!qao!qap!qas!qaz!qa{!qa!X!qa!f!qa!x!qa#g!qa%[!qa%_!qa%j!qa%k!qa%l!qa%m!qa%n!qa%o!qa%p!qa%q!qa%r!qa%s!qa%z!qag!qa!T!qa!U!qa%{!qa!W!qa![!qa!Q!qa#[!qat!qa!m!qa~P#yOz%|O{%ha!x%ha#g%ha%[%ha%_%ha%z%ha~P%SOV&OOopOvqO{%ha!x%ha#g%ha%[%ha%_%ha%z%ha~P'vOz%|O{%ha!x%ha#g%ha%[%ha%_%ha%z%ha~OPdOVaOopOvqO!PrO!Q{O!{tO!}uO#PvO#RwO#TxO#XyO#ZzO#^|O#_|O#a}O#c!OO#g$zX%[$zX%_$zX~P'vO#g#gO%[&TO%_&TO~O!f&UOh&sX%[&sXz&sX#[&sX#g&sX%_&sX#Z&sXg&sX~Oh!iO%[&WO~Okealeameaneaoeapeaseazea{ea!xea#gea%[ea%_ea%zeagea!Tea!Uea%{ea!Wea![ea!Qea#[eatea!mea~P%SOsqazqa{qa#gqa%[qa%_qa%zqa~Ok!pOl!qOm!oOn!oOo!rOp!sO!xqa~PEcO%z&YOz%yX{%yX~O%uWOz%yX{%yX~Oz&]O{wX~O{&_O~Oz%lO#g%}X%[%}X%_%}Xg%}X{%}X![%}X!m%}X%z%}X~OV0lOo0cOv0qO!PrO~P'vO%z#|O#gUa%[Ua%_Ua~Oz&hO#g&PX%[&PX%_&PXn&PX~P%SOz&kO!Q&jO#g#Wa%[#Wa%_#Wa~Oz&lO#[&nO#g&rX%[&rX%_&rXg&rX~O!f$YO!r$YO#Z&qO%uWO~O#Z&qO~Oz&sO#g&tX%[&tX%_&tX~Oz&uO#g&pX%[&pX%_&pX{&pX~O!X&wO%z&xO~Oz&|On&wX~P%SOn'PO~OPdOVaOopOvqO!PrO!Q{O!{tO!}uO#PvO#RwO#TxO#XyO#ZzO#^|O#_|O#a}O#c!OO%['UO~P'vOt'YO#p'WO#q'XOP#naV#naf#nah#nao#nas#nav#na!P#na!Q#na!T#na!U#na!X#na!]#na!h#na!r#na!s#na!t#na!{#na!}#na#P#na#R#na#T#na#X#na#Z#na#^#na#_#na#a#na#c#na#l#na#o#na#s#na#u#na#z#na#}#na$P#na%X#na%o#na%p#na%t#na%u#na&Z#na&[#na&]#na&^#na&_#na&`#na&a#na&b#na&c#na&d#na&e#na&f#na&g#na&h#na&i#na&j#na%Z#na%_#na~Oz'ZO#[']O{&xX~Oh'_O!X&wO~Oh!iO{$jO!X&wO~O{'eO~P%SO%['hO%_'hO~OS'iO%['hO%_'hO~OV!aO_!aOa!bOh!iO!X!kO!f!mO%l!^O%m!_O%n!_O%o!`O%p!`O%q!aO%r!aO%s!aOkWilWimWinWioWipWisWizWi{Wi!xWi#gWi%[Wi%_Wi%jWi%zWigWi!TWi!UWi%{Wi!WWi![Wi!QWi#[WitWi!mWi~O%k!]O~P!#uO%kWi~P!#uOV!aO_!aOa!bOh!iO!X!kO!f!mO%o!`O%p!`O%q!aO%r!aO%s!aOkWilWimWinWioWipWisWizWi{Wi!xWi#gWi%[Wi%_Wi%jWi%kWi%lWi%zWigWi!TWi!UWi%{Wi!WWi![Wi!QWi#[WitWi!mWi~O%m!_O%n!_O~P!&pO%mWi%nWi~P!&pOa!bOh!iO!X!kO!f!mOkWilWimWinWioWipWisWizWi{Wi!xWi#gWi%[Wi%_Wi%jWi%kWi%lWi%mWi%nWi%oWi%pWi%zWigWi!TWi!UWi%{Wi!WWi![Wi!QWi#[WitWi!mWi~OV!aO_!aO%q!aO%r!aO%s!aO~P!)nOVWi_Wi%qWi%rWi%sWi~P!)nO!T%dO!U%cOg&VXz&VX~O%z'kO%{'kO~P,eOz'mOg&UX~Og'oO~Oz'pO{'rO!W&XX~Oo0cOv0qOz'pO{'sO!W&XX~P'vO!W'uO~Om!oOn!oOo!rOp!sOkjisjizji{ji!xji#gji%[ji%_ji%zji~Ol!qO~P!.aOlji~P!.aOk0eOl0fOm0dOn0dOo0mOp0nO~Ot'wO~P!/jOV'|Og'}Oo0cOv0qO~P'vOg'}Oz(OO~Og(QO~O!U(SO~Og(TOz(OO!T%dO!U%cO~P%SOk0eOl0fOm0dOn0dOo0mOp0nOgqa!Tqa!Uqa%{qa!Wqa![qa!Qqa#[qatqa!mqa~PEcOV'|Oo0cOv0qO!W&Sa~P'vOz(WO!W&Sa~O!W(XO~Oz(WO!T%dO!U%cO!W&Sa~P%SOV(]Oo0cOv0qO![%}a#g%}a%[%}a%_%}ag%}a{%}a!m%}a%z%}a~P'vOz(^O![%}a#g%}a%[%}a%_%}ag%}a{%}a!m%}a%z%}a~O![(aO~Oz(^O!T%dO!U%cO![%}a~P%SOz(dO!T%dO!U%cO![&Ta~P%SOz(gO{&lX![&lX!m&lX%z&lX~O{(kO![(mO!m(nO%z(jO~OV&OOopOvqO{%hi!x%hi#g%hi%[%hi%_%hi%z%hi~P'vOz(pO{%hi!x%hi#g%hi%[%hi%_%hi%z%hi~O!f&UOh&sa%[&saz&sa#[&sa#g&sa%_&sa#Z&sag&sa~O%[(uO~OV#sOa#tO%uWO~Oz&]O{wa~OopOvqO~P'vOz(^O#g%}a%[%}a%_%}ag%}a{%}a![%}a!m%}a%z%}a~P%SOz(zO#g%hX%[%hX%_%hX%z%hX~O%z#|O#gUi%[Ui%_Ui~O#g&Pa%[&Pa%_&Pan&Pa~P'vOz(}O#g&Pa%[&Pa%_&Pan&Pa~O%uWO#g&ra%[&ra%_&rag&ra~Oz)SO#g&ra%[&ra%_&rag&ra~Og)VO~OV)WOh$WO%uWO~O#Z)XO~O%uWO#g&ta%[&ta%_&ta~Oz)ZO#g&ta%[&ta%_&ta~Oo0cOv0qO#g&pa%[&pa%_&pa{&pa~P'vOz)^O#g&pa%[&pa%_&pa{&pa~OV)`Oa)`O%uWO~O%z)eO~Ot)hO#j)gOP#hiV#hif#hih#hio#his#hiv#hi!P#hi!Q#hi!T#hi!U#hi!X#hi!]#hi!h#hi!r#hi!s#hi!t#hi!{#hi!}#hi#P#hi#R#hi#T#hi#X#hi#Z#hi#^#hi#_#hi#a#hi#c#hi#l#hi#o#hi#s#hi#u#hi#z#hi#}#hi$P#hi%X#hi%o#hi%p#hi%t#hi%u#hi&Z#hi&[#hi&]#hi&^#hi&_#hi&`#hi&a#hi&b#hi&c#hi&d#hi&e#hi&f#hi&g#hi&h#hi&i#hi&j#hi%Z#hi%_#hi~Ot)iOP#kiV#kif#kih#kio#kis#kiv#ki!P#ki!Q#ki!T#ki!U#ki!X#ki!]#ki!h#ki!r#ki!s#ki!t#ki!{#ki!}#ki#P#ki#R#ki#T#ki#X#ki#Z#ki#^#ki#_#ki#a#ki#c#ki#l#ki#o#ki#s#ki#u#ki#z#ki#}#ki$P#ki%X#ki%o#ki%p#ki%t#ki%u#ki&Z#ki&[#ki&]#ki&^#ki&_#ki&`#ki&a#ki&b#ki&c#ki&d#ki&e#ki&f#ki&g#ki&h#ki&i#ki&j#ki%Z#ki%_#ki~OV)kOn&wa~P'vOz)lOn&wa~Oz)lOn&wa~P%SOn)pO~O%Y)tO~Ot)wO#p'WO#q)vOP#niV#nif#nih#nio#nis#niv#ni!P#ni!Q#ni!T#ni!U#ni!X#ni!]#ni!h#ni!r#ni!s#ni!t#ni!{#ni!}#ni#P#ni#R#ni#T#ni#X#ni#Z#ni#^#ni#_#ni#a#ni#c#ni#l#ni#o#ni#s#ni#u#ni#z#ni#}#ni$P#ni%X#ni%o#ni%p#ni%t#ni%u#ni&Z#ni&[#ni&]#ni&^#ni&_#ni&`#ni&a#ni&b#ni&c#ni&d#ni&e#ni&f#ni&g#ni&h#ni&i#ni&j#ni%Z#ni%_#ni~OV)zOo0cOv0qO{$jO~P'vOo0cOv0qO{&xa~P'vOz*OO{&xa~OV*SOa*TOg*WO%q*UO%uWO~O{$jO&{*YO~Oh'_O~Oh!iO{$jO~O%[*_O~O%[*aO%_*aO~OV$}Oa$}Oo0cOv0qOg&Ua~P'vOz*dOg&Ua~Oo0cOv0qO{*gO!W&Xa~P'vOz*hO!W&Xa~Oo0cOv0qOz*hO{*kO!W&Xa~P'vOo0cOv0qOz*hO!W&Xa~P'vOz*hO{*kO!W&Xa~Om0dOn0dOo0mOp0nOgjikjisjizji!Tji!Uji%{ji!Wji{ji![ji#gji%[ji%_ji!Qji#[jitji!mji%zji~Ol0fO~P!NkOlji~P!NkOV'|Og*pOo0cOv0qO~P'vOn*rO~Og*pOz*tO~Og*uO~OV'|Oo0cOv0qO!W&Si~P'vOz*vO!W&Si~O!W*wO~OV(]Oo0cOv0qO![%}i#g%}i%[%}i%_%}ig%}i{%}i!m%}i%z%}i~P'vOz*zO!T%dO!U%cO![&Ti~Oz*}O![%}i#g%}i%[%}i%_%}ig%}i{%}i!m%}i%z%}i~O![+OO~Oa+QOo0cOv0qO![&Ti~P'vOz*zO![&Ti~O![+SO~OV+UOo0cOv0qO{&la![&la!m&la%z&la~P'vOz+VO{&la![&la!m&la%z&la~O!]+YO&n+[O![!nX~O![+^O~O{(kO![+_O~O{(kO![+_O!m+`O~OV&OOopOvqO{%hq!x%hq#g%hq%[%hq%_%hq%z%hq~P'vOz$ri{$ri!x$ri#g$ri%[$ri%_$ri%z$ri~P%SOV&OOopOvqO~P'vOV&OOo0cOv0qO#g%ha%[%ha%_%ha%z%ha~P'vOz+aO#g%ha%[%ha%_%ha%z%ha~Oz$ia#g$ia%[$ia%_$ian$ia~P%SO#g&Pi%[&Pi%_&Pin&Pi~P'vOz+dO#g#Wq%[#Wq%_#Wq~O#[+eOz$va#g$va%[$va%_$vag$va~O%uWO#g&ri%[&ri%_&rig&ri~Oz+gO#g&ri%[&ri%_&rig&ri~OV+iOh$WO%uWO~O%uWO#g&ti%[&ti%_&ti~Oo0cOv0qO#g&pi%[&pi%_&pi{&pi~P'vO{#{Oz#eX!W#eX~Oz+mO!W&uX~O!W+oO~Ot+rO#j)gOP#hqV#hqf#hqh#hqo#hqs#hqv#hq!P#hq!Q#hq!T#hq!U#hq!X#hq!]#hq!h#hq!r#hq!s#hq!t#hq!{#hq!}#hq#P#hq#R#hq#T#hq#X#hq#Z#hq#^#hq#_#hq#a#hq#c#hq#l#hq#o#hq#s#hq#u#hq#z#hq#}#hq$P#hq%X#hq%o#hq%p#hq%t#hq%u#hq&Z#hq&[#hq&]#hq&^#hq&_#hq&`#hq&a#hq&b#hq&c#hq&d#hq&e#hq&f#hq&g#hq&h#hq&i#hq&j#hq%Z#hq%_#hq~On$|az$|a~P%SOV)kOn&wi~P'vOz+yOn&wi~Oz,TO{$jO#[,TO~O#q,VOP#nqV#nqf#nqh#nqo#nqs#nqv#nq!P#nq!Q#nq!T#nq!U#nq!X#nq!]#nq!h#nq!r#nq!s#nq!t#nq!{#nq!}#nq#P#nq#R#nq#T#nq#X#nq#Z#nq#^#nq#_#nq#a#nq#c#nq#l#nq#o#nq#s#nq#u#nq#z#nq#}#nq$P#nq%X#nq%o#nq%p#nq%t#nq%u#nq&Z#nq&[#nq&]#nq&^#nq&_#nq&`#nq&a#nq&b#nq&c#nq&d#nq&e#nq&f#nq&g#nq&h#nq&i#nq&j#nq%Z#nq%_#nq~O#[,WOz%Oa{%Oa~Oo0cOv0qO{&xi~P'vOz,YO{&xi~O{#{O%z,[Og&zXz&zX~O%uWOg&zXz&zX~Oz,`Og&yX~Og,bO~O%Y,eO~O!T%dO!U%cOg&Viz&Vi~OV$}Oa$}Oo0cOv0qOg&Ui~P'vO{,hOz$la!W$la~Oo0cOv0qO{,iOz$la!W$la~P'vOo0cOv0qO{*gO!W&Xi~P'vOz,lO!W&Xi~Oo0cOv0qOz,lO!W&Xi~P'vOz,lO{,oO!W&Xi~Og$hiz$hi!W$hi~P%SOV'|Oo0cOv0qO~P'vOn,qO~OV'|Og,rOo0cOv0qO~P'vOV'|Oo0cOv0qO!W&Sq~P'vOz$gi![$gi#g$gi%[$gi%_$gig$gi{$gi!m$gi%z$gi~P%SOV(]Oo0cOv0qO~P'vOa+QOo0cOv0qO![&Tq~P'vOz,sO![&Tq~O![,tO~OV(]Oo0cOv0qO![%}q#g%}q%[%}q%_%}qg%}q{%}q!m%}q%z%}q~P'vO{,uO~OV+UOo0cOv0qO{&li![&li!m&li%z&li~P'vOz,zO{&li![&li!m&li%z&li~O!]+YO&n+[O![!na~O{(kO![,}O~OV&OOo0cOv0qO#g%hi%[%hi%_%hi%z%hi~P'vOz-OO#g%hi%[%hi%_%hi%z%hi~O%uWO#g&rq%[&rq%_&rqg&rq~Oz-RO#g&rq%[&rq%_&rqg&rq~OV)`Oa)`O%uWO!W&ua~Oz-TO!W&ua~On$|iz$|i~P%SOV)kO~P'vOV)kOn&wq~P'vOt-XOP#myV#myf#myh#myo#mys#myv#my!P#my!Q#my!T#my!U#my!X#my!]#my!h#my!r#my!s#my!t#my!{#my!}#my#P#my#R#my#T#my#X#my#Z#my#^#my#_#my#a#my#c#my#l#my#o#my#s#my#u#my#z#my#}#my$P#my%X#my%o#my%p#my%t#my%u#my&Z#my&[#my&]#my&^#my&_#my&`#my&a#my&b#my&c#my&d#my&e#my&f#my&g#my&h#my&i#my&j#my%Z#my%_#my~O%Z-]O%_-]O~P`O#q-^OP#nyV#nyf#nyh#nyo#nys#nyv#ny!P#ny!Q#ny!T#ny!U#ny!X#ny!]#ny!h#ny!r#ny!s#ny!t#ny!{#ny!}#ny#P#ny#R#ny#T#ny#X#ny#Z#ny#^#ny#_#ny#a#ny#c#ny#l#ny#o#ny#s#ny#u#ny#z#ny#}#ny$P#ny%X#ny%o#ny%p#ny%t#ny%u#ny&Z#ny&[#ny&]#ny&^#ny&_#ny&`#ny&a#ny&b#ny&c#ny&d#ny&e#ny&f#ny&g#ny&h#ny&i#ny&j#ny%Z#ny%_#ny~Oz-aO{$jO#[-aO~Oo0cOv0qO{&xq~P'vOz-dO{&xq~O%z,[Og&zaz&za~O{#{Og&zaz&za~OV*SOa*TO%q*UO%uWOg&ya~Oz-hOg&ya~O$S-lO~OV$}Oa$}Oo0cOv0qO~P'vOo0cOv0qO{-mOz$li!W$li~P'vOo0cOv0qOz$li!W$li~P'vO{-mOz$li!W$li~Oo0cOv0qO{*gO~P'vOo0cOv0qO{*gO!W&Xq~P'vOz-pO!W&Xq~Oo0cOv0qOz-pO!W&Xq~P'vOs-sO!T%dO!U%cOg&Oq!W&Oq![&Oqz&Oq~P!/jOa+QOo0cOv0qO![&Ty~P'vOz$ji![$ji~P%SOa+QOo0cOv0qO~P'vOV+UOo0cOv0qO~P'vOV+UOo0cOv0qO{&lq![&lq!m&lq%z&lq~P'vO{(kO![-xO!m-yO%z-wO~OV&OOo0cOv0qO#g%hq%[%hq%_%hq%z%hq~P'vO%uWO#g&ry%[&ry%_&ryg&ry~OV)`Oa)`O%uWO!W&ui~Ot-}OP#m!RV#m!Rf#m!Rh#m!Ro#m!Rs#m!Rv#m!R!P#m!R!Q#m!R!T#m!R!U#m!R!X#m!R!]#m!R!h#m!R!r#m!R!s#m!R!t#m!R!{#m!R!}#m!R#P#m!R#R#m!R#T#m!R#X#m!R#Z#m!R#^#m!R#_#m!R#a#m!R#c#m!R#l#m!R#o#m!R#s#m!R#u#m!R#z#m!R#}#m!R$P#m!R%X#m!R%o#m!R%p#m!R%t#m!R%u#m!R&Z#m!R&[#m!R&]#m!R&^#m!R&_#m!R&`#m!R&a#m!R&b#m!R&c#m!R&d#m!R&e#m!R&f#m!R&g#m!R&h#m!R&i#m!R&j#m!R%Z#m!R%_#m!R~Oo0cOv0qO{&xy~P'vOV*SOa*TO%q*UO%uWOg&yi~O$S-lO%Z.VO%_.VO~OV.aOh._O!X.^O!].`O!h.YO!s.[O!t.[O%p.XO%uWO&Z]O&[]O&]]O&^]O&_]O&`]O&a]O&b]O~Oo0cOv0qOz$lq!W$lq~P'vO{.fOz$lq!W$lq~Oo0cOv0qO{*gO!W&Xy~P'vOz.gO!W&Xy~Oo0cOv.kO~P'vOs-sO!T%dO!U%cOg&Oy!W&Oy![&Oyz&Oy~P!/jO{(kO![.nO~O{(kO![.nO!m.oO~OV*SOa*TO%q*UO%uWO~Oh.tO!f.rOz$TX#[$TX%j$TXg$TX~Os$TX{$TX!W$TX![$TX~P$-bO%o.vO%p.vOs$UXz$UX{$UX#[$UX%j$UX!W$UXg$UX![$UX~O!h.xO~Oz.|O#[/OO%j.yOs&|X{&|X!W&|Xg&|X~Oa/RO~P$)zOh.tOs&}Xz&}X{&}X#[&}X%j&}X!W&}Xg&}X![&}X~Os/VO{$jO~Oo0cOv0qOz$ly!W$ly~P'vOo0cOv0qO{*gO!W&X!R~P'vOz/ZO!W&X!R~Og&RXs&RX!T&RX!U&RX!W&RX![&RXz&RX~P!/jOs-sO!T%dO!U%cOg&Qa!W&Qa![&Qaz&Qa~O{(kO![/^O~O!f.rOh$[as$[az$[a{$[a#[$[a%j$[a!W$[ag$[a![$[a~O!h/eO~O%o.vO%p.vOs$Uaz$Ua{$Ua#[$Ua%j$Ua!W$Uag$Ua![$Ua~O%j.yOs$Yaz$Ya{$Ya#[$Ya!W$Yag$Ya![$Ya~Os&|a{&|a!W&|ag&|a~P$)nOz/jOs&|a{&|a!W&|ag&|a~O!W/mO~Og/mO~O{/oO~O![/pO~Oo0cOv0qO{*gO!W&X!Z~P'vO{/sO~O%z/tO~P$-bOz/uO#[/OO%j.yOg'PX~Oz/uOg'PX~Og/wO~O!h/xO~O#[/OOs%Saz%Sa{%Sa%j%Sa!W%Sag%Sa![%Sa~O#[/OO%j.yOs%Waz%Wa{%Wa!W%Wag%Wa~Os&|i{&|i!W&|ig&|i~P$)nOz/zO#[/OO%j.yO!['Oa~Og'Pa~P$)nOz0SOg'Pa~Oa0UO!['Oi~P$)zOz0WO!['Oi~Oz0WO#[/OO%j.yO!['Oi~O#[/OO%j.yOg$biz$bi~O%z0ZO~P$-bO#[/OO%j.yOg%Vaz%Va~Og'Pi~P$)nO{0^O~Oa0UO!['Oq~P$)zOz0`O!['Oq~O#[/OO%j.yOz%Ui![%Ui~Oa0UO~P$)zOa0UO!['Oy~P$)zO#[/OO%j.yOg$ciz$ci~O#[/OO%j.yOz%Uq![%Uq~Oz+aO#g%ha%[%ha%_%ha%z%ha~P%SOV&OOo0cOv0qO~P'vOn0hO~Oo0hO~P'vO{0iO~Ot0jO~P!/jO&]&Z&j&h&i&g&f&d&e&c&b&`&a&_&^&[%u~",
@@ -26811,7 +27031,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const pythonLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "python",
-		parser: /*@__PURE__*/ parser$9.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$10.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			Body: (context) => {
 				var _a;
 				return (_a = indentBody(context, /^\s*(#|$)/.test(context.textAfter) && innerBody(context) || context.node)) !== null && _a !== void 0 ? _a : context.continue();
@@ -26984,7 +27204,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		DoctypeDecl: tags$1.documentMeta,
 		Cdata: tags$1.special(tags$1.string)
 	});
-	const parser$8 = LRParser.deserialize({
+	const parser$9 = LRParser.deserialize({
 		version: 14,
 		states: ",lOQOaOOOrOxO'#CfOzOpO'#CiO!tOaO'#CgOOOP'#Cg'#CgO!{OrO'#CrO#TOtO'#CsO#]OpO'#CtOOOP'#DT'#DTOOOP'#Cv'#CvQQOaOOOOOW'#Cw'#CwO#eOxO,59QOOOP,59Q,59QOOOO'#Cx'#CxO#mOpO,59TO#uO!bO,59TOOOP'#C|'#C|O$TOaO,59RO$[OpO'#CoOOOP,59R,59ROOOQ'#C}'#C}O$dOrO,59^OOOP,59^,59^OOOS'#DO'#DOO$lOtO,59_OOOP,59_,59_O$tOpO,59`O$|OpO,59`OOOP-E6t-E6tOOOW-E6u-E6uOOOP1G.l1G.lOOOO-E6v-E6vO%UO!bO1G.oO%UO!bO1G.oO%dOpO'#CkO%lO!bO'#CyO%zO!bO1G.oOOOP1G.o1G.oOOOP1G.w1G.wOOOP-E6z-E6zOOOP1G.m1G.mO&VOpO,59ZO&_OpO,59ZOOOQ-E6{-E6{OOOP1G.x1G.xOOOS-E6|-E6|OOOP1G.y1G.yO&gOpO1G.zO&gOpO1G.zOOOP1G.z1G.zO&oO!bO7+$ZO&}O!bO7+$ZOOOP7+$Z7+$ZOOOP7+$c7+$cO'YOpO,59VO'bOpO,59VO'mO!bO,59eOOOO-E6w-E6wO'{OpO1G.uO'{OpO1G.uOOOP1G.u1G.uO(TOpO7+$fOOOP7+$f7+$fO(]O!bO<<GuOOOP<<Gu<<GuOOOP<<G}<<G}O'bOpO1G.qO'bOpO1G.qO(hO#tO'#CnO(vO&jO'#CnOOOO1G.q1G.qO)UOpO7+$aOOOP7+$a7+$aOOOP<<HQ<<HQOOOPAN=aAN=aOOOPAN=iAN=iO'bOpO7+$]OOOO7+$]7+$]OOOO'#Cz'#CzO)^O#tO,59YOOOO,59Y,59YOOOO'#C{'#C{O)lO&jO,59YOOOP<<G{<<G{OOOO<<Gw<<GwOOOO-E6x-E6xOOOO1G.t1G.tOOOO-E6y-E6y",
 		stateData: ")z~OPQOSVOTWOVWOWWOXWOiXOyPO!QTO!SUO~OvZOx]O~O^`Oz^O~OPQOQcOSVOTWOVWOWWOXWOyPO!QTO!SUO~ORdO~P!SOteO!PgO~OuhO!RjO~O^lOz^O~OvZOxoO~O^qOz^O~O[vO`sOdwOz^O~ORyO~P!SO^{Oz^O~OteO!P}O~OuhO!R!PO~O^!QOz^O~O[!SOz^O~O[!VO`sOd!WOz^O~Oa!YOz^O~Oz^O[mX`mXdmX~O[!VO`sOd!WO~O^!]Oz^O~O[!_Oz^O~O[!aOz^O~O[!cO`sOd!dOz^O~O[!cO`sOd!dO~Oa!eOz^O~Oz^O{!gO}!hO~Oz^O[ma`madma~O[!kOz^O~O[!lOz^O~O[!mO`sOd!nO~OW!qOX!qO{!sO|!qO~OW!tOX!tO}!sO!O!tO~O[!vOz^O~OW!qOX!qO{!yO|!qO~OW!tOX!tO}!yO!O!tO~O",
@@ -27261,7 +27481,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const xmlLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "xml",
-		parser: /*@__PURE__*/ parser$8.configure({ props: [
+		parser: /*@__PURE__*/ parser$9.configure({ props: [
 			/*@__PURE__*/ indentNodeProp.add({
 				Element(context) {
 					let closed = /^\s*<\//.test(context.textAfter);
@@ -27293,7 +27513,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	XML language support. Includes schema-based autocompletion when
 	configured.
 	*/
-	function xml(conf = {}) {
+	function xml$1(conf = {}) {
 		let support = [xmlLanguage.data.of({ autocomplete: completeFromSchema$1(conf.elements || [], conf.attributes || []) })];
 		if (conf.autoCloseTags !== false) support.push(autoCloseTags);
 		return new LanguageSupport(xmlLanguage, support);
@@ -27380,7 +27600,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	const type_Map = 2;
 	const type_Flow = 3;
 	const type_Lit = 4;
-	var Context$2 = class {
+	var Context$5 = class {
 		constructor(parent, depth, type) {
 			this.parent = parent;
 			this.depth = depth;
@@ -27388,7 +27608,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			this.hash = (parent ? parent.hash + parent.hash << 8 : 0) + depth + (depth << 4) + type;
 		}
 	};
-	Context$2.top = new Context$2(null, -1, type_Top);
+	Context$5.top = new Context$5(null, -1, type_Top);
 	function findColumn(input, pos) {
 		for (let col = 0, p = pos - input.pos - 1;; p--, col++) {
 			let ch = input.peek(p);
@@ -27408,19 +27628,19 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		return ch < 0 || isSpace$1(ch);
 	}
 	const indentation = new ContextTracker({
-		start: Context$2.top,
+		start: Context$5.top,
 		reduce(context, term) {
 			return context.type == type_Flow && (term == FlowSequence || term == FlowMapping) ? context.parent : context;
 		},
 		shift(context, term, stack, input) {
-			if (term == sequenceStartMark) return new Context$2(context, findColumn(input, input.pos), type_Seq);
-			if (term == mapStartMark || term == explicitMapStartMark) return new Context$2(context, findColumn(input, input.pos), type_Map);
+			if (term == sequenceStartMark) return new Context$5(context, findColumn(input, input.pos), type_Seq);
+			if (term == mapStartMark || term == explicitMapStartMark) return new Context$5(context, findColumn(input, input.pos), type_Map);
 			if (term == blockEnd) return context.parent;
-			if (term == BracketL$1 || term == BraceL$1) return new Context$2(context, 0, type_Flow);
+			if (term == BracketL$1 || term == BraceL$1) return new Context$5(context, 0, type_Flow);
 			if (term == BlockLiteralContent && context.type == type_Lit) return context.parent;
 			if (term == BlockLiteralHeader) {
 				let indent = /[1-9]/.exec(input.read(input.pos, stack.pos));
-				if (indent) return new Context$2(context, context.depth + +indent[0], type_Lit);
+				if (indent) return new Context$5(context, context.depth + +indent[0], type_Lit);
 			}
 			return context;
 		},
@@ -27476,7 +27696,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				readAnchor(input);
 				break;
 			} else if (input.next == 39 || input.next == 34) {
-				if (readQuoted(input, true)) break;
+				if (readQuoted$1(input, true)) break;
 				return;
 			} else if (input.next == 91 || input.next == 123) {
 				if (!scanBrackets(input)) return;
@@ -27495,14 +27715,14 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	function uriChar(ch) {
 		return ch > 32 && ch < 127 && ch != 34 && ch != 37 && ch != 44 && ch != 60 && ch != 62 && ch != 92 && ch != 94 && ch != 96 && ch != 123 && ch != 124 && ch != 125;
 	}
-	function hexChar(ch) {
+	function hexChar$1(ch) {
 		return ch >= 48 && ch <= 57 || ch >= 97 && ch <= 102 || ch >= 65 && ch <= 70;
 	}
 	function readUriChar(input, quoted) {
 		if (input.next == 37) {
 			input.advance();
-			if (hexChar(input.next)) input.advance();
-			if (hexChar(input.next)) input.advance();
+			if (hexChar$1(input.next)) input.advance();
+			if (hexChar$1(input.next)) input.advance();
 			return true;
 		} else if (uriChar(input.next) || quoted && input.next == 44) {
 			input.advance();
@@ -27524,7 +27744,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		input.advance();
 		while (!isSep(input.next) && charTag(input.next) != "f") input.advance();
 	}
-	function readQuoted(input, scan) {
+	function readQuoted$1(input, scan) {
 		let quote = input.next, lineBreak = false, start = input.pos;
 		input.advance();
 		for (;;) {
@@ -27550,7 +27770,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			stack.push(input.next);
 			input.advance();
 		} else if (input.next == 39 || input.next == 34) {
-			if (!readQuoted(input, true)) return false;
+			if (!readQuoted$1(input, true)) return false;
 		} else if (input.next == 93 || input.next == 125) {
 			if (stack[stack.length - 1] != input.next - 2) return false;
 			stack.pop();
@@ -27598,7 +27818,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			readAnchor(input);
 			input.acceptToken(token);
 		} else if (input.next == 39 || input.next == 34) {
-			readQuoted(input, false);
+			readQuoted$1(input, false);
 			input.acceptToken(QuotedLiteral);
 		} else if (readPlain(input, false, stack.context.type == type_Flow, stack.context.depth)) input.acceptToken(Literal);
 	});
@@ -27639,7 +27859,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		"[ ]": tags$1.squareBracket,
 		"{ }": tags$1.brace
 	});
-	const parser$7 = LRParser.deserialize({
+	const parser$8 = LRParser.deserialize({
 		version: 14,
 		states: "5lQ!ZQgOOO#PQfO'#CpO#uQfO'#DOOOQR'#Dv'#DvO$qQgO'#DRO%gQdO'#DUO%nQgO'#DUO&ROaO'#D[OOQR'#Du'#DuO&{QgO'#D^O'rQgO'#D`OOQR'#Dt'#DtO(iOqO'#DbOOQP'#Dj'#DjO(zQaO'#CmO)YQgO'#CmOOQP'#Cm'#CmQ)jQaOOQ)uQgOOQ]QgOOO*PQdO'#CrO*nQdO'#CtOOQO'#Dw'#DwO+]Q`O'#CxO+hQdO'#CwO+rQ`O'#CwOOQO'#Cv'#CvO+wQdO'#CvOOQO'#Cq'#CqO,UQ`O,59[O,^QfO,59[OOQR,59[,59[OOQO'#Cx'#CxO,eQ`O'#DPO,pQdO'#DPOOQO'#Dx'#DxO,zQdO'#DxO-XQ`O,59jO-aQfO,59jOOQR,59j,59jOOQR'#DS'#DSO-hQcO,59mO-sQgO'#DVO.TQ`O'#DVO.YQcO,59pOOQR'#DX'#DXO#|QfO'#DWO.hQcO'#DWOOQR,59v,59vO.yOWO,59vO/OOaO,59vO/WOaO,59vO/cQgO'#D_OOQR,59x,59xO0VQgO'#DaOOQR,59z,59zOOQP,59|,59|O0yOaO,59|O1ROaO,59|O1aOqO,59|OOQP-E7h-E7hO1oQgO,59XOOQP,59X,59XO2PQaO'#DeO2_QgO'#DeO2oQgO'#DkOOQP'#Dk'#DkQ)jQaOOO3PQdO'#CsOOQO,59^,59^O3kQdO'#CuOOQO,59`,59`OOQO,59c,59cO4VQdO,59cO4aQdO'#CzO4kQ`O'#CzOOQO,59b,59bOOQU,5:Q,5:QOOQR1G.v1G.vO4pQ`O1G.vOOQU-E7d-E7dO4xQdO,59kOOQO,59k,59kO5SQdO'#DQO5^Q`O'#DQOOQO,5:d,5:dOOQU,5:R,5:ROOQR1G/U1G/UO5cQ`O1G/UOOQU-E7e-E7eO5kQgO'#DhO5xQcO1G/XOOQR1G/X1G/XOOQR,59q,59qO6TQgO,59qO6eQdO'#DiO6lQgO'#DiO7PQcO1G/[OOQR1G/[1G/[OOQR,59r,59rO#|QfO,59rOOQR1G/b1G/bO7_OWO1G/bO7dOaO1G/bOOQR,59y,59yOOQR,59{,59{OOQP1G/h1G/hO7lOaO1G/hO7tOaO1G/hO8POaO1G/hOOQP1G.s1G.sO8_QgO,5:POOQP,5:P,5:POOQP,5:V,5:VOOQP-E7i-E7iOOQO,59_,59_OOQO,59a,59aOOQO1G.}1G.}OOQO,59f,59fO8oQdO,59fOOQR7+$b7+$bP,XQ`O'#DfOOQO1G/V1G/VOOQO,59l,59lO8yQdO,59lOOQR7+$p7+$pP9TQ`O'#DgOOQR'#DT'#DTOOQR,5:S,5:SOOQR-E7f-E7fOOQR7+$s7+$sOOQR1G/]1G/]O9YQgO'#DYO9jQ`O'#DYOOQR,5:T,5:TO#|QfO'#DZO9oQcO'#DZOOQR-E7g-E7gOOQR7+$v7+$vOOQR1G/^1G/^OOQR7+$|7+$|O:QOWO7+$|OOQP7+%S7+%SO:VOaO7+%SO:_OaO7+%SOOQP1G/k1G/kOOQO1G/Q1G/QOOQO1G/W1G/WOOQR,59t,59tO:jQgO,59tOOQR,59u,59uO#|QfO,59uOOQR<<Hh<<HhOOQP<<Hn<<HnO:zOaO<<HnOOQR1G/`1G/`OOQR1G/a1G/aOOQPAN>YAN>Y",
 		stateData: ";S~O!fOS!gOS^OS~OP_OQbORSOTUOWROXROYYOZZO[XOcPOqQO!PVO!V[O!cTO~O`cO~P]OVkOWROXROYeOZfO[dOcPOmhOqQO~OboO~P!bOVtOWROXROYeOZfO[dOcPOmrOqQO~OpwO~P#WORSOTUOWROXROYYOZZO[XOcPOqQO!PVO!cTO~OSvP!avP!bvP~P#|OWROXROYeOZfO[dOcPOqQO~OmzO~P%OOm!OOUzP!azP!bzP!dzP~P#|O^!SO!b!QO!f!TO!g!RO~ORSOTUOWROXROcPOqQO!PVO!cTO~OY!UOP!QXQ!QX!V!QX!`!QXS!QX!a!QX!b!QXU!QXm!QX!d!QX~P&aO[!WOP!SXQ!SX!V!SX!`!SXS!SX!a!SX!b!SXU!SXm!SX!d!SX~P&aO^!ZO!W![O!b!YO!f!]O!g!YO~OP!_O!V[OQaX!`aX~OPaXQaX!VaX!`aX~P#|OP!bOQ!cO!V[O~OP_O!V[O~P#|OWROXROY!fOcPOqQObfXmfXofXpfX~OWROXRO[!hOcPOqQObhXmhXohXphX~ObeXmlXoeX~ObkXokX~P%OOm!kO~Om!lObnPonP~P%OOb!pOo!oO~Ob!pO~P!bOm!sOosXpsX~OosXpsX~P%OOm!uOotPptP~P%OOo!xOp!yO~Op!yO~P#WOS!|O!a#OO!b#OO~OUyX!ayX!byX!dyX~P#|Om#QO~OU#SO!a#UO!b#UO!d#RO~Om#WOUzX!azX!bzX!dzX~O]#XO~O!b#XO!g#YO~O^#ZO!b#XO!g#YO~OP!RXQ!RX!V!RX!`!RXS!RX!a!RX!b!RXU!RXm!RX!d!RX~P&aOP!TXQ!TX!V!TX!`!TXS!TX!a!TX!b!TXU!TXm!TX!d!TX~P&aO!b#^O!g#^O~O^#_O!b#^O!f#`O!g#^O~O^#_O!W#aO!b#^O!g#^O~OPaaQaa!Vaa!`aa~P#|OP#cO!V[OQ!XX!`!XX~OP!XXQ!XX!V!XX!`!XX~P#|OP_O!V[OQ!_X!`!_X~P#|OWROXROcPOqQObgXmgXogXpgX~OWROXROcPOqQObiXmiXoiXpiX~Obkaoka~P%OObnXonX~P%OOm#kO~Ob#lOo!oO~Oosapsa~P%OOotXptX~P%OOm#pO~Oo!xOp#qO~OSwP!awP!bwP~P#|OS!|O!a#vO!b#vO~OUya!aya!bya!dya~P#|Om#xO~P%OOm#{OU}P!a}P!b}P!d}P~P#|OU#SO!a$OO!b$OO!d#RO~O]$QO~O!b$QO!g$RO~O!b$SO!g$SO~O^$TO!b$SO!g$SO~O^$TO!b$SO!f$UO!g$SO~OP!XaQ!Xa!V!Xa!`!Xa~P#|Obnaona~P%OOotapta~P%OOo!xO~OU|X!a|X!b|X!d|X~P#|Om$ZO~Om$]OU}X!a}X!b}X!d}X~O]$^O~O!b$_O!g$_O~O^$`O!b$_O!g$_O~OU|a!a|a!b|a!d|a~P#|O!b$cO!g$cO~O",
@@ -27693,7 +27913,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const yamlLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "yaml",
-		parser: /*@__PURE__*/ parser$7.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$8.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			Stream: (cx) => {
 				for (let before = cx.node.resolve(cx.pos, -1); before && before.to >= cx.pos; before = before.parent) {
 					if (before.name == "BlockLiteralContent" && before.from < before.to) return cx.baseIndentFor(before);
@@ -27837,12 +28057,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	function eol(input) {
 		while (!(input.next < 0 || input.next == 10)) input.advance();
 	}
-	function inString(ch, str) {
+	function inString$1(ch, str) {
 		for (let i = 0; i < str.length; i++) if (str.charCodeAt(i) == ch) return true;
 		return false;
 	}
 	const Space$1 = " 	\r\n";
-	function keywords$4(keywords, types, builtin) {
+	function keywords$15(keywords, types, builtin) {
 		let result = Object.create(null);
 		result["true"] = result["false"] = Bool;
 		result["null"] = result["unknown"] = Null;
@@ -27851,7 +28071,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		for (let kw of (builtin || "").split(" ")) if (kw) result[kw] = Builtin;
 		return result;
 	}
-	const defaults = {
+	const defaults$1 = {
 		backslashEscapes: false,
 		hashComments: false,
 		spaceAfterDashes: false,
@@ -27866,12 +28086,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		specialVar: "?",
 		identifierQuotes: "\"",
 		caseInsensitiveIdentifiers: false,
-		words: /*@__PURE__*/ keywords$4("absolute action add after all allocate alter and any are as asc assertion at authorization before begin between both breadth by call cascade cascaded case cast catalog check close collate collation column commit condition connect connection constraint constraints constructor continue corresponding count create cross cube current current_date current_default_transform_group current_transform_group_for_type current_path current_role current_time current_timestamp current_user cursor cycle data day deallocate declare default deferrable deferred delete depth deref desc describe descriptor deterministic diagnostics disconnect distinct do domain drop dynamic each else elseif end end-exec equals escape except exception exec execute exists exit external fetch first for foreign found from free full function general get global go goto grant group grouping handle having hold hour identity if immediate in indicator initially inner inout input insert intersect into is isolation join key language last lateral leading leave left level like limit local localtime localtimestamp locator loop map match method minute modifies module month names natural nesting new next no none not of old on only open option or order ordinality out outer output overlaps pad parameter partial path prepare preserve primary prior privileges procedure public read reads recursive redo ref references referencing relative release repeat resignal restrict result return returns revoke right role rollback rollup routine row rows savepoint schema scroll search second section select session session_user set sets signal similar size some space specific specifictype sql sqlexception sqlstate sqlwarning start state static system_user table temporary then timezone_hour timezone_minute to trailing transaction translation treat trigger under undo union unique unnest until update usage user using value values view when whenever where while with without work write year zone ", "array binary bit boolean char character clob date decimal double float int integer interval large national nchar nclob numeric object precision real smallint time timestamp varchar varying ")
+		words: /*@__PURE__*/ keywords$15("absolute action add after all allocate alter and any are as asc assertion at authorization before begin between both breadth by call cascade cascaded case cast catalog check close collate collation column commit condition connect connection constraint constraints constructor continue corresponding count create cross cube current current_date current_default_transform_group current_transform_group_for_type current_path current_role current_time current_timestamp current_user cursor cycle data day deallocate declare default deferrable deferred delete depth deref desc describe descriptor deterministic diagnostics disconnect distinct do domain drop dynamic each else elseif end end-exec equals escape except exception exec execute exists exit external fetch first for foreign found from free full function general get global go goto grant group grouping handle having hold hour identity if immediate in indicator initially inner inout input insert intersect into is isolation join key language last lateral leading leave left level like limit local localtime localtimestamp locator loop map match method minute modifies module month names natural nesting new next no none not of old on only open option or order ordinality out outer output overlaps pad parameter partial path prepare preserve primary prior privileges procedure public read reads recursive redo ref references referencing relative release repeat resignal restrict result return returns revoke right role rollback rollup routine row rows savepoint schema scroll search second section select session session_user set sets signal similar size some space specific specifictype sql sqlexception sqlstate sqlwarning start state static system_user table temporary then timezone_hour timezone_minute to trailing transaction translation treat trigger under undo union unique unnest until update usage user using value values view when whenever where while with without work write year zone ", "array binary bit boolean char character clob date decimal double float int integer interval large national nchar nclob numeric object precision real smallint time timestamp varchar varying ")
 	};
 	function dialect(spec, kws, types, builtin) {
 		let dialect = {};
-		for (let prop in defaults) dialect[prop] = (spec.hasOwnProperty(prop) ? spec : defaults)[prop];
-		if (kws) dialect.words = keywords$4(kws, types || "", builtin);
+		for (let prop in defaults$1) dialect[prop] = (spec.hasOwnProperty(prop) ? spec : defaults$1)[prop];
+		if (kws) dialect.words = keywords$15(kws, types || "", builtin);
 		return dialect;
 	}
 	function tokensFor(d) {
@@ -27879,8 +28099,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			var _a;
 			let { next } = input;
 			input.advance();
-			if (inString(next, Space$1)) {
-				while (inString(input.next, Space$1)) input.advance();
+			if (inString$1(next, Space$1)) {
+				while (inString$1(input.next, Space$1)) input.advance();
 				input.acceptToken(whitespace);
 			} else if (next == 36 && d.doubleDollarQuotedStrings) {
 				let tag = readWord(input, "");
@@ -27932,12 +28152,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				if (!isAlpha(input.next)) break;
 				input.advance();
 			}
-			else if (d.plsqlQuotingMechanism && (next == 113 || next == 81) && input.next == 39 && input.peek(1) > 0 && !inString(input.peek(1), Space$1)) {
+			else if (d.plsqlQuotingMechanism && (next == 113 || next == 81) && input.next == 39 && input.peek(1) > 0 && !inString$1(input.peek(1), Space$1)) {
 				let openDelim = input.peek(1);
 				input.advance(2);
 				readPLSQLQuotedLiteral(input, openDelim);
 				input.acceptToken(String$1$1);
-			} else if (inString(next, d.identifierQuotes)) {
+			} else if (inString$1(next, d.identifierQuotes)) {
 				readLiteral(input, next == 91 ? 93 : next, false);
 				input.acceptToken(QuotedIdentifier);
 			} else if (next == 40) input.acceptToken(ParenL$1);
@@ -27974,10 +28194,10 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			else if (next >= 48 && next <= 57) {
 				readNumber(input, false);
 				input.acceptToken(Number$2);
-			} else if (inString(next, d.operatorChars)) {
-				while (inString(input.next, d.operatorChars)) input.advance();
+			} else if (inString$1(next, d.operatorChars)) {
+				while (inString$1(input.next, d.operatorChars)) input.advance();
 				input.acceptToken(Operator);
-			} else if (inString(next, d.specialVar)) {
+			} else if (inString$1(next, d.specialVar)) {
 				if (input.next == next) input.advance();
 				readWordOrQuoted(input);
 				input.acceptToken(SpecialVar);
@@ -27988,7 +28208,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			}
 		});
 	}
-	const tokens = /*@__PURE__*/ tokensFor(defaults);
+	const tokens = /*@__PURE__*/ tokensFor(defaults$1);
 	const parser$1$1 = /*@__PURE__*/ LRParser.deserialize({
 		version: 14,
 		states: "%vQ]QQOOO#wQRO'#DSO$OQQO'#CwO%eQQO'#CxO%lQQO'#CyO%sQQO'#CzOOQQ'#DS'#DSOOQQ'#C}'#C}O'UQRO'#C{OOQQ'#Cv'#CvOOQQ'#C|'#C|Q]QQOOQOQQOOO'`QQO'#DOO(xQRO,59cO)PQQO,59cO)UQQO'#DSOOQQ,59d,59dO)cQQO,59dOOQQ,59e,59eO)jQQO,59eOOQQ,59f,59fO)qQQO,59fOOQQ-E6{-E6{OOQQ,59b,59bOOQQ-E6z-E6zOOQQ,59j,59jOOQQ-E6|-E6|O+VQRO1G.}O+^QQO,59cOOQQ1G/O1G/OOOQQ1G/P1G/POOQQ1G/Q1G/QP+kQQO'#C}O+rQQO1G.}O)PQQO,59cO,PQQO'#Cw",
@@ -28220,7 +28440,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			"."
 		], completeFromList(Object.keys(keywords).map((keyword) => build(upperCase ? keyword.toUpperCase() : keyword, completionType(keywords[keyword])))));
 	}
-	let parser$5 = /*@__PURE__*/ parser$1$1.configure({ props: [
+	let parser$6 = /*@__PURE__*/ parser$1$1.configure({ props: [
 		/*@__PURE__*/ indentNodeProp.add({ Statement: /*@__PURE__*/ continuedIndent() }),
 		/*@__PURE__*/ foldNodeProp.add({
 			Statement(tree, state) {
@@ -28287,7 +28507,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			let d = dialect(spec, spec.keywords, spec.types, spec.builtin);
 			let language = LRLanguage.define({
 				name: "sql",
-				parser: parser$5.configure({ tokenizers: [{
+				parser: parser$6.configure({ tokenizers: [{
 					from: tokens,
 					to: tokensFor(d)
 				}] }),
@@ -28451,7 +28671,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		catch: 372,
 		finally: 380
 	};
-	const parser$4 = LRParser.deserialize({
+	const parser$5 = LRParser.deserialize({
 		version: 14,
 		states: "##jQ]QPOOQ$wQPOOO(bQQO'#H^O*iQQO'#CbOOQO'#Cb'#CbO*pQPO'#CaO*xOSO'#CpOOQO'#Hc'#HcOOQO'#Cu'#CuO,eQPO'#D_O-OQQO'#HmOOQO'#Hm'#HmO/gQQO'#HhO/nQQO'#HhOOQO'#Hh'#HhOOQO'#Hg'#HgO1rQPO'#DUO2PQPO'#GnO4wQPO'#D_O5OQPO'#DzO*pQPO'#E[O5qQPO'#E[OOQO'#DV'#DVO7SQQO'#HaO9^QQO'#EeO9eQPO'#EdO9jQPO'#EfOOQO'#Hb'#HbO7jQQO'#HbO:pQQO'#FhO:wQPO'#ExO:|QPO'#E}O:|QPO'#FPOOQO'#Ha'#HaOOQO'#HY'#HYOOQO'#Gh'#GhOOQO'#HX'#HXO<^QPO'#FiOOQO'#HW'#HWOOQO'#Gg'#GgQ]QPOOOOQO'#Hs'#HsO<cQPO'#HsO<hQPO'#D{O<hQPO'#EVO<hQPO'#EQO<pQPO'#HpO=RQQO'#EfO*pQPO'#C`O=ZQPO'#C`O*pQPO'#FcO=`QPO'#FeO=kQPO'#FkO=kQPO'#FnO<hQPO'#FsO=pQPO'#FpO:|QPO'#FwO=kQPO'#FyO]QPO'#GOO=uQPO'#GQO>QQPO'#GSO>]QPO'#GUO=kQPO'#GWO:|QPO'#GXO>dQPO'#GZO?QQQO'#HiO?mQQO'#CuO?tQPO'#HxO@SQPO'#D_O@rQPO'#DpO?wQPO'#DqO@|QPO'#HxOA_QPO'#DpOAgQPO'#IROAlQPO'#E`OOQO'#Hr'#HrOOQO'#Gm'#GmQ$wQPOOOAtQPO'#HsOOQO'#H^'#H^OCsQQO,58{OOQO'#H['#H[OOOO'#Gi'#GiOEfOSO,59[OOQO,59[,59[OOQO'#Hi'#HiOFVQPO,59eOGXQPO,59yOOQO-E:f-E:fO*pQPO,58zOG{QPO,58zO*pQPO,5;}OHQQPO'#DQOHVQPO'#DQOOQO'#Gk'#GkOIVQQO,59jOOQO'#Dm'#DmOJqQPO'#HuOJ{QPO'#DlOKZQPO'#HtOKcQPO,5<_OKhQPO,59^OLRQPO'#CxOOQO,59c,59cOLYQPO,59bOLeQQO'#H^ONgQQO'#CbO!!iQPO'#D_O!#nQQO'#HmO!$OQQO,59pO!$VQPO'#DvO!$eQPO'#H|O!$mQPO,5:`O!$rQPO,5:`O!%YQPO,5;nO!%eQPO'#ITO!%pQPO,5;eO!%uQPO,5=YOOQO-E:l-E:lOOQO,5:f,5:fO!']QPO,5:fO!'dQPO,5:vO?tQPO,5<_O*pQPO,5:vO<hQPO,5:gO<hQPO,5:qO<hQPO,5:lO<hQPO,5<_O!'zQPO,59qO:|QPO,5:}O!(RQPO,5;QO:|QPO,59TO!(aQPO'#DXOOQO,5;O,5;OOOQO'#El'#ElOOQO'#Eo'#EoO:|QPO,5;UO:|QPO,5;UO:|QPO,5;UO:|QPO,5;UO:|QPO,5;UO:|QPO,5;UO:|QPO,5;UO:|QPO,5;UO:|QPO,5;UO:|QPO,5;fOOQO,5;i,5;iOOQO,5<S,5<SO!(hQPO,5;bO!(yQPO,5;dO!(hQPO'#CyO!)QQQO'#HmO!)`QQO,5;kO]QPO,5<TOOQO-E:e-E:eOOQO,5>_,5>_O!*sQPO,5:gO!+RQPO,5:qO!+ZQPO,5:lO!+fQPO,5>[O!$VQPO,5>[O!'iQPO,59UO!+qQQO,58zO!+yQQO,5;}O!,RQQO,5<PO*pQPO,5<PO:|QPO'#DUO]QPO,5<VO]QPO,5<YO!,ZQPO'#FrO]QPO,5<[O]QPO,5<aO!,kQQO,5<cO!,uQPO,5<eO!,zQPO,5<jOOQO'#Fj'#FjOOQO,5<l,5<lO!-PQPO,5<lOOQO,5<n,5<nO!-UQPO,5<nO!-ZQQO,5<pOOQO,5<p,5<pO>gQPO,5<rO!-bQQO,5<sO!-iQPO'#GdO!.oQPO,5<uO>gQPO,5<}O!2mQPO,59jO!2zQPO'#HuO!3RQPO,59xO!3WQPO,5>dO?tQPO,59xO!3cQPO,5:[OAlQPO,5:zO!3kQPO'#DrO?wQPO'#DrO!3vQPO'#HyO!4OQPO,5:]O?tQPO,5>dO!(hQPO,5>dOAgQPO,5>mOOQO,5:[,5:[O!$rQPO'#DtOOQO,5>m,5>mO!4TQPO'#EaOOQO,5:z,5:zO!7UQPO,5:zO!(hQPO'#DxOOQO-E:k-E:kOOQO,5:y,5:yO*pQPO,58}O!7ZQPO'#ChOOQO1G.k1G.kOOOO-E:g-E:gOOQO1G.v1G.vO!+qQQO1G.fO*pQPO1G.fO!7eQQO1G1iOOQO,59l,59lO!7mQPO,59lOOQO-E:i-E:iO!7rQPO,5>aO!8ZQPO,5:WO<hQPO'#GpO!8bQPO,5>`OOQO1G1y1G1yOOQO1G.x1G.xO!8{QPO'#CyO!9kQPO'#HmO!9uQPO'#CzO!:TQPO'#HlO!:]QPO,59dOOQO1G.|1G.|OLYQPO1G.|O!:sQPO,59eO!;QQQO'#H^O!;cQQO'#CbOOQO,5:b,5:bO<hQPO,5:cOOQO,5:a,5:aO!;tQQO,5:aOOQO1G/[1G/[O!;yQPO,5:bO!<[QPO'#GsO!<oQPO,5>hOOQO1G/z1G/zO!<wQPO'#DvO!=YQPO1G/zO!(hQPO'#GqO!=_QPO1G1YO:|QPO1G1YO<hQPO'#GyO!=gQPO,5>oOOQO1G1P1G1POOQO1G0Q1G0QO!=oQPO'#E]OOQO1G0b1G0bO!>`QPO1G1yO!'dQPO1G0bO!*sQPO1G0RO!+RQPO1G0]O!+ZQPO1G0WOOQO1G/]1G/]O!>eQQO1G.pO9eQPO1G0jO*pQPO1G0jO<pQPO'#HpO!@[QQO1G.pOOQO1G.p1G.pO!@aQQO1G0iOOQO1G0l1G0lO!@hQPO1G0lO!@sQQO1G.oO!AZQQO'#HqO!AhQPO,59sO!BzQQO1G0pO!DfQQO1G0pO!DmQQO1G0pO!FUQQO1G0pO!F]QQO1G0pO!GbQQO1G0pO!I]QQO1G0pO!IdQQO1G0pO!IkQQO1G0pO!IuQQO1G1QO!I|QQO'#HmOOQO1G0|1G0|O!KSQQO1G1OOOQO1G1O1G1OOOQO1G1o1G1oO!KjQPO'#D[O!(hQPO'#D|O!(hQPO'#D}OOQO1G0R1G0RO!KqQPO1G0RO!KvQPO1G0RO!LOQPO1G0RO!LZQPO'#EXOOQO1G0]1G0]O!LnQPO1G0]O!LsQPO'#ETO!(hQPO'#ESOOQO1G0W1G0WO!MmQPO1G0WO!MrQPO1G0WO!MzQPO'#EhO!NRQPO'#EhOOQO'#Gx'#GxO!NZQQO1G0mO# }QQO1G3vO9eQPO1G3vO#$PQPO'#FXOOQO1G.f1G.fOOQO1G1i1G1iO#$WQPO1G1kOOQO1G1k1G1kO#$cQQO1G1kO#$kQPO1G1qOOQO1G1t1G1tO+QQPO'#D_O-OQQO,5<bO#(cQPO,5<bO#(tQPO,5<^O#({QPO,5<^OOQO1G1v1G1vOOQO1G1{1G1{OOQO1G1}1G1}O:|QPO1G1}O#,oQPO'#F{OOQO1G2P1G2PO=kQPO1G2UOOQO1G2W1G2WOOQO1G2Y1G2YOOQO1G2[1G2[OOQO1G2^1G2^OOQO1G2_1G2_O#,vQQO'#H^O#-aQQO'#CbO-OQQO'#HmO#-zQQOOO#.hQQO'#EeO#.VQQO'#HbO!$VQPO'#GeO#.oQPO,5=OOOQO'#HQ'#HQO#.wQPO1G2aO#2uQPO'#G]O>gQPO'#GaOOQO1G2a1G2aO#2zQPO1G2iO#6xQPO,5>gOOQO1G/d1G/dOOQO1G4O1G4OO#7ZQPO1G/dOOQO1G/v1G/vOOQO1G0f1G0fO!7UQPO1G0fOOQO,5:^,5:^O!(hQPO'#DsO#7`QPO,5:^O?wQPO'#GrO#7kQPO,5>eOOQO1G/w1G/wOAgQPO'#H{O#7sQPO1G4OO?tQPO1G4OOOQO1G4X1G4XO!#YQPO'#DvO!!iQPO'#D_OOQO,5:{,5:{O#8OQPO,5:{O#8OQPO,5:{O#8VQQO'#HaO#9hQQO'#HbO#9rQQO'#EbO#9}QPO'#EbO#:VQPO'#IOOOQO,5:d,5:dOOQO1G.i1G.iO#:bQQO'#EeO#:rQQO'#H`O#;SQPO'#FTOOQO'#H`'#H`O#;^QPO'#H`O#;{QPO'#IWO#<TQPO,59SOOQO7+$Q7+$QO!+qQQO7+$QOOQO7+'T7+'TOOQO1G/W1G/WO#<YQPO'#DoO#<dQQO'#HvOOQO'#Hv'#HvOOQO1G/r1G/rOOQO,5=[,5=[OOQO-E:n-E:nO#<tQWO,58{O#<{QPO,59fOOQO,59f,59fO!(hQPO'#HoOKmQPO'#GjO#=ZQPO,5>WOOQO1G/O1G/OOOQO7+$h7+$hOOQO1G/{1G/{O#=cQQO1G/{OOQO1G/}1G/}O#=hQPO1G/{OOQO1G/|1G/|O<hQPO1G/}OOQO,5=_,5=_OOQO-E:q-E:qOOQO7+%f7+%fOOQO,5=],5=]OOQO-E:o-E:oO:|QPO7+&tOOQO7+&t7+&tOOQO,5=e,5=eOOQO-E:w-E:wO#=mQPO'#EUO#={QPO'#EUOOQO'#Gw'#GwO#>dQPO,5:wOOQO,5:w,5:wOOQO7+'e7+'eOOQO7+%|7+%|OOQO7+%m7+%mO!KqQPO7+%mO!KvQPO7+%mO!LOQPO7+%mOOQO7+%w7+%wO!LnQPO7+%wOOQO7+%r7+%rO!MmQPO7+%rO!MrQPO7+%rOOQO7+&U7+&UOOQO'#Ee'#EeO9eQPO7+&UO9eQPO,5>[O#?TQPO7+$[OOQO7+&T7+&TOOQO7+&W7+&WO:|QPO'#GlO#?cQPO,5>]OOQO1G/_1G/_O:|QPO7+&lO#?nQQO,59eO#@tQPO,59vOOQO,59v,59vOOQO,5:h,5:hOOQO'#EP'#EPOOQO,5:i,5:iO#@{QPO'#EYO<hQPO'#EYO#A^QPO'#IPO#AiQPO,5:sO?tQPO'#HxO!(hQPO'#HxO#AqQPO'#DpOOQO'#Gu'#GuO#AxQPO,5:oOOQO,5:o,5:oOOQO,5:n,5:nOOQO,5;S,5;SO#BrQQO,5;SO#ByQPO,5;SOOQO-E:v-E:vOOQO7+&X7+&XOOQO7+)b7+)bO#CQQQO7+)bOOQO'#G|'#G|O#DqQPO,5;sOOQO,5;s,5;sO#DxQPO'#FYO*pQPO'#FYO*pQPO'#FYO*pQPO'#FYO#EWQPO7+'VO#E]QPO7+'VOOQO7+'V7+'VO]QPO7+']O#EhQPO1G1|O?tQPO1G1|O#EvQQO1G1xO!(aQPO1G1xO#E}QPO1G1xO#FUQQO7+'iOOQO'#HP'#HPO#F]QPO,5<gOOQO,5<g,5<gO#FdQPO'#HsO:|QPO'#F|O#FlQPO7+'pO#FqQPO,5=PO?tQPO,5=PO#FvQPO1G2jO#HPQPO1G2jOOQO1G2j1G2jOOQO-E;O-E;OOOQO7+'{7+'{O!<[QPO'#G_O>gQPO,5<wOOQO,5<{,5<{O#HXQPO7+(TOOQO7+(T7+(TO#LVQPO1G4ROOQO7+%O7+%OOOQO7+&Q7+&QO#LhQPO,5:_OOQO1G/x1G/xOOQO,5=^,5=^OOQO-E:p-E:pOOQO7+)j7+)jO#LsQPO7+)jO!:bQPO,5:aOOQO1G0g1G0gO#MOQPO1G0gO#MVQPO,59qO#MkQPO,5:|O9eQPO,5:|O!(hQPO'#GtO#MpQPO,5>jO#M{QPO,59TO#NSQPO'#IVO#N[QPO,5;oO*pQPO'#G{O#NaQPO,5>rOOQO1G.n1G.nOOQO<<Gl<<GlO#NiQPO'#HwO#NqQPO,5:ZOOQO1G/Q1G/QOOQO,5>Z,5>ZOOQO,5=U,5=UOOQO-E:h-E:hO#NvQPO7+%gOOQO7+%g7+%gOOQO7+%i7+%iOOQO<<J`<<J`O$ ^QPO'#H^O$ eQPO'#CbO$ lQPO,5:pO$ qQPO,5:xO#=mQPO,5:pOOQO-E:u-E:uOOQO1G0c1G0cOOQO<<IX<<IXO!KqQPO<<IXO!KvQPO<<IXOOQO<<Ic<<IcOOQO<<I^<<I^O!MmQPO<<I^OOQO<<Ip<<IpO$ vQQO<<GvO9eQPO<<IpO*pQPO<<IpOOQO<<Gv<<GvO$#mQQO,5=WOOQO-E:j-E:jO$#zQQO<<JWOOQO1G/b1G/bOOQO,5:t,5:tO$$bQPO,5:tO$$pQPO,5:tO$%RQPO'#GvO$%iQPO,5>kO$%tQPO'#EZOOQO1G0_1G0_O$%{QPO1G0_O?tQPO,5:pOOQO-E:s-E:sOOQO1G0Z1G0ZOOQO1G0n1G0nO$&QQQO1G0nOOQO<<L|<<L|OOQO-E:z-E:zOOQO1G1_1G1_O$&XQQO,5;tOOQO'#G}'#G}O#DxQPO,5;tOOQO'#IX'#IXO$&aQQO,5;tO$&rQQO,5;tOOQO<<Jq<<JqO$&zQPO<<JqOOQO<<Jw<<JwO:|QPO7+'hO$'PQPO7+'hO!(aQPO7+'dO$'_QPO7+'dO$'dQQO7+'dOOQO<<KT<<KTOOQO-E:}-E:}OOQO1G2R1G2ROOQO,5<h,5<hO$'kQQO,5<hOOQO<<K[<<K[O:|QPO1G2kO$'rQPO1G2kOOQO,5=n,5=nOOQO7+(U7+(UO$'wQPO7+(UOOQO-E;Q-E;QO$)fQWO'#HhO$)QQWO'#HhO$)mQPO'#G`O<hQPO,5<yO!$VQPO,5<yOOQO1G2c1G2cOOQO<<Ko<<KoO$*OQPO1G/yOOQO<<MU<<MUOOQO7+&R7+&RO$*ZQPO1G0jO$*fQQO1G0hOOQO1G0h1G0hO$*nQPO1G0hOOQO,5=`,5=`OOQO-E:r-E:rO$*sQQO1G.oOOQO1G1[1G1[O$*}QPO'#GzO$+[QPO,5>qOOQO1G1Z1G1ZO$+dQPO'#FUOOQO,5=g,5=gOOQO-E:y-E:yO$+iQPO'#GoO$+vQPO,5>cOOQO1G/u1G/uOOQO<<IR<<IROOQO1G0[1G0[O$,OQPO1G0dO$,TQPO1G0[O$,YQPO1G0dOOQOAN>sAN>sO!KqQPOAN>sOOQOAN>xAN>xOOQOAN?[AN?[O9eQPOAN?[OOQO1G0`1G0`O$,_QPO1G0`OOQO,5=b,5=bOOQO-E:t-E:tO$,mQPO,5:uOOQO7+%y7+%yOOQO7+&Y7+&YOOQO1G1`1G1`O$,tQQO1G1`OOQO-E:{-E:{O$,|QQO'#IYO$,wQPO1G1`O$&gQPO1G1`O*pQPO1G1`OOQOAN@]AN@]O$-XQQO<<KSO:|QPO<<KSO$-`QPO<<KOOOQO<<KO<<KOO!(aQPO<<KOOOQO1G2S1G2SO$-eQQO7+(VO:|QPO7+(VOOQO<<Kp<<KpP!-iQPO'#HSO!$VQPO'#HRO$-oQPO,5<zO$-zQPO1G2eO<hQPO1G2eO9eQPO7+&SO$.PQPO7+&SOOQO7+&S7+&SOOQO,5=f,5=fOOQO-E:x-E:xO#M{QPO,5;pOOQO,5=Z,5=ZOOQO-E:m-E:mO$.UQPO7+&OOOQO7+%v7+%vO$.dQPO7+&OOOQOG24_G24_OOQOG24vG24vOOQO7+%z7+%zOOQO7+&z7+&zO*pQPO'#HOO$.iQPO,5>tO$.qQPO7+&zO$.vQQO'#IZOOQOAN@nAN@nO$/RQQOAN@nOOQOAN@jAN@jO$/YQPOAN@jO$/_QQO<<KqO$/iQPO,5=mOOQO-E;P-E;POOQO7+(P7+(PO$/zQPO7+(PO$0PQPO<<InOOQO<<In<<InO$0UQPO<<IjOOQO<<Ij<<IjO#M{QPO<<IjO$0UQPO<<IjO$0dQQO,5=jOOQO-E:|-E:|OOQO<<Jf<<JfO$0oQPO,5>uOOQOG26YG26YOOQOG26UG26UOOQO<<Kk<<KkOOQOAN?YAN?YOOQOAN?UAN?UO#M{QPOAN?UO$0wQPOAN?UO$0|QPOAN?UO$1[QPOG24pOOQOG24pG24pO#M{QPOG24pOOQOLD*[LD*[O$1aQPOLD*[OOQO!$'Mv!$'MvO*pQPO'#CaO$1fQQO'#H^O$1yQQO'#CbO!(hQPO'#Cy",
 		stateData: "$2i~OPOSQOS%yOS~OZ`O_VO`VOaVObVOcVOeVOg^Oh^Op!POv{OwkOz!OO}cO!PvO!SyO!TyO!UyO!VyO!WyO!XyO!YyO!ZzO![!`O!]yO!^yO!_yO!u}O!z|O#fpO#roO#tpO#upO#y!RO#z!QO$W!SO$Y!TO$`!UO$c!VO$e!XO$h!WO$l!YO$n!ZO$s![O$u!]O$w!^O$y!_O$|!aO%O!bO%}TO&PRO&RQO&XUO&tdO~Og^Oh^Ov{O}cO!P!mO!SyO!TyO!UyO!VyO!W!pO!XyO!YyO!ZzO!]yO!^yO!_yO!u}O!z|O%}TO&P!cO&R!dO&_!hO&tdO~OWiXW&QXZ&QXuiXu&QX!P&QX!b&QX#]&QX#_&QX#a&QX#b&QX#d&QX#e&QX#f&QX#g&QX#h&QX#i&QX#k&QX#o&QX#r&QX%}iX&PiX&RiX&^&QX&_iX&_&QX&n&QX&viX&v&QX&x!aX~O#p$^X~P&bOWUXW&]XZUXuUXu&]X!PUX!bUX#]UX#_UX#aUX#bUX#dUX#eUX#fUX#gUX#hUX#iUX#kUX#oUX#rUX%}&]X&P&]X&R&]X&^UX&_UX&_&]X&nUX&vUX&v&]X&x!aX~O#p$^X~P(iO&PSO&R!qO~O&W!vO&Y!tO~Og^Oh^O!SyO!TyO!UyO!VyO!WyO!XyO!YyO!ZzO!]yO!^yO!_yO%}TO&P!wO&RWOg!RXh!RX$h!RX&P!RX&R!RX~O#y!|O#z!{O$W!}Ov!RX!u!RX!z!RX&t!RX~P+QOW#XOu#OO%}TO&P#SO&R#SO&v&aX~OW#[Ou&[X%}&[X&P&[X&R&[X&v&[XY&[Xw&[X&n&[X&q&[XZ&[Xq&[X&^&[X!P&[X#_&[X#a&[X#b&[X#d&[X#e&[X#f&[X#g&[X#h&[X#i&[X#k&[X#o&[X#r&[X}&[X!r&[X#p&[Xs&[X|&[X~O&_#YO~P-dO&_&[X~P-dOZ`O_VO`VOaVObVOcVOeVOg^Oh^Op!POwkOz!OO!SyO!TyO!UyO!VyO!WyO!XyO!YyO!ZzO!]yO!^yO!_yO#fpO#roO#tpO#upO%}TO&XUO~O&P#^O&R#]OY&pP~P/uO%}TOg%bXh%bXv%bX!S%bX!T%bX!U%bX!V%bX!W%bX!X%bX!Y%bX!Z%bX!]%bX!^%bX!_%bX!u%bX!z%bX$h%bX&P%bX&R%bX&t%bX&_%bX~O!SyO!TyO!UyO!VyO!WyO!XyO!YyO!ZzO!]yO!^yO!_yOg!RXh!RXv!RX!u!RX!z!RX&P!RX&R!RX&t!RX&_!RX~O$h!RX~P3gO|#kO~P]Og^Oh^Ov#pO!u#rO!z#qO&P!wO&RWO&t#oO~O$h#sO~P5VOu#uO&v#vO!P&TX#_&TX#a&TX#b&TX#d&TX#e&TX#f&TX#g&TX#h&TX#i&TX#k&TX#o&TX#r&TX&^&TX&_&TX&n&TX~OW#tOY&TX#p&TXs&TXq&TX|&TX~P5xO!b#wO#]#wOW&UXu&UX!P&UX#_&UX#a&UX#b&UX#d&UX#e&UX#f&UX#g&UX#h&UX#i&UX#k&UX#o&UX#r&UX&^&UX&_&UX&n&UX&v&UXY&UX#p&UXs&UXq&UX|&UX~OZ#XX~P7jOZ#xO~O&v#vO~O#_#|O#a#}O#b$OO#d$QO#e$RO#f$SO#g$TO#h$UO#i$UO#k$YO#o$VO#r$WO&^#zO&_#zO&n#{O~O!P$XO~P9oO&x$ZO~OZ`O_VO`VOaVObVOcVOeVOg^Oh^Op!POwkOz!OO#fpO#roO#tpO#upO%}TO&P0qO&R0pO&XUO~O#p$_O~O![$aO~O&P#SO&R#SO~Og^Oh^O&P!wO&RWO&_#YO~OW$gO&v#vO~O#z!{O~O!W$kO&PSO&R!qO~OZ$lO~OZ$oO~O!P$vO&P$uO&R$uO~O!P$xO&P$uO&R$uO~O!P${O~P:|OZ%OO}cO~OW&]Xu&]X%}&]X&P&]X&R&]X&_&]X~OZ!aX~P>lOWiXuiX%}iX&PiX&RiX&_iX~OZ!aX~P?XOu#OO%}TO&P#SO&R#SO~O%}TO~P3gOg^Oh^Ov#pO!u#rO!z#qO&_!hO&t#oO~O&P!cO&R!dO~P@ZOg^Oh^O%}TO&P!cO&R!dO~O}cO!P%aO~OZ%bO~O}%dO!m%gO~O}cOg&gXh&gXv&gX!S&gX!T&gX!U&gX!V&gX!W&gX!X&gX!Y&gX!Z&gX!]&gX!^&gX!_&gX!u&gX!z&gX%}&gX&P&gX&R&gX&_&gX&t&gX~OW%jOZ%kOgTahTa%}Ta&PTa&RTa~OvTa!STa!TTa!UTa!VTa!WTa!XTa!YTa!ZTa!]Ta!^Ta!_Ta!uTa!zTa#yTa#zTa$WTa$hTa&tTa&_TauTaYTaqTa|Ta!PTa~PC[O&W%nO&Y!tO~Ou#OO%}TOqma&^maYma&nma!Pma~O&vma}ma!rma~PEnO!SyO!TyO!UyO!VyO!WyO!XyO!YyO!ZzO!]yO!^yO!_yO~Og!Rah!Rav!Ra!u!Ra!z!Ra$h!Ra&P!Ra&R!Ra&t!Ra&_!Ra~PFdO#z%pO~Os%rO~Ou%sO%}TO~Ou#OO%}ra&Pra&Rra&vraYrawra&nra&qra!Pra&^raqra~OWra#_ra#ara#bra#dra#era#fra#gra#hra#ira#kra#ora#rra&_ra#prasra|ra~PH_Ou#OO%}TOq&iX!P&iX!b&iX~OY&iX#p&iX~PJ`O!b%vOq!`X!P!`XY!`X~Oq%wO!P&hX~O!P%yO~Ov%zO~Og^Oh^O%}0oO&P!wO&RWO&b%}O~O&^&`P~PKmO%}TO&P!wO&RWO~OW&QXYiXY!aXY&QXZ&QXq!aXu&QXwiX!b&QX#]&QX#_&QX#a&QX#b&QX#d&QX#e&QX#f&QX#g&QX#h&QX#i&QX#k&QX#o&QX#r&QX&^&QX&_&QX&niX&n&QX&qiX&viX&v&QX&x!aX~P?XOWUXYUXY!aXY&]XZUXq!aXuUXw&]X!bUX#]UX#_UX#aUX#bUX#dUX#eUX#fUX#gUX#hUX#iUX#kUX#oUX#rUX&^UX&_UX&nUX&n&]X&q&]X&vUX&v&]X&x!aX~P>lOg^Oh^O%}TO&P!wO&RWOg!RXh!RX&P!RX&R!RX~PFdOu#OOw&XO%}TO&P&UO&R&TO&q&WO~OW#XOY&aX&n&aX&v&aX~P!#YOY&ZO~P9oOg^Oh^O&P!wO&RWO~Oq&]OY&pX~OY&_O~Og^Oh^O%}TO&P!wO&RWOY&pP~PFdOY&dO&n&bO&v#vO~Oq&eO&x$ZOY&wX~OY&gO~O%}TOg%bah%bav%ba!S%ba!T%ba!U%ba!V%ba!W%ba!X%ba!Y%ba!Z%ba!]%ba!^%ba!_%ba!u%ba!z%ba$h%ba&P%ba&R%ba&t%ba&_%ba~O|&hO~P]O}&iO~Op&uOw&vO&PSO&R!qO&_#YO~Oz&tO~P!'iOz&xO&PSO&R!qO&_#YO~OY&eP~P:|Og^Oh^O%}TO&P!wO&RWO~O}cO~P:|OW#XOu#OO%}TO&v&aX~O#r$WO!P#sa#_#sa#a#sa#b#sa#d#sa#e#sa#f#sa#g#sa#h#sa#i#sa#k#sa#o#sa&^#sa&_#sa&n#saY#sa#p#sas#saq#sa|#sa~Oo'_O}'^O!r'`O&_!hO~O}'eO!r'`O~Oo'iO}'hO&_!hO~OZ#xOu'mO%}TO~OW%jO}'sO~OW%jO!P'uO~OW'vO!P'wO~O$h!WO&P0qO&R0pO!P&eP~P/uO!P(SO#p(TO~P9oO}(UO~O$c(WO~O!P(XO~O!P(YO~O!P(ZO~P9oO!P(]O~P9oOZ$lO_VO`VOaVObVOcVOeVOg^Oh^Op!POwkOz!OO%}TO&P(_O&R(^O&XUO~PFdO%Q(hO%U(iOZ$}a_$}a`$}aa$}ab$}ac$}ae$}ag$}ah$}ap$}av$}aw$}az$}a}$}a!P$}a!S$}a!T$}a!U$}a!V$}a!W$}a!X$}a!Y$}a!Z$}a![$}a!]$}a!^$}a!_$}a!u$}a!z$}a#f$}a#r$}a#t$}a#u$}a#y$}a#z$}a$W$}a$Y$}a$`$}a$c$}a$e$}a$h$}a$l$}a$n$}a$s$}a$u$}a$w$}a$y$}a$|$}a%O$}a%w$}a%}$}a&P$}a&R$}a&X$}a&t$}a|$}a$a$}a$q$}a~O}ra!rra'Ora~PH_OZ%bO~PJ`O!P(mO~O!m%gO}&la!P&la~O}cO!P(pO~Oo(tOq!fX&^!fX~Oq(vO&^&mX~O&^(xO~OZ`O_VO`VOaVObVOcVOeVOg^Oh^Op)UOv{Ow)TOz!OO|)PO}cO!PvO![!`O!u}O!z|O#fpO#roO#tpO#upO#y!RO#z!QO$W!SO$Y!TO$`!UO$c!VO$e!XO$h!WO$l!YO$n!ZO$s![O$u!]O$w!^O$y!_O$|!aO%O!bO%}TO&PRO&RQO&XUO&_#YO&tdO~PFdO}%dO~O})]OY&zP~P:|OW%jO!P)dO~Os)eO~Ou#OO%}TOq&ia!P&ia!b&iaY&ia#p&ia~O})fO~P:|Oq%wO!P&ha~Og^Oh^O%}0oO&P!wO&RWO~O&b)mO~P!8jOu#OO%}TOq&aX&^&aXY&aX&n&aX!P&aX~O}&aX!r&aX~P!9SOo)oOp)oOqnX&^nX~Oq)pO&^&`X~O&^)rO~Ou#OOw)tO%}TO&PSO&R!qO~OYma&nma&vma~P!:bOW&QXY!aXq!aXu!aX%}!aX~OWUXY!aXq!aXu!aX%}!aX~OW)wO~Ou#OO%}TO&P#SO&R#SO&q)yO~Og^Oh^O%}TO&P!wO&RWO~PFdOq&]OY&pa~Ou#OO%}TO&P#SO&R#SO&q&WO~OY)|O~OY*PO&n&bO~Oq&eOY&wa~Og^Oh^Ov{O|*XO!u}O%}TO&P!wO&RWO&tdO~PFdO!P*YO~OW^iZ#XXu^i!P^i!b^i#]^i#_^i#a^i#b^i#d^i#e^i#f^i#g^i#h^i#i^i#k^i#o^i#r^i&^^i&_^i&n^i&v^iY^i#p^is^iq^i|^i~OW*iO~Os*jO~P9oOz*kO&PSO&R!qO~O!P]iY]i#p]is]iq]i|]i~P9oOq*lOY&eX!P&eX~P9oOY*nO~O#f$SO#g$TO#k$YO#r$WO!P#^i#_#^i#a#^i#b#^i#d#^i#e#^i#o#^i&^#^i&_#^i&n#^iY#^i#p#^is#^iq#^i|#^i~O#h$UO#i$UO~P!AmO#_#|O#d$QO#e$RO#f$SO#g$TO#h$UO#i$UO#k$YO#r$WO&^#zO&_#zO&n#{O!P#^i#b#^i#o#^iY#^i#p#^is#^iq#^i|#^i~O#a#^i~P!CUO#a#}O~P!CUO#_#|O#f$SO#g$TO#h$UO#i$UO#k$YO#r$WO&^#zO&_#zO!P#^i#a#^i#b#^i#d#^i#e#^i#o#^iY#^i#p#^is#^iq#^i|#^i~O&n#^i~P!DtO&n#{O~P!DtO#f$SO#g$TO#k$YO#r$WO!P#^i#a#^i#b#^i#e#^i#o#^iY#^i#p#^is#^iq#^i|#^i~O#_#|O#d$QO#h$UO#i$UO&^#zO&_#zO&n#{O~P!FdO#k$YO#r$WO!P#^i#_#^i#a#^i#b#^i#d#^i#e#^i#f#^i#h#^i#i#^i#o#^i&^#^i&_#^i&n#^iY#^i#p#^is#^iq#^i|#^i~O#g$TO~P!G{O#g#^i~P!G{O#h#^i#i#^i~P!AmO#p*oO~P9oO#_&aX#a&aX#b&aX#d&aX#e&aX#f&aX#g&aX#h&aX#i&aX#k&aX#o&aX#r&aX&_&aX#p&aXs&aX|&aX~P!9SO!P#liY#li#p#lis#liq#li|#li~P9oO|*rO~P$wO}'^O~O}'^O!r'`O~Oo'_O}'^O!r'`O~O%}TO&P#SO&R#SO|&sP!P&sP~PFdO}'eO~Og^Oh^Ov{O|+PO!P*}O!u}O!z|O%}TO&P!wO&RWO&_!hO&tdO~PFdO}'hO~Oo'iO}'hO~Os+RO~P:|Ou+TO%}TO~Ou'mO})fO%}TOW#Zi!P#Zi#_#Zi#a#Zi#b#Zi#d#Zi#e#Zi#f#Zi#g#Zi#h#Zi#i#Zi#k#Zi#o#Zi#r#Zi&^#Zi&_#Zi&n#Zi&v#ZiY#Zi#p#Zis#Ziq#Zi|#Zi~O}'^OW&diu&di!P&di#_&di#a&di#b&di#d&di#e&di#f&di#g&di#h&di#i&di#k&di#o&di#r&di&^&di&_&di&n&di&v&diY&di#p&dis&diq&di|&di~O#}+]O$P+^O$R+^O$S+_O$T+`O~O|+[O~P##nO$Z+aO&PSO&R!qO~OW+bO!P+cO~O$a+dOZ$_i_$_i`$_ia$_ib$_ic$_ie$_ig$_ih$_ip$_iv$_iw$_iz$_i}$_i!P$_i!S$_i!T$_i!U$_i!V$_i!W$_i!X$_i!Y$_i!Z$_i![$_i!]$_i!^$_i!_$_i!u$_i!z$_i#f$_i#r$_i#t$_i#u$_i#y$_i#z$_i$W$_i$Y$_i$`$_i$c$_i$e$_i$h$_i$l$_i$n$_i$s$_i$u$_i$w$_i$y$_i$|$_i%O$_i%w$_i%}$_i&P$_i&R$_i&X$_i&t$_i|$_i$q$_i~Og^Oh^O$h#sO&P!wO&RWO~O!P+hO~P:|O!P+iO~OZ`O_VO`VOaVObVOcVOeVOg^Oh^Op!POv{OwkOz!OO}cO!PvO!SyO!TyO!UyO!VyO!WyO!XyO!YyO!Z+nO![!`O!]yO!^yO!_yO!u}O!z|O#fpO#roO#tpO#upO#y!RO#z!QO$W!SO$Y!TO$`!UO$c!VO$e!XO$h!WO$l!YO$n!ZO$q+oO$s![O$u!]O$w!^O$y!_O$|!aO%O!bO%}TO&PRO&RQO&XUO&tdO~O|+mO~P#)QOW&QXY&QXZ&QXu&QX!P&QX&viX&v&QX~P?XOWUXYUXZUXuUX!PUX&vUX&v&]X~P>lOW#tOu#uO&v#vO~OW&UXY%XXu&UX!P%XX&v&UX~OZ#XX~P#.VOY+uO!P+sO~O%Q(hO%U(iOZ$}i_$}i`$}ia$}ib$}ic$}ie$}ig$}ih$}ip$}iv$}iw$}iz$}i}$}i!P$}i!S$}i!T$}i!U$}i!V$}i!W$}i!X$}i!Y$}i!Z$}i![$}i!]$}i!^$}i!_$}i!u$}i!z$}i#f$}i#r$}i#t$}i#u$}i#y$}i#z$}i$W$}i$Y$}i$`$}i$c$}i$e$}i$h$}i$l$}i$n$}i$s$}i$u$}i$w$}i$y$}i$|$}i%O$}i%w$}i%}$}i&P$}i&R$}i&X$}i&t$}i|$}i$a$}i$q$}i~OZ+xO~O%Q(hO%U(iOZ%Vi_%Vi`%Via%Vib%Vic%Vie%Vig%Vih%Vip%Viv%Viw%Viz%Vi}%Vi!P%Vi!S%Vi!T%Vi!U%Vi!V%Vi!W%Vi!X%Vi!Y%Vi!Z%Vi![%Vi!]%Vi!^%Vi!_%Vi!u%Vi!z%Vi#f%Vi#r%Vi#t%Vi#u%Vi#y%Vi#z%Vi$W%Vi$Y%Vi$`%Vi$c%Vi$e%Vi$h%Vi$l%Vi$n%Vi$s%Vi$u%Vi$w%Vi$y%Vi$|%Vi%O%Vi%w%Vi%}%Vi&P%Vi&R%Vi&X%Vi&t%Vi|%Vi$a%Vi$q%Vi~Ou#OO%}TO}&oa!P&oa!m&oa~O!P,OO~Oo(tOq!fa&^!fa~Oq(vO&^&ma~O!m%gO}&li!P&li~O|,XO~P]OW,ZO~P5xOW&UXu&UX#_&UX#a&UX#b&UX#d&UX#e&UX#f&UX#g&UX#h&UX#i&UX#k&UX#o&UX#r&UX&^&UX&_&UX&n&UX&v&UX~OZ#xO!P&UX~P#8^OW$gOZ#xO&v#vO~Op,]Ow,]O~Oq,^O}&rX!P&rX~O!b,`O#]#wOY&UXZ#XX~P#8^OY&SXq&SX|&SX!P&SX~P9oO})]O|&yP~P:|OY&SXg%[Xh%[X%}%[X&P%[X&R%[Xq&SX|&SX!P&SX~Oq,cOY&zX~OY,eO~O})fO|&kP~P:|Oq&jX!P&jX|&jXY&jX~P9oO&bTa~PC[Oo)oOp)oOqna&^na~Oq)pO&^&`a~OW,mO~Ow,nO~Ou#OO%}TO&P,rO&R,qO~Og^Oh^Ov#pO!u#rO&P!wO&RWO&t#oO~Og^Oh^Ov{O|,wO!u}O%}TO&P!wO&RWO&tdO~PFdOw-SO&PSO&R!qO&_#YO~Oq*lOY&ea!P&ea~O#_ma#ama#bma#dma#ema#fma#gma#hma#ima#kma#oma#rma&_ma#pmasma|ma~PEnO|-WO~P$wOZ#xO}'^Oq!|X|!|X!P!|X~Oq-[O|&sX!P&sX~O|-_O!P-^O~O&_!hO~P5VOg^Oh^Ov{O|-cO!P*}O!u}O!z|O%}TO&P!wO&RWO&_!hO&tdO~PFdOs-dO~P9oOs-dO~P:|O}'^OW&dqu&dq!P&dq#_&dq#a&dq#b&dq#d&dq#e&dq#f&dq#g&dq#h&dq#i&dq#k&dq#o&dq#r&dq&^&dq&_&dq&n&dq&v&dqY&dq#p&dqs&dqq&dq|&dq~O|-hO~P##nO!W-lO$O-lO&PSO&R!qO~O!P-oO~O$Z-pO&PSO&R!qO~O!b%vO#p-rOq!`X!P!`X~O!P-tO~P9oO!P-tO~P:|O!P-wO~P9oO|-yO~P#)QO![$aO#p-zO~O!P-|O~O!b-}O~OY.QOZ$lO_VO`VOaVObVOcVOeVOg^Oh^Op!POwkOz!OO%}TO&P(_O&R(^O&XUO~PFdOY.QO!P.RO~O%Q(hO%U(iOZ%Vq_%Vq`%Vqa%Vqb%Vqc%Vqe%Vqg%Vqh%Vqp%Vqv%Vqw%Vqz%Vq}%Vq!P%Vq!S%Vq!T%Vq!U%Vq!V%Vq!W%Vq!X%Vq!Y%Vq!Z%Vq![%Vq!]%Vq!^%Vq!_%Vq!u%Vq!z%Vq#f%Vq#r%Vq#t%Vq#u%Vq#y%Vq#z%Vq$W%Vq$Y%Vq$`%Vq$c%Vq$e%Vq$h%Vq$l%Vq$n%Vq$s%Vq$u%Vq$w%Vq$y%Vq$|%Vq%O%Vq%w%Vq%}%Vq&P%Vq&R%Vq&X%Vq&t%Vq|%Vq$a%Vq$q%Vq~Ou#OO%}TO}&oi!P&oi!m&oi~O&n&bOq!ga&^!ga~O!m%gO}&lq!P&lq~O|.^O~P]Op.`Ow&vOz&tO&PSO&R!qO&_#YO~O!P.aO~Oq,^O}&ra!P&ra~O})]O~P:|Oq.gO|&yX~O|.iO~Oq,cOY&za~Oq.mO|&kX~O|.oO~Ow.pO~Oq!aXu!aX!P!aX!b!aX%}!aX~OZ&QX~P#N{OZUX~P#N{O!P.qO~OZ.rO~OW^yZ#XXu^y!P^y!b^y#]^y#_^y#a^y#b^y#d^y#e^y#f^y#g^y#h^y#i^y#k^y#o^y#r^y&^^y&_^y&n^y&v^yY^y#p^ys^yq^y|^y~OY%`aq%`a!P%`a~P9oO!P#nyY#ny#p#nys#nyq#ny|#ny~P9oO}'^Oq!|a|!|a!P!|a~OZ#xO}'^Oq!|a|!|a!P!|a~O%}TO&P#SO&R#SOq%jX|%jX!P%jX~PFdOq-[O|&sa!P&sa~O|!}X~P$wO|/PO~Os/QO~P9oOW%jO!P/RO~OW%jO$Q/WO&PSO&R!qO!P&|P~OW%jO$U/XO~O!P/YO~O!b%vO#p/[Oq!`X!P!`X~OY/^O~O!P/_O~P9oO#p/`O~P9oO!b/bO~OY/cOZ$lO_VO`VOaVObVOcVOeVOg^Oh^Op!POwkOz!OO%}TO&P(_O&R(^O&XUO~PFdOW#[Ou&[X%}&[X&P&[X&R&[X'O&[X~O&_#YO~P$)QOu#OO%}TO'O/eO&P%SX&R%SX~O&n&bOq!gi&^!gi~Op/iO&PSO&R!qO~OW*iOZ#xO~O!P/kO~OY&SXq&SX~P9oO})]Oq%nX|%nX~P:|Oq.gO|&ya~O!b/nO~O})fOq%cX|%cX~P:|Oq.mO|&ka~OY/qO~O!P/rO~OZ/sO~O}'^Oq!|i|!|i!P!|i~O|!}a~P$wOW%jO!P/wO~OW%jOq/xO!P&|X~OY/|O~P9oOY0OO~OY%Xq!P%Xq~P9oO'O/eO&P%Sa&R%Sa~OY0TO~O!P0WO~Ou#OO!P0YO!Z0ZO%}TO~OY0[O~Oq/xO!P&|a~O!P0_O~OW%jOq/xO!P&}X~OY0aO~P9oOY0bO~OY%Xy!P%Xy~P9oOu#OO%}TO&P%ua&R%ua'O%ua~OY0cO~O!P0dO~Ou#OO!P0eO!Z0fO%}TO~OW%jOq%ra!P%ra~Oq/xO!P&}a~O!P0jO~Ou#OO!P0jO!Z0kO%}TO~O!P0lO~O!P0nO~O#p&QXY&QXs&QXq&QX|&QX~P&bO#pUXYUXsUXqUX|UX~P(iO`Q_P#g%y&P&Xc&X~",
@@ -28588,7 +28808,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const javaLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "java",
-		parser: /*@__PURE__*/ parser$4.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$5.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			IfStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|else\b)/ }),
 			TryStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|catch|finally)\b/ }),
 			LabeledStatement: flatIndent,
@@ -28858,7 +29078,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		new: 576,
 		delete: 582
 	};
-	const parser$3 = LRParser.deserialize({
+	const parser$4 = LRParser.deserialize({
 		version: 14,
 		states: "$<[Q!QQVOOP'gOUOOO([OWO'#CdO,UQUO'#CgO,`QUO'#FjO-vQbO'#CxO.XQUO'#CxO0WQUO'#KaO0_QUO'#CwO0jOpO'#DvO0rQ!dO'#D]OOQR'#JP'#JPO5[QVO'#GUO5iQUO'#JWOOQQ'#JW'#JWO8}QUO'#KtO<hQUO'#KtO?OQVO'#E^O?`QUO'#E^OOQQ'#Ed'#EdOOQQ'#Ee'#EeO?eQVO'#EfO@[QVO'#EiOBXQUO'#FPOByQUO'#FhOOQR'#Fj'#FjOCOQUO'#FjOOQR'#LX'#LXOOQR'#LW'#LWOEWQVO'#KWOF{QUO'#L_OGYQUO'#KxOGnQUO'#L_OH`QUO'#LaOOQR'#HU'#HUOOQR'#HV'#HVOOQR'#HW'#HWOOQR'#LT'#LTOOQR'#J`'#J`Q!QQVOOOHnQVO'#FOOIZQUO'#EhOIbQUOOOK^QVO'#HgOKnQUO'#HgONYQUO'#KxONdQUO'#KxOOQQ'#Kx'#KxO!!bQUO'#KxOOQQ'#Js'#JsO!!oQUO'#HxOOQQ'#Ka'#KaO!&aQUO'#KaO!&}QUO'#KWO!(}QVO'#I]O!(}QVO'#I`OCTQUO'#KWOOQQ'#Ip'#IpOOQQ'#KW'#KWO!-QQUO'#KaOOQR'#K`'#K`O!-XQUO'#DZO!/pQUO'#KuOOQQ'#Ku'#KuO!/wQUO'#KuO!0OQUO'#ETO!0TQUO'#EWO!0YQUO'#FRO8}QUO'#FPO!QQVO'#F^O!0_Q#vO'#F`O!0jQUO'#FkO!0rQUO'#FpO!0wQVO'#FrO!0rQUO'#FuO!3vQUO'#FvO!3{QVO'#FxO!4VQUO'#FzO!4[QUO'#F|O!4aQUO'#GOO!4fQVO'#GQO!(}QVO'#GSO!4mQUO'#GpO!4{QUO'#GYO!(}QVO'#FeO!6YQUO'#FeO!6_QVO'#G`O!6fQUO'#GaO!6qQUO'#GnO!6vQUO'#GrO!6{QUO'#GzO!7mQ&lO'#HiO!:pQUO'#GuO!;QQUO'#HXO!;]QUO'#HZO!;eQUO'#DXO!;eQUO'#HuO!;eQUO'#HvO!;|QUO'#HwO!<_QUO'#H|O!=SQUO'#H}O!>xQVO'#IbO!(}QVO'#IdO!?SQUO'#IgO!?ZQVO'#IjP!AQO!LQO'#CaP!A]{,UO'#CbP!6q{,UO'#CbP!Ah{7[O'#CbP!6q{,UO'#CbP!Am{,UO'#CbP!AxOSO'#IzPOOO)CEp)CEpOOOO'#I}'#I}O!BSOWO,59OOOQR,59O,59OO!(}QVO,59VOOQQ,59X,59XOOQR'#Do'#DoO!(}QVO,5;ROOQR,5<U,5<UO!B_QUO,59ZO!(}QVO,5>qOOQR'#IX'#IXOOQR'#IY'#IYOOQR'#IZ'#IZOOQR'#I['#I[O!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!(}QVO,5>rO!D^QVO,5>zOOQQ,5?W,5?WO!FPQVO'#CjO!IxQUO'#CzOOQQ,59d,59dOOQQ,59c,59cOOQQ,5<},5<}O!JVQ&lO,5=mO!?SQUO,5?RO!LyQVO,5?UO!MQQbO,59dO!M]QVO'#FYOOQQ,5?P,5?PO!MmQVO,59WO!MtO`O,5:bO!MyQbO'#D^O!N[QbO'#KeO!NjQbO,59wO!NrQbO'#CxO# TQUO'#CxO# YQUO'#KaO# dQUO'#CwOOQR-E<}-E<}O# oQUO,5AvO# vQVO'#EfO@[QVO'#EiOBXQUO,5;kOOQR,5<p,5<pO#$oQUO'#KWO#$vQUO'#KWO!(}QVO'#IUO8}QUO,5;kO#%ZQ&lO'#HiO#(bQUO'#CtO#+VQbO'#CxO#+[QUO'#CwO#.xQUO'#KaOOQQ-E=U-E=UO#1]QUO,5A`O#1gQUO'#KaO#1qQUO,5A`OOQR,5Av,5AvOOQQ,5>l,5>lO#3uQUO'#CgO#4kQUO,5>pO#6^QUO'#IeOOQR'#JO'#JOO#6fQUO,5:xO#7SQUO,5:xO#7sQUO,5:xO#8hQUO'#CuO!0TQUO'#CmOOQQ'#JX'#JXO#7SQUO,5:xO#8pQUO,5;QO!4{QUO'#DOO#9yQUO,5;QO#:OQUO,5>QO#;[QUO'#DOO#;rQUO,5>{O#;wQUO'#LOO#=QQUO,5;TO#=YQVO,5;TO#=dQUO,5;TOOQQ,5;T,5;TO#?]QUO'#LdO#?dQUO,5>UO#?iQbO'#CxO#?tQUO'#GcO#?yQUO'#E^O#@jQUO,5;kO#ARQUO'#LUO#AZQUO,5;rOKnQUO'#HfOBXQUO'#HgO#A`QUO'#KxO!6qQUO'#HjO#BWQUO'#CuO!0wQVO,5<SOOQQ'#Cg'#CgOOQR'#Jj'#JjO#B]QVO,5=`OOQQ,5?Z,5?ZO#DfQbO'#CxO#DqQUO'#GcOOQQ'#Jk'#JkOOQQ-E=i-E=iOGYQUO,5AyOGnQUO,5AyO#DvQUO,5A{O#ERQUO'#G|OOQR,5Ay,5AyO#DvQUO,5AyO#E^QUO'#HOO#EfQUO,5A{OOQR,5A{,5A{OOQR,5A|,5A|O#EtQVO,5A|OOQR-E=^-E=^O#GnQVO,5;jOOQR,5;j,5;jO#IoQUO'#EjO#JtQUO'#EwO#KkQVO'#ExO#M}QUO'#EvO#NVQUO'#EyO$ UQUO'#EzOOQQ'#LR'#LRO$ {QUO,5;SO$#RQUO'#EvOOQQ,5;S,5;SO$$OQUO,5;SO$%qQUO,5:yO$([QVO,5>PO$(fQUO'#E[O$(sQUO,5>ROOQQ,5>S,5>SO$,aQVO'#C|OOQQ-E=q-E=qOOQQ,5>d,5>dOOQQ,59a,59aO$,kQUO,5>wO$.kQUO,5>zO!6qQUO,59uO$/OQUO,5;qO$/]QUO,5<{O!0TQUO,5:oOOQQ,5:r,5:rO$/hQUO,5;mO$/mQUO'#KtOBXQUO,5;kOOQR,5;x,5;xO$0^QUO'#FbO$0lQUO'#FbO$0qQUO,5;zO$4[QVO'#FmO!0wQVO,5<VO!0rQUO,5<VO!0YQUO,5<[O$4cQVO'#GUO$7_QUO,5<^O!0wQVO,5<aO$:uQVO,5<bO$;SQUO,5<dOOQR,5<d,5<dO$<]QUO,5<dOOQR,5<f,5<fOOQR,5<h,5<hOOQQ'#Fi'#FiO$<bQUO,5<jO$<gQUO,5<lOOQR,5<l,5<lO$=mQUO,5<nO$>sQUO'#L^O$>{QUO,5<rO$?WQUO,5=[O$?]QUO,5=[O!4{QUO,5<tO$?eQUO,5<tO$?yQUO,5<PO$APQVO,5<PO$CbQUO,5<zOOQR,5<z,5<zOOQR,5<{,5<{O$?]QUO,5<{O$DhQUO,5<{O$DsQUO,5=YO!(}QVO,5=^O!(}QVO,5=fO#NsQUO,5=mOOQQ,5>T,5>TO$FxQUO,5>TO$GSQUO,5>TO$GXQUO,5>TO$G^QUO,5>TO!6qQUO,5>TO$I[QUO'#KaO$IcQUO,5=oO$InQUO,5=aOKnQUO,5=oO$JhQUO,5=sOOQR,5=s,5=sO$JpQUO,5=sO$L{QVO'#H[OOQQ,5=u,5=uO!;`QUO,5=uO%#vQUO'#KqO%#}QUO'#KbO%$cQUO'#KqO%$mQUO'#DyO%%OQUO'#D|O%'{QUO'#KbOOQQ'#Kb'#KbO%)nQUO'#KbO%#}QUO'#KbO%)sQUO'#KbOOQQ,59s,59sOOQQ,5>a,5>aOOQQ,5>b,5>bO%){QUO'#HzO%*TQUO,5>cOOQQ,5>c,5>cO%-oQUO,5>cO%-zQUO,5>hO%1fQVO,5>iO%1mQUO,5>|O# vQVO'#EfO%4sQUO,5>|OOQQ,5>|,5>|O%5dQUO,5?OO%7hQUO,5?RO!<_QUO,5?RO%9dQUO,5?UO%=PQVO,5?UPOOO'#I|'#I|P%=WO!LQO,58{POOO,58{,58{P!Am{,UO,58|P%=c{,UO,58|P%=q{7[O,58|PO{O'#Jw'#JwP%>S{,UO'#LkPOOO'#Lk'#LkP%>Y{,UO'#LkPOOO,58|,58|POOO,5?f,5?fP%>_OSO,5?fOOOO-E<{-E<{OOQR1G.j1G.jO%>fQUO1G.qO%?lQUO1G0mOOQQ1G0m1G0mO%@xQUO'#CpO%CXQbO'#CxO%CdQUO'#CsO%CiQUO'#CsO%CnQUO1G.uO#BWQUO'#CrOOQQ1G.u1G.uO%EqQUO1G4]O%FwQUO1G4^O%HjQUO1G4^O%J]QUO1G4^O%LOQUO1G4^O%MqQUO1G4^O& dQUO1G4^O&#VQUO1G4^O&$xQUO1G4^O&&kQUO1G4^O&(^QUO1G4^O&*PQUO1G4^O&+rQUO'#KVO&,{QUO'#KVO&-TQUO,59UOOQQ,5=P,5=PO&/]QUO,5=PO&/gQUO,5=PO&/lQUO,5=PO&/qQUO,5=PO!6qQUO,5=PO#NsQUO1G3XO&/{QUO1G4mO!<_QUO1G4mO&1wQUO1G4pO&3jQVO1G4pOOQQ1G/O1G/OOOQQ1G.}1G.}OOQQ1G2i1G2iO!JVQ&lO1G3XO&3qQUO'#LVO@[QVO'#EiO&4zQUO'#F]OOQQ'#Jb'#JbO&5PQUO'#FZO&5[QUO'#LVO&5dQUO,5;tO&5iQUO1G.rOOQQ1G.r1G.rOOQR1G/|1G/|O&7[Q!dO'#JQO&7aQbO,59xO&9rQ!eO'#D`O&9yQ!dO'#JSO&:OQbO,5APO&:OQbO,5APOOQR1G/c1G/cO&:ZQbO1G/cO&:`Q&lO'#GeO&;^QbO,59dOOQR1G7b1G7bO#@jQUO1G1VO&;iQUO1G1^OBXQUO1G1VO&=zQUO'#CzO#+VQbO,59dO&AmQUO1G6zOOQR-E<|-E<|O&CPQUO1G0dO#6fQUO1G0dOOQQ-E=V-E=VO#7SQUO1G0dOOQQ1G0l1G0lO&CtQUO,59jOOQQ1G3l1G3lO&D[QUO,59jO&DrQUO,59jO!MmQVO1G4gO!(}QVO'#JZO&E^QUO,5AjOOQQ1G0o1G0oO!(}QVO1G0oO!6qQUO'#JpO&EfQUO,5BOOOQQ1G3p1G3pOOQR1G1V1G1VO&IcQVO'#FOO!MmQVO,5;sOOQQ,5;s,5;sOBXQUO'#JdO&K_QUO,5ApO&KgQVO'#E[OOQR1G1^1G1^O&NUQUO'#LdOOQR1G1n1G1nOOQR-E=h-E=hOOQR1G7e1G7eO#DvQUO1G7eOGYQUO1G7eO#DvQUO1G7gOOQR1G7g1G7gO&N^QUO'#G}O&NfQUO'#L`OOQQ,5=h,5=hO&NtQUO,5=jO&NyQUO,5=kOOQR1G7h1G7hO#EtQVO1G7hO' OQUO1G7hO'!UQVO,5=kOOQR1G1U1G1UO$/UQUO'#E]O'!zQUO'#E]OOQQ'#LQ'#LQO'#eQUO'#LPO'#pQUO,5;UO'#xQUO'#ElO'$]QUO'#ElO'$pQUO'#EtOOQQ'#J]'#J]O'$uQUO,5;cO'%lQUO,5;cO'&gQUO,5;dO''mQVO,5;dOOQQ,5;d,5;dO''wQVO,5;dO''mQVO,5;dO'(OQUO,5;bO'({QUO,5;eO')WQUO'#KwO')`QUO,5:vO')eQUO,5;fOOQQ1G0n1G0nOOQQ'#J^'#J^O'(OQUO,5;bO!4{QUO'#E}OOQQ,5;b,5;bO'*`QUO'#E`O',YQUO'#E{OHuQUO1G0nO',_QUO'#EbOOQQ'#JY'#JYO'-wQUO'#KyOOQQ'#Ky'#KyO'.qQUO1G0eO'/iQUO1G3kO'0oQVO1G3kOOQQ1G3k1G3kO'0yQVO1G3kO'1QQUO'#LgO'2^QUO'#K_O'2lQUO'#K^O'2wQUO,59hO'3PQUO1G/aO'3UQUO'#FPOOQR1G1]1G1]OOQR1G2g1G2gO$?]QUO1G2gO'3`QUO1G2gO'3kQUO1G0ZOOQR'#Ja'#JaO'3pQVO1G1XO'9iQUO'#FTO'9nQUO1G1VO!6qQUO'#JeO'9|QUO,5;|O$0lQUO,5;|OOQQ'#Fc'#FcOOQQ,5;|,5;|O':[QUO1G1fOOQR1G1f1G1fO':dQUO,5<XO$/UQUO'#FWOBXQUO'#FWO':kQUO,5<XO!(}QVO,5<XO':sQUO,5<XO':xQVO1G1qO!0wQVO1G1qOOQR1G1v1G1vO'@hQUO1G1xOOQR1G1{1G1{O'@mQUO1G1|OBXQUO1G2]O'AvQVO1G1|O'D[QUO1G1|O'DaQUO'#GWO8}QUO1G2]OOQR1G2O1G2OOOQR1G2U1G2UOOQR1G2W1G2WOOQR1G2Y1G2YO$?]QUO'#JiO'DfQUO,5AxO'DnQUO1G2^O!4{QUO1G2^OOQR1G2v1G2vO'DvQUO1G2vO$?eQUO1G2`OOQQ'#Cv'#CvO'D{QUO'#G[O'EvQUO'#G[O'E{QUO'#LYO'FZQUO'#G_OOQQ'#LZ'#LZO'FiQUO1G2`O'FnQVO1G1kO'IPQVO'#GUOBXQUO'#FWOOQR'#Jf'#JfO'FnQVO1G1kO'IZQUO'#FvOOQR1G2f1G2fO'I`QUO1G2gO'IeQUO'#JhO'3`QUO1G2gO!(}QVO1G2tO'ImQUO1G2xO'JvQUO1G3QO'K|QUO1G3XOOQQ1G3o1G3oO'LbQUO1G3oOOQR1G3Z1G3ZO'LgQUO'#KaO'3UQUO'#L[OGnQUO'#L_OOQR'#Gy'#GyO#DvQUO'#LaOOQR'#HQ'#HQO'LqQUO'#GvO'$pQUO'#GuOOQR1G2{1G2{O'MnQUO1G2{O'NeQUO1G3ZO'NpQUO1G3_O'NuQUO1G3_OOQR1G3_1G3_O'N}QUO'#H]OOQR'#H]'#H]O(!WQUO'#H]O!(}QVO'#H`O!(}QVO'#H_OOQR'#Lc'#LcO(!]QUO'#LcOOQR'#Jm'#JmO(!bQVO,5=vOOQQ,5=v,5=vO(!iQUO'#H^O(!qQUO'#HZOOQQ1G3a1G3aO(!{QUO,5@|OOQQ,5@|,5@|O%)nQUO,5@|O%)sQUO,5@|O%$mQUO,5:eO(&jQUO'#KrO(&xQUO'#KrOOQQ,5:e,5:eOOQQ'#JT'#JTO('TQUO'#D}O('_QUO'#KxOGnQUO'#L_O((ZQUO'#D}OOQQ'#Hp'#HpOOQQ'#Hr'#HrOOQQ'#Hs'#HsOOQQ'#Ks'#KsOOQQ'#JV'#JVO((eQUO,5:hOOQQ,5:h,5:hO()bQUO'#L_O()oQUO'#HtO(*VQUO,5@|O(*^QUO'#H{O(*iQUO'#LfO(*qQUO,5>fO(*vQUO'#LeOOQQ1G3}1G3}O(.mQUO1G3}O(.tQUO1G3}O(.{QUO1G4TO(0RQUO1G4TO(0WQUO,5BUO!6qQUO1G4hO!(}QVO'#IiOOQQ1G4m1G4mO(0]QUO1G4mO(2`QVO1G4pPOOO-E<z-E<zPOOO1G.g1G.gPOOO1G.h1G.hP!Am{,UO1G.hP(4`QUO'#LmP(4k{7[O1G.hPO{O-E=u-E=uPOOO,5BV,5BVP(4y{,UO,5BVPOOO1G5Q1G5QO!(}QVO7+$]O(5OQUO'#CzOOQQ,59_,59_O(5ZQbO,59dO(5fQbO,59_OOQQ,59^,59^OOQQ7+)w7+)wO!MmQVO'#JvO(5qQUO,5@qOOQQ1G.p1G.pOOQQ1G2k1G2kO(5yQUO1G2kO(6OQUO7+(sOOQQ7+*X7+*XO(8dQUO7+*XO(8kQUO7+*XO(2`QVO7+*[O#NsQUO7+(sO(8xQVO'#JcO(9]QUO,5AqO(9eQUO,5;vOOQQ'#Cp'#CpOOQQ,5;w,5;wO!(}QVO'#F[OOQQ-E=`-E=`O!MmQVO,5;uOOQQ1G1`1G1`OOQQ,5?l,5?lOOQQ-E=O-E=OOOQR'#Dg'#DgOOQR'#Di'#DiOOQR'#Dl'#DlO(:nQ!eO'#KfO(:uQMkO'#KfO(:|Q!eO'#KfOOQR'#Kf'#KfOOQR'#JR'#JRO(;TQ!eO,59zOOQQ,59z,59zO(;[QbO,5?nOOQQ-E=Q-E=QO(;jQbO1G6kOOQR7+$}7+$}OOQR7+&q7+&qOOQR7+&x7+&xO'9nQUO7+&qO(;uQUO7+&OO#6fQUO7+&OO(<jQUO1G/UO(=QQUO1G/UO(=lQUO7+*ROOQQ7+*V7+*VO(?_QUO,5?uOOQQ-E=X-E=XO(@hQUO7+&ZOOQQ,5@[,5@[OOQQ-E=n-E=nO(@mQUO'#LVO@[QVO'#EiO(AyQUO1G1_OOQQ1G1_1G1_O(CSQUO,5@OOOQQ,5@O,5@OOOQQ-E=b-E=bO(ChQUO'#KwOOQR7+-P7+-PO#DvQUO7+-POOQR7+-R7+-RO(CuQUO,5=iO#ERQUO'#JlO(DWQUO,5AzOOQR1G3U1G3UOOQR1G3V1G3VO(DfQUO7+-SOOQR7+-S7+-SO(F^QUO,5:wO(G{QUO'#EwO!(}QVO,5;VO(HnQUO,5:wO(HxQUO'#EpO(IZQUO'#EzOOQQ,5;Z,5;ZO#KkQVO'#ExO(IqQUO,5:wO(IxQUO'#EyO#GuQUO'#J[O(KbQUO,5AkOOQQ1G0p1G0pO(KmQUO,5;WO!<_QUO,5;^O(LWQUO,5;_O(LfQUO,5;WO(NxQUO,5;`OOQQ-E=Z-E=ZO) QQUO1G0}OOQQ1G1O1G1OO) {QUO1G1OO)#RQVO1G1OO)#YQVO1G1OO)#dQUO1G0|OOQQ1G0|1G0|OOQQ1G1P1G1PO)$aQUO'#JqO)$kQUO,5AcOOQQ1G0b1G0bOOQQ-E=[-E=[O)$sQUO,5;iO!<_QUO,5;iO)%pQVO,5:zO)%wQUO,5;gO$ {QUO7+&YOOQQ7+&Y7+&YO!(}QVO'#EfO)&OQUO,5:|OOQQ'#Kz'#KzOOQQ-E=W-E=WOOQQ,5Ae,5AeOOQQ'#Jn'#JnO))sQUO7+&PPOQQ7+&P7+&POOQQ7+)V7+)VO)*kQUO7+)VO)+qQVO7+)VOOQQ,5>m,5>mO$)hQVO'#JuO)+xQUO,5@xOOQQ1G/S1G/SOOQQ7+${7+${O),TQUO7+(RO),YQUO7+(ROOQR7+(R7+(RO$?]QUO7+(ROOQQ7+%u7+%uOOQR-E=_-E=_O!0YQUO,5;oOOQQ,5@P,5@POOQQ-E=c-E=cO$0lQUO1G1hOOQQ1G1h1G1hOOQR7+'Q7+'QOOQR1G1s1G1sOBXQUO,5;rO),vQUO,5<YO),}QUO1G1sO).WQUO1G1sO!0wQVO7+']O).]QVO7+']O)3{QUO7+'dO)4QQVO7+'hO)6fQUO7+'wO)6pQUO7+'hO)7vQVO7+'hOKnQUO7+'wO$?OQUO,5<rOOQQ,5@T,5@TOOQQ-E=g-E=gO!4{QUO7+'xO)7}QUO7+'xOOQR7+(b7+(bO)8SQUO7+'zO)8XQUO,5<vO'D{QUO,5<vO)9PQUO,5<vO'D{QUO,5<vOOQQ,5<w,5<wO)9bQVO,5<xO'FZQUO'#JgO)9lQUO,5AtO)9tQUO,5<yOOQR7+'z7+'zO):PQVO7+'VO)6iQUO'#LUOOQR-E=d-E=dO)<bQVO,5<bOOQQ,5@S,5@SO!6qQUO,5@SOOQQ-E=f-E=fO)>yQUO7+(`O)@PQUO7+(dO)@UQVO7+(dOOQQ7+(l7+(lOOQQ7+)Z7+)ZO)@^QUO'#KqO)@hQUO'#KqOOQR,5=b,5=bO)@uQUO,5=bO!;eQUO,5=bO!;eQUO,5=bO!;eQUO,5=bOOQR7+(g7+(gOOQR7+(u7+(uOOQR7+(y7+(yOOQR,5=w,5=wO)@zQUO,5=zO)BQQUO,5=yOOQR,5A},5A}OOQR-E=k-E=kOOQQ1G3b1G3bO)CWQUO,5=xO)C]QVO'#EfOOQQ1G6h1G6hO%)nQUO1G6hO%)sQUO1G6hOOQQ1G0P1G0POOQQ-E=R-E=RO)EtQUO,5A^O(&jQUO'#JUO)FPQUO,5A^O)FPQUO,5A^O)FXQUO,5:iO8}QUO,5:iOOQQ,5>],5>]O)FcQUO,5AyO)FjQUO'#EVO)GtQUO'#EVO)H_QUO,5:iO)HiQUO'#HlO)HiQUO'#HmOOQQ'#Kv'#KvO)IWQUO'#KvO!(}QVO'#HnOOQQ,5:i,5:iO)IxQUO,5:iO!MmQVO,5:iOOQQ-E=T-E=TOOQQ1G0S1G0SOOQQ,5>`,5>`O)I}QUO1G6hO!(}QVO,5>gO)MlQUO'#JtO)MwQUO,5BQOOQQ1G4Q1G4QO)NPQUO,5BPOOQQ,5BP,5BPOOQQ7+)i7+)iO*#nQUO7+)iOOQQ7+)o7+)oO*(mQVO1G7pO**oQUO7+*SO**tQUO,5?TO*+zQUO7+*[POOO7+$S7+$SP*-mQUO'#LnP*-uQUO,5BXP!Am{,UO7+$SPOOO1G7q1G7qO*-zQUO<<GwOOQQ1G.y1G.yOOQQ'#IT'#ITO*/mQUO,5@bOOQQ,5@b,5@bOOQQ-E=t-E=tOOQQ7+(V7+(VOOQQ<<Ms<<MsO*0vQUO<<MsO*2yQUO<<MvO*4lQUO<<L_O*5QQUO,5?}OOQQ,5?},5?}OOQQ-E=a-E=aOOQQ1G1b1G1bO*6ZQUO,5;vO*7aQUO1G1aOOQQ1G1a1G1aOOQR,5AQ,5AQO*8jQ!eO,5AQO*8qQMkO,5AQO*8xQ!eO,5AQOOQR-E=P-E=POOQQ1G/f1G/fO*9PQ!eO'#DwOOQQ1G5Y1G5YOOQR<<J]<<J]O*9WQUO<<IjO*9{QUO7+$pOOQQ<<Iu<<IuO(8xQVO,5;ROOQR<=!k<=!kOOQQ1G3T1G3TOOQQ,5@W,5@WOOQQ-E=j-E=jOOQR<=!n<=!nO*:xQUO1G0cO*;PQUO'#EzO*;aQUO1G0cO*;hQUO'#JOO*=OQUO1G0qO!(}QVO1G0qOOQQ,5;[,5;[OOQQ,5;],5;]OOQQ,5?v,5?vOOQQ-E=Y-E=YO!<_QUO1G0xO*>_QUO1G0xOOQQ1G0y1G0yO*>pQUO'#ElOOQQ1G0z1G0zOOQQ7+&j7+&jO*?UQUO7+&jO*@[QVO7+&jOOQQ7+&h7+&hOOQQ,5@],5@]OOQQ-E=o-E=oO*AWQUO1G1TO*AbQUO1G1TO*A{QUO1G0fOOQQ1G0f1G0fO*CRQUO'#LSO*CZQUO1G1ROOQQ<<It<<ItOOQQ'#Hb'#HbO',_QUO,5={OOQQ'#Hd'#HdO',_QUO,5=}OOQQ-E=l-E=lPOQQ<<Ik<<IkPOQQ-E=m-E=mOOQQ<<Lq<<LqO*C`QUO'#LiO*DlQUO'#LhOOQQ,5@a,5@aOOQQ-E=s-E=sOOQR<<Km<<KmO$?]QUO<<KmO*DzQUO<<KmOOQR1G1Z1G1ZOOQQ7+'S7+'SO!MmQVO1G1tO*EPQUO1G1tOOQR7+'_7+'_OOQR<<Jw<<JwO!0wQVO<<JwOOQR<<KO<<KOO*E[QUO<<KSO*FbQVO<<KSOKnQUO<<KcO!MmQVO<<KcO*FiQUO<<KSO!0wQVO<<KSO*GrQUO<<KSO*GwQUO<<KcO*HSQUO<<KdOOQR<<Kd<<KdOOQR<<Kf<<KfO*HXQUO1G2bO)8XQUO1G2bO'D{QUO1G2bO*HjQUO1G2dO*IpQVO1G2dOOQQ1G2d1G2dO*IzQVO1G2dO*JRQUO,5@ROOQQ-E=e-E=eOOQQ1G2e1G2eO*JaQUO1G1|O*KjQVO1G1|O*KqQUO1G1|OOQQ1G5n1G5nOOQR<<Kz<<KzOOQR<<LO<<LOO*KvQVO<<LOO*LRQUO<<LOOOQR1G2|1G2|O*LWQUO1G2|O*L_QUO1G3eOOQR1G3d1G3dOOQQ7+,S7+,SO%)nQUO7+,SO*LjQUO1G6xO*LjQUO1G6xO(&jQUO,5?pO*LrQUO,5?pOOQQ-E=S-E=SO*L}QUO1G0TOOQQ1G0T1G0TO*MXQUO1G0TO!MmQVO1G0TO*M^QUO1G0TOOQQ1G3w1G3wO*MhQUO,5:qO)FjQUO,5:qO*NUQUO,5:qO)FjQUO,5:qO$$TQUO,5:uO*NsQVO,5>VO)HiQUO'#JrO*N}QUO1G0TO+ `QVO1G0TOOQQ1G3u1G3uO+ gQUO,5>WO+ rQUO,5>XO+!aQUO,5>YO+#gQUO1G0TO%)sQUO7+,SO+$mQUO1G4ROOQQ,5@`,5@`OOQQ-E=r-E=rOOQQ<<MT<<MTOOQQ<<Mn<<MnO+%vQUO1G4oP+'yQUO'#JxP+(RQUO,5BYPO{O1G7s1G7sPOOO<<Gn<<GnOOQQANC_ANC_OOQR1G6l1G6lO+(ZQ!eO,5:cOOQQ,5:c,5:cO+(bQUO1G0mO+)nQUO7+&]O+*}QUO7+&dO++`QUO,5;WOOQQ<<JU<<JUO++nQUO7+&oOOQQ7+&Q7+&QO!4{QUO'#J_O+,iQUO,5AnOOQQ7+&m7+&mOOQQ1G3g1G3gO+,qQUO1G3iOOQQ,5>n,5>nO+0fQUOANAXOOQRANAXANAXO+0kQUO7+'`OOQRAN@cAN@cO+1wQVOAN@nO+2OQUOAN@nO!0wQVOAN@nO+3XQUOAN@nO+3^QUOAN@}O+3iQUOAN@}O+4oQUOAN@}OOQRAN@nAN@nO!MmQVOAN@}OOQRANAOANAOO+4tQUO7+'|O)8XQUO7+'|OOQQ7+(O7+(OO+5VQUO7+(OO+6]QVO7+(OO+6dQVO7+'hO+6kQUOANAjOOQR7+(h7+(hOOQR7+)P7+)PO+6pQUO7+)PO+6uQUO7+)POOQQ<= n<= nO+6}QUO7+,dO+7VQUO1G5[OOQQ1G5[1G5[O+7bQUO7+%oOOQQ7+%o7+%oO+7sQUO7+%oO+ `QVO7+%oOOQQ7+)a7+)aO+7xQUO7+%oO+9OQUO7+%oO!MmQVO7+%oO+9YQUO1G0]O*MhQUO1G0]O)FjQUO1G0]OOQQ1G0a1G0aO+9wQUO1G3qO+:}QVO1G3qOOQQ1G3q1G3qO+;XQVO1G3qO+;`QUO,5@^OOQQ-E=p-E=pOOQQ1G3r1G3rO%)nQUO<= nOOQQ7+*Z7+*ZPOQQ,5@d,5@dPOQQ-E=v-E=vOOQQ1G/}1G/}OOQQ,5?y,5?yOOQQ-E=]-E=]OOQRG26sG26sO+;wQUOG26YO!0wQVOG26YO+=QQUOG26YOOQRG26YG26YO!MmQVOG26iO!0wQVOG26iO+=VQUOG26iO+>]QUOG26iO+>bQUO<<KhOOQQ<<Kj<<KjOOQRG27UG27UOOQR<<Lk<<LkO+>sQUO<<LkOOQQ7+*v7+*vOOQQ<<IZ<<IZO+>xQUO<<IZO!MmQVO<<IZO+>}QUO<<IZO+@TQUO<<IZO+ `QVO<<IZOOQQ<<L{<<L{O+@fQUO7+%wO*MhQUO7+%wOOQQ7+)]7+)]O+ATQUO7+)]O+BZQVO7+)]OOQQANEYANEYO!0wQVOLD+tOOQRLD+tLD+tO+BbQUOLD,TO+ChQUOLD,TOOQRLD,TLD,TO!0wQVOLD,TOOQRANBVANBVOOQQAN>uAN>uO+CmQUOAN>uO+DsQUOAN>uO!MmQVOAN>uO+DxQUO<<IcOOQQ<<Lw<<LwOOQR!$( `!$( `O!0wQVO!$( oOOQR!$( o!$( oOOQQG24aG24aO+EgQUOG24aO+FmQUOG24aOOQR!)9EZ!)9EZOOQQLD){LD){O+FrQUO'#CgO(gQUO'#CgO+JoQUO'#CzO+M`QUO'#CzO!FZQUO'#CzO+NXQUO'#CzO+NlQUO'#CzO,$_QUO'#CzO,$oQUO'#CzO,$}QUO'#CzO,%[QbO,59dO,%gQbO,59dO,%rQbO,59dO,%}QbO'#CxO,&`QbO'#CxO,&qQbO'#CxO,'SQUO'#CgO,)gQUO'#CgO,)tQUO'#CgO,,lQUO'#CgO,/oQUO'#CgO,0PQUO'#CgO,1uQUO'#CgO,4uQUO'#CgO,5SQUO'#CgO,5^QUO,5:xO#?yQUO,5:xO#?yQUO,5:xO#=iQUO'#LdO,5zQbO'#CxO,6VQbO'#CxO,6bQbO'#CxO,6mQbO'#CxO#7SQUO'#E^O,6xQUO'#E^O,8VQUO'#HgO,8wQbO'#CxO,9SQbO'#CxO,9_QUO'#CwO,9dQUO'#CwO,9iQUO'#CpO,9wQbO,59dO,:SQbO,59dO,:_QbO,59dO,:jQbO,59dO,:uQbO,59dO,;QQbO,59dO,;]QbO,59dO,5^QUO1G0dO,;hQUO1G0dO#?yQUO1G0dO,6xQUO1G0dO,=uQUO'#KaO,>VQUO'#CzO,>eQbO,59dO,5^QUO7+&OO,;hQUO7+&OO,>pQUO'#EwO,?cQUO'#EzO,@SQUO'#E^O,@XQUO'#GcO,@^QUO'#CwO,@cQUO'#CxO,@hQUO'#CxO,@mQUO'#GcO,@rQUO'#CwO,@wQUO'#KaO,AeQUO'#KaO,AoQUO'#CwO,AzQUO'#CwO,BVQUO'#CwO,;hQUO,5:xO,6xQUO,5:xO,6xQUO,5:xO,BbQUO'#KaO,BuQbO'#CxO,CQQUO'#CsO,CVQUO'#E^",
 		stateData: ",C{~O(pOSSOSRPQVPQ'ePQ'gPQ'hPQ'iPQ'jPQ'kPQ'lPQ'mPQ(qPQ~O*cOS~OPmO]eOb!]Oe!POmTOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!TxO!VfO!X!XO!Y!WO!i!YO!opO!r!`O!s!aO!t!aO!u!bO!v!aO!x!cO!{!dO#V#QO#a#VO#b#TO#i#OO#p!xO#t!fO#v!eO$R!gO$T!hO$Y!vO$Z!wO$`!iO$e!jO$g!kO$h!lO$k!mO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO${!tO$}!uO%U!yO%_#ZO%`#[O%a#YO%c!zO%e#UO%g!{O%l#SO%o!|O%v!}O%|#PO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(xRO)WYO)ZaO)]|O)^{O)`iO)a!ZO)cXO)ocO)pdO~OR#cOV#^O'e#_O'g#`O'h#aO'i#aO'j#bO'k#bO'l#`O'm#`O(q#]O~OX#eO(u#gO(w#eO~O]ZX]jXejXmhXqZXqjXsjXtjXujXvjXwjXxjXyjXzjX!OjX!TjX!VZX!VjX!XZX!YZX![ZX!^ZX!_ZX!aZX!bZX!eZX!fZX!gZX!hZX!rjX!sjX!tjX!ujX!vjX!xjX!{jX%vjX&rjX&sjX(xjX({ZX(|$]X(}ZX)OZX)ZZX)ZjX)[ZX)]ZX)]jX)^ZX)^jX)_ZX)`ZX)aZX)qZX~O)`jX!UZX~P(gO]$PO!V#nO!X#}O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO(}#mO)O#mO)Z#oO)[#qO)]#pO)^#rO)_#jO)`#lO)a$OO~Oe$TO%Y$UO'[$VO'_$WO)P$QO~Om$XO~O!T$YO])TXe)TXs)TXt)TXu)TXv)TXw)TXx)TXy)TXz)TX!O)TX!V)TX!r)TX!s)TX!t)TX!u)TX!v)TX!x)TX!{)TX%v)TX&r)TX&s)TX(x)TX)Z)TX)])TX)^)TX)`)TX~Om$XO~P.^Om$XO!g$[O)q$[O~OX$]O)d$]O~O!R$^O)V)XP)a)XP~OPmO]$gOb!]Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!TxO!V$hO!X!XO!Y!WO!i!YO!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO#V#QO#a#VO#b#TO#v!eO$Y!vO$Z!wO$`!iO$e!jO$g!kO$h!lO$k!mO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO)WYO)Z$mO)^$mO)`iO)a!ZO)cXO)ocO)pdO~Om$aO#t$nO(xRO~P0}O](_Xb'zXe(_Xm'zXm(_Xs'zXs(_Xt'zXt(_Xu'zXu(_Xv'zXv(_Xw'zXw(_Xx'zXx(_Xy'zXy(_Xz'zXz(_X|'zX!O'zX!V(_X!o(_X!r'zX!r(_X!s'zX!s(_X!t'zX!t(_X!u'zX!u(_X!v'zX!v(_X!x'zX!x(_X!{(_X#a'zX#b'zX%e'zX%l'zX%o(_X%v(_X&m'zX&r'zX&s'zX(x'zX(x(_X)Z(_X)](_X)^(_X~Ob!TOm$qOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO#a#VO#b#TO%e#UO%l#SO&m!RO&r#WO&s!TO(x$pO~Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!O!_O!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO&r#WO&s$yO])hXe)hXm)hX!V)hX!{)hX%v)hX(x)hX)Z)hX)])hX)^)hX~O)`$xO~P:qOPmO]eOe!POs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!VfO!X!XO!Y!WO!i!YO!{!dO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO)ZaO)]|O)^{O)a!ZO)cXO)ocO)pdO~Ob%SOm;UO!|%TO(x$zO~P<oO)Z%UO~Ob!]Om$aO|#RO#a#VO#b#TO%e#UO%l#SO&m!RO&r#WO&s!TO(x;XO~P<oOPmO]$gOb%SOm;UO!V$hO!W%aO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z$mO)^%_O)a!ZO)cXO)ocO)pdO)q%^O~O]%jOe!POm%dO!V%mO!{!dO%v$oO(x;YO)Z%fO)]%kO)^%kO~O(|%oO~O)`#lO~O(x%pO](zX!V(zX!X(zX!Y(zX![(zX!^(zX!_(zX!a(zX!b(zX!e(zX!f(zX!h(zX({(zX(}(zX)O(zX)Z(zX)[(zX)](zX)^(zX)_(zX)`(zX)a(zX!g(zX)q(zX[(zX!W(zX(|(zX!U(zXQ(zX!d(zX~OP%qO(vQO~PCTO]%jOe!POs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!V%mO!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO!{!dO%o!|O%v!}O)Z;jO)]|O)^|O~Om%tO!o%yO(x$zO~PEbO!TxO#v!eO(|%{O)q&OO])lX!V)lX~O]%jOe!POm%tO!V%mO!{!dO%v!}O(x$zO)Z;jO)]|O)^|O~O!TxO#v!eO)`&RO)q&SO~O!U&VO~P!QO]&[O!TxO!V&YO)Z&XO)]&]O)^&]O~Oq&WO~PHuO]&eO!V&dO~OPmO]eOe!PO!VfO!X!XO!Y!WO!i!YO!{!dO#V#QO%_#ZO%`#[O%a#YO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO)ZaO)]|O)^{O)a!ZO)cXO)ocO)pdO~Ob%SOm;UO%v$oO(x$zO~PIjO]%jOe!POm;fO!V%mO!{!dO%v$oO(x$zO)Z;jO)]|O)^|O~Oq&hO](zX])lX!V(zX!V)lX!X(zX!Y(zX![(zX!^(zX!_(zX!a(zX!b(zX!e(zX!f(zX!h(zX({(zX(}(zX)O(zX)Z(zX)[(zX)](zX)^(zX)_(zX)`(zX)a(zX[(zX[)lX!U(zX~O!g$[O)q$[O~PL`O!g(zX)q(zX~PL`O](zX!V(zX!X(zX!Y(zX![(zX!^(zX!_(zX!a(zX!b(zX!e(zX!f(zX!h(zX({(zX(}(zX)O(zX)Z(zX)[(zX)](zX)^(zX)_(zX)`(zX)a(zX!g(zX)q(zX[(zX!U(zX~O])lX!V)lX[)lX~PNnOb&jO&m!RO]&lXe&lXm&lXs&lXt&lXu&lXv&lXw&lXx&lXy&lXz&lX!O&lX!V&lX!r&lX!s&lX!t&lX!u&lX!v&lX!x&lX!{&lX%v&lX&r&lX&s&lX(x&lX)Z&lX)]&lX)^&lX)`&lX[&lX!T&lX!X&lX!Y&lX![&lX!^&lX!_&lX!a&lX!b&lX!e&lX!f&lX!h&lX({&lX(}&lX)O&lX)[&lX)_&lX)a&lX!g&lX)q&lX!W&lXQ&lX!d&lX(|&lX!U&lX#v&lX~Oq&hOm)TX[)TXQ)TX!d)TX!h)TX)a)TX)q)TX~P.^O!g$[O)q$[O](zX!V(zX!X(zX!Y(zX![(zX!^(zX!_(zX!a(zX!b(zX!e(zX!f(zX!h(zX({(zX(}(zX)O(zX)Z(zX)[(zX)](zX)^(zX)_(zX)`(zX)a(zX[(zX!W(zX(|(zX!U(zXQ(zX!d(zX~OPmO]$gOb%SOm;UO!V$hO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z$mO)^$mO)a!ZO)cXO)ocO)pdO~O])TXe)TXm)TXs)TXt)TXu)TXv)TXw)TXx)TXy)TXz)TX!O)TX!V)TX!r)TX!s)TX!t)TX!u)TX!v)TX!x)TX!{)TX%v)TX&r)TX&s)TX(x)TX)Z)TX)])TX)^)TX)`)TX[)TXQ)TX!d)TX!h)TX)a)TX)q)TX~O]$PO~P!*tO]&nO~O])iXb)iXe)iXm)iXs)iXt)iXu)iXv)iXw)iXx)iXy)iXz)iX|)iX!O)iX!V)iX!o)iX!r)iX!s)iX!t)iX!u)iX!v)iX!x)iX!{)iX#a)iX#b)iX%e)iX%l)iX%o)iX%v)iX&m)iX&r)iX&s)iX(x)iX)Z)iX)])iX)^)iX~O(vQO~P!-^O%U&pO~P!-^O]&qO~O]$PO~O!TxO~O$W&yO(x%pO(|&xO~O]&zOx&|O~O]&zO~OPmO]$gOb%SOm;UO!TxO!V$hO!X!XO!Y!WO!i!YO#V#QO#p!xO#v!eO$Y!vO$Z!wO$`!iO$e!jO$g!kO$h!lO$k!mO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x:wO)WYO)Z$mO)^$mO)`iO)a!ZO)cXO)ocO)pdO~O]'RO~O!T$YO)`'TO~P!(}O)`'VO~O)`'WO~O(x'XO~O)`'[O~P!(}Om;hO%U'aO%e'aO(x;ZO~Ob!TOm$qOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO#a#VO#b#TO%e#UO%l#SO&m!RO&r#WO&s!TO(x$pO~O(|'eO~O)`'gO~P!(}O!TxO(x%pO)q'iO~O(x%pO~O]'lO~O]'mOe%nXm%nX!V%nX!{%nX%v%nX(x%nX)Z%nX)]%nX)^%nX~O]'qO!V'rO!X'oO!g'oO%Z'oO%['oO%]'oO%^'oO%_'sO%`'sO%a'oO)O'pO)q'oO*P'tO~P8}O]%jOb!TOe!POs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!V%mO!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO!{!dO#a#VO#b#TO%e#UO%l#SO&m!RO&r#WO&s!TO)Z;jO)]|O)^|O~Om;iOq&WO%v$oO(x;[O~P!8mO(x%pO(|'yO)`'zO~O]&eO!T'|O~Om$qO!O!_O!T(TO!l(YO(x$pO(|(SO)WYO~Om$qO|(aO!T(^O#b(aO(x$pO~Ob!TOm$qO|#RO#a#VO#b#TO%e#UO%l#SO&m!RO&r#WO&s!TO(x$pO~O](cO~OPmOb%SOm;UO!V$hO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z$mO)^$mO)cXO)ocO)pdO~O](eO)a(fO~P!=XO]$PO~P!<_OPmO]$gOb%SOm;UO!V(lO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z$mO)^$mO)a!ZO)cXO)ocO)pdO~O(r(mO(s(mO(t(oO~OY(pO(vQO(x%pO~O'f(pO~OS(vO(q#]O*`(uO~O]$PO(p(yO~Q'nXX#eO(u({O(w#eO~Oe)VOm)QO&r#WO(x)PO~O!Y'Sa!['Sa!^'Sa!_'Sa!a'Sa!b'Sa!e'Sa!f'Sa!h'Sa({'Sa)Z'Sa)['Sa)]'Sa)^'Sa)_'Sa)`'Sa)a'Sa!g'Sa)q'Sa['Sa!W'Sa(|'Sa!U'SaQ'Sa!d'Sa~OPmOb%SOm;UO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)cXO)ocO)pdO]'Sa!V'Sa!X'Sa(}'Sa)O'Sa~P!BmO!T$YO[(yP~P!(}O]oX]%WXeoXmnXqoXq%WXsoXtoXuoXvoXwoXxoXyoXzoX!OoX!ToX!VoX!V%WX!X%WX!Y%WX![%WX!^%WX!_%WX!a%WX!b%WX!e%WX!f%WX!gnX!h%WX!roX!soX!toX!uoX!voX!xoX!{oX%voX&roX&soX(xoX({%WX(}%WX)O%WX)ZoX)Z%WX)[%WX)]oX)]%WX)^oX)^%WX)_%WX)`%WX)a%WX)qnX[%WX~O)`oX[oX!U%WX~P!FZO])iO!V)jO!X)gO!g)gO%Z)gO%[)gO%])gO%^)gO%_)kO%`)kO%a)gO)O)hO)q)gO*P)lO~P8}OPmO]$gOb%SOm;UO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z$mO)^$mO)a!ZO)cXO)ocO)pdO~O!V)qO~P!KVOe)tO%Y)uO)P$QO~O!T$YO!V)wO(})xO!U)yP~P!KVO!T$YO~P!(}O)b*PO~Om*QO]!QX!h!QX)V!QX)a!QX~O]*SO!h*TO)V)XX)a)XX~O)V*WO)a*XO~Oe$TO%Y*YO'[$VO'_$WO)P$QO~Om*ZO~Om*ZO[)TX~P.^Om*ZO!g$[O)q$[O~O)`*[O~P:qOPmO]$gOb!]Om$aOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!V$hO!X!XO!Y!WO!i!YO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x;XO)Z$mO)^$mO)a!ZO)cXO)ocO)pdO~Oq&hO~P!&}Oq&hO!W(zX(|(zXQ(zX!d(zX~PNnO]'qO!V'rO!X'oO!g'oO%Z'oO%['oO%]'oO%^'oO%_'sO%`'sO%a'oO)O'pO)q'oO*P'tO~O]jXejXmhXqjXsjXtjXujXvjXwjXxjXyjXzjX!OjX!VjX!rjX!sjX!tjX!ujX!vjX!xjX!{jX%vjX&rjX&sjX(xjX)ZjX)]jX)^jX!TjX!hjX)ajX)qjX[jX~O!ljX(|jX)`jX!XjX!YjX![jX!^jX!_jX!ajX!bjX!ejX!fjX({jX(}jX)OjX)[jX)_jX!gjX!WjXQjX!djX!UjX#vjX#TjX#VjX#pjXbjX|jX!ojX#ajX#bjX#ijX#tjX${jX%cjX%ejX%kjX%ljX%ojX&mjX)WjX~P#&XO)P*`O~Om*aO~O])TXe)TXs)TXt)TXu)TXv)TXw)TXx)TXy)TXz)TX!O)TX!V)TX!r)TX!s)TX!t)TX!u)TX!v)TX!x)TX!{)TX%v)TX&r)TX&s)TX(x)TX)Z)TX)])TX)^)TX)`)TX!T)TX!X)TX!Y)TX![)TX!^)TX!_)TX!a)TX!b)TX!e)TX!f)TX!h)TX({)TX(})TX)O)TX)[)TX)_)TX)a)TX!g)TX)q)TX[)TX!W)TXQ)TX!d)TX(|)TX!U)TX#v)TX~Om*aO~P#+aOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!O!_O!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO])hae)ham)ha!V)ha!{)ha%v)ha(x)ha)Z)ha)])ha)^)haQ)ha!d)ha!h)ha)a)ha)q)ha[)ha!T)ha(|)ha)`)ha~O&r#WO&s$yO~P#/POq&hOm)TX~P#+aO&r)ha~P#/PO]ZXmhXqZXqjX!TjX!VZX!XZX!YZX![ZX!^ZX!_ZX!aZX!bZX!eZX!fZX!gZX!hZX({ZX(}ZX)OZX)ZZX)[ZX)]ZX)^ZX)_ZX)`ZX)aZX)qZX[ZX~O!WZX(|ZX!UZXQZX!dZX~P#1xO]$PO!V#nO!X#}O(}#mO)O#mO~O!Y&xa![&xa!^&xa!_&xa!a&xa!b&xa!e&xa!f&xa!g&xa!h&xa({&xa)Z&xa)[&xa)]&xa)^&xa)_&xa)`&xa)a&xa)q&xa[&xa!W&xa(|&xa!U&xaQ&xa!d&xa~P#4YOm;rO!T$YO~Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O~PKnOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!|%TO~PKnO]&eO!V&dO[#Qa!T#Qa!h#Qa#v#Qa)`#Qa)q#QaQ#Qa!d#Qa(|#Qa~Oq&hO!T$YO~O[*hO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[*hO~O[*jO]&eO!V&dO~O]&[Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!V&YO&r#WO&s$yO)Z&XO)]&]O)^&]O~O[rXQrX!drX!hrX)arX)`rX~P#:ZO[*mO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h*nO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!W)rX~P#4YO!W*pO!h*qO~O!W*pO!h*qO~P!(}O!W*pO~Oq&hO!g$[O!h*rO)q$[O](zX!V(zX!W(zX!W*WX!X(zX!Y(zX![(zX!^(zX!_(zX!a(zX!b(zX!e(zX!f(zX({(zX(}(zX)O(zX)Z(zX)[(zX)](zX)^(zX)_(zX)a(zX~O!h(zX~P#=iO!W*tO~Oe$TO%Y*YO)P:|O~Om;uO~Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!|%TO~PBXO]*{O!T*vO!V&dO!h*yO#v!eO)q*wO)`)xX~O!h*yO)`)xX~O)`*|O~Oq&hO])lX!T)lX!V)lX!h)lX#v)lX)`)lX)q)lX[)lXQ)lX!d)lX(|)lX~Oq&hO~OP%qO(vQO]%ha!V%ha!X%ha!Y%ha![%ha!^%ha!_%ha!a%ha!b%ha!e%ha!f%ha!h%ha(x%ha({%ha(}%ha)O%ha)Z%ha)[%ha)]%ha)^%ha)_%ha)`%ha)a%ha!g%ha)q%ha[%ha!W%ha(|%ha!U%haQ%ha!d%ha~Oe$TO%Y$UO)P:yO~Om;RO~O!TxO#v!eO)q&OO~Om<fO&r#WO(x;qO~O$Z+YO%`+ZO~O!TxO#v!eO)`+[O)q+]O~OPmO]$gOb%SOm;UO!V$hO!X!XO!Y!WO!i!YO#V#QO$Z+YO%_#ZO%`+_O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z$mO)^$mO)a!ZO)cXO)ocO)pdO~O!U+`O~P!QOb!TOm$qOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO#a+fO#b+gO#i+hO%e#UO%l#SO&m!RO&r#WO&s!TO(x$pO)WYO~OQ)sP!d)sP~P#GuO]&[Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!V&YO)Z&XO)]&]O)^&]O~O[#kX!T#kX#v#kX)`#kX)q#kXQ#kX!d#kX!h#kX)a#kX!x#kX(|#kX~P#IyOPmO]$gOb%SOm;UOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!V$hO!W+nO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z+oO)^$mO)a!ZO)cXO)ocO)pdO~O]&eO!V+pO~O]&[O!V&YO)WYO)Z&XO)]&]O)^&]O)a+sO[)kP~P8}O]&[O!V&YO)Z&XO)]&]O)^&]O~O[#nX!T#nX#v#nX)`#nX)q#nXQ#nX!d#nX!h#nX)a#nX!x#nX(|#nX~P#NsO!TxO])uX!V)uX~Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O#T+{O#p+|O)O+yO)]+wO)^+wO~O]#jX!T#jX!V#jX[#jX#v#jX)`#jX)q#jXQ#jX!d#jX!h#jX)a#jX!x#jX(|#jX~P$!WO#V,OO~Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!l,PO#T+{O#V,OO#p+|O)O+yO)],PO)^,PO])mP!T)mP!V)mP#v)mP(|)mP)q)mP[)mP!h)mP)`)mP~O!x)mPQ)mP!d)mP~P$$TOPmO]$gOb%SOm;UOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!V$hO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)^$mO)a!ZO)cXO)ocO)pdO~O!W,VO)Z,WO~P$&OO)WYO)a+sO[)kP~P8}O]&eO!V&dO[&Za!T&Za!h&Za#v&Za)`&Za)q&ZaQ&Za!d&Za(|&Za~OPmO]$gOb!]Om;WOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!V$hO!X!XO!Y!WO!i!YO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x;]O)Z$mO)^$mO)a!ZO)cXO)ocO)pdO~OQ)QP!d)QP~P$)hO]$PO!V#nO(}#mO)O#mO!X'Pa!Y'Pa!['Pa!^'Pa!_'Pa!a'Pa!b'Pa!e'Pa!f'Pa!h'Pa({'Pa)Z'Pa)['Pa)]'Pa)^'Pa)_'Pa)`'Pa)a'Pa!g'Pa)q'Pa['Pa!W'Pa(|'Pa!U'PaQ'Pa!d'Pa~O]$PO!V#nO!X#}O(}#mO)O#mO~P!BmO!TxO#t!fO)WYO~P8}O!TxO(x%pO)q,aO~O#x,fO~OQ)hX!d)hX!h)hX)a)hX)q)hX[)hX!T)hX(|)hX)`)hX~P:qO(|,jO(},hO)W$UX)`$UX~O(x,kO~O)WYO)`,nO~OPmO]$gOb!]Om;VOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!V$hO!X!XO!Y!WO!i!YO!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO)WYO)Z$mO)^$mO)`iO)a!ZO)cXO)ocO)pdO~O(x;^O~P$0yOPmO]$gOb%SOm;UO!TxO!V$hO!X!XO!Y!WO!i!YO#V#QO#v!eO$Y!vO$Z!wO$`!iO$e!jO$g!kO$h!lO$k!mO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x:wO)WYO)Z$mO)^$mO)`iO)a!ZO)cXO)ocO)pdO~O$h,xO~OPmO]$gOb!]Om;VOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!V$hO!X!XO!Y!WO!i!YO!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO#V#QO#a#VO#b#TO$}!uO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO)WYO)Z$mO)^$mO)a!ZO)cXO)ocO)pdO~O${-OO(x;XO)`,|O~P$7dO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`-QO)a$OO~P#4YO)`-QO~O)`-RO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`-SO)a$OO~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`-TO)a$OO~P#4YO!h-UO)`*QX~Oq&hO)WYO)q-XO~O)`-YO~Om;hO(x;ZO~O]-aO!{!dO&r#WO&s$yO(x-]O)Z-^O~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO(|-dO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!TxO$`!iO$e!jO$g!kO$h!lO$k-iO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO$}!uO(x:xOe$Xa!o$Xa!{$Xa#i$Xa#p$Xa#t$Xa#v$Xa$R$Xa$T$Xa$Y$Xa$Z$Xa${$Xa%U$Xa%c$Xa%g$Xa%o$Xa%|$Xa(m$Xa)]$Xa!U$Xa$c$Xa~P$0yO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`-jO)a$OO~P#4YOm-lO!TxO)q,aO~O)q-nO~O]&]a!X&]a!Y&]a![&]a!^&]a!_&]a!a&]a!b&]a!e&]a!f&]a!h&]a({&]a(}&]a)O&]a)[&]a)]&]a)^&]a)_&]a)`&]a)a&]a!g&]a)q&]a[&]a!W&]a!T&]a#v&]a(|&]a!U&]aQ&]a!d&]a~O)Z-rO!V&]a~P$DxO[-rO~O!W-rO~O!V-sO)Z&]a~P$DxO])TXe)TXs)TXt)TXu)TXv)TXw)TXx)TXy)TXz)TX!O)TX!V)TX!r)TX!s)TX!t)TX!u)TX!v)TX!x)TX!{)TX%v)TX&r)TX&s)TX(x)TX)Z)TX)])TX)^)TX~Om;xO~P$GhO]&eO!V&dO)`-tO~Om;mO!o-wO#V,OO#i-|O#t!fO${-OO%c!zO%k-{O%o!|O%v!}O(x;aO)WYO~P!8mO!n.QO(x,kO~O)WYO)`.SO~OPmO]$gOb%SOm;UO!T.XO!V$hO!X!XO!Y!WO!i!YO#V.`O#a._O%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)O.WO)Z$mO)^$mO)`.UO)a!ZO)cXO)ocO)pdO~O!U.^O~P$JxO])eXe)eXs)eXt)eXu)eXv)eXw)eXx)eXy)eXz)eX!O)eX!T)eX!V)eX!l)eX!r)eX!s)eX!t)eX!u)eX!v)eX!x)eX!{)eX%v)eX&r)eX&s)eX(x)eX(|)eX)Z)eX)])eX)^)eX)`)eX[)eX!h)eX)a)eX!X)eX!Y)eX![)eX!^)eX!_)eX!a)eX!b)eX!e)eX!f)eX({)eX(})eX)O)eX)[)eX)_)eX!g)eX)q)eX!W)eXQ)eX!d)eX#T)eX#V)eX#p)eX#v)eXb)eX|)eX!o)eX#a)eX#b)eX#i)eX#t)eX${)eX%c)eX%e)eX%k)eX%l)eX%o)eX&m)eX)W)eX!U)eX~Om*aO~P$MSOm$qO!T(TO!l.eO(x$pO(|(SO)WYO~Oq&hOm)eX~P$MSOm$qO!n.jO!o.jO(x$pO)WYO~Om;nO!U.uO!n.wO!o.vO#i-|O${!tO$}!uO%g!{O%k-{O%o!|O%v!}O(x;`O)WYO~P!8mO!T(TO!l.eO(|(SO])UXe)UXm)UXs)UXt)UXu)UXv)UXw)UXx)UXy)UXz)UX!O)UX!V)UX!r)UX!s)UX!t)UX!u)UX!v)UX!x)UX!{)UX%v)UX&r)UX&s)UX(x)UX)Z)UX)])UX)^)UX~O)`)UX[)UX!X)UX!Y)UX![)UX!^)UX!_)UX!a)UX!b)UX!e)UX!f)UX!h)UX({)UX(})UX)O)UX)[)UX)_)UX)a)UX!g)UX)q)UX!W)UXQ)UX!d)UX!U)UX#v)UX~P%%{O!T(TO~O!T(TO(|(SO~O(x%pO!U*YP~O!T(^O(|.|O]&kae&kam&kas&kat&kau&kav&kaw&kax&kay&kaz&ka!O&ka!V&ka!r&ka!s&ka!t&ka!u&ka!v&ka!x&ka!{&ka%v&ka&r&ka&s&ka(x&ka)Z&ka)]&ka)^&ka)`&ka[&ka!X&ka!Y&ka![&ka!^&ka!_&ka!a&ka!b&ka!e&ka!f&ka!h&ka({&ka(}&ka)O&ka)[&ka)_&ka)a&ka!g&ka)q&ka!W&kaQ&ka!d&ka!U&ka#v&ka~Om$qO!T(^O(x$pO~O&r#WO&s$yO]&pae&pam&pas&pat&pau&pav&paw&pax&pay&paz&pa!O&pa!V&pa!r&pa!s&pa!t&pa!u&pa!v&pa!x&pa!{&pa%v&pa(x&pa)Z&pa)]&pa)^&pa)`&pa[&pa!T&pa!X&pa!Y&pa![&pa!^&pa!_&pa!a&pa!b&pa!e&pa!f&pa!h&pa({&pa(}&pa)O&pa)[&pa)_&pa)a&pa!g&pa)q&pa!W&paQ&pa!d&pa(|&pa!U&pa#v&pa~O&s/RO~P!(}O!Y#sO![#tO!f#|O)Z#oO!^'Ua!_'Ua!a'Ua!b'Ua!e'Ua!h'Ua({'Ua)['Ua)]'Ua)^'Ua)_'Ua)`'Ua)a'Ua!g'Ua)q'Ua['Ua!W'Ua(|'Ua!U'UaQ'Ua!d'Ua~P#4YO!V'dX!X'dX!Y'dX!['dX!^'dX!_'dX!a'dX!b'dX!e'dX!f'dX!h'dX({'dX(}'dX)O'dX)Z'dX)['dX)]'dX)^'dX)_'dX)a'dX['dX~O]/TO)`'dX!g'dX)q'dX!W'dX(|'dX!U'dXQ'dX!d'dX~P%3`O!Y#sO![#tO!f#|O)Z#oO!^'Wa!_'Wa!a'Wa!b'Wa!e'Wa!h'Wa({'Wa)['Wa)]'Wa)^'Wa)_'Wa)`'Wa)a'Wa!g'Wa)q'Wa['Wa!W'Wa(|'Wa!U'WaQ'Wa!d'Wa~P#4YO]$PO!T$YO!V/UO&r#WO&s$yO~O!X'Za!Y'Za!['Za!^'Za!_'Za!a'Za!b'Za!e'Za!f'Za!h'Za({'Za(}'Za)O'Za)Z'Za)['Za)]'Za)^'Za)_'Za)`'Za)a'Za!g'Za)q'Za['Za!W'Za(|'Za!U'ZaQ'Za!d'Za~P%7VO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h'^a)`'^a!g'^a)q'^a['^a!W'^a(|'^a!U'^aQ'^a!d'^a~P#4YOPmO]$gOb%SOm;UO!V$hO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)Z$mO)^%_O)a!ZO)cXO)ocO)pdO)q%^O~O!W/XO~P%;VO(r(mO(s(mO(t/ZO~OS(vO]$PO(q#]O*`(uO~OS(vO]/^O'f/]O(q#]O*`(uO~OS/bO(q#]O*`/aO~O]$PO~Q'na!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO(|/dO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO)`#Zi[#Zi~P#4YO]dXmhXqdXqjX!VdX!XdX!YdX![dX!^dX!_dX!adX!bdX!edX!fdX!gdX!hdX({dX(}dX)OdX)ZdX)[dX)]dX)^dX)_dX)`dX)adX)qdX[dX!WdX(|dX!TdX#vdX!UdXQdX!ddX~Oe/fO%Y*YO)P/eO~Om/gO~Om/hO~Oq&hO]ci!Vci!Xci!Yci![ci!^ci!_ci!aci!bci!eci!fci!gci!hci({ci(}ci)Oci)Zci)[ci)]ci)^ci)_ci)`ci)aci)qci[ci!Wci(|ci!UciQci!dci~O!W/jO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO![#tO)Z#oO!Y&zi!^&zi!_&zi!a&zi!b&zi!e&zi!f&zi!h&zi({&zi)[&zi)]&zi)^&zi)_&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y&zi![&zi!^&zi!_&zi!a&zi!b&zi!e&zi!f&zi!h&zi({&zi)Z&zi)[&zi)]&zi)^&zi)_&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O)Z#oO)^#rO)_#jO!h&zi({&zi)[&zi)]&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O)Z#oO)]#pO)^#rO)_#jO!h&zi({&zi)[&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!_#xO!a#zO!b#{O!e#{O!f#|O)Z#oO)^#rO)_#jO!^&zi!h&zi({&zi)[&zi)]&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!a#zO!b#{O!e#{O!f#|O)Z#oO)^#rO)_#jO!^&zi!_&zi!h&zi({&zi)[&zi)]&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!a#zO!b#{O!e#{O!f#|O)Z#oO)_#jO!^&zi!_&zi!h&zi({&zi)[&zi)]&zi)^&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!b#{O!e#{O!f#|O)Z#oO)_#jO!^&zi!_&zi!a&zi!h&zi({&zi)[&zi)]&zi)^&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!f#|O)Z#oO!^&zi!_&zi!a&zi!b&zi!e&zi!h&zi({&zi)[&zi)]&zi)^&zi)_&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO)Z#oO!^&zi!_&zi!a&zi!b&zi!e&zi!f&zi!h&zi({&zi)[&zi)]&zi)^&zi)_&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O)Z#oO)[#qO)]#pO)^#rO)_#jO!h&zi({&zi)`&zi)a&zi!g&zi)q&zi[&zi!W&zi(|&zi!U&ziQ&zi!d&zi~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h/kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO[(yX~P#4YO!h/kO[(yX~O[/mO~O]%Xaq%Xa!X%Xa!Y%Xa![%Xa!^%Xa!_%Xa!a%Xa!b%Xa!e%Xa!f%Xa!h%Xa({%Xa(}%Xa)O%Xa)[%Xa)]%Xa)^%Xa)_%Xa)`%Xa)a%Xa!g%Xa)q%Xa[%Xa!W%Xa!T%Xa#v%Xa(|%Xa!U%XaQ%Xa!d%Xa~O)Z/nO!V%Xa~P&-YO[/nO~O!W/nO~O!V/oO)Z%Xa~P&-YO!X'Zi!Y'Zi!['Zi!^'Zi!_'Zi!a'Zi!b'Zi!e'Zi!f'Zi!h'Zi({'Zi(}'Zi)O'Zi)Z'Zi)['Zi)]'Zi)^'Zi)_'Zi)`'Zi)a'Zi!g'Zi)q'Zi['Zi!W'Zi(|'Zi!U'ZiQ'Zi!d'Zi~P%7VO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h'^i)`'^i!g'^i)q'^i['^i!W'^i(|'^i!U'^iQ'^i!d'^i~P#4YO!W/tO~P%;VO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h/vO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!U)yX~P#4YO(x/yO~O!V/{O(})xO)q/}O~O!h/vO!U)yX~O!U0OO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h`i({`i)``i!g`i)q`i[`i!W`i(|`i!U`iQ`i!d`i~P#4YO!R0PO~Om*QO]!Qa!h!Qa)V!Qa)a!Qa~OP0XO]0WOm0XO!R0XO!T0UO!V0VO!X0XO!Y0XO![0XO!^0XO!_0XO!a0XO!b0XO!e0XO!f0XO!g0XO!h0XO!i0XO(vQO(|0XO(}0XO)O0XO)Z0RO)[0SO)]0SO)^0TO)_#jO)`0XO)a0XO)cXO~O[0[O~P&7rO!R$^O~O!h*TO)V)Xa)a)Xa~O)V0`O~O])iO!V)jO!X)gO!g)gO%Z)gO%[)gO%])gO%^)gO%_)kO%`)kO%a)gO)O)hO)q)gO*P)lO~Oe)tO%Y*YO)P$QO~O)`0bO~O]oXeoXmnXqoXsoXtoXuoXvoXwoXxoXyoXzoX!OoX!VoX!roX!soX!toX!uoX!voX!xoX!{oX%voX&roX&soX(xoX)ZoX)]oX)^oX!ToX!hoX)aoX[oXQoX!doX~O!loX(|oX)`oX!XoX!YoX![oX!^oX!_oX!aoX!boX!eoX!foX({oX(}oX)OoX)[oX)_oX!goX)qoX!WoX!UoX#voX#ToX#VoX#poXboX|oX!ooX#aoX#boX#ioX#toX${oX%coX%eoX%koX%loX%ooX&moX)WoX~P&;nOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!O!_O!r!aO!s!aO!t!aO!u!aO!v!aO!x!cO~O])hie)him)hi!V)hi!{)hi%v)hi(x)hi)Z)hi)])hi)^)hiQ)hi!d)hi!h)hi)a)hi)q)hi[)hi!T)hi&r)hi(|)hi)`)hi~P&@lO]&eO!V&dO[#Qi!T#Qi!h#Qi#v#Qi)`#Qi)q#QiQ#Qi!d#Qi(|#Qi~O[raQra!dra!hra)ara)`ra~P#:ZO[raQra!dra!hra)ara)`ra~P#IyO]&eO!V+pO[raQra!dra!hra)ara)`ra~O!h*nO!W)ra~O!h*rO!W*Wa~OPmOb!]Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O|#RO!O!_O!X!XO!Y!WO!i!YO!s!aO!t!aO!v!aO!x!cO#V#QO#a#VO#b#TO#v!eO$Y!vO$Z!wO$`!iO$e!jO$g!kO$h!lO$k!mO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO%_#ZO%`#[O%a#YO%e#UO%l#SO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO)WYO)`iO)a!ZO)cXO)ocO)pdO~O]eOe!POmTO!T*vO!U&VO!V0pO!opO!r!`O!u!bO!{!dO#i#OO#p!xO#t!fO$R!gO$T!hO${!tO$}!uO%U!yO%c!zO%g!{O%o!|O%v!}O%|#PO(xRO(})xO)ZaO)]|O)^{O~P&EnO!h*yO)`)xa~OPmO]$gOb!]Om;WO|#RO!T$YO!V$hO!X!XO!Y!WO!i!YO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x;_O)WYO)Z$mO)^$mO)a0vO)cXO)ocO)pdO[(yP[)kP~P&@lO!h*rO!W*WX~O]$PO!T$YO~O!h0{O!T*SX#v*SX)q*SX~O)`0}O~O)`1OO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`1QO)a$OO~P#4YO)`1OO~P!?ZO]1[Oe!POm%dO!V1YO!{!dO%v$oO(x$zO)Z1SO)a1VO~O)]1WO)^1WO)q1TOQ#PX!d#PX!h#PX[#PX~P'!]O!h1]OQ)sX!d)sX~OQ1_O!d1_O~O)a1bO)q1aOQ#`X!d#`X!h#`X~P!<_O)a1bO)q1aOQ#`X!d#`X!h#`X~P!;eOq&WO~O[#ka!T#ka#v#ka)`#ka)q#kaQ#ka!d#ka!h#ka)a#ka!x#ka(|#ka~P#IyO]&eO!V+pO[#ka!T#ka#v#ka)`#ka)q#kaQ#ka!d#ka!h#ka)a#ka!x#ka(|#ka~O!W1gO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W1gO)Z1iO~P$&OO!W1gO~P!(}O]#ja!T#ja!V#ja[#ja#v#ja)`#ja)q#jaQ#ja!d#ja!h#ja)a#ja!x#ja(|#ja~P$!WO[1mO]&eO!V+pO~O!h1nO[)kX~O[1pO~O]&eO!V+pO[#na!T#na#v#na)`#na)q#naQ#na!d#na!h#na)a#na!x#na(|#na~O]1tOs#SXt#SXu#SXv#SXw#SXx#SXy#SXz#SX!T#SX!V#SX#T#SX#p#SX)O#SX)]#SX)^#SX!l#SX!x#SX#V#SX#v#SX(|#SX)q#SX[#SX!h#SX)`#SXQ#SX!d#SX)a#SX~O]1uO~O]1xOm$qO!V$hO#V#QO(x$pO)ocO)pdO~Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!l,PO#T+{O#V,OO#p+|O)O+yO)],PO)^,PO~O])mX!T)mX!V)mX!x)mX#v)mX(|)mX)q)mX[)mX!h)mX)`)mXQ)mX!d)mX~P',vO!x!cO]#Ri!T#Ri!V#Ri#v#Ri(|#Ri)q#Ri[#Ri!h#Ri)`#RiQ#Ri!d#Ri~O!W2QO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W2QO)Z2SO~P$&OO!W2QO~P!(}O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OOQ*ZX!d*ZX!h*ZX~P#4YO)a2TOQ)RX!d)RX!h)RX~O!h2UOQ)QX!d)QX~OQ2WO!d2WO~O[2XO~O#t$nO)WYO~P8}Om-lO!TxO)q2]O~O[2^O~O#x,fOP#ui]#uib#uie#uim#uis#uit#uiu#uiv#uiw#uix#uiy#uiz#ui|#ui!O#ui!T#ui!V#ui!X#ui!Y#ui!i#ui!o#ui!r#ui!s#ui!t#ui!u#ui!v#ui!x#ui!{#ui#V#ui#a#ui#b#ui#i#ui#p#ui#t#ui#v#ui$R#ui$T#ui$Y#ui$Z#ui$`#ui$e#ui$g#ui$h#ui$k#ui$m#ui$o#ui$q#ui$s#ui$u#ui$w#ui${#ui$}#ui%U#ui%_#ui%`#ui%a#ui%c#ui%e#ui%g#ui%l#ui%o#ui%v#ui%|#ui&m#ui&r#ui&s#ui'Q#ui'R#ui'V#ui'Y#ui'a#ui'b#ui(m#ui(v#ui(x#ui)W#ui)Z#ui)]#ui)^#ui)`#ui)a#ui)c#ui)o#ui)p#ui!U#ui$c#ui!n#ui%k#ui~O]&eO~O]&eO!TxO!V&dO#v!eO~O(|2cO(},hO)W$Ua)`$Ua~O)WYO)`2eO~O[2fO~P,`O[2fO)`#lO~O[2fO~O$c2kOP$_i]$_ib$_ie$_im$_is$_it$_iu$_iv$_iw$_ix$_iy$_iz$_i|$_i!O$_i!T$_i!V$_i!X$_i!Y$_i!i$_i!o$_i!r$_i!s$_i!t$_i!u$_i!v$_i!x$_i!{$_i#V$_i#a$_i#b$_i#i$_i#p$_i#t$_i#v$_i$R$_i$T$_i$Y$_i$Z$_i$`$_i$e$_i$g$_i$h$_i$k$_i$m$_i$o$_i$q$_i$s$_i$u$_i$w$_i${$_i$}$_i%U$_i%_$_i%`$_i%a$_i%c$_i%e$_i%g$_i%l$_i%o$_i%v$_i%|$_i&m$_i&r$_i&s$_i'Q$_i'R$_i'V$_i'Y$_i'a$_i'b$_i(m$_i(v$_i(x$_i)W$_i)Z$_i)]$_i)^$_i)`$_i)a$_i)c$_i)o$_i)p$_i!U$_i~O]1xO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`2nO)a$OO~P#4YOPmO]$gOb!]Om;VO|#RO!V$hO!X!XO!Y!WO!i!YO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x;XO)Z$mO)^$mO)`2qO)a!ZO)cXO)ocO)pdO~P&@lO)`2nO~O(x-]O~O!h-UO)`*Qa~O)WYO)q2vO~O)`2xO~O]-aOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!{!dO!|%TO(x-]O)Z-^O~O)Z2}O~O]&eO!V3PO!h3QO)`)|X~O]-aO!{!dO(x-]O)Z-^O~O)`3TO~O!TxO$`!iO$e!jO$g!kO$h!lO$k-iO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO$}!uO(x:xOe$Xi!o$Xi!{$Xi#i$Xi#p$Xi#t$Xi#v$Xi$R$Xi$T$Xi$Y$Xi$Z$Xi${$Xi%U$Xi%c$Xi%g$Xi%o$Xi%|$Xi(m$Xi)]$Xi!U$Xi$c$Xi~P$0yOm;VO(x:xO~P0}O]3XO~O)`2[O~O!u3ZO(x%pO~O[3^O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h3_O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[3`O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO]&eO!V+pO!T%ui#v%ui)`%ui)q%ui~O!W3aO~Om;TO)`)TX~P$GhOb!TOm$qO|3gO#a#VO#b3fO#t!fO%e#UO%l3hO&m!RO&r#WO&s!TO(x$pO)WYO~P&@lOm;mO!o-wO#i-|O#t!fO${-OO%c!zO%k-{O%o!|O%v!}O(x;aO)WYO~P!8mO]&eO!V&dO)`3jO~O)`3kO~O)WYO)`3kO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`3lO)a$OO~P#4YO)`3lO~O)`3oO~O!U3qO~P$JxOm$qO(x$pO~O]3sO!T'|O~P',bO!T(TO!l3vO(|(SO])Uae)Uam)Uas)Uat)Uau)Uav)Uaw)Uax)Uay)Uaz)Ua!O)Ua!V)Ua!r)Ua!s)Ua!t)Ua!u)Ua!v)Ua!x)Ua!{)Ua%v)Ua&r)Ua&s)Ua(x)Ua)Z)Ua)])Ua)^)Ua)`)Ua[)Ua!X)Ua!Y)Ua![)Ua!^)Ua!_)Ua!a)Ua!b)Ua!e)Ua!f)Ua!h)Ua({)Ua(})Ua)O)Ua)[)Ua)_)Ua)a)Ua!g)Ua)q)Ua!W)UaQ)Ua!d)Ua!U)Ua#v)Ua~Om$qO!n.jO!o.jO(x$pO~O!h3zO)a3|O!T)fX~O!o4OO)WYO~P8}O)`4PO~PGYO]4UOm)QO!T$YO!{!dO%v$oO&r#WO(x)PO(|4YO)Z4RO)]4VO)^4VO~O)`4ZO)q4]O~P('fOm;nO!U4_O!n.wO!o.vO#i-|O${!tO$}!uO%g!{O%k-{O%o!|O%v!}O(x;`O)WYO~P!8mOm;nO%v!}O(x;`O~P!8mO(|4`O~Om$qO!T(TO(x$pO(|(SO)WYO~O!l3vO~P()tO)q4bO!U&oX!h&oX~O!h4cO!U*YX~O!U4eO~Ob4gOm$qO&m!RO(x$pO~O!T(^O]&kie&kim&kis&kit&kiu&kiv&kiw&kix&kiy&kiz&ki!O&ki!V&ki!r&ki!s&ki!t&ki!u&ki!v&ki!x&ki!{&ki%v&ki&r&ki&s&ki(x&ki)Z&ki)]&ki)^&ki)`&ki[&ki!X&ki!Y&ki![&ki!^&ki!_&ki!a&ki!b&ki!e&ki!f&ki!h&ki({&ki(}&ki)O&ki)[&ki)_&ki)a&ki!g&ki)q&ki!W&kiQ&ki!d&ki!U&ki#v&ki~O(|&ki~P(+UO(|.|O~P(+UO[4jO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[4jO~O[4kO~O]$PO!T$YO!V'Zi!X'Zi!Y'Zi!['Zi!^'Zi!_'Zi!a'Zi!b'Zi!e'Zi!f'Zi!h'Zi({'Zi(}'Zi)O'Zi)Z'Zi)['Zi)]'Zi)^'Zi)_'Zi)`'Zi)a'Zi!g'Zi)q'Zi['Zi!W'Zi(|'Zi!U'ZiQ'Zi!d'Zi~OPmOb%SOm;UO!X!XO!Y!WO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)a!ZO)cXO)ocO)pdO]#]aq#]a!T#]a!V#]a)Z#]a)]#]a)^#]a~O(x%pO)a4pO[*bP~OS(vO'f4rO(q#]O*`(uO~O*`4sO~OmnXqoXq&wX~Oe4uO%Y*YO)P/eO~Oe4uO%Y*YO)P4vO~O!h/kO[(ya~O!W4zO~O]&eO!V+pO!T%uq#v%uq)`%uq)q%uq~O]$PO!T$YO!X'Zq!Y'Zq!['Zq!^'Zq!_'Zq!a'Zq!b'Zq!e'Zq!f'Zq!h'Zq({'Zq(}'Zq)O'Zq)Z'Zq)['Zq)]'Zq)^'Zq)_'Zq)`'Zq)a'Zq!g'Zq)q'Zq['Zq!W'Zq(|'Zq!U'ZqQ'Zq!d'Zq~O!V'Zq~P(6dO!V/UO&r#WO&s$yO~P(6dO!T$YO!V)wO(})xO!U(VX!h(VX~P!KVO!h/vO!U)ya~O!W5SO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h*nO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!U5WO~P&7rO!W5WO~P&7rO[5WO~P&7rO[5]O~P&7rO]5^O!h'va)V'va)a'va~O!h*TO)V)Xi)a)Xi~O]&eO!V&dO[#Qq!T#Qq!h#Qq#v#Qq)`#Qq)q#QqQ#Qq!d#Qq(|#Qq~O[riQri!dri!hri)ari)`ri~P#IyO]&eO!V+pO[riQri!dri!hri)ari)`ri~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h'Tq)`'Tq!g'Tq)q'Tq['Tq!W'Tq(|'Tq!U'TqQ'Tq!d'Tq~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!W'}a!h'}a~P#4YO!W5cO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h5dO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`#lO)a$OO!U)yX~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h#{i)`#{i~P#4YO]*{O!T$YO!V&dO)q*wO!h(Wa)`(Wa~O!h1nO[)kX]'dX~P%3`O)a5fO!T%qa!h%qa#v%qa)q%qa~O!h0{O!T*Sa#v*Sa)q*Sa~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`5iO)a$OO~P#4YO]1[Oe!POm;fO!V1YO!{!dO%v$oO(x$zO)Z<SO)]5kO)^5kO~OQ#Pa!d#Pa!h#Pa[#Pa~P(ElO]1[Oe!POs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!V1YO!{!dO!|%TO%v$oO(x$zOQ#kX!d#kX!h#kX[#kX~Om%dO)Z1SO)]<TO)^<TO~P(FnO]&eOQ#Pa!d#Pa!h#Pa[#Pa~O!V&dO)q5oO~P(H]O(x%pOQ#dX!d#dX!h#dX[#dX~O)]<TO)^<TOQ#nX!d#nX!h#nX[#nX~P'!]O!V+pO~P(H]O]1[Ob!TOe!POm;gO|#RO!V1YO!{!dO#a#VO#b#TO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO(x;[O)WYO)Z<SO)]5kO)^5kO)a+sO[)kP~P&@lO!h1]OQ)sa!d)sa~Oq&hO)q5tOQ#`am)TX!d#`a!h#`a)a)TX~P$GhO(x-]OQ#ga!d#ga!h#ga~Oq&hO)q5tOQ#`a])eXe)eXm)eXs)eXt)eXu)eXv)eXw)eXx)eXy)eXz)eX!O)eX!T)eX!V)eX!d#`a!h#`a!l)eX!r)eX!s)eX!t)eX!u)eX!v)eX!x)eX!{)eX%v)eX&r)eX&s)eX(x)eX(|)eX)Z)eX)])eX)^)eX)a)eX~O#a5wO#b5wO~O]&eO!V+pO[#ki!T#ki#v#ki)`#ki)q#kiQ#ki!d#ki!h#ki)a#ki!x#ki(|#ki~O!W5yO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W5yO~P!(}O!W5yO)Z5{O~P$&OO]#ji!T#ji!V#ji[#ji#v#ji)`#ji)q#jiQ#ji!d#ji!h#ji)a#ji!x#ji(|#ji~P$!WO)WYO)a5}O~P8}O!h1nO[)ka~O&r#WO&s$yO!T#qa!x#qa#v#qa(|#qa)q#qa[#qa!h#qa)`#qaQ#qa!d#qa)a#qa~P#NsO[6SO~P!(}O[)vP~P!4{O)[6YO)]6WO]#Ua!T#Ua!V#Ua)Z#Ua)^#Uas#Uat#Uau#Uav#Uaw#Uax#Uay#Uaz#Ua!l#Ua!x#Ua#T#Ua#V#Ua#p#Ua#v#Ua(|#Ua)O#Ua)q#Uab#Uae#Uam#Ua|#Ua!O#Ua!o#Ua!r#Ua!s#Ua!t#Ua!u#Ua!v#Ua!{#Ua#a#Ua#b#Ua#i#Ua#t#Ua${#Ua%c#Ua%e#Ua%k#Ua%l#Ua%o#Ua%v#Ua&m#Ua&r#Ua&s#Ua(x#Ua)W#Ua)`#Ua[#Ua!h#UaQ#Ua!d#Ua~O!x!cO]#Rq!T#Rq!V#Rq#v#Rq(|#Rq)q#Rq[#Rq!h#Rq)`#RqQ#Rq!d#Rq~O!W6_O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W6_O~P!(}O!h2UOQ)Qa!d)Qa~O)`6dO~Om-lO!TxO)q6eO~O]*{O!T$YO!V&dO!h*yO)`)xX~O)q6iO~P),eO[6kO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[6kO~O$c6mOP$_q]$_qb$_qe$_qm$_qs$_qt$_qu$_qv$_qw$_qx$_qy$_qz$_q|$_q!O$_q!T$_q!V$_q!X$_q!Y$_q!i$_q!o$_q!r$_q!s$_q!t$_q!u$_q!v$_q!x$_q!{$_q#V$_q#a$_q#b$_q#i$_q#p$_q#t$_q#v$_q$R$_q$T$_q$Y$_q$Z$_q$`$_q$e$_q$g$_q$h$_q$k$_q$m$_q$o$_q$q$_q$s$_q$u$_q$w$_q${$_q$}$_q%U$_q%_$_q%`$_q%a$_q%c$_q%e$_q%g$_q%l$_q%o$_q%v$_q%|$_q&m$_q&r$_q&s$_q'Q$_q'R$_q'V$_q'Y$_q'a$_q'b$_q(m$_q(v$_q(x$_q)W$_q)Z$_q)]$_q)^$_q)`$_q)a$_q)c$_q)o$_q)p$_q!U$_q~O)`6nO~OPmO]$gOb!]Om;VO|#RO!V$hO!X!XO!Y!WO!i!YO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x;XO)Z$mO)^$mO)`6pO)a!ZO)cXO)ocO)pdO~P&@lO(|6rO)q*wO~P),eO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`6pO)a$OO~P#4YO[6tO~P!(}O)`6xO~O)`6yO~O]-aOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!{!dO(x-]O)Z-^O~O]&eO!V3PO!h%Oa)`%Oa[%Oa~O!W7PO)Z7QO~P$&OO!h3QO)`)|a~O[7TO]&eO!V3PO~O!TxO$`!iO$e!jO$g!kO$h!lO$k-iO$m!nO$o!oO$q!pO$s!qO$u!rO$w!sO$}!uO(x:xOe$Xq!o$Xq!{$Xq#i$Xq#p$Xq#t$Xq#v$Xq$R$Xq$T$Xq$Y$Xq$Z$Xq${$Xq%U$Xq%c$Xq%g$Xq%o$Xq%|$Xq(m$Xq)]$Xq!U$Xq$c$Xq~P$0yOPmO]$gOb!]Om;VO|#RO!V$hO!X!XO!Y!WO!i!YO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x;XO)WYO)Z$mO)^$mO)`7VO)a!ZO)cXO)ocO)pdO~P&@lO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`7YO)a$OO~P#4YO)`7ZO~OP7[O(vQO~Om*aO)`)eX~P$GhOq&hOm)TX)`)eX~P$GhO)`7^O~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO)`&Sa~P#4YO!U7`O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO)`7aO~OPmO]$gOb!]Om;WO|#RO!V$hO!X!XO!Y!WO!i!YO#V#QO#a#VO#b#TO%_#ZO%`#[O%a#YO%e#UO%l#SO%v$oO&m!RO&r#WO&s!TO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x;_O)WYO)Z$mO)^$mO)a0vO)cXO)ocO)pdO[)kP~P&@lO!h3zO)a7eO!T)fa~O!h3zO!T)fa~O)`7jO)q7lO~P('fO)`7nO~PGYO]4UOm)QOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!{!dO!|%TO%v$oO&r#WO(x)PO)Z4RO)]4VO)^4VO~O)Z7rO~O]&eO!T*vO!V7tO!h7uO#v!eO(|4YO~O)`7jO)q7wO~P)GyO]4UOm)QO!{!dO%v$oO&r#WO(x)PO)Z4RO)]4VO)^4VO~Oq&hO])jX!T)jX!V)jX!h)jX#v)jX(|)jX)`)jX)q)jX[)jX~O)`7jO~O!T(TO!l7}O(|(SO])Uie)Uim)Uis)Uit)Uiu)Uiv)Uiw)Uix)Uiy)Uiz)Ui!O)Ui!V)Ui!r)Ui!s)Ui!t)Ui!u)Ui!v)Ui!x)Ui!{)Ui%v)Ui&r)Ui&s)Ui(x)Ui)Z)Ui)])Ui)^)Ui)`)Ui[)Ui!X)Ui!Y)Ui![)Ui!^)Ui!_)Ui!a)Ui!b)Ui!e)Ui!f)Ui!h)Ui({)Ui(})Ui)O)Ui)[)Ui)_)Ui)a)Ui!g)Ui)q)Ui!W)UiQ)Ui!d)Ui!U)Ui#v)Ui~O(x%pO!U(hX!h(hX~O!h4cO!U*Ya~Oq&hO]*Xae*Xam*Xas*Xat*Xau*Xav*Xaw*Xax*Xay*Xaz*Xa!O*Xa!T*Xa!V*Xa!r*Xa!s*Xa!t*Xa!u*Xa!v*Xa!x*Xa!{*Xa%v*Xa&r*Xa&s*Xa(x*Xa)Z*Xa)]*Xa)^*Xa)`*Xa[*Xa!X*Xa!Y*Xa![*Xa!^*Xa!_*Xa!a*Xa!b*Xa!e*Xa!f*Xa!h*Xa({*Xa(}*Xa)O*Xa)[*Xa)_*Xa)a*Xa!g*Xa)q*Xa!W*XaQ*Xa!d*Xa(|*Xa!U*Xa#v*Xa~O!T(^O]&kqe&kqm&kqs&kqt&kqu&kqv&kqw&kqx&kqy&kqz&kq!O&kq!V&kq!r&kq!s&kq!t&kq!u&kq!v&kq!x&kq!{&kq%v&kq&r&kq&s&kq(x&kq)Z&kq)]&kq)^&kq)`&kq[&kq!X&kq!Y&kq![&kq!^&kq!_&kq!a&kq!b&kq!e&kq!f&kq!h&kq({&kq(}&kq)O&kq)[&kq)_&kq)a&kq!g&kq)q&kq!W&kqQ&kq!d&kq(|&kq!U&kq#v&kq~OPmOb%SOm;UO!T$YO!i!YO#V#QO%_#ZO%`#[O%a#YO%v$oO'Q!WO'R!WO'V#XO'Y![O'a![O'b![O(vQO(x$zO)cXO)ocO)pdO~O]*^i!V*^i!X*^i!Y*^i![*^i!^*^i!_*^i!a*^i!b*^i!e*^i!f*^i!h*^i({*^i(}*^i)O*^i)Z*^i)[*^i)]*^i)^*^i)_*^i)`*^i)a*^i!g*^i)q*^i[*^i!W*^i(|*^i!U*^iQ*^i!d*^i~P*'YO[8SO~O!W8TO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h'^q)`'^q!g'^q)q'^q['^q!W'^q(|'^q!U'^qQ'^q!d'^q~P#4YO!h8UO[*bX~O[8WO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h_y)`_y!g_y)q_y[_y!W_y(|_y!U_yQ_y!d_y~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO[(ja!h(ja~P#4YO]$PO!T$YO!V'Zy!X'Zy!Y'Zy!['Zy!^'Zy!_'Zy!a'Zy!b'Zy!e'Zy!f'Zy!h'Zy({'Zy(}'Zy)O'Zy)Z'Zy)['Zy)]'Zy)^'Zy)_'Zy)`'Zy)a'Zy!g'Zy)q'Zy['Zy!W'Zy(|'Zy!U'ZyQ'Zy!d'Zy~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!h'^y)`'^y!g'^y)q'^y['^y!W'^y(|'^y!U'^yQ'^y!d'^y~P#4YO]&eO!V+pO!T%uy#v%uy)`%uy)q%uy~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!U(Va!h(Va~P#4YO!W5SO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!U#}i!h#}i~P#4YO!U8ZO~P&7rO!W8ZO~P&7rO[8ZO~P&7rO[8]O~P&7rO]&eO!V&dO[#Qy!T#Qy!h#Qy#v#Qy)`#Qy)q#QyQ#Qy!d#Qy(|#Qy~O]&eO!V+pO[rqQrq!drq!hrq)arq)`rq~O]&eOQ#Pi!d#Pi!h#Pi[#Pi~O!V+pO~P*:gOQ#nX!d#nX!h#nX[#nX~P(ElO!V&dO~P*:gOQ(PX](PXe'rXm'rXs(PXt(PXu(PXv(PXw(PXx(PXy(PXz(PX!V(PX!d(PX!h(PX!{'rX%v'rX(x'rX)Z(PX)](PX)^(PX[(PX~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OOQ#_i!d#_i!h#_i[#_i~P#4YO&r#WO&s$yOQ#fi!d#fi!h#fi~O(x-]O)a1bO)q1aOQ#`X!d#`X!h#`X~O!W8bO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W8bO~P!(}O!T#qi!x#qi#v#qi(|#qi)q#qi[#qi!h#qi)`#qiQ#qi!d#qi)a#qi~O]&eO!V+pO~P*@cO]&[O!V&YO&r#WO&s$yO)Z&XO)]&]O)^&]O~P*@cO[8dO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!h8eO[)vX~O[8gO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OOQ*]X!d*]X!h*]X~P#4YO)a8jOQ*[X!d*[X!h*[X~O)`8lO~O[$bi!h#{a)`#{a~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`8oO)a$OO~P#4YO[8qO~P!(}O[8qO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[8qO~O]&eO!V&dO(|8wO~O)`8xO~O]&eO!V3PO!h%Oi)`%Oi[%Oi~O!W8{O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W8{O)Z8}O~P$&OO!W8{O~P!(}O]&eO!V3PO!h(Za)`(Za~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`9OO)a$OO~P#4YO)`2qO~P!(}O)`9OO~OP%qO[9PO(vQO~O[9PO~O)`9QO~P%%{O#T9TO)O.WO)`9RO~O!h3zO!T)fi~O)a9XO!T'xa!h'xa~O)`9ZO)q9]O~P)GyO)`9ZO~O)`9ZO)q9aO~P('fOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O~P)HiO]&eO!V7tO!T!ya!h!ya#v!ya(|!ya)`!ya)q!ya[!ya~O!W9hO)Z9iO~P$&OO!T$YO!h7uO(|4YO)`9ZO)q9aO~O!T$YO~P#EtO[9lO]&eO!V7tO~O]&eO!V7tO!T&aa!h&aa#v&aa(|&aa)`&aa)q&aa[&aa~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO)`&ba~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`9ZO)a$OO~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!U&oi!h&oi~P#4YO!V/UO]']i!T']i!X']i!Y']i![']i!^']i!_']i!a']i!b']i!e']i!f']i!h']i({']i(}']i)O']i)Z']i)[']i)]']i)^']i)_']i)`']i)a']i!g']i)q']i[']i!W']i(|']i!U']iQ']i!d']i~O(x%pO)a9oO~O!h8UO[*ba~O[9qO~P&7rO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO!U(Va)`#Zi~P#4YO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OOQ#_q!d#_q!h#_q[#_q~P#4YO&r#WO&s$yOQ#fq!d#fq!h#fq~O)q5tOQ#`a!d#`a!h#`a~O]&eO!V+pO!T#qq!x#qq#v#qq(|#qq)q#qq[#qq!h#qq)`#qqQ#qq!d#qq)a#qq~O!h8eO[)va~O)]6WO]&Vi!T&Vi!V&Vi)Z&Vi)[&Vi)^&Vis&Vit&Viu&Viv&Viw&Vix&Viy&Viz&Vi!l&Vi!x&Vi#T&Vi#V&Vi#p&Vi#v&Vi(|&Vi)O&Vi)q&Vib&Vie&Vim&Vi|&Vi!O&Vi!o&Vi!r&Vi!s&Vi!t&Vi!u&Vi!v&Vi!{&Vi#a&Vi#b&Vi#i&Vi#t&Vi${&Vi%c&Vi%e&Vi%k&Vi%l&Vi%o&Vi%v&Vi&m&Vi&r&Vi&s&Vi(x&Vi)W&Vi)`&Vi[&Vi!h&ViQ&Vi!d&Vi~O)`9tO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO[$bq!h#{i)`#{i~P#4YO[9vO~P!(}O[9vO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[9vO~O]&eO!V&dO(|9yO~O[9zO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[9zO~O]&eO!V3PO!h%Oq)`%Oq[%Oq~O!W:OO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W:OO~P!(}O)`6pO~P!(}O)`:PO~O)`:QO~O)O.WO)`:QO~O!h3zO!T)fq~O)a:SO!T'xi!h'xi~O!T$YO!h7uO(|4YO)`:TO)q:VO~O)`:TO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`:TO)a$OO~P#4YO)`:TO)q:YO~P)GyO]&eO!V7tO!T!yi!h!yi#v!yi(|!yi)`!yi)q!yi[!yi~O!W:^O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W:^O)Z:`O~P$&OO!W:^O~P!(}O]&eO!V7tO!T(fa!h(fa(|(fa)`(fa)q(fa~O[:bO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O!h#kO({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[:bO~O[:gO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[:gO~O]&eO!V3PO!h%Oy)`%Oy[%Oy~O)`:hO~O)`:iO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`:iO)a$OO~P#4YO!T$YO!h7uO(|4YO)`:iO)q:lO~O]&eO!V7tO!T!yq!h!yq#v!yq(|!yq)`!yq)q!yq[!yq~O!W:nO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO!W:nO~P!(}O[:pO!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)a$OO~P#4YO[:pO~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`:rO)a$OO~P#4YO)`:rO~O]&eO!V7tO!T!yy!h!yy#v!yy(|!yy)`!yy)q!yy[!yy~O!Y#sO![#tO!^#wO!_#xO!a#zO!b#{O!e#{O!f#|O({#hO)Z#oO)[#qO)]#pO)^#rO)_#jO)`:vO)a$OO~P#4YO)`:vO~O]ZXmhXqZXqjX!TjX!VZX!XZX!YZX![ZX!^ZX!_ZX!aZX!bZX!eZX!fZX!gZX!hZX({ZX(|$]X(}ZX)OZX)ZZX)[ZX)]ZX)^ZX)_ZX)`ZX)aZX)qZX~O]%WXmnXqoXq%WX!ToX!V%WX!X%WX!Y%WX![%WX!^%WX!_%WX!a%WX!b%WX!e%WX!f%WX!gnX!h%WX({%WX(}%WX)O%WX)Z%WX)[%WX)]%WX)^%WX)_%WX)a%WX)qnX[%WXQ%WX!d%WX~O)`%WX!W%WX(|%WX!U%WX~P+HoO]oX]%WXeoXmnXqoXq%WXsoXtoXuoXvoXwoXxoXyoXzoX!OoX!VoX!V%WX!roX!soX!toX!uoX!voX!xoX!{oX%voX&roX&soX(xoX)ZoX)]oX)^oX[oX[%WX!hoX)aoX~O)`oX)qoX~P+KPO]%WXmnXqoXq%WX!V%WX!h%WXQ%WX!d%WX[%WX~O!T%WX#v%WX)`%WX)q%WX(|%WX~P+MjOQoXQ%WX!ToX!X%WX!Y%WX![%WX!^%WX!_%WX!a%WX!b%WX!doX!d%WX!e%WX!f%WX!gnX!h%WX({%WX(}%WX)O%WX)Z%WX)[%WX)]%WX)^%WX)_%WX)a%WX)qnX~P+KPO]oX]%WXmnXqoXq%WXsoXtoXuoXvoXwoXxoXyoXzoX!OoX!V%WX!roX!soX!toX!uoX!voX!xoX!{oX%voX&roX&soX(xoX)ZoX)]oX)^oX~O!ToX(|oX)`oX)qoX~P,!bOmnXqoX!h%WX)`%WX~OeoX!VoX)`%WX~P,!bOe)tO%Y)uO)P:yO~Oe)tO%Y)uO)P;OO~Oe)tO%Y)uO)P:zO~Oe$TO%Y*YO'[$VO'_$WO)P:yO~Oe$TO%Y*YO'[$VO'_$WO)P:{O~Oe$TO%Y*YO'[$VO'_$WO)P:}O~O[jX]jXsjXtjXujXvjXwjXxjXyjXzjX!VjX&rjX&sjX)ZjX)]jX)^jXejX!OjX!rjX!sjX!tjX!ujX!vjX!xjX!{jX%vjX(xjX~P#1xO]ZXmhXqZXqjX!VZX!hZX)`ZX)qZX~O!TZX#vZX(|ZX~P,({OmhXqjX!hZX)WjX)`ZX)qjX~O]ZX]jXejXmhXqZXqjXsjXtjXujXvjXwjXxjXyjXzjX!OjX!VZX!VjX!rjX!sjX!tjX!ujX!vjX!xjX!{jX%vjX&rjX&sjX(xjX)ZjX)]jX)^jX[ZX[jX!hjX)ajX)qjX~O)`ZX~P,*YO]ZX]jXmhXqZXqjXsjXtjXujXvjXwjXxjXyjXzjX!TjX!VZX!VjX!XZX!YZX![ZX!^ZX!_ZX!aZX!bZX!eZX!fZX!gZX!hZX!hjX&rjX&sjX({ZX(}ZX)OZX)ZZX)ZjX)[ZX)]ZX)]jX)^ZX)^jX)_ZX)aZX)ajX)qZX~OQZXQjX!dZX!djX~P,,sO]jXejXsjXtjXujXvjXwjXxjXyjXzjX!OjX!VjX!rjX!sjX!tjX!ujX!vjX!xjX!{jX%vjX&rjX&sjX(xjX)ZjX)]jX)^jX~P#1xO[ZX[jXejX!OjX!rjX!sjX!tjX!ujX!vjX!xjX!{jX%vjX(xjX)qjX~P,,sO]ZX]jXmhXqZXqjXsjXtjXujXvjXwjXxjXyjXzjX!OjX!VZX!rjX!sjX!tjX!ujX!vjX!xjX!{jX%vjX&rjX&sjX(xjX)ZjX)]jX)^jX)`jX~O!TjX(|jX)qjX~P,2uOejX!VjX~P,2uOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O~PBXOe$TO%Y*YO)P:yO~Oe$TO%Y*YO)P:zO~Oe$TO%Y*YO)P;PO~Oe$TO%Y*YO)P;QO~O]%jOe!POm%dOs!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O!V%mO!{!dO!|%TO%v$oO(x$zO)Z;kO)];lO)^;lO~O]%jOe!POm%dO!V%mO!{!dO%v$oO(x$zO)Z;kO)];lO)^;lO~Oe$TO%Y$UO)P:zO~Oe$TO%Y$UO)P;OO~Om;TO~Om;SO~O]dXmhXqjX!TdX~Oe)tO%Y*YO)P:yO~Oe)tO%Y*YO)P:zO~Oe)tO%Y*YO)P:{O~Oe)tO%Y*YO)P:|O~Oe)tO%Y*YO)P:}O~Oe)tO%Y*YO)P;PO~Oe)tO%Y*YO)P;QO~Os!^Ot!^Ou!^Ov!^Ow!^Ox!^Oy!^Oz!^O~P,8VO])TXs)TXt)TXu)TXv)TXw)TXx)TXy)TXz)TX!O)TX!r)TX!s)TX!t)TX!u)TX!v)TX!x)TX!{)TX%v)TX&r)TX&s)TX(x)TX)Z)TX)])TX)^)TX)q)TX~Om;SO!T)TX(|)TX)`)TX~P,<UO]&wXmnXqoX!T&wX~Oe4uO%Y*YO)P<OO~Om;fO)Z<SO)]5kO)^5kO~P(FnOe!POm%dO!{!dO%v$oO(x$zO~O]1[O!V1YO)Z1SO)]<TO)^<TOQ#nX!d#nX!h#nX[#nX~P,?QO)Z;dO~Om;rO~Om;sO~Om;tO~Om;vO~Om;wO~Om;xO~Om;vO!T$YOQ)TX!d)TX!h)TX)a)TX[)TX)q)TX~P$GhOm;tO!T$YO~P$GhOm;rO!g$[O)q$[O~Om;tO!g$[O)q$[O~Om;vO!g$[O)q$[O~Om;sO[)TX!h)TX)a)TX)q)TX~P$GhOe/fO%Y*YO)P<OO~Om<PO~O)Z<dO~OV'e'h'i'g(v)c!R(xS(q%Z!Y!['je%[!i'R!f]'f*c'k(}!^!_'l'm'l~",
@@ -29063,7 +29283,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const cppLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "cpp",
-		parser: /*@__PURE__*/ parser$3.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$4.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			IfStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|else\b)/ }),
 			TryStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|catch)\b/ }),
 			LabeledStatement: flatIndent,
@@ -29286,7 +29506,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		static: 438,
 		dyn: 476
 	};
-	const parser$2 = LRParser.deserialize({
+	const parser$3 = LRParser.deserialize({
 		version: 14,
 		states: "$2xQ]Q_OOP$wOWOOO&sQWO'#CnO)WQWO'#I`OOQP'#I`'#I`OOQQ'#Ie'#IeO)hO`O'#C}OOQR'#Ih'#IhO)sQWO'#IuOOQO'#Hk'#HkO)xQWO'#DpOOQR'#Iw'#IwO)xQWO'#DpO*ZQWO'#DpOOQO'#Iv'#IvO,SQWO'#J`O,ZQWO'#EiOOQV'#Hp'#HpO,cQYO'#F{OOQV'#El'#ElOOQV'#Em'#EmOOQV'#En'#EnO.YQ_O'#EkO0_Q_O'#EoO2gQWOOO4QQ_O'#FPO7hQWO'#J`OOQV'#FY'#FYO7{Q_O'#F^O:WQ_O'#FaOOQO'#F`'#F`O=sQ_O'#FcO=}Q_O'#FbO@VQWO'#FgOOQO'#J`'#J`OOQV'#Io'#IoOA]Q_O'#InOEPQWO'#InOOQV'#Fw'#FwOF[QWO'#JuOFcQWO'#F|OOQO'#IO'#IOOGrQWO'#GhOOQV'#Im'#ImOOQV'#Il'#IlOOQV'#Hj'#HjQGyQ_OOOKeQ_O'#DUOKlQYO'#CqOOQP'#I_'#I_OOQV'#Hg'#HgQ]Q_OOOLuQWO'#I`ONsQYO'#DXO!!eQWO'#JuO!!lQWO'#JuO!!vQ_O'#DfO!%]Q_O'#E}O!(sQ_O'#FWO!,ZQWO'#FZO!.^QXO'#FbO!.cQ_O'#EeO!!vQ_O'#FmO!0uQWO'#FoO!0zQWO'#FoO!1PQ^O'#FqO!1WQWO'#JuO!1_QWO'#FtO!1dQWO'#FxO!2WQWO'#JjO!2_QWO'#GOO!2_QWO'#G`O!2_QWO'#GbO!2_QWO'#GsOOQO'#Ju'#JuO!2dQWO'#GhO!2lQYO'#GpO!2_QWO'#GqO!3uQ^O'#GtO!3|QWO'#GuO!4hQWO'#HOP!4sOpO'#CcPOOO)CC})CC}OOOO'#Hi'#HiO!5OO`O,59iOOQV,59i,59iO!5ZQYO,5?aOOQO-E;i-E;iOOQO,5:[,5:[OOQP,59Z,59ZO)xQWO,5:[O)xQWO,5:[O!5oQWO,5?kO!5zQYO,5;qO!6PQYO,5;TO!6hQWO,59QO!7kQXO'#CnO!7xQXO'#I`O!9SQWO'#CoO,^QWO'#EiOOQV-E;n-E;nO!9eQWO'#FsOOQV,5<g,5<gO!9SQWO'#CoO!9jQWO'#CoO!9oQWO'#I`O! yQWO'#JuO!9yQWO'#J`O!:aQWO,5;VOOQO'#In'#InO!0zQWO'#DaO!<aQWO'#DcO!<iQWO,5;ZO.YQ_O,5;ZOOQO,5;[,5;[OOQV'#Er'#ErOOQV'#Es'#EsOOQV'#Et'#EtOOQV'#Eu'#EuOOQV'#Ev'#EvOOQV'#Ew'#EwOOQV'#Ex'#ExOOQV'#Ey'#EyO.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;]O.YQ_O,5;fO!=PQ_O,5;kO!@gQ_O'#FROOQO,5;l,5;lO!BrQWO,5;pO.YQ_O,5;wOKlQYO,5;gO!D_QWO,5;kO!EOQWO,5;xOOQO,5;x,5;xO!E]QWO,5;xO!EbQ_O,5;xO!GmQWO'#CfO!GrQWO,5<QO!G|Q_O,5<QOOQO,5;{,5;{O!JjQXO'#CnO!K{QXO'#I`OOQS'#Dk'#DkOOQP'#Ir'#IrO!LuQ[O'#IrO!L}QXO'#DjO!M{QWO'#DnO!M{QWO'#DnO!N^QWO'#DnOOQP'#It'#ItO!NcQXO'#ItO# ^Q^O'#DoO# hQWO'#DrO# pQ^O'#DzO# zQ^O'#D|O#!RQWO'#EPO#!^QXO'#FdOOQP'#ES'#ESOOQP'#Iq'#IqO#!lQXO'#JfOOQP'#Je'#JeO#!tQXO,5;}O#!yQXO'#I`O!1PQ^O'#DyO!1PQ^O'#FdO##sQWO,5;|OOQO,5;|,5;|OKlQYO,5;|O#$ZQWO'#FhOOQO,5<R,5<ROOQV,5=l,5=lO#&`QYO'#FzOOQV,5<h,5<hO#&gQWO,5<hO#&nQWO,5=SO!1WQWO,59rO!1dQWO,5<dO#&uQWO,5=iO!2_QWO,5<jO!2_QWO,5<zO!2_QWO,5<|O!2_QWO,5=QO#&|QWO,5=]O#'TQWO,5=SO!2_QWO,5=]O!3|QWO,5=aO#']QWO,5=jOOQO-E;|-E;|O#'hQWO'#JjOOQV-E;h-E;hO#(PQWO'#HRO#(WQ_O,59pOOQV,59p,59pO#(_QWO,59pO#(dQ_O,59pO#)SQZO'#CuO#+[QZO'#CvOOQV'#C|'#C|O#-wQWO'#HTO#.OQYO'#IdOOQO'#Hh'#HhO#.WQWO'#CwO#.WQWO'#CwO#.iQWO'#CwOOQR'#Ic'#IcO#.nQZO'#IbO#1TQYO'#HTO#1qQYO'#H[O#2}QYO'#H_OKlQYO'#H`OOQR'#Hb'#HbO#4ZQWO'#HeO#4`QYO,59]OOQR'#Ib'#IbO#5PQZO'#CtO#7[QYO'#HUO#7aQWO'#HTO#7fQYO'#CrO#8VQWO'#H]O#7fQYO'#HcOOQV-E;e-E;eO#8_QWO,59sOOQV,59{,59{O#8mQYO,5=[OOQV,59},59}O!0zQWO,59}O#;aQWO'#IpOOQO'#Ip'#IpO!1PQ^O'#DhO!0zQWO,5:QO#;hQWO,5;iO#<OQWO,5;rO#<fQ_O,5;rOOQO,5;u,5;uO#@PQ_O,5;|O#BXQWO,5;PO!0zQWO,5<XO#B`QWO,5<ZOOQV,5<Z,5<ZO#BkQWO,5<]O!1PQ^O'#EOOOQQ'#D_'#D_O#BsQWO,59rO#BxQWO,5<`O#B}QWO,5<dOOQO,5@U,5@UO#CVQWO,5=iOOQQ'#Cv'#CvO#C[QYO,5<jO#CmQYO,5<zO#CxQYO,5<|O#DTQYO,5=_O#DcQYO,5=SO#E{QYO'#GQO#FYQYO,5=[O#FmQWO,5=[O#F{QYO,5=[O#HUQYO,5=]O#HdQWO,5=`O!1PQ^O,5=`O#HrQWO'#CnO#ITQWO'#I`OOQO'#Jy'#JyO#IfQWO'#IQO#IkQWO'#GwOOQO'#Jz'#JzO#JSQWO'#GzOOQO'#G|'#G|OOQO'#Jx'#JxO#IkQWO'#GwO#JZQWO'#GxO#J`QWO,5=aO#JeQWO,5=jO!1dQWO,5=jO#'`QWO,5=jPOOO'#Hf'#HfP#JjOpO,58}POOO,58},58}OOOO-E;g-E;gOOQV1G/T1G/TO#JuQWO1G4{O#JzQ^O'#CyPOQQ'#Cx'#CxOOQO1G/v1G/vOOQP1G.u1G.uO)xQWO1G/vO#NTQ!fO'#ETO#N[Q!fO'#EaO#NcQ!fO'#EbO$ kQWO1G1yO$!_Q_O1G1yOOQP1G5V1G5VOOQO1G1]1G1]O$&RQWO1G0oO$&WQWO'#CiO!7xQXO'#I`O!6PQYO1G.lO!5oQWO,5<_O!9SQWO,59ZO!9SQWO,59ZO!5oQWO,5?kO$&iQWO1G0uO$(vQWO1G0wO$*nQWO1G0wO$+UQWO1G0wO$-YQWO1G0wO$-aQWO1G0wO$/bQWO1G0wO$/iQWO1G0wO$1jQWO1G0wO$1qQWO1G0wO$3YQWO1G1QO$5ZQWO1G1VO$5zQ_O'#JcO$8SQWO'#JcOOQO'#Jb'#JbO$8^QWO,5;mOOQO'#Dw'#DwOOQO1G1[1G1[OOQO1G1Y1G1YO$8cQWO1G1cOOQO1G1R1G1RO$8jQ_O'#HrO$:xQWO,5@OO.YQ_O1G1dOOQO1G1d1G1dO$;QQWO1G1dO$;_QWO1G1dO$;dQWO1G1eOOQO1G1l1G1lO$;lQWO1G1lOOQP,5?^,5?^O$;vQ^O,5:kO$<aQXO,5:YO!M{QWO,5:YO!M{QWO,5:YO!1PQ^O,5:gO$=bQWO'#IyOOQO'#Ix'#IxO$=pQWO,5:ZO# ^Q^O,5:ZO$=uQWO'#DsOOQP,5:^,5:^O$>WQWO,5:fOOQP,5:h,5:hO!1PQ^O,5:hO!1PQ^O,5:mO$>]QYO,5<OO$>gQ_O'#HsO$>tQXO,5@QOOQV1G1i1G1iOOQP,5:e,5:eO$>|QXO,5<OO$?[QWO1G1hO$?dQWO'#CnO$?oQWO'#FiOOQO'#Fi'#FiO$?wQWO'#FjO.YQ_O'#FkOOQO'#Ji'#JiO$?|QWO'#JhOOQO'#Jg'#JgO$@UQWO,5<SOOQQ'#Hv'#HvO$@ZQYO,5<fOOQV,5<f,5<fO$@bQYO,5<fOOQV1G2S1G2SO$@iQWO1G2nO$@qQWO1G/^O$@vQWO1G2OO#CVQWO1G3TO$AOQYO1G2UO#CmQYO1G2fO#CxQYO1G2hO$AaQYO1G2lO!2_QWO1G2wO#DcQYO1G2nO#HUQYO1G2wO$AiQWO1G2{O$AnQWO1G3UO!1dQWO1G3UO$AsQWO1G3UOOQV1G/[1G/[O$A{QWO1G/[O$BQQ_O1G/[O#7aQWO,5=oO$BXQYO,5?OO$BmQWO,5?OO$BrQZO'#IeOOQO-E;f-E;fOOQR,59c,59cO#.WQWO,59cO#.WQWO,59cOOQR,5=n,5=nO$E_QYO'#HVO$FwQZO,5=oO!5oQWO,5={O$IZQWO,5=oO$IbQZO,5=vO$KqQYO,5=vO$>]QYO,5=vO$LRQWO'#KRO$L^QWO,5=xOOQR,5=y,5=yO$LcQWO,5=zO$>]QYO,5>PO$>]QYO,5>POOQO1G.w1G.wO$>]QYO1G.wO$LnQYO,5=pO$LvQZO,59^OOQR,59^,59^O$>]QYO,5=wO% YQZO,5=}OOQR,5=},5=}O%#lQWO1G/_O!6PQYO1G/_O#FYQYO1G2vO%#qQWO1G2vO%$PQYO1G2vOOQV1G/i1G/iO%%YQWO,5:SO%%bQ_O1G/lO%*kQWO1G1^O%+RQWO1G1hOOQO1G1h1G1hO$>]QYO1G1hO%+iQ^O'#EgOOQV1G0k1G0kOOQV1G1s1G1sO!!vQ_O1G1sO!0zQWO1G1uO!1PQ^O1G1wO!.cQ_O1G1wOOQP,5:j,5:jO$>]QYO1G/^OOQO'#Cn'#CnO%+vQWO1G1zOOQV1G2O1G2OO%,OQWO'#CnO%,WQWO1G3TO%,]QWO1G3TO%,bQYO'#GQO%,sQWO'#G]O%-UQYO'#G_O%.hQYO'#GXOOQV1G2U1G2UO%/wQWO1G2UO%/|QWO1G2UO$ARQWO1G2UOOQV1G2f1G2fO%/wQWO1G2fO#CpQWO1G2fO%0UQWO'#GdOOQV1G2h1G2hO%0gQWO1G2hO#C{QWO1G2hO%0lQYO'#GSO$>]QYO1G2lO$AdQWO1G2lOOQV1G2y1G2yO%1xQWO1G2yO%3hQ^O'#GkO%3rQWO1G2nO#DfQWO1G2nO%4QQYO,5<lO%4[QYO,5<lO%4jQYO,5<lO%5XQYO,5<lOOQQ,5<l,5<lO!1WQWO'#JuO%5dQYO,5<lO%5lQWO1G2vOOQV1G2v1G2vO%5tQWO1G2vO$>]QYO1G2vOOQV1G2w1G2wO%5tQWO1G2wO%5yQWO1G2wO#HXQWO1G2wOOQV1G2z1G2zO.YQ_O1G2zO$>]QYO1G2zO%6RQWO1G2zOOQO,5>l,5>lOOQO-E<O-E<OOOQO,5=c,5=cOOQO,5=e,5=eOOQO,5=g,5=gOOQO,5=h,5=hO%6aQWO'#J|OOQO'#J{'#J{O%6iQWO,5=fO%6nQWO,5=cO!1dQWO,5=dOOQV1G2{1G2{O$>]QYO1G3UPOOO-E;d-E;dPOOO1G.i1G.iOOQO7+*g7+*gO%7VQYO'#IcO%7nQYO'#IfO%7yQYO'#IfO%8RQYO'#IfO%8^QYO,59eOOQO7+%b7+%bOOQP7+$a7+$aO%8cQ!fO'#JTOOQS'#EX'#EXOOQS'#EY'#EYOOQS'#EZ'#EZOOQS'#JT'#JTO%;UQWO'#EWOOQS'#E`'#E`OOQS'#JR'#JROOQS'#Hn'#HnO%;ZQ!fO,5:oOOQV,5:o,5:oOOQV'#JQ'#JQO%;bQ!fO,5:{OOQV,5:{,5:{O%;iQ!fO,5:|OOQV,5:|,5:|OOQV7+'e7+'eOOQV7+&Z7+&ZO%;pQ!fO,59TOOQO,59T,59TO%>YQWO7+$WO%>_QWO1G1yOOQV1G1y1G1yO!9SQWO1G.uO%>dQWO,5?}O%>nQ_O'#HqO%@|QWO,5?}OOQO1G1X1G1XOOQO7+&}7+&}O%AUQWO,5>^OOQO-E;p-E;pO%AcQWO7+'OO.YQ_O7+'OOOQO7+'O7+'OOOQO7+'P7+'PO%AjQWO7+'POOQO7+'W7+'WOOQP1G0V1G0VO%ArQXO1G/tO!M{QWO1G/tO%BsQXO1G0RO%CkQ^O'#HlO%C{QWO,5?eOOQP1G/u1G/uO%DWQWO1G/uO%D]QWO'#D_OOQO'#Dt'#DtO%DhQWO'#DtO%DmQWO'#I{OOQO'#Iz'#IzO%DuQWO,5:_O%DzQWO'#DtO%EPQWO'#DtOOQP1G0Q1G0QOOQP1G0S1G0SOOQP1G0X1G0XO%EXQXO1G1jO%EdQXO'#FeOOQP,5>_,5>_O!1PQ^O'#FeOOQP-E;q-E;qO$>]QYO1G1jOOQO7+'S7+'SOOQO,5<T,5<TO%ErQWO,5<UO.YQ_O,5<UO%EwQWO,5<VO%FRQWO'#HtO%FdQWO,5@SOOQO1G1n1G1nOOQQ-E;t-E;tOOQV1G2Q1G2QO%FlQYO1G2QO#DcQYO7+(YO$>]QYO7+$xOOQV7+'j7+'jO%FsQWO7+(oO%FxQWO7+(oOOQV7+'p7+'pO%/wQWO7+'pO%F}QWO7+'pO%GVQWO7+'pOOQV7+(Q7+(QO%/wQWO7+(QO#CpQWO7+(QOOQV7+(S7+(SO%0gQWO7+(SO#C{QWO7+(SO$>]QYO7+(WO%GeQWO7+(WO#HUQYO7+(cO%GjQWO7+(YO#DfQWO7+(YOOQV7+(c7+(cO%5tQWO7+(cO%5yQWO7+(cO#HXQWO7+(cOOQV7+(g7+(gO$>]QYO7+(pO%GxQWO7+(pO!1dQWO7+(pOOQV7+$v7+$vO%G}QWO7+$vO%HSQZO1G3ZO%JfQWO1G4jOOQO1G4j1G4jOOQR1G.}1G.}O#.WQWO1G.}O%JkQWO'#KQOOQO'#HW'#HWO%J|QWO'#HXO%KXQWO'#KQOOQO'#KP'#KPO%KaQWO,5=qO%KfQYO'#H[O%LrQWO'#GmO%L}QYO'#CtO%MXQWO'#GmO$>]QYO1G3ZOOQR1G3g1G3gO#7aQWO1G3ZO%M^QZO1G3bO$>]QYO1G3bO& mQYO'#IVO& }QWO,5@mOOQR1G3d1G3dOOQR1G3f1G3fO.YQ_O1G3fOOQR1G3k1G3kO&!VQYO7+$cO&!_QYO'#KOOOQQ'#J}'#J}O&!gQYO1G3[O&!lQZO1G3cOOQQ7+$y7+$yO&${QWO7+$yO&%QQWO7+(bOOQV7+(b7+(bO%5tQWO7+(bO$>]QYO7+(bO#FYQYO7+(bO&%YQWO7+(bO!.cQ_O1G/nO&%hQWO7+%WO$?[QWO7+'SO&%pQWO'#EhO&%{Q^O'#EhOOQU'#Ho'#HoO&%{Q^O,5;ROOQV,5;R,5;RO&&VQWO,5;RO&&[Q^O,5;RO!0zQWO7+'_OOQV7+'a7+'aO&&iQWO7+'cO&&qQWO7+'cO&&xQWO7+$xO&'TQ!fO7+'fO&'[Q!fO7+'fOOQV7+(o7+(oO!1dQWO7+(oO&'cQYO,5<lO&'nQYO,5<lO!1dQWO'#GWO&'|QWO'#JpO&([QWO'#G^O!BxQWO'#G^O&(aQWO'#JpOOQO'#Jo'#JoO&(iQWO,5<wOOQO'#DX'#DXO&(nQYO'#JrO&)}QWO'#JrO$>]QYO'#JrOOQO'#Jq'#JqO&*YQWO,5<yO&*_QWO'#GZO#D^QWO'#G[O&*gQWO'#G[O&*oQWO'#JmOOQO'#Jl'#JlO&*zQYO'#GTOOQO,5<s,5<sO&+PQWO7+'pO&+UQWO'#JtO&+dQWO'#GeO#BxQWO'#GeO&+uQWO'#JtOOQO'#Js'#JsO&+}QWO,5=OO$>]QYO'#GUO&,SQYO'#JkOOQQ,5<n,5<nO&,kQWO7+(WOOQV7+(e7+(eO&.TQ^O'#D|O&._QWO'#GlO&.gQ^O'#JwOOQO'#Gn'#GnO&.nQWO'#JwOOQO'#Jv'#JvO&.vQWO,5=VO&.{QWO'#I`O&/]Q^O'#GmO&/dQWO'#IqO&/rQWO'#GmOOQV7+(Y7+(YO&/zQWO7+(YO$>]QYO7+(YO&0SQYO'#HxO&0hQYO1G2WOOQQ1G2W1G2WOOQQ,5<m,5<mO$>]QYO,5<qO&0pQWO,5<rO&0uQWO7+(bO&1QQWO7+(fO&1XQWO7+(fOOQV7+(f7+(fO.YQ_O7+(fO$>]QYO7+(fO&1dQWO'#IRO&1nQWO,5@hOOQO1G3Q1G3QOOQO1G2}1G2}OOQO1G3P1G3POOQO1G3R1G3ROOQO1G3S1G3SOOQO1G3O1G3OO&1vQWO7+(pO$>]QYO,59fO&2RQ^O'#ISO&2xQYO,5?QOOQR1G/P1G/PO&3QQ!bO,5:pO&3VQ!fO,5:rOOQS-E;l-E;lOOQV1G0Z1G0ZOOQV1G0g1G0gOOQV1G0h1G0hO&3^QWO'#JTOOQO1G.o1G.oOOQV<<Gr<<GrO&3iQWO1G5iO$5zQ_O,5>]O&3qQWO,5>]OOQO-E;o-E;oOOQO<<Jj<<JjO&3{QWO<<JjOOQO<<Jk<<JkO&4SQXO7+%`O&5TQWO,5>WOOQO-E;j-E;jOOQP7+%a7+%aO!1PQ^O,5:`O&5cQWO'#HmO&5wQWO,5?gOOQP1G/y1G/yOOQO,5:`,5:`O&6PQWO,5:`O%DzQWO,5:`O$>]QYO,5<PO&6UQXO,5<PO&6dQXO7+'UO.YQ_O1G1pO&6oQWO1G1pOOQO,5>`,5>`OOQO-E;r-E;rOOQV7+'l7+'lO&6yQWO<<KtO#DfQWO<<KtO&7XQWO<<HdOOQV<<LZ<<LZO!1dQWO<<LZOOQV<<K[<<K[O&7dQWO<<K[O%/wQWO<<K[O&7iQWO<<K[OOQV<<Kl<<KlO%/wQWO<<KlOOQV<<Kn<<KnO%0gQWO<<KnO&7qQWO<<KrO$>]QYO<<KrOOQV<<K}<<K}O%5tQWO<<K}O%5yQWO<<K}O#HXQWO<<K}OOQV<<Kt<<KtO&7yQWO<<KtO$>]QYO<<KtO&8RQWO<<L[O$>]QYO<<L[O&8^QWO<<L[OOQV<<Hb<<HbO$>]QYO7+(uOOQO7+*U7+*UOOQR7+$i7+$iO&8cQWO,5@lOOQO'#Gm'#GmO&8kQWO'#GmO&8vQYO'#IUO&8cQWO,5@lOOQR1G3]1G3]O&:cQYO,5=vO&;rQYO,5=XO&;|QWO,5=XOOQO,5=X,5=XOOQR7+(u7+(uO&<RQZO7+(uO&>eQZO7+(|O&@tQWO,5>qOOQO-E<T-E<TO&APQWO7+)QOOQO<<G}<<G}O&AWQYO'#ITO&AcQYO,5@jOOQQ7+(v7+(vOOQQ<<He<<HeO$>]QYO<<K|OOQV<<K|<<K|O&0uQWO<<K|O&AkQWO<<K|O%5tQWO<<K|O&AsQWO7+%YOOQV<<Hr<<HrOOQO<<Jn<<JnO.YQ_O,5;SO&AzQWO,5;SO.YQ_O'#EjO&BPQWO,5;SOOQU-E;m-E;mO&B[QWO1G0mOOQV1G0m1G0mO&%{Q^O1G0mOOQV<<Jy<<JyO!.cQ_O<<J}OOQV<<J}<<J}OOQV<<Hd<<HdO.YQ_O<<HdO&BaQWO'#FvO&BfQWO<<KQO&BnQ!fO<<KQO&BuQWO<<KQO&BzQWO<<KQO&CSQ!fO<<KQOOQV<<KQ<<KQO&CZQWO<<LZO&C`QWO,5@[O$>]QYO,5<xO&ChQWO,5<xO&CmQWO'#H{O&C`QWO,5@[OOQV1G2c1G2cO&DRQWO,5@^O$>]QYO,5@^O&D^QYO'#H|O&EsQWO,5@^OOQO1G2e1G2eO%,nQWO,5<uOOQO,5<v,5<vO&E{QYO'#HzO&G_QWO,5@XO%,bQYO,5=pO$>]QYO,5<oO&GjQWO,5@`O.YQ_O,5=PO&GrQWO,5=PO&G}QWO,5=PO&H`QWO'#H}O&GjQWO,5@`OOQV1G2j1G2jO&HtQYO,5<pO%0lQYO,5>PO&I]QYO,5@VOOQV<<Kr<<KrO&ItQWO,5=XO&KfQ^O,5:hO&KmQWO,5=XO$>]QYO,5=WO&KuQWO,5@cO&K}QWO,5@cO&MvQ^O'#IPO&KuQWO,5@cOOQO1G2q1G2qO&NTQWO,5=WO&N]QWO<<KtO&NkQYO,5>oO&NvQYO,5>dO' UQYO,5>dOOQQ,5>d,5>dOOQQ-E;v-E;vOOQQ7+'r7+'rO' aQYO1G2]O$>]QYO1G2^OOQV<<LQ<<LQO.YQ_O<<LQO' lQWO<<LQO' sQWO<<LQOOQO,5>m,5>mOOQO-E<P-E<POOQV<<L[<<L[O.YQ_O<<L[O'!OQYO1G/QO'!ZQYO,5>nOOQQ,5>n,5>nO'!fQYO,5>nOOQQ-E<Q-E<QOOQS1G0[1G0[O'$tQ!fO1G0^O'%RQ!fO1G0^O'%YQWO1G3wOOQOAN@UAN@UO'%dQWO1G/zOOQO,5>X,5>XOOQO-E;k-E;kO!1PQ^O1G/zOOQO1G/z1G/zO'%oQWO1G/zO'%tQXO1G1kO$>]QYO1G1kO'&PQWO7+'[OOQVANA`ANA`O'&ZQWOANA`O$>]QYOANA`O'&cQWOANA`OOQVAN>OAN>OO.YQ_OAN>OO'&qQWOANAuOOQVAN@vAN@vO'&vQWOAN@vOOQVANAWANAWOOQVANAYANAYOOQVANA^ANA^O'&{QWOANA^OOQVANAiANAiO%5tQWOANAiO%5yQWOANAiO''TQWOANA`OOQVANAvANAvO.YQ_OANAvO''cQWOANAvO$>]QYOANAvOOQR<<La<<LaO''nQWO1G6WO%JkQWO,5>pOOQO'#HY'#HYO''vQWO'#HZOOQO,5>p,5>pOOQO-E<S-E<SO'(RQYO1G2sO'(]QWO1G2sOOQO1G2s1G2sO$>]QYO<<LaOOQR<<Ll<<LlOOQQ,5>o,5>oOOQQ-E<R-E<RO&0uQWOANAhOOQVANAhANAhO%5tQWOANAhO$>]QYOANAhO'(bQWO1G1rO')UQ^O1G0nO.YQ_O1G0nO'*zQWO,5;UO'+RQWO1G0nP'+WQWO'#ERP&%{Q^O'#HpOOQV7+&X7+&XO'+cQWO7+&XO&&qQWOAN@iO'+hQWOAN>OO!5oQWO,5<bOOQS,5>a,5>aO'+oQWOAN@lO'+tQWOAN@lOOQS-E;s-E;sOOQVAN@lAN@lO'+|QWOAN@lOOQVANAuANAuO',UQWO1G5vO',^QWO1G2dO$>]QYO1G2dO&'|QWO,5>gOOQO,5>g,5>gOOQO-E;y-E;yO',iQWO1G5xO',qQWO1G5xO&(nQYO,5>hO',|QWO,5>hO$>]QYO,5>hOOQO-E;z-E;zO'-XQWO'#JnOOQO1G2a1G2aOOQO,5>f,5>fOOQO-E;x-E;xO&'cQYO,5<lO'-gQYO1G2ZO'.RQWO1G5zO'.ZQWO1G2kO.YQ_O1G2kO'.eQWO1G2kO&+UQWO,5>iOOQO,5>i,5>iOOQO-E;{-E;{OOQQ,5>c,5>cOOQQ-E;u-E;uO'.pQWO1G2sO'/QQWO1G2rO'/]QWO1G5}O'/eQ^O,5>kOOQO'#Go'#GoOOQO,5>k,5>kO'/lQWO,5>kOOQO-E;}-E;}O$>]QYO1G2rO'/zQYO7+'xO'0VQWOANAlOOQVANAlANAlO.YQ_OANAlO'0^QWOANAvOOQS7+%x7+%xO'0eQWO7+%xO'0pQ!fO7+%xO'0}QWO7+%fO!1PQ^O7+%fO'1YQXO7+'VOOQVG26zG26zO'1eQWOG26zO'1sQWOG26zO$>]QYOG26zO'1{QWOG23jOOQVG27aG27aOOQVG26bG26bOOQVG26xG26xOOQVG27TG27TO%5tQWOG27TO'2SQWOG27bOOQVG27bG27bO.YQ_OG27bO'2ZQWOG27bOOQO1G4[1G4[OOQO7+(_7+(_OOQRANA{ANA{OOQVG27SG27SO%5tQWOG27SO&0uQWOG27SO'2fQ^O7+&YO'4PQWO7+'^O'4sQ^O7+&YO.YQ_O7+&YP.YQ_O,5;SP'6PQWO,5;SP'6UQWO,5;SOOQV<<Is<<IsOOQVG26TG26TOOQVG23jG23jOOQO1G1|1G1|OOQVG26WG26WO'6aQWOG26WP&B}QWO'#HuO'6fQWO7+(OOOQO1G4R1G4RO'6qQWO7++dO'6yQWO1G4SO$>]QYO1G4SO%,nQWO'#HyO'7UQWO,5@YO'7dQWO7+(VO.YQ_O7+(VOOQO1G4T1G4TOOQO1G4V1G4VO'7nQWO1G4VO'7|QWO7+(^OOQVG27WG27WO'8XQWOG27WOOQS<<Id<<IdO'8`QWO<<IdO'8kQWO<<IQOOQVLD,fLD,fO'8vQWOLD,fO'9OQWOLD,fOOQVLD)ULD)UOOQVLD,oLD,oOOQVLD,|LD,|O'9^QWOLD,|O.YQ_OLD,|OOQVLD,nLD,nO%5tQWOLD,nO'9eQ^O<<ItO';OQWO<<JxO';rQ^O<<ItP'=OQWO1G0nP'=oQ^O1G0nP.YQ_O1G0nP'?bQWO1G0nOOQVLD+rLD+rO'?gQWO7+)nOOQO,5>e,5>eOOQO-E;w-E;wO'?rQWO<<KqOOQVLD,rLD,rOOQSAN?OAN?OOOQV!$(!Q!$(!QO'?|QWO!$(!QOOQV!$(!h!$(!hO'@UQWO!$(!hOOQV!$(!Y!$(!YO'@]Q^OAN?`POQU7+&Y7+&YP'AvQWO7+&YP'BgQ^O7+&YP.YQ_O7+&YOOQV!)9El!)9ElOOQV!)9FS!)9FSPOQU<<It<<ItP'DYQWO<<ItP'DyQ^O<<ItPOQUAN?`AN?`O'FlQWO'#CnO'FsQXO'#CnO'GlQWO'#I`O'IRQXO'#I`O'IxQWO'#DpO'IxQWO'#DpO!.cQ_O'#EkO'JZQ_O'#EoO'JbQ_O'#FPO'MfQ_O'#FbO'MmQXO'#I`O'NdQ_O'#E}O( gQ_O'#FWO'IxQWO,5:[O'IxQWO,5:[O!.cQ_O,5;ZO!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;]O!.cQ_O,5;fO(!jQ_O,5;kO(%nQWO,5;kO(&OQWO,5;|O(&VQYO'#CuO(&bQYO'#CvO(&mQWO'#CwO(&mQWO'#CwO('OQYO'#CtO('ZQWO,5;iO('bQWO,5;rO('iQ_O,5;rO((oQ_O,5;|O'IxQWO1G/vO((vQWO1G0uO(*eQWO1G0wO(*oQWO1G0wO(,dQWO1G0wO(,kQWO1G0wO(.]QWO1G0wO(.dQWO1G0wO(0UQWO1G0wO(0]QWO1G0wO(0dQWO1G1QO(0tQWO1G1VO(1UQYO'#IeO(&mQWO,59cO(&mQWO,59cO(1aQWO1G1^O(1hQWO1G1hO(&mQWO1G.}O(1oQWO'#DpO!.^QXO'#FbO(1tQWO,5;ZO(1{QWO'#Cw",
 		stateData: "(2_~O&|OSUOS&}PQ~OPoOQ!QOSVOTVOZeO[lO^RO_RO`ROa!UOd[Og!nOsVOtVOuVOw!POyvO|!VO}mO!Q!dO!U!WO!W!XO!X!^O!Z!YO!]!pO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q`O'TQO'ZkO'^UO'gcO'qiO(QdO~O&}!sO~OZbX[bXdbXdlXobXwjX}bX!lbX!qbX!tbX#ObX#PbX#pbX'gbX'qbX'rbX'xbX'ybX'zbX'{bX'|bX'}bX(ObX(PbX(QbX(RbX(TbX~OybXXbX!ebX!PbXvbX#RbX~P$|OZ'SX['SXd'SXd'XXo'SXw'kXy'SX}'SX!l'SX!q'SX!t'SX#O'SX#P'SX#p'SX'g'SX'q'SX'r'SX'x'SX'y'SX'z'SX'{'SX'|'SX'}'SX(O'SX(P'SX(Q'SX(R'SX(T'SXv'SX~OX'SX!e'SX!P'SX#R'SX~P'ZOr!uO']!wO'_!uO~Od!xO~O^RO_RO`ROaRO'TQO~Od!}O~Od#PO[(SXo(SXy(SX}(SX!l(SX!q(SX!t(SX#O(SX#P(SX#p(SX'g(SX'q(SX'r(SX'x(SX'y(SX'z(SX'{(SX'|(SX'}(SX(O(SX(P(SX(Q(SX(R(SX(T(SXv(SX~OZ#OO~P*`OZ#RO[#QO~OQ!QO^#TO_#TO`#TOa#]Od#ZOg!nOyvO|!VO!Q!dO!U#^O!W!lO!]!pO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q#VO'T#SO~OPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!j#eO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xO[#}Oo#xO}#zO!l#yO!q#jO!t#yO#O#xO#P#uO#p$OO'g#gO'q#yO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO~OPoOQ!QOSVOTVOZeOd[OsVOtVOuVOw!PO!U#bO!W#cO!X!^O!Z!YO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sXo#sXy#sX}#sX!l#sX!q#sX!t#sX#O#sX#P#sX#p#sX'g#sX'q#sX'r#sX'x#sX'y#sX'z#sX'{#sX'|#sX'}#sX(O#sX(P#sX(Q#sX(R#sX(T#sXX#sX!e#sX!P#sXv#sX#R#sX~P)xOX(SX!e(SX!P(SXw(SX#R(SX~P*`OPoOQ!QOSVOTVOX$ROZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!P$XO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOQ!QOSVOTVO[$gO^$pO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!l$lO!q$hO#V$lO'T$YO'^UO'g$[O~O!j$rOP(XP~P<cOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Q$uO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xOw$vO~Oo'bX#O'bX#P'bX#p'bX'r'bX'x'bX'y'bX'z'bX'{'bX'|'bX'}'bX(O'bX(P'bX(R'bX(T'bX~OP%tXQ%tXS%tXT%tXZ%tX[%tX^%tX_%tX`%tXa%tXd%tXg%tXs%tXt%tXu%tXw%tXy%tX|%tX}%tX!Q%tX!U%tX!W%tX!X%tX!Z%tX!]%tX!l%tX!q%tX!t%tX#Y%tX#r%tX#{%tX$O%tX$b%tX$d%tX$f%tX$i%tX$m%tX$q%tX$s%tX%T%tX%V%tX%Z%tX%]%tX%^%tX%f%tX%j%tX%s%tX&z%tX'Q%tX'T%tX'Z%tX'^%tX'g%tX'q%tX(Q%tXv%tX~P@[Oy$xO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bXv'bX~P@[Ow$yO!Q(iX!U(iX!W(iX$q(iX%](iX%^(iX~Oy$zO~PEsO!Q$}O!U%UO!W!lO$m%OO$q%PO$s%QO%T%RO%V%SO%Z%TO%]!lO%^%VO%f%WO%j%XO%s%YO~O!Q!lO!U!lO!W!lO$q%[O%]!lO~O%^%VO~PGaOPoOQ!QOSVOTVOZeO[lO^RO_RO`ROa!UOd[Og!nOsVOtVOuVOw!POyvO|!VO}mO!Q!dO!U!WO!W!XO!X!^O!Z!YO!]!pO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q#VO'TQO'ZkO'^UO'gcO'qiO(QdO~Ov%`O~P]OQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO!Q{X!U{X!W{X$m{X$q{X$s{X%T{X%V{X%Z{X%]{X%^{X%f{X%j{X%s{X~P'ZO!Q{X!U{X!W{X$m{X$q{X$s{X%T{X%V{X%Z{X%]{X%^{X%f{X%j{X%s{X~O}%}O'T{XQ{XZ{X[{X^{X_{X`{Xa{Xd{Xg{X!q{X$f{X&W{X'Z{X(Q{X~PMuOg&PO%f%WO!Q(iX!U(iX!W(iX$q(iX%](iX%^(iX~Ow!PO~P! yOw!PO!X&RO~PEvOPoOQ!QOSVOTVOZeO[lO^9qO_9qO`9qOa9qOd9tOsVOtVOuVOw!PO}mO!U#bO!W#cO!X:zO!Z!YO!]&UO!l9wO!q9vO!t9wO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'T9oO'ZkO'^UO'gcO'q9wO(QdO~OPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOo#qXy#qX#O#qX#P#qX#p#qX'r#qX'x#qX'y#qX'z#qX'{#qX'|#qX'}#qX(O#qX(P#qX(R#qX(T#qXX#qX!e#qX!P#qXv#qX#R#qX~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOo#zXy#zX#O#zX#P#zX#p#zX'r#zX'x#zX'y#zX'z#zX'{#zX'|#zX'}#zX(O#zX(P#zX(R#zX(T#zXX#zX!e#zX!P#zXv#zX#R#zX~P)xO'ZkO[#}Xo#}Xy#}X}#}X!l#}X!q#}X!t#}X#O#}X#P#}X#p#}X'g#}X'q#}X'r#}X'x#}X'y#}X'z#}X'{#}X'|#}X'}#}X(O#}X(P#}X(Q#}X(R#}X(T#}XX#}X!e#}X!P#}Xv#}Xw#}X#R#}X~OPoO~OPoOQ!QOSVOTVOZeO[lO^9qO_9qO`9qOa9qOd9tOsVOtVOuVOw!PO}mO!U#bO!W#cO!X:zO!Z!YO!l9wO!q9vO!t9wO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'T9oO'ZkO'^UO'gcO'q9wO(QdO~O!S&_O~Ow!PO~O!j&bO~P<cO'T&cO~PEvOZ&eO~O'T&cO~O'^UOw(^Xy(^X!Q(^X!U(^X!W(^X$q(^X%](^X%^(^X~Oa&hO~P!1iO'T&iO~O_&nO'T&cO~OQ&oOZ&pO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO!j&uO~P<cO^&wO_&wO`&wOa&wOd'POw&|O'T&vO(Q&}O~O!i'UO!j'TO'T&cO~O&}!sO'O'VO'P'XO~Or!uO']'ZO'_!uO~OQ']O^'ia_'ia`'iaa'ia'T'ia~O['cOw'dO}'bO~OQ']O~OQ!QO^#TO_#TO`#TOa'kOd#ZO'T#SO~O['lO~OZbXdlXXbXobXPbX!SbX!ebX'rbX!PbX!ObXybX!ZbX#RbXvbX~O[bXwbX}bX~P!6mOZ'SXd'XXX'SX['SXo'SXw'SX}'SX#p'SXP'SX!S'SX!e'SX'r'SX!P'SX!O'SXy'SX!Z'SX#R'SXv'SX~O^#TO_#TO`#TOa'kO'T#SO~OZ'mO~Od'oO~OZ'SXd'XX~PMuOZ'pOX(SX!e(SX!P(SXw(SX#R(SX~P*`O[#}O}#zO(O#|O(R#fOo#_ay#_a!l#_a!q#_a!t#_a#O#_a#P#_a#p#_a'g#_a'q#_a'r#_a'x#_a'y#_a'z#_a'{#_a'|#_a'}#_a(P#_a(Q#_a(T#_aX#_a!e#_a!P#_av#_aw#_a#R#_a~Ow!PO!X&RO~Oy#caX#ca!e#ca!P#cav#ca#R#ca~P2gOPoOQ!QOSVOTVOZeOd[OsVOtVOuVOw!PO!U#bO!W#cO!X!^O!Z!YO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sao#say#sa}#sa!l#sa!q#sa!t#sa#O#sa#P#sa#p#sa'g#sa'q#sa'r#sa'x#sa'y#sa'z#sa'{#sa'|#sa'}#sa(O#sa(P#sa(Q#sa(R#sa(T#saX#sa!e#sa!P#sav#sa#R#sa~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q#VO'ZkO'^UO'gcO'qiO(QdO!P(UP~P)xOu(SO#w(TO'T(RO~O[#}O}#zO!q#jO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO!l#sa!t#sa#p#sa'q#sa~Oo#xO#O#xO#P#uOy#saX#sa!e#sa!P#sav#sa#R#sa~P!B}Oy(YO!e(WOX(WX~P2gOX(ZO~OPoOQ!QOSVOTVOX(ZOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOZ#RO~O!P(_O!e(WO~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q$UO'ZkO'^UO'gcO'qiO(QdO~P)xOZbXdlXwjX}jX!tbX'qbX~OP!RX!S!RX!e!RX'p!RX'r!RX!O!RXo!RXy!RX!P!RXX!RX!Z!RX#R!RXv!RX~P!JUOZ'SXd'XXw'kX}'kX!t'SX'q'SX~OP!`X!S!`X!e!`X'r!`X!O!`Xo!`Xy!`X!P!`XX!`X!Z!`X#R!`Xv!`X~P!KgOT(aOu(aO~O!t(bO'q(bOP!^X!S!^X!e!^X'r!^X!O!^Xo!^Xy!^X!P!^XX!^X!Z!^X#R!^Xv!^X~O^9rO_9rO`9yOa9yO'T9pO~Od(eO~O'p(fOP'hX!S'hX!e'hX'r'hX!O'hXo'hXy'hX!P'hXX'hX!Z'hX#R'hXv'hX~O!j&bO!P'lP~P<cOw(kO}(jO~O!j&bOX'lP~P<cO!j(oO~P<cOZ'pO!t(bO'q(bO~O!S(qO'r(pOP$WX!e$WX~O!e(rOP(YX~OP(tO~OP!aX!S!aX!e!aX'r!aX!O!aXo!aXy!aX!P!aXX!aX!Z!aX#R!aXv!aX~P!KgOy$UaX$Ua!e$Ua!P$Uav$Ua#R$Ua~P2gO!l(|O'Q#VO'T(xOv(ZP~OQ!QO^#TO_#TO`#TOa#]Od#ZOg!nOyvO|!VO!Q!dO!U#^O!W!lO!]!pO$i!eO$m!fO$q!gO$s!hO%T!iO%V!jO%Z!kO%]!lO%^!mO%f!oO%j!qO%s!rO'Q`O'T#SO~Ov)TO~P#$iOy)VO~PEsO%^)WO~PGaOa)ZO~P!1iO%f)`O~PEvO_)aO'T&cO~O!i)fO!j)eO'T&cO~O'^UO!Q(^X!U(^X!W(^X$q(^X%](^X%^(^X~Ov%uX~P2gOv)gO~PGyOv)gO~Ov)gO~P]OQiXQ'XXZiXd'XX}iX#piX(PiX~ORiXwiX$fiX$|iX[iXoiXyiX!liX!qiX!tiX#OiX#PiX'giX'qiX'riX'xiX'yiX'ziX'{iX'|iX'}iX(OiX(QiX(RiX(TiX!PiX!eiXXiXPiXviX!SiX#RiX~P#(kOQjXQlXRjXZjXdlX}jX#pjX(PjXwjX$fjX$|jX[jXojXyjX!ljX!qjX!tjX#OjX#PjX'gjX'qjX'rjX'xjX'yjX'zjX'{jX'|jX'}jX(OjX(QjX(RjX(TjX!PjX!ejXXjX!SjXPjXvjX#RjX~O%^)jO~PGaOQ']Od)kO~O^)mO_)mO`)mOa)mO'T%dO~Od)qO~OQ']OZ)uO})sOR'UX#p'UX(P'UXw'UX$f'UX$|'UX['UXo'UXy'UX!l'UX!q'UX!t'UX#O'UX#P'UX'g'UX'q'UX'r'UX'x'UX'y'UX'z'UX'{'UX'|'UX'}'UX(O'UX(Q'UX(R'UX(T'UX!P'UX!e'UXX'UXP'UXv'UX!S'UX#R'UX~OQ!QO^:bO_:^O`TOaTOd:aO%^)jO'T:_O~PGaOQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!j)yO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaOQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!P)|O!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO(P*OO~OR*QO#p*RO(P*PO~OQhXQ'XXZhXd'XX}hX(PhX~ORhX#phXwhX$fhX$|hX[hXohXyhX!lhX!qhX!thX#OhX#PhX'ghX'qhX'rhX'xhX'yhX'zhX'{hX'|hX'}hX(OhX(QhX(RhX(ThX!PhX!ehXXhXPhXvhX!ShX#RhX~P#4kOQ*SO~O})sO~OQ!QO^%vO_%cO`TOaTOd%jO$f%wO%^%xO'T%dO~PGaO!Q*VO!j*VO~O^*YO`*YOa*YO!O*ZO~OQ&oOZ*[O[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO[#}Oo:YO}#zO!l:ZO!q#jO!t:ZO#O:YO#P:VO#p$OO'g#gO'q:ZO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO~Ow'dX~P#9vOy#qaX#qa!e#qa!P#qav#qa#R#qa~P2gOy#zaX#za!e#za!P#zav#za#R#za~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!S&_O!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOo#zay#za#O#za#P#za#p#za'r#za'x#za'y#za'z#za'{#za'|#za'}#za(O#za(P#za(R#za(T#zaX#za!e#za!P#zav#za#R#za~P)xOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Q*eO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdO~P)xOw*fO~P#9vO$b*iO$d*jO$f*kO~O!O*lO'r(pO~O!S*nO~O'T*oO~Ow$yOy*qO~O'T*rO~OQ*uOw*vOy*yO}*wO$|*xO~OQ*uOw*vO$|*xO~OQ*uOw+QO$|*xO~OQ*uOo+VOy+XO!S+UO~OQ*uO}+ZO~OQ!QOZ%rO[%qO^%vO`TOaTOd%jOg%yO}%pO!U!lO!W!lO!q%oO$f%wO$q%[O%]!lO%^%xO&W%{O'T%dO'Z%eO(Q%zO~OR+bO_+^O!Q+cO~P#DkO_%cO!Q!lOw&UX$|&UX(P&UX~P#DkOw$yO$f+hO$|*xO(P*PO~OQ!QOZ*[O[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaOQ*uOw$yO!S+UO$|*xO~Oo+nOy+mO!S+oO'r(pO~OdlXy!RX#pbXv!RX!e!RX~Od'XXy(mX#p'SXv(mX!e(mX~Od+qO~O^#TO_#TO`#TOa'kOw&|O'T&vO(Q+vO~Ov(oP~P!3|O#p+{O~Oy+|O~O!S+}O~O&}!sO'O'VO'P,PO~Od,QO~OSVOTVO_%cOsVOtVOuVOw!PO!Q!lO'^UO~P#DkOS,^OT,^OZ,^O['cO_,YOd,^Oo,^Os,^Ou,^Ow'dOy,^O}'bO!S,^O!e,^O!l,^O!q,[O!t,^O!y,^O#O,^O#P,^O#Q,^O#R,^O'Q,^O'Z%eO'^UO'g,ZO'r,[O'v,_O'x,ZO'y,[O'z,[O'{,[O'|,]O'},]O(O,^O(P,`O(Q,`O(R,aO~O!P,dO~P#KkOX,gO~P#KkOv,iO~P#KkOo'tX#O'tX#P'tX#p'tX'r'tX'x'tX'y'tX'z'tX'{'tX'|'tX'}'tX(O'tX(P'tX(R'tX(T'tX~Oy,jO['tX}'tX!l'tX!q'tX!t'tX'g'tX'q'tX(Q'tXv'tX~P#NjOP$giQ$giS$giT$giZ$gi[$gi^$gi_$gi`$gia$gid$gig$gis$git$giu$giw$giy$gi|$gi}$gi!Q$gi!U$gi!W$gi!X$gi!Z$gi!]$gi!l$gi!q$gi!t$gi#Y$gi#r$gi#{$gi$O$gi$b$gi$d$gi$f$gi$i$gi$m$gi$q$gi$s$gi%T$gi%V$gi%Z$gi%]$gi%^$gi%f$gi%j$gi%s$gi&z$gi'Q$gi'T$gi'Z$gi'^$gi'g$gi'q$gi(Q$giv$gi~P#NjOX,kO~O['cOo,lOw'dO}'bOX]X~Oy#ciX#ci!e#ci!P#civ#ci#R#ci~P2gO[#}O}#zO'x#hO(O#|O(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!q#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'y#ei'z#ei'{#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O'g#ei(P#ei~P$'PO[#}O}#zO(O#|O(R#fOo#eiy#ei!l#ei!q#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'y#ei'z#ei'{#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O'g#ei'x#ei(P#ei(Q#ei(T#eiw#ei~P$)QO'g#gO(P#gO~P$'PO[#}O}#zO'g#gO'x#hO'y#iO'z#iO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'{#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O!q#ei~P$+`O!q#jO~P$+`O[#}O}#zO!q#jO'g#gO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'|#ei'}#eiX#ei!e#ei!P#eiv#ei#R#ei~O'r#ei~P$-hO'r#lO~P$-hO[#}O}#zO!q#jO#P#uO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiy#ei!l#ei!t#ei#O#ei#p#ei'q#ei'|#eiX#ei!e#ei!P#eiv#ei#R#ei~O'}#ei~P$/pO'}#mO~P$/pO[#}O}#zO!q#jO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO!l#ni!t#ni#p#ni'q#ni~Oo#xO#O#xO#P#uOy#niX#ni!e#ni!P#niv#ni#R#ni~P$1xO[#}O}#zO!q#jO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO'|#nO'}#mO(O#|O(P#gO(Q#hO(R#fO(T#hO!l#si!t#si#p#si'q#si~Oo#xO#O#xO#P#uOy#siX#si!e#si!P#siv#si#R#si~P$3yOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q#VO'ZkO'^UO'gcO'qiO(QdO~P)xO!e,sO!P(VX~P2gO!P,uO~OX,vO~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO'gcO'qiO(QdOX&fX!e&fX!P&fX~P)xO!e(WOX(Wa~Oy,zO!e(WOX(WX~P2gOX,{O~O!P,|O!e(WO~O!P-OO!e(WO~P2gOSVOTVOsVOtVOuVO'^UO'g$[O~P!6POP!baZca!S!ba!e!ba!tca'qca'r!ba!O!bao!bay!ba!P!baX!ba!Z!ba#R!bav!ba~O!e-TO'r(pO!P'mXX'mX~O!P-VO~O!i-`O!j-_O!l-[O'T-XOv'nP~OX-aO~O_%cO!Q!lO~P#DkO!j-gOP&gX!e&gX~P<cO!e(rOP(Ya~O!S-iO'r(pOP$Wa!e$Wa~Ow!PO(P*PO~OvbX!S!kX!ebX~O'Q#VO'T(xO~O!S-mO~O!e-oOv([X~Ov-qO~Ov-sO~P,cOv-sO~P#$iO_-uO'T&cO~O!S-vO~Ow$yOy-wO~OQ*uOw*vOy-zO}*wO$|*xO~OQ*uOo.UO~Oy._O~O!S.`O~O!j.bO'T&cO~Ov.cO~Ov.cO~PGyOQ']O^'Wa_'Wa`'Waa'Wa'T'Wa~Od.gO~OQ'XXQ'kXR'kXZ'kXd'XX}'kX#p'kX(P'kXw'kX$f'kX$|'kX['kXo'kXy'kX!l'kX!q'kX!t'kX#O'kX#P'kX'g'kX'q'kX'r'kX'x'kX'y'kX'z'kX'{'kX'|'kX'}'kX(O'kX(Q'kX(R'kX(T'kX!P'kX!e'kXX'kXP'kXv'kX!S'kX#R'kX~OQ!QOZ%rO[%qO^.rO_%cO`TOaTOd%jOg%yO}%pO!j.sO!q.pO!t.kO#V.mO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P(sP~PGaO#Q.tOR%wa#p%wa(P%waw%wa$f%wa$|%wa[%wao%way%wa}%wa!l%wa!q%wa!t%wa#O%wa#P%wa'g%wa'q%wa'r%wa'x%wa'y%wa'z%wa'{%wa'|%wa'}%wa(O%wa(Q%wa(R%wa(T%wa!P%wa!e%waX%waP%wav%wa!S%wa#R%wa~O%^.vO~PGaO(P*POR&Oa#p&Oaw&Oa$f&Oa$|&Oa[&Oao&Oay&Oa}&Oa!l&Oa!q&Oa!t&Oa#O&Oa#P&Oa'g&Oa'q&Oa'r&Oa'x&Oa'y&Oa'z&Oa'{&Oa'|&Oa'}&Oa(O&Oa(Q&Oa(R&Oa(T&Oa!P&Oa!e&OaX&OaP&Oav&Oa!S&Oa#R&Oa~O_%cO!Q!lO!j.xO(P*OO~P#DkO!e.yO(P*PO!P(uX~O!P.{O~OX.|Oy.}O(P*PO~O'Z%eOR(qP~OQ']O})sORfa#pfa(Pfawfa$ffa$|fa[faofayfa!lfa!qfa!tfa#Ofa#Pfa'gfa'qfa'rfa'xfa'yfa'zfa'{fa'|fa'}fa(Ofa(Qfa(Rfa(Tfa!Pfa!efaXfaPfavfa!Sfa#Rfa~OQ']O})sOR&Va#p&Va(P&Vaw&Va$f&Va$|&Va[&Vao&Vay&Va!l&Va!q&Va!t&Va#O&Va#P&Va'g&Va'q&Va'r&Va'x&Va'y&Va'z&Va'{&Va'|&Va'}&Va(O&Va(Q&Va(R&Va(T&Va!P&Va!e&VaX&VaP&Vav&Va!S&Va#R&Va~O!P/UO~Ow$yO$f/ZO$|*xO(P*PO~OQ!QOZ/[O[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaOo/^O'r(pO~O#W/_OP!YiQ!YiS!YiT!YiZ!Yi[!Yi^!Yi_!Yi`!Yia!Yid!Yig!Yio!Yis!Yit!Yiu!Yiw!Yiy!Yi|!Yi}!Yi!Q!Yi!U!Yi!W!Yi!X!Yi!Z!Yi!]!Yi!l!Yi!q!Yi!t!Yi#O!Yi#P!Yi#Y!Yi#p!Yi#r!Yi#{!Yi$O!Yi$b!Yi$d!Yi$f!Yi$i!Yi$m!Yi$q!Yi$s!Yi%T!Yi%V!Yi%Z!Yi%]!Yi%^!Yi%f!Yi%j!Yi%s!Yi&z!Yi'Q!Yi'T!Yi'Z!Yi'^!Yi'g!Yi'q!Yi'r!Yi'x!Yi'y!Yi'z!Yi'{!Yi'|!Yi'}!Yi(O!Yi(P!Yi(Q!Yi(R!Yi(T!YiX!Yi!e!Yi!P!Yiv!Yi!i!Yi!j!Yi#V!Yi#R!Yi~Oy#ziX#zi!e#zi!P#ziv#zi#R#zi~P2gOy$UiX$Ui!e$Ui!P$Uiv$Ui#R$Ui~P2gOv/eO!j&bO'Q`O~P<cOw/nO}/mO~Oy!RX#pbX~Oy/oO~O#p/pO~OR+bO_+dO!Q/sO'T&iO'Z%eO~Oa/zO|!VO'Q#VO'T(ROv(cP~OQ!QOZ%rO[%qO^%vO_%cO`TOa/zOd%jOg%yO|!VO}%pO!q%oO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P(eP~PGaOQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f0VO%^%xO&W%{O'T%dO'Z%eO(Q%zOw(`Py(`P~PGaOw*vO~Oy-zO$|*xO~Oa/zO|!VO'Q#VO'T*oOv(gP~Ow+QO~OQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f0VO%^%xO&W%{O'T%dO'Z%eO(Q%zO(R0`O~PGaOy0dO~OQ!QOSVOTVO[$gO^0lO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!j0mO!l$lO!q0eO!t0hO'Q#VO'T$YO'Z%eO'^UO'g$[O~O#V0nO!P(jP~P%1}Ow!POy0pO#Q0rO$|*xO~OR0uO!e0sO~P#(kOR0uO!S+UO!e0sO(P*OO~OR0uOo0wO!S+UO!e0sOQ'VXZ'VX}'VX#p'VX(P'VX~OR0uOo0wO!e0sO~OR0uO!e0sO~O$f/ZO(P*PO~Ow$yO~Ow$yO$|*xO~Oo0}Oy0|O!S1OO'r(pO~O!e1POv(pX~Ov1RO~O^#TO_#TO`#TOa'kOw&|O'T&vO(Q1VO~Oo1YOQ'VXR'VXZ'VX}'VX!e'VX(P'VX~O!e1ZO(P*POR'YX~O!e1ZOR'YX~O!e1ZO(P*OOR'YX~OR1]O~O!S1^OS'wXT'wXZ'wX['wX_'wXd'wXo'wXs'wXu'wXw'wXy'wX}'wX!P'wX!e'wX!l'wX!q'wX!t'wX!y'wX#O'wX#P'wX#Q'wX#R'wX'Q'wX'Z'wX'^'wX'g'wX'r'wX'v'wX'x'wX'y'wX'z'wX'{'wX'|'wX'}'wX(O'wX(P'wX(Q'wX(R'wXX'wXv'wX~O}1_O~O!P1aO~P#KkOX1bO~P#KkOv1cO~P#KkOS,^OT,^OZ,^O['cO_1dOd,^Oo,^Os,^Ou,^Ow'dOy,^O}'bO!S,^O!e,^O!l,^O!q,[O!t,^O!y,^O#O,^O#P,^O#Q,^O#R,^O'Q,^O'Z%eO'^UO'g,ZO'r,[O'v,_O'x,ZO'y,[O'z,[O'{,[O'|,]O'},]O(O,^O(P,`O(Q,`O(R,aO~OX1fO~Oy,jO~O!e,sO!P(Va~P2gOPoOQ!QOSVOTVOZeO[lOd[OsVOtVOuVOw!PO}mO!U#bO!W#cO!X!^O!Z!YO!liO!qgO!tiO#Y!_O#r!ZO#{![O$O!]O$b!`O$d!bO$f!cO'Q#VO'ZkO'^UO'gcO'qiO(QdO!P&eX!e&eX~P)xO!e,sO!P(Va~OX&fa!e&fa!P&fa~P2gOX1kO~P2gO!P1mO!e(WO~OP!biZci!S!bi!e!bi!tci'qci'r!bi!O!bio!biy!bi!P!biX!bi!Z!bi#R!biv!bi~O'r(pOP!oi!S!oi!e!oi!O!oio!oiy!oi!P!oiX!oi!Z!oi#R!oiv!oi~O!j&bO!P&`X!e&`XX&`X~P<cO!e-TO!P'maX'ma~O!P1qO~Ov!RX!S!kX!e!RX~O!S1rO~O!e1sOv'oX~Ov1uO~O'T-XO~O!j1xO'T-XO~O(P*POP$Wi!e$Wi~O!S1yO'r(pOP$XX!e$XX~O!S1|O~Ov$_a!e$_a~P2gO!l(|O'Q#VO'T(xOv&hX!e&hX~O!e-oOv([a~Ov2QO~P,cOy2UO~O#p2VO~Oy2WO$|*xO~Ow*vOy2WO}*wO$|*xO~Oo2aO~Ow!POy2fO#Q2hO$|*xO~O!S2jO~Ov2lO~O#Q2mOR%wi#p%wi(P%wiw%wi$f%wi$|%wi[%wio%wiy%wi}%wi!l%wi!q%wi!t%wi#O%wi#P%wi'g%wi'q%wi'r%wi'x%wi'y%wi'z%wi'{%wi'|%wi'}%wi(O%wi(Q%wi(R%wi(T%wi!P%wi!e%wiX%wiP%wiv%wi!S%wi#R%wi~Od2nO~O^2qO!j.sO!q2rO'Q#VO'Z%eO~O(P*PO!P%{X!e%{X~O!e2sO!P(tX~O!P2uO~OQ!QOZ%rO[%qO^2wO_%cO`TOaTOd%jOg%yO}%pO!j2xO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(Q%zO~PGaO^2yO!j2xO(P*OO~O!P%aX!e%aX~P#4kO^2yO~O(P*POR&Oi#p&Oiw&Oi$f&Oi$|&Oi[&Oio&Oiy&Oi}&Oi!l&Oi!q&Oi!t&Oi#O&Oi#P&Oi'g&Oi'q&Oi'r&Oi'x&Oi'y&Oi'z&Oi'{&Oi'|&Oi'}&Oi(O&Oi(Q&Oi(R&Oi(T&Oi!P&Oi!e&OiX&OiP&Oiv&Oi!S&Oi#R&Oi~O_%cO!Q!lO!P&yX!e&yX~P#DkO!e.yO!P(ua~OR3QO(P*PO~O!e3ROR(rX~OR3TO~O(P*POR&Pi#p&Piw&Pi$f&Pi$|&Pi[&Pio&Piy&Pi}&Pi!l&Pi!q&Pi!t&Pi#O&Pi#P&Pi'g&Pi'q&Pi'r&Pi'x&Pi'y&Pi'z&Pi'{&Pi'|&Pi'}&Pi(O&Pi(Q&Pi(R&Pi(T&Pi!P&Pi!e&PiX&PiP&Piv&Pi!S&Pi#R&Pi~O!P3UO~O$f3VO(P*PO~Ow$yO$f3VO$|*xO(P*PO~Ow!PO!Z!YO~O!Z3aO#R3_O'r(pO~O!j&bO'Q#VO~P<cOv3eO~Ov3eO!j&bO'Q`O~P<cO!O3hO'r(pO~Ow!PO~P#9vOo3kOy3jO(P*PO~O!P3oO~P%;pOv3rO~P%;pOR0uO!S+UO!e0sO~OR0uOo0wO!S+UO!e0sO~Oa/zO|!VO'Q#VO'T(RO~O!S3uO~O!e3wOv(dX~Ov3yO~OQ!QOZ%rO[%qO^%vO_%cO`TOa/zOd%jOg%yO|!VO}%pO!q%oO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO~PGaO!e3|O(P*PO!P(fX~O!P4OO~O!S4PO(P*OO~O!S+UO(P*PO~O!e4ROw(aXy(aX~OQ4TO~Oy2WO~Oa/zO|!VO'Q#VO'T*oO~Oo4WOw*vO}*wOv%XX!e%XX~O!e4ZOv(hX~Ov4]O~O(P4_Oy(_Xw(_X$|(_XR(_Xo(_X!e(_X~Oy4aO(P*PO~OQ!QOSVOTVO[$gO^4bO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!l$lO!q$hO#V$lO'T$YO'^UO'g$[O~O!j4cO'Z%eO~P&,sO!S4eO'r(pO~O#V4gO~P%1}O!e4hO!P(kX~O!P4jO~O!P%aX!S!aX!e%aX'r!aX~P!KgO!j&bO~P&,sO!e4hO!P(kX!S'eX'r'eX~O^2yO!j2xO~Ow!POy2fO~O_4pO!Q/sO'T&iO'Z%eOR&lX!e&lX~OR4rO!e0sO~O!S4tO~Ow$yO$|*xO(P*PO~Oy4uO~P2gOo4vOy4uO(P*PO~Ov&uX!e&uX~P!3|O!e1POv(pa~Oo4|Oy4{O(P*PO~OSVOTVO_%cOsVOtVOuVOw!PO!Q!lO'^UOR&vX!e&vX~P#DkO!e1ZOR'Ya~O!y5SO~O!P5TO~P#KkO!S1^OX'wX#R'wX~O!e,sO!P(Vi~O!P&ea!e&ea~P2gOX5WO~P2gOP!bqZcq!S!bq!e!bq!tcq'qcq'r!bq!O!bqo!bqy!bq!P!bqX!bq!Z!bq#R!bqv!bq~O'r(pO!P&`a!e&`aX&`a~O!i-`O!j-_O!l5YO'T-XOv&aX!e&aX~O!e1sOv'oa~O!S5[O~O!S5`O'r(pOP$Xa!e$Xa~O(P*POP$Wq!e$Wq~Ov$^i!e$^i~P2gOw!POy5bO#Q5dO$|*xO~Oo5gOy5fO(P*PO~Oy5iO~Oy5iO$|*xO~Oy5mO(P*PO~Ow!POy5bO~Oo5tOy5sO(P*PO~O!S5vO~O!e2sO!P(ta~O^2yO!j2xO'Z%eO~OQ!QOZ%rO[%qO^.rO_%cO`TOaTOd%jOg%yO}%pO!j.sO!q.pO!t5zO#V5|O$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P&xX!e&xX~PGaOQ!QOZ%rO[%qO^6OO_%cO`TOaTOd%jOg%yO}%pO!j6PO!q%oO$f%wO%^%xO&W%{O'T%dO'Z%eO(P*OO(Q%zO~PGaO!P%aa!e%aa~P#4kO^6QO~O#Q6ROR%wq#p%wq(P%wqw%wq$f%wq$|%wq[%wqo%wqy%wq}%wq!l%wq!q%wq!t%wq#O%wq#P%wq'g%wq'q%wq'r%wq'x%wq'y%wq'z%wq'{%wq'|%wq'}%wq(O%wq(Q%wq(R%wq(T%wq!P%wq!e%wqX%wqP%wqv%wq!S%wq#R%wq~O(P*POR&Oq#p&Oqw&Oq$f&Oq$|&Oq[&Oqo&Oqy&Oq}&Oq!l&Oq!q&Oq!t&Oq#O&Oq#P&Oq'g&Oq'q&Oq'r&Oq'x&Oq'y&Oq'z&Oq'{&Oq'|&Oq'}&Oq(O&Oq(Q&Oq(R&Oq(T&Oq!P&Oq!e&OqX&OqP&Oqv&Oq!S&Oq#R&Oq~O(P*PO!P&ya!e&ya~OX6SO~P2gO'Z%eOR&wX!e&wX~O!e3ROR(ra~O$f6YO(P*PO~Ow![q~P#9vO#R6]O~O!Z3aO#R6]O'r(pO~Ov6bO~O#R6fO~Oy6gO!P6hO~O!P6hO~P%;pOy6kO~Ov6kOy6gO~Ov6kO~P%;pOy6mO~O!e3wOv(da~O!S6pO~Oa/zO|!VO'Q#VO'T(ROv&oX!e&oX~O!e3|O(P*PO!P(fa~OQ!QOZ%rO[%qO^%vO_%cO`TOa/zOd%jOg%yO|!VO}%pO!q%oO$f%wO%^%xO&W%{O'Q#VO'T%dO'Z%eO(Q%zO!P&pX!e&pX~PGaO!e3|O!P(fa~OQ!QOZ%rO[%qO^%vO_%cO`TOaTOd%jOg%yO}%pO!q%oO$f0VO%^%xO&W%{O'T%dO'Z%eO(Q%zOw&nX!e&nXy&nX~PGaO!e4ROw(aay(aa~O!e4ZOv(ha~Oo7SOv%Xa!e%Xa~Oo7SOw*vO}*wOv%Xa!e%Xa~Oa/zO|!VO'Q#VO'T*oOv&qX!e&qX~O(P*POy$xaw$xa$|$xaR$xao$xa!e$xa~O(P4_Oy(_aw(_a$|(_aR(_ao(_a!e(_a~O!P%aa!S!aX!e%aa'r!aX~P!KgOQ!QOSVOTVO[$gO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!j&bO!l$lO!q$hO#V$lO'T$YO'^UO'g$[O~O^7ZO~P&JUO^6QO!j6PO~O!e4hO!P(ka~O!e4hO!P(ka!S'eX'r'eX~OQ!QOSVOTVO[$gO^0lO_$ZO`9yOa9yOd$aOsVOtVOuVO}$eO!i$qO!j0mO!l$lO!q0eO!t7_O'Q#VO'T$YO'Z%eO'^UO'g$[O~O#V7aO!P&sX!e&sX~P&L]O!S7cO'r(pO~Ow!POy5bO$|*xO(P*PO~O!S+UOR&la!e&la~Oo0wO!S+UOR&la!e&la~Oo0wOR&la!e&la~O(P*POR$yi!e$yi~Oy7fO~P2gOo7gOy7fO(P*PO~O(P*PORni!eni~O(P*POR&va!e&va~O(P*OOR&va!e&va~OS,^OT,^OZ,^O_,^Od,^Oo,^Os,^Ou,^Oy,^O!S,^O!e,^O!l,^O!q,[O!t,^O!y,^O#O,^O#P,^O#Q,^O#R,^O'Q,^O'Z%eO'^UO'g,ZO'r,[O'x,ZO'y,[O'z,[O'{,[O'|,]O'},]O(O,^O~O(P7iO(Q7iO(R7iO~P'!qO!P7kO~P#KkO!P&ei!e&ei~P2gO'r(pOv!hi!e!hi~O!S7mO~O(P*POP$Xi!e$Xi~Ov$^q!e$^q~P2gOw!POy7oO~Ow!POy7oO#Q7rO$|*xO~Oy7tO~Oy7uO~Oy7vO(P*PO~Ow!POy7oO$|*xO(P*PO~Oo7{Oy7zO(P*PO~O!e2sO!P(ti~O(P*PO!P%}X!e%}X~O!P%ai!e%ai~P#4kO^8OO~O!e8TO['bXv$`i}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[iS#[iT#[i[#[i^#[i_#[i`#[ia#[id#[is#[it#[iu#[iv$`i}#[i!i#[i!j#[i!l#[i!q#[i!t'bX#V#[i'Q#[i'T#[i'^#[i'g#[i'q'bX(Q'bX~P@[O#R#^a~P2gO#R8WO~O!Z3aO#R8XO'r(pO~Ov8[O~Oy8^O~P2gOy8`O~Oy6gO!P8aO~Ov8`Oy6gO~O!e3wOv(di~O(P*POv%Qi!e%Qi~O!e3|O!P(fi~O!e3|O(P*PO!P(fi~O(P*PO!P&pa!e&pa~O(P8hOw(bX!e(bXy(bX~O(P*PO!S$wiy$wiw$wi$|$wiR$wio$wi!e$wi~O!e4ZOv(hi~Ov%Xi!e%Xi~P2gOo8kOv%Xi!e%Xi~O!P%ai!S!aX!e%ai'r!aX~P!KgO(P*PO!P%`i!e%`i~O!e4hO!P(ki~O#V8nO~P&L]O!P&sa!S'eX!e&sa'r'eX~O(P*POR$zq!e$zq~Oy8pO~P2gOy7zO~P2gO(P8rO(Q8rO(R8rO~O(P8rO(Q8rO(R8rO~P'!qO'r(pOv!hq!e!hq~O(P*POP$Xq!e$Xq~Ow!POy8uO$|*xO(P*PO~Ow!POy8uO~Oy8xO~P2gOy8zO~P2gOo8|Oy8zO(P*PO~OQ#[qS#[qT#[q[#[q^#[q_#[q`#[qa#[qd#[qs#[qt#[qu#[qv$`q}#[q!i#[q!j#[q!l#[q!q#[q#V#[q'Q#[q'T#[q'^#[q'g#[q~O!e9PO['bXv$`q}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[Oo'bX!t'bX#O'bX#P'bX#p'bX'q'bX'r'bX'x'bX'y'bX'z'bX'{'bX'|'bX'}'bX(O'bX(P'bX(Q'bX(R'bX(T'bX~P'2fO#R9UO~O!Z3aO#R9UO'r(pO~Oy9WO~O(P*POv%Qq!e%Qq~O!e3|O!P(fq~O(P*PO!P&pi!e&pi~O(P8hOw(ba!e(bay(ba~Ov%Xq!e%Xq~P2gO!P&si!S'eX!e&si'r'eX~O(P*PO!P%`q!e%`q~Oy9]O~P2gO(P9^O(Q9^O(R9^O~O'r(pOv!hy!e!hy~Ow!POy9_O~Ow!POy9_O$|*xO(P*PO~Oy9aO~P2gOQ#[yS#[yT#[y[#[y^#[y_#[y`#[ya#[yd#[ys#[yt#[yu#[yv$`y}#[y!i#[y!j#[y!l#[y!q#[y#V#[y'Q#[y'T#[y'^#[y'g#[y~O!e9dO['bXv$`y}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[Oo'bX!t'bX#O'bX#P'bX#p'bX'q'bX'r'bX'x'bX'y'bX'z'bX'{'bX'|'bX'}'bX(O'bX(P'bX(Q'bX(R'bX(T'bX~P'9eO!e9eO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[iS#[iT#[i[#[i^#[i_#[i`#[ia#[id#[is#[it#[iu#[i}#[i!i#[i!j#[i!l#[i!q#[i!t'bX#V#[i'Q#[i'T#[i'^#[i'g#[i'q'bX(Q'bX~P@[O#R9hO~O(P*PO!P&pq!e&pq~Ov%Xy!e%Xy~P2gOw!POy9iO~Oy9jO~P2gOQ#[!RS#[!RT#[!R[#[!R^#[!R_#[!R`#[!Ra#[!Rd#[!Rs#[!Rt#[!Ru#[!Rv$`!R}#[!R!i#[!R!j#[!R!l#[!R!q#[!R#V#[!R'Q#[!R'T#[!R'^#[!R'g#[!R~O!e9kO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[qS#[qT#[q[#[q^#[q_#[q`#[qa#[qd#[qs#[qt#[qu#[q}#[q!i#[q!j#[q!l#[q!q#[q!t'bX#V#[q'Q#[q'T#[q'^#[q'g#[q'q'bX(Q'bX~P@[O!e9nO['bX}'bX!l'bX!q'bX!t'bX'g'bX'q'bX(Q'bX~P@[OQ#[yS#[yT#[y[#[y^#[y_#[y`#[ya#[yd#[ys#[yt#[yu#[y}#[y!i#[y!j#[y!l#[y!q#[y!t'bX#V#[y'Q#[y'T#[y'^#[y'g#[y'q'bX(Q'bX~P@[OwbX~P$|OwjX}jX!tbX'qbX~P!6mOZ'SXd'XXo'SXw'kX!t'SX'q'SX'r'SX~O['SXd'SXw'SX}'SX!l'SX!q'SX#O'SX#P'SX#p'SX'g'SX'x'SX'y'SX'z'SX'{'SX'|'SX'}'SX(O'SX(P'SX(Q'SX(R'SX(T'SX~P'GTOP'SX}'kX!S'SX!e'SX!O'SXy'SX!P'SXX'SX!Z'SX#R'SXv'SX~P'GTO^9qO_9qO`9qOa9qO'T9oO~O!j:OO~P!.cOPoOQ!QOSVOTVOZeOd9tOsVOtVOuVO!U#bO!W#cO!X:zO!Z!YO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sXo#sXw#sX}#sX!l#sX!q#sX!t#sX#O#sX#P#sX#p#sX'g#sX'q#sX'r#sX'x#sX'y#sX'z#sX'{#sX'|#sX'}#sX(O#sX(P#sX(Q#sX(R#sX(T#sX~P'IxO#Q$uO~P!.cO}'kXP'SX!S'SX!e'SX!O'SXy'SX!P'SXX'SX!Z'SX#R'SXv'SX~P'GTOo#qX#O#qX#P#qX#p#qX'r#qX'x#qX'y#qX'z#qX'{#qX'|#qX'}#qX(O#qX(P#qX(R#qX(T#qX~P!.cOo#zX#O#zX#P#zX#p#zX'r#zX'x#zX'y#zX'z#zX'{#zX'|#zX'}#zX(O#zX(P#zX(R#zX(T#zX~P!.cOPoOQ!QOSVOTVOZeOd9tOsVOtVOuVO!U#bO!W#cO!X:zO!Z!YO#Y!_O#r9zO#{9{O$O!]O$b!`O$d!bO$f!cO'ZkO'^UO[#sao#saw#sa}#sa!l#sa!q#sa!t#sa#O#sa#P#sa#p#sa'g#sa'q#sa'r#sa'x#sa'y#sa'z#sa'{#sa'|#sa'}#sa(O#sa(P#sa(Q#sa(R#sa(T#sa~P'IxOo:YO#O:YO#P:VOw#sa~P!B}Ow$Ua~P#9vOQ'XXd'XX}iX~OQlXdlX}jX~O^:sO_:sO`:sOa:sO'T:_O~OQ'XXd'XX}hX~Ow#qa~P#9vOw#za~P#9vO!S&_Oo#za#O#za#P#za#p#za'r#za'x#za'y#za'z#za'{#za'|#za'}#za(O#za(P#za(R#za(T#za~P!.cO#Q*eO~P!.cOw#ci~P#9vO[#}O}#zO'x#hO(O#|O(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!q#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'y#ei'z#ei'{#ei'|#ei'}#ei~O'g#ei(P#ei~P((}O'g#gO(P#gO~P((}O[#}O}#zO'g#gO'x#hO'y#iO'z#iO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'r#ei'{#ei'|#ei'}#ei~O!q#ei~P(*yO!q#jO~P(*yO[#}O}#zO!q#jO'g#gO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!t#ei#O#ei#P#ei#p#ei'q#ei'|#ei'}#ei~O'r#ei~P(,rO'r#lO~P(,rO[#}O}#zO!q#jO#P:VO'g#gO'r#lO'x#hO'y#iO'z#iO'{#kO(O#|O(P#gO(Q#hO(R#fO(T#hOo#eiw#ei!l#ei!t#ei#O#ei#p#ei'q#ei'|#ei~O'}#ei~P(.kO'}#mO~P(.kOo:YO#O:YO#P:VOw#ni~P$1xOo:YO#O:YO#P:VOw#si~P$3yOQ'XXd'XX}'kX~Ow#zi~P#9vOw$Ui~P#9vOd9}O~Ow#ca~P#9vOd:uO~OU'x_'v'P'O'^s!y'^'T'Z~",
@@ -29462,7 +29682,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const rustLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "rust",
-		parser: /*@__PURE__*/ parser$2.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$3.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			IfExpression: /*@__PURE__*/ continuedIndent({ except: /^\s*({|else\b)/ }),
 			"String BlockComment": () => null,
 			"AttributeItem": (cx) => cx.continue(),
@@ -29612,7 +29832,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		fallthrough: 296,
 		defer: 300
 	};
-	const parser$1 = LRParser.deserialize({
+	const parser$2 = LRParser.deserialize({
 		version: 14,
 		states: "!=xO#{QQOOP$SOQOOO&UQTO'#CbO&]QRO'#FlO]QQOOOOQP'#Cn'#CnOOQP'#Co'#CoO&eQQO'#C|O(kQQO'#C{O)]QRO'#GiO+tQQO'#D_OOQP'#Ge'#GeO+{QQO'#GeO.aQTO'#GaO.hQQO'#D`OOQP'#Gm'#GmO.mQRO'#GdO/hQQO'#DgOOQP'#Gd'#GdO/uQQO'#DrO2bQQO'#DsO4QQTO'#GqO,^QTO'#GaO4XQQO'#DxO4^QQO'#D{OOQO'#EQ'#EQOOQO'#ER'#EROOQO'#ES'#ESOOQO'#ET'#ETO4cQQO'#EPO5}QQO'#EPOOQP'#Ga'#GaO6UQQO'#E`O6^QQO'#EcOOQP'#G`'#G`O6cQQO'#EsOOQP'#G_'#G_O&]QRO'#FnOOQO'#Fn'#FnO9QQQO'#G^QOQQOOO&]QROOO9XQQO'#C`O9^QSO'#CdO9lQQO'#C}O9tQQO'#DSO9yQQO'#D[O:kQQO'#CsO:pQQO'#DhO:uQQO'#EeO:}QQO'#EiO;VQQO'#EoO;_QQO'#EuO<uQQO'#ExO<|QQO'#FRO4cQQO'#FWO=WQQO'#FYO=]QRO'#F_O=jQRO'#FaO=uQQO'#FaOOQP'#Fe'#FeO4cQQO'#FgP=zOWO'#C^POOO)CAz)CAzOOQO'#G]'#G]OOQO,5<W,5<WOOQO-E9j-E9jO?TQTO'#CqOOQO'#C|'#C|OOQP,59g,59gO?tQQO'#D_O@fQSO'#FuO@kQQO'#C}O@pQQO'#D[O9XQQO'#FqO@uQRO,5=TOAyQQO,59yOCVQSO,5:[O@kQQO'#C}OCaQQO'#DjOOQP,59^,59^OOQO,5<a,5<aO?tQQO'#DeOOQO,5:e,5:eOOQO-E9s-E9sOOQP,59z,59zOOQP,59|,59|OCqQSO,5:QO(kQQO,5:ROC{QQO,5:RO&]QRO'#FxOOQO'#Fx'#FxOFjQQO'#GpOFwQQO,5:^OF|QQO,5:_OHdQQO,5:`OHlQQO,5:aOHvQRO'#FyOIaQRO,5=]OIuQQO'#DzOOQP,5:d,5:dOOQO'#EV'#EVOOQO'#EW'#EWOOQO'#EX'#EXOOQO'#EZ'#EZOOQO'#E['#E[O4cQQO,5:pO4cQQO,5:pO4cQQO,5:pO4cQQO,5:pO4cQQO,5:pO4cQQO,5:wOOQP,5:x,5:xO?tQQO'#EOOOQP,5:g,5:gOOQP,5:k,5:kO9yQQO,59vO4cQQO,5:zO4cQQO,5:}OI|QRO,5;_OOQO,5<Y,5<YOOQO-E9l-E9lO]QQOOOOQP'#Cb'#CbOOQP,58z,58zOOQP'#Cf'#CfOJWQQO'#CfOJ]QSO'#CkOOQP,59O,59OOJkQQO'#DPOLZQQO,5<UOLbQQO,59iOLsQQO,5<TOMpQQO'#DUOOQP,59n,59nOOQP,59v,59vONfQQO,59vONmQQO'#CwOOQP,59_,59_O?tQQO,5:SONxQRO'#EgO! VQQO'#EhOOQP,5;P,5;PO! |QQO'#EkO!!WQQO'#EnOOQP,5;T,5;TO!!`QRO'#EqO!!mQQO'#ErOOQP,5;Z,5;ZO!!uQTO'#CbO!!|QTO,5;aO&]QRO,5;aO!#WQQO,5;jO!$yQTO,5;dO!%WQQO'#EzOOQP,5;d,5;dO&]QRO,5;dO!%cQSO,5;mO!%mQQO'#E`O!%uQQO'#EcO!%zQQO'#FTO!&UQQO'#FTOOQP,5;m,5;mO!&ZQQO,5;mO!&`QTO,5;rO!&mQQO'#F[OOQP,5;t,5;tO!&xQTO'#GqOOQP,5;y,5;yOOQP'#Et'#EtOOQP,5;{,5;{O!']QTO,5<RPOOO'#Fk'#FkP!'jOWO,58xPOOO,58x,58xO!'uQQO,59yO!'zQQO'#GgOOQP,59i,59iO(kQQO,59vOOQP,5<],5<]OOQP-E9o-E9oOOQP1G/e1G/eOOQP1G/v1G/vO!([QSO'#DlO!(lQQO'#DlO!(wQQO'#DkOOQO'#Go'#GoO!(|QQO'#GoO!)UQQO,5:UO!)ZQQO'#GnO!)fQQO,5:PPOQO'#Cq'#CqO(kQQO1G/lOOQP1G/m1G/mO(kQQO1G/mOOQO,5<d,5<dOOQO-E9v-E9vOOQP1G/x1G/xO!)kQSO1G/yOOQP'#Cy'#CyOOQP1G/z1G/zO?tQQO1G/}O!)xQSO1G/{O!*YQQO1G/|O!*gQTO,5<eOOQP-E9w-E9wOOQP,5:f,5:fO!+QQQO,5:fOOQP1G0[1G0[O!,vQTO1G0[O!.wQTO1G0[O!/OQTO1G0[O!0pQTO1G0[O!1QQTO1G0cO!1bQQO,5:jOOQP1G/b1G/bOOQP1G0f1G0fOOQP1G0i1G0iOOQP1G0y1G0yOOQP,59Q,59QO&]QRO'#FmO!1mQSO,59VOOQP,59V,59VOOQO'#DQ'#DQO?tQQO'#DQO!1{QQO'#DQOOQO'#Gh'#GhO!2SQQO'#GhO!2[QQO,59kO!2aQSO'#CqOJkQQO'#DPOOQP,5=R,5=RO@kQQO1G1pOOQP1G/w1G/wO.hQQO'#ElO!2rQRO1G1oO@kQQO1G1oO@kQQO'#DVO?tQQO'#DWOOQP'#Gk'#GkO!2}QRO'#GjOOQP'#Gj'#GjO&]QRO'#FsO!3`QQO,59pOOQP,59p,59pO!3gQRO'#CxO!3uQQO'#CxO!3|QRO'#CxO.hQQO'#CxO&]QRO'#FoO!4XQQO,59cOOQP,59c,59cO!4dQQO1G/nO4cQQO,5;RO!4iQQO,5;RO&]QRO'#FzO!4nQQO,5;SOOQP,5;S,5;SO!6aQQO'#DgO?tQQO,5;VOOQP,5;V,5;VO&]QRO'#F}O!6hQQO,5;YOOQP,5;Y,5;YO!6pQRO,5;]O4cQQO,5;]O&]QRO'#GOO!6{QQO,5;^OOQP,5;^,5;^O!7TQRO1G0{O!7`QQO1G0{O4cQQO1G1UO!8vQQO1G1UOOQP1G1O1G1OO!9OQQO'#GPO!9YQQO,5;fOOQP,5;f,5;fO4cQQO'#E{O!9eQQO'#E{O<uQQO1G1OOOQP1G1X1G1XO!9jQQO,5:zO!9jQQO,5:}O!9tQSO,5;oO!:OQQO,5;oO!:VQQO,5;oO!9OQQO'#GRO!:aQQO,5;vOOQP,5;v,5;vO!<PQQO'#F]O!<WQQO'#F]POOO-E9i-E9iPOOO1G.d1G.dO!<]QQO,5:VO!<gQQO,5=ZO!<tQQO,5=ZOOQP1G/p1G/pO!<|QQO,5=YO!=WQQO,5=YOOQP1G/k1G/kOOQP7+%W7+%WOOQP7+%X7+%XOOQP7+%e7+%eO!=cQQO7+%eO!=hQQO7+%iOOQP7+%g7+%gO!=mQQO7+%gO!=rQQO7+%hO!>PQSO7+%hOOQP7+%h7+%hO4cQQO7+%hOOQP1G0Q1G0QO!>^QQO1G0QOOQP1G0U1G0UO!>fQQO1G0UOF|QQO1G0UOOQO,5<X,5<XOOQO-E9k-E9kOOQP1G.q1G.qOOQO,59l,59lO?tQQO,59lO!?cQQO,5=SO!?jQQO,5=SOOQP1G/V1G/VO!?rQQO,59yO!?}QRO7+'[O!@YQQO'#EmO!@dQQO'#HOO!@lQQO,5;WOOQP7+'Z7+'ZO!@qQRO7+'ZOOQP,59q,59qOOQP,59r,59rOOQO'#DZ'#DZO!@]QQO'#FtO!@|QRO,59tOOQO,5<_,5<_OOQO-E9q-E9qOOQP1G/[1G/[OOQP,59d,59dOHgQQO'#FpO!3uQQO,59dO!A_QRO,59dO!AjQRO,59dOOQO,5<Z,5<ZOOQO-E9m-E9mOOQP1G.}1G.}O(kQQO7+%YOOQP1G0m1G0mO4cQQO1G0mOOQO,5<f,5<fOOQO-E9x-E9xOOQP1G0n1G0nO!AxQQO'#GdOOQP1G0q1G0qOOQO,5<i,5<iOOQO-E9{-E9{OOQP1G0t1G0tO4cQQO1G0wOOQP1G0w1G0wOOQO,5<j,5<jOOQO-E9|-E9|OOQP1G0x1G0xO!B]QQO7+&gO!BeQSO7+&gO!CsQSO7+&pO!CzQQO7+&pOOQO,5<k,5<kOOQO-E9}-E9}OOQP1G1Q1G1QO!DRQQO,5;gOOQO,5;g,5;gO!DWQSO7+&jOOQP7+&j7+&jO!DbQQO7+&pO!7`QQO1G1[O!DgQQO1G1ZOOQO1G1Z1G1ZO!DnQSO1G1ZOOQO,5<m,5<mOOQO-E:P-E:POOQP1G1b1G1bO!DxQSO'#GqO!E]QQO'#F^O!EbQQO'#F^O!EgQQO,5;wOOQO,5;w,5;wO!ElQSO1G/qOOQO1G/q1G/qO!EyQSO'#DoO!FZQQO'#DoO!FfQQO'#DnOOQO,5<c,5<cO!FkQQO1G2uOOQO-E9u-E9uOOQO,5<b,5<bO!FxQQO1G2tOOQO-E9t-E9tOOQP<<IP<<IPOOQP<<IT<<ITOOQP<<IR<<IRO!GSQSO<<ISOOQP<<IS<<ISO4cQQO<<ISO!GaQSO<<ISOOQP7+%l7+%lO!GkQQO7+%lOOQP7+%p7+%pO!GpQQO7+%pO!GuQQO7+%pOOQO1G/W1G/WOOQO,5<^,5<^O!G}QQO1G2nOOQO-E9p-E9pOOQP<<Jv<<JvO.hQQO'#F{O!@YQQO,5;XOOQO,5;X,5;XO!HUQQO,5=jO!H^QQO,5=jOOQO1G0r1G0rOOQP<<Ju<<JuOOQP,5<`,5<`OOQP-E9r-E9rOOQO,5<[,5<[OOQO-E9n-E9nO!HfQRO1G/OOOQP1G/O1G/OOOQP<<Ht<<HtOOQP7+&X7+&XO!HqQQO'#DeOOQP7+&c7+&cOOQP<<JR<<JRO!HxQRO<<JRO!ITQQO<<J[O!I]QQO<<J[OOQO1G1R1G1ROOQP<<JU<<JUO4cQQO<<J[O!IbQSO7+&vOOQO7+&u7+&uO!IlQQO7+&uO4cQQO,5;xOOQO1G1c1G1cO!<]QQO,5:YP!<]QQO'#FwP?tQQO'#FvOOQPAN>nAN>nO4cQQOAN>nO!IsQSOAN>nOOQP<<IW<<IWOOQP<<I[<<I[O!I}QQO<<I[P!>nQQO'#FrOOQO,5<g,5<gOOQO-E9y-E9yOOQO1G0s1G0sOOQO,5<h,5<hO!JVQQO1G3UOOQO-E9z-E9zOOQP7+$j7+$jO!J_QQO'#GnO!B]QQOAN?mO!JjQQOAN?vO!JqQQOAN?vO!KzQSOAN?vOOQO<<Ja<<JaO!LRQSO1G1dO!L]QSO1G/tOOQO1G/t1G/tO!LjQSOG24YOOQPG24YG24YOOQPAN>vAN>vO!LtQQOAN>vP.hQQO'#F|OOQPG25XG25XO!LyQQOG25bO!MOQQO'#FPOOQPG25bG25bO!MZQQOG25bOOQPLD)tLD)tOOQPG24bG24bO!JqQQOLD*|O!9OQQO'#GQO!McQQO,5;kOOQP,5;k,5;kO?tQQO'#FQO!MnQQO'#FQO!MsQQOLD*|OOQP!$'Nh!$'NhOOQO,5<l,5<lOOQO-E:O-E:OOOQP1G1V1G1VO!MzQQO,5;lOOQO,5;l,5;lO!NPQQO!$'NhOOQO1G1W1G1WO!JqQQO!)9DSOOQP!.K9n!.K9nO# {QTO'#CqO#!`QTO'#CqO##}QSO'#CqO#$XQSO'#CqO#&]QSO'#CqO#&gQQO'#FyO#&tQQO'#FyO#'OQQO,5=]O#'ZQQO,5=]O#'cQQO,5:pO!7`QQO,5:pOF|QQO,5:pO#'cQQO,5:pO!7`QQO,5:pOF|QQO,5:pO#'cQQO,5:pO!7`QQO,5:pOF|QQO,5:pO#'cQQO,5:pO!7`QQO,5:pOF|QQO,5:pO#'cQQO,5:pO!7`QQO,5:pOF|QQO,5:pO!7`QQO,5:wO!7`QQO,5:zO!7`QQO,5:}O#(yQSO'#CbO#)}QSO'#CbO#*bQSO'#GqO#*rQSO'#GqO#+PQRO'#GgO#+yQSO,5<eO#,ZQSO,5<eO#,hQSO1G0[O#-rQTO1G0[O#-yQSO1G0[O#.TQSO1G0[O#0{QTO1G0[O#1SQSO1G0[O#2eQSO1G0[O#2lQTO1G0[O#2sQSO1G0[O#4XQSO1G0[O#4`QTO1G0[O#4jQSO1G0[O#4wQSO1G0cO#5dQTO'#CqO#5kQTO'#CqO#6bQSO'#GqO#'cQQO'#EPO!7`QQO'#EPOF|QQO'#EPO#8]QQO'#EPO#8gQQO'#EPO#8qQQO'#EPO#8{QQO'#E`O#9TQQO'#EcO@kQQO'#C}O?tQQO,5:RO#9YQQO,59vO#:iQQO,59vO?tQQO,59vO?tQQO1G/lO?tQQO1G/mO?tQQO7+%YO?tQQO'#C{O#:pQQO'#DgO#9YQQO'#D[O#:wQQO'#D[O#:|QSO,5:QO#;WQQO,5:RO#;]QQO1G/nO?tQQO,5:SO#;bQQO'#Dh",
 		stateData: "#;m~O$yOSPOS$zPQ~OVvOX{O[oO^YOaoOdoOh!POjcOr|Ow}O!P!OO!QnO!WaO!]!QO!phO!qhO#Y!RO#^!SO#d!TO#j!UO#m!VO#v!WO#{!XO#}!YO$S!ZO$U![O$V![O$W!]O$Y!^O$[!_O%OQO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO$v%QP~OTzO~P]O$z!`O~OVeXZeX^eX^!TXj!TXnUXneX!QeX!WeX!W!TX!|eX#ReX#TeX#UeX#WUX$weX%YeX%`eX%feX%geX%ieX%jeX%keX%leX%meX%neX%oeX%peX%qeX~O!a#hX~P$XOV!bO$w!bO~O[!wX^pX^!wXa!wXd!wXhpXh!wXrpXr!wXwpXw!wX!PpX!P!wX!QpX!Q!wX!WpX!W!wX!]pX!]!wX!p!wX!q!wX%OpX%O!wX%U!wX%V!wX%YpX%Y!wX%f!wX%g!wX%h!wX%i!wX%j!wX~O^!hOh!POr!jOw}O!P!OO!Q!kO!WaO!]!QO%O!eO%Y!fO~On!lO#W%]XV%]X^%]Xh%]Xr%]Xw%]X!P%]X!Q%]X!W%]X!]%]X#T%]X$w%]X%O%]X%Y%]Xu%]X~O[oO^YOaoOdoOh!POr!pOw}O!P!OO!WaO!]!QO!phO!qhO%O+wO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O!Q-OO~P*aOj!qO^%XX]%XXn%XX!V%XX~O!W!tOV%TXZ%TX^%TXn%TX!Q%TX!W%TX!|%TX#R%TX#T%TX#U%TX$w%TX%Y%TX%`%TX%f%TX%g%TX%i%TX%j%TX%k%TX%l%TX%m%TX%n%TX%o%TX%p%TX%q%TX]%TX!V%TXj%TXi%TX!a%TXu%TX~OZ!sO~P,^O%O!eO~O!W!tO^%WXj%WX]%WXn%WX!V%WXu%WXV%WX$w%WX%`%WX#T%WX[%WX!a%WX~Ou!{O!QnO!V!zO~P*aOV!}O[oO^YOaoOdoOh!POjcOr!pOw}O!P!OO!QnO!WaO!]!QO!phO!qhO#Y!RO#^!SO#d!TO#j!UO#m!VO#v!WO#{!XO#}!YO$S!ZO$U![O$V![O$W!]O$Y!^O$[!_O%OQO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlOi%dP~O^#QO~OZ#RO^#VOn#TO!Q#cO!W#SO#R#dO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YO%p#[O%q#]OV`X#T%eX#U%eX$w`X~O!|#`O~P2gO^#VO~O^#eO~O!QnO~P*aO[oO^YOaoOdoOh!POr!pOw}O!QnO!WaO!]!QO!phO!qhO%O+wO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O!P#hO~P4jO#T#iO#U#iO~O#W#jO~O!a#kO~OVvO[oO^YOaoOdoOh!POjcOr|Ow}O!P!OO!QnO!WaO!]!QO!phO!qhO#Y!RO#^!SO#d!TO#j!UO#m!VO#v!WO#{!XO#}!YO$S!ZO$U![O$V![O$W!]O$Y!^O$[!_O%OQO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O$v%QX~P6hO%O#oO~OZ#rO[#qO^#sO%O#oO~O^#uO%O#oO~Oj#yO~O^!hOh!POr!jOw}O!P!OO!Q#|O!WaO!]!QO%O!eO%Y!fO~Oj#}O~O!W$PO~O^$RO%O#oO~O^$UO%O#oO~O^$XO%O#oO~O[oO^YOaoOdoOh!POr!pOw}O!P!OO!Q-PO!WaO!]!QO!phO!qhO%O$ZO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~Oj$`O~P;_OV$fOjcO~P;_Oj$kO~O!QnOV$RX$w$RX~P*aO%O$oOV$TX$w$TX~O%O$oO~O${$rO$|$rO$}$tO~OZeX^!TX!W!TXj!TXn!TXh!TXr!TXw!TX{!TX!P!TX!Q!TX!]!TX%O!TX%Y!TX~O]!TX!V!TXu!TX#T!TXV!TX$w!TX%`!TX[!TX!a!TX~P>VO^!hOh!POr-TOw}O!P-_O!Q-`O!W-^O!]-eO%O!eO%Y!fO~OZ!sO~O^#uO~O!P$xO~On!lO#W%]aV%]a^%]ah%]ar%]aw%]a!P%]a!Q%]a!W%]a!]%]a#T%]a$w%]a%O%]a%Y%]au%]a~O]${O^#QO~OZ#RO^#VO!W#SO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YO%p#[O%q#]O~O]$|O!|,WO~PBROj!qOn%QO!QnOi%cP~P*aO!V%WO!|#`O~PBRO!V%YO~OV!}O[oO^YOaoOdoOh!POjcOr!pOw}O!P!OO!QnO!WaO!]!QO!phO!qhO#Y!RO#^!SO#d!TO#j!UO#m!VO#v!WO#{!XO#}!YO$S!ZO$U![O$V![O$W!]O$Y!^O$[!_O%OQO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~Oi%dX#p%dX#q%dX~PDQOi%]O~O[oO^YOaoOdoOh!POr!pOw}O!P!OO!Q-QO!WaO!]!QO!phO!qhO%O+{O%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O^%aO%O%_O~O!QnO!a%cO~P*aO!QnOn$mX#T$mX#U$mXV$mX$w$mX!a$mX~P*aOn#TO#T%ea#U%eaV%ea$w%ea!a%ea~O]%fO~PF|OV#ga$w#ga~PDTO[%sO~OZ#rO[#qO]%vO%O#oO~O^!hOh!POn%zOr-TOu%xOw}O!P-_O!Q-`O!W-^O!]-eO%O,dO%Y!fO]%[P~O^&OOh!POr!jOw}O!P!OO!Q!kO!WaO!]!QO%Y!fO^%ZXj%ZX~O%O%}O~PKfOjcO^qa]qanqa!Vqa~O^#uO!W&SO~O^!hOh!POr-TOw}O{&WO!P-_O!Q-`O!W-^O!]-eO%O,xO%Y!fO~Oi&^O~PL{O^!hOh!POr!jOw}O!Q!kO!WaO!]!QO%O!eO%Y!fO~O!P#hO~PMwOi&eO%O,yO%Y!fO~O#T&gOV#ZX$w#ZX~P?tO]&kO%O#oO~O^!hOh!POr-TOw}O!P-_O!Q-`O!]-eO%O!eO%Y!fO~O!W&lO#T&mO~P! _O]&qO%O#oO~O#T&sOV#eX$w#eX~P?tO]&vO%O#oO~OjeX~P$XOjcO!|,XO~P2gOn!lO#W&yO#W%]X~O^#VOn#TO!Q#cO!W#SO!|,XO#R#dO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YO%p#[O%q#]OV`X#T%eX#U%eX~OZ&zOj$`O$w`X~P!#cOi'OO#p'PO#q'QO~OZ#ROjcO~P!#cO#T'TO#U#iO~O#W'UO~OV'WO!QnO~P*aOV'XO~OjcO~O!|#`OV#za$w#za~PBROi'[O#p']O#q'^O~On#TO!|#`OV%eX$w%eX!a%eX~PBRO!|#`OV$Za$w$Za~PBRO${$rO$|$rO$}'`O~O]${O~O%O!eO]%ZXn%ZX!V%ZX~PKfO!|#`Oi!_Xn!_X!a!`X~PBROi!_Xn!_X!a!`X~O!a'aO~On'bOi%cX~Oi'dO~On'eO!V%bX!a%bX~O!V'gO~O]'jOn'kO!|,YO~PBROn'nO!V'mO!a'oO!|#`O~PBRO!QnO!V'qO!a'rO~P*aO!|#`On$ma#T$ma#U$maV$ma$w$ma!a$ma~PBRO]'sOu'tO~O%Y#XO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YOV!xiZ!xi^!xin!xi!Q!xi!W!xi!|!xi#R!xi#T!xi#U!xi$w!xi%`!xi%f!xi%g!xi%i!xi%p!xi%q!xi~O!V!xii!xi!a!xi~P!+YO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YOV!xiZ!xi^!xin!xi!Q!xi!W!xi#R!xi#T!xi#U!xi$w!xi%p!xi%q!xi!V!xii!xi!a!xi~O!|!xi~P!-TO!|#`O~P!-TO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YO%p#[OV!xiZ!xi^!xin!xi!Q!xi!W!xi#R!xi#T!xi#U!xi$w!xi%q!xi~O!|#`O!V!xii!xi!a!xi~P!/VO!|#`OV#Pi$w#Pi!a#Pi~PBRO]'uOn'wOu'vO~OZ#rO[#qO]'zO%O#oO~Ou'|O~P?tOn'}O]%[X~O](PO~OZeX^mX^!TXj!TX!W!TX~OjcOV$]i$w$]i~O%`(ZOV%^X$w%^Xn%^X!V%^X~Oi(`O~PL{O[(aO!W!tOVlX$wlX~On(bO~P?tO[(aOVlX$wlX~Oi(hO%O,yO%Y!fO~O!V(iO~O#T(kO~O](nO%O#oO~O[oO^YOaoOdoOh!POr!pOu-bOw}O!P!OO!QnO!V-UO!WaO!]!QO!phO!qhO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O%O+zO~P!4vO](sO%O#oO~O#T(tOV#ea$w#ea~O](xO%O#oO~O#k(yOV#ii$w#ii~O[oO^YOaoOdoOh!POr!pOw}O!P!OO!Q-PO!WaO!]!QO!phO!qhO%O+xO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O^(|O%O%_O~O#p%dP#q%dP~P/uOi)PO#p'PO#q'QO~O!a)RO~O!QnO#y)VO~P*aOV)WO!|#`O~PBROj#wa~P;_OV)WO!QnO~P*aOi)]O#p']O#q'^O~O[oO^YOaoOdoOh!POr!pOw}O!P!OO!QnO!WaO!]!QO!phO!qhO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O%O,eO~P!:lO!a)bO~Oj!qO!QnO~P*aOj!qO!QnOi%ca~P*aOn)iOi%ca~O!V%ba!a%ba~P?tOn)lO!V%ba!a%ba~O])nO~O])oO~O!V)pO~O!QnO!V)rO!a)sO~P*aO!V)rO!a)sO!|#`O~PBRO])uOn)vO~O])wOn)xO~O^!hOh!POr-TOu%xOw}O!P-_O!Q-`O!W-^O!]-eO%O,dO%Y!fO~O]%[a~P!>nOn)|O]%[a~O]${O]tXntX~OjcOV$^q$w$^q~On*PO{&WO~P?tOn*SO!V%rX~O!V*UO~OjcOV$]q$w$]q~O%`(ZOV|a$w|an|a!V|a~O[*]OVla$wla~O[*]O!W!tOVla$wla~On*PO{&WO!W*`O^%WXj%WX~P! _OjcO#j!UO~OjcO!|,XO~PBROZ*dO^#VO!W#SO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YO%p#[O%q#]O~O!|#`O~P!BoO#^*eO~P?tO!a*fO~Oj$`O!|,XO~P!BoO#W*hO~Oj#wi~P;_OV*kO!|#`O~PBROn#TO!Q#cO!|#`O!a$QX#T%eX~PBRO#T*lO~O#W*lO~O!a*mO~O!|#`Oi!_in!_i~PBRO!|#`Oi!bXn!bX!a!cX~PBROi!bXn!bX!a!cX~O!a*nO~Oj!qO!QnOi%ci~P*aO!V%bi!a%bi~P?tO!V*qO!a*rO!|#`O~PBRO!V*qO!|#`O~PBRO]*tO~O]*uO~O]*uOu*vO~O]%[i~P!>nO%O!eO!V%ra~On*|O!V%ra~O[+OOVli$wli~O%O+yO~P!4vO#k+QOV#iy$w#iy~O^+RO%O%_O~O]+SO~O!|,XOj#xq~PBROj#wq~P;_O!V+ZO!|#`O~PBRO]+[On+]O~O%O!eO!V%ri~O^#QOn'eO!V%bX~O#^+`O~P?tOj+aO~O^#VO!W#SO!|#`O%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YO%p#[O%q#]O~OZ+cO~P!JvO!|#`O!a$Qi~PBRO!|#`Oi!bin!bi~PBRO!V+dO!|#`O~PBRO]+eO~O]+fO~Oi+iO#p+jO#q+kO~O^+lO%O%_O~Oi+pO#p+jO#q+kO~O!a+rO~O#^+sO~P?tO!a+tO~O]+uO~OZeX^eX^!TXj!TX!WeX!W!TX!|eX%YeX%`eX%feX%geX%ieX%jeX%keX%leX%meX%neX%oeX%peX%qeXVeXneX!QeX#ReX#TeX#UeX$weX~O]eX]!TX!VeXieX!aeX~P!NUOjeX~P!NUOZeX^eX^!TXj!TX!WeX!W!TX!|eX%YeX%`eX%feX%geX%ieX%jeX%keX%leX%meX%neX%oeX%peX%qeXn!TX!VeX~O]eX!V!TX~P#!gOh!TXr!TXw!TX{!TX!P!TX!Q!TX!]!TX%O!TX%Y!TX~P#!gOZeX^eX^!TXj!TXneX!WeX!W!TX!|eX%YeX%`eX%feX%geX%ieX%jeX%keX%leX%meX%neX%oeX%peX%qeX~O]eXueX~P#$xO]$mXn$mXu$mX~PF|Oj$mXn$mX~P!7`On+|O]%eau%ea~On+}Oj%ea~O[oO^YOaoOdoOh!POr!pOw}O!P!OO!Q-OO!WaO!]!QO!phO!qhO%O+yO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~OZeX]!TX^UXhUXnUXn!TXrUXuUXwUX!PUX!QUX!WUX!W!TX!]UX%OUX%YUX~OnUX!QeX!aeX#TeX#WUX~P#$xOn+|O!|,YO]%eXu%eX~PBROn+}O!|,XOj%eX~PBRO^&OOV%ZXj%ZX$w%ZX]%ZXn%ZX!V%ZXu%ZX%`%ZX#T%ZX[%ZX!a%ZX~P?wO!|,YO]$man$mau$ma~PBRO!|,XOj$man$ma~PBRO%Y#XO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YOZ!xi]!xi^!xi!W!xi!|!xi%`!xi%f!xi%g!xi%i!xi%p!xi%q!xi~Oj!xi~P!+YOn!xiu!xi~P#,hO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YOZ!xi]!xi^!xi!W!xi!|!xi%p!xi%q!xi~O%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YOV!xiZ!xi^!xij!xin!xi!Q!xi!W!xi#R!xi#T!xi#U!xi$w!xi%p!xi%q!xi~O!|!xi~P#/_On!xiu!xi~P#.TO%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YOZ!xi]!xi^!xi!W!xi%p!xi%q!xi~O!|,WO~P#1^O!|,XO~P#/_O!|,YOn!xiu!xi~P#1^O%Y#XO%`#ZO%fiO%giO%i#ZO%j#YO%k#XO%l#XO%m#YO%n#YO%o#YO%p#[OZ!xi]!xi^!xi!W!xi%q!xi~O!|,WO~P#3QO!|,XOj!xi~P!/VO!|,YOn!xiu!xi~P#3QO!|,XOj#Pi~PBROV!TXZeX^mX!W!TX$w!TX~O%`!TX~P#5RO[!TXhmXnmXrmXwmX!PmX!QmX!WmX!]mX%OmX%YmX~P#5ROn#TO!Q,aO!|,XO#R#dOj`X#T%eX#U%eX~PBRO[oO^YOaoOdoOh!POr!pOw}O!P#hO!WaO!]!QO!phO!qhO%UTO%VUO%YVO%fiO%giO%hjO%ikO%jlO~O!Q-OO%O+yO~P#6{O!Q-PO%O+xO~P#6{O!Q-QO%O+{O~P#6{O#T,bO#U,bO~O#W,cO~O^!hOh!POr-TOw}O!P-_O!Q-WO!W-^O!]-eO%O!eO%Y!fO~O^!hOh!POr-TOw}O!Q-`O!W-^O!]-eO%O!eO%Y!fO~O!P-VO~P#9zO%O+wO~P!4vO!P-XO~O!V-YO!|#`O~PBRO!V-ZO~O!V-[O~O!W-dO~OP%ka%Oa~",
@@ -29917,7 +30137,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const goLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "go",
-		parser: /*@__PURE__*/ parser$1.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$2.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			IfStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|else\b)/ }),
 			LabeledStatement: flatIndent,
 			"SwitchBlock SelectBlock": (context) => {
@@ -29959,13 +30179,13 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		label: name,
 		type: "keyword"
 	});
-	const keywords$3 = /*@__PURE__*/ "interface struct chan map package go return break continue goto fallthrough else defer range true false nil".split(" ").map(kwCompletion);
+	const keywords$14 = /*@__PURE__*/ "interface struct chan map package go return break continue goto fallthrough else defer range true false nil".split(" ").map(kwCompletion);
 	/**
 	Go support. Includes [snippet](https://codemirror.net/6/docs/ref/#lang-go.snippets) and local
 	variable completion.
 	*/
 	function go() {
-		let completions = snippets.concat(keywords$3);
+		let completions = snippets.concat(keywords$14);
 		return new LanguageSupport(goLanguage, [goLanguage.data.of({ autocomplete: ifNotIn(dontComplete, completeFromList(completions)) }), goLanguage.data.of({ autocomplete: localCompletionSource })]);
 	}
 	//#endregion
@@ -29985,7 +30205,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	const _break = 9;
 	const _case = 10;
 	const _catch = 11;
-	const clone = 12;
+	const clone$1 = 12;
 	const _const = 13;
 	const _continue = 14;
 	const _default = 15;
@@ -30013,7 +30233,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	const goto = 37;
 	const _if = 38;
 	const _implements = 39;
-	const include = 40;
+	const include$1 = 40;
 	const include_once = 41;
 	const _instanceof = 42;
 	const insteadof = 43;
@@ -30047,7 +30267,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		break: _break,
 		case: _case,
 		catch: _catch,
-		clone,
+		clone: clone$1,
 		const: _const,
 		continue: _continue,
 		declare,
@@ -30075,7 +30295,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		goto,
 		if: _if,
 		implements: _implements,
-		include,
+		include: include$1,
 		include_once,
 		instanceof: _instanceof,
 		insteadof,
@@ -30106,7 +30326,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		yield: 66,
 		__proto__: null
 	};
-	function keywords$2(name) {
+	function keywords$13(name) {
 		let found = keywordMap[name.toLowerCase()];
 		return found == null ? -1 : found;
 	}
@@ -30275,7 +30495,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		class: 351,
 		CLASS: 351
 	};
-	const parser = LRParser.deserialize({
+	const parser$1 = LRParser.deserialize({
 		version: 14,
 		states: "%#[Q`OWOOQhQaOOP%oO`OOOOO#t'#Hh'#HhO%tO#|O'#DuOOO#u'#Dx'#DxQ&SOWO'#DxO&XO$VOOOOQ#u'#Dy'#DyO&lQaO'#D}O'[QdO'#EQO+QQdO'#IqO+_QdO'#ERO-RQaO'#EXO/bQ`O'#EUO/gQ`O'#E_O2UQaO'#E_O2]Q`O'#EgO2bQ`O'#EqO-RQaO'#EqO2mQpO'#FOO2rQ`O'#FOOOQS'#Iq'#IqO2wQ`O'#ExOOQS'#Ih'#IhO5SQdO'#IeO9UQeO'#F]O-RQaO'#FlO-RQaO'#FmO-RQaO'#FnO-RQaO'#FoO-RQaO'#FoO-RQaO'#FrOOQO'#Ir'#IrO9cQ`O'#FxOOQO'#Ht'#HtO9kQ`O'#HXO:VQ`O'#FsO:bQ`O'#HfO:mQ`O'#GPO:uQaO'#GQO-RQaO'#G`O-RQaO'#GcO;bOrO'#GfOOQS'#JP'#JPOOQS'#JO'#JOOOQS'#Ie'#IeO/bQ`O'#GmO/bQ`O'#GoO/bQ`O'#GtOhQaO'#GvO;iQ`O'#GwO;nQ`O'#GzO:]Q`O'#G}O;sQeO'#HOO;sQeO'#HPO;sQeO'#HQO;}Q`O'#HRO<SQ`O'#HTO<XQaO'#HUO>hQ`O'#HVO:]Q`O'#HWO>mQ`O'#HWO;}Q`O'#HXO:]Q`O'#HZO:]Q`O'#H[O:]Q`O'#H]O>rQ`O'#H`O>}Q`O'#HaO<XQaO'#HeOOQ#u'#Ic'#IcOOQ#u'#Hj'#HjQhQaOOO:]Q`O'#HYO:QQ`O'#HYO?]O#|O'#DsPOOO)CDT)CDTOOO#t-E;f-E;fOOO#u,5:d,5:dOOO#u'#Hi'#HiO&XO$VOOO?hQ$VO'#IbOOOO'#Ib'#IbQOOOOOOOQ#y,5:i,5:iO?oQaO,5:iOOQ#u,5:k,5:kO?vQaO,5:nO?}QaO,5;VO@UQpO,5;WOBsQaO'#EuOOQS,5;`,5;`OBzQ`O,5;pOOQP'#Fd'#FdO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xO-RQaO,5;xOOQ#u'#Iv'#IvOOQS,5<z,5<zOOQ#u,5:m,5:mODsQ`O,5:sODzQ`O'#FsOESQ`O'#FsOE[Q`O,5:pOEaQaO'#E`OOQS,5:y,5:yOGeQ`O'#IjO<XQaO'#EbO<XQaO'#IjOOQS'#Ij'#IjOGlQ`O'#IiOGtQ`O,5:yO/lQaO,5:yOGyQaO'#EhOOQS,5;R,5;ROOQS,5;],5;]OHTQ`O,5;]OHsQdO'#FQOJxQ`O'#HrO2mQpO,5;jOOQS,5;j,5;jOJ}QpO,5;jOKSQtO'#EQOKaQpO,5;dO2wQ`O'#E|OOQS'#E}'#E}OOQS'#Ip'#IpOKlQaO,5:xO-RQaO,5;uOOQS,5;w,5;wO-RQaO,5;wOKsQdO,5<WOLTQdO,5<XOLeQdO,5<YOLuQdO,5<ZON|QdO,5<ZO! TQdO,5<^O! eQ`O'#FyO! pQ`O'#IuO! xQ`O,5<dOOQO-E;r-E;rO! }Q`O'#I}O:]Q`O,5=rO!!VQ`O,5=rO;}Q`O,5=sO:]Q`O,5=wO:]Q`O,5=tO!![Q`O,5=tOOQS'#EQ'#EQO!!aQ`O'#FuO!!wQ`O,5<_O!#SQ`O,5<_O!#[Q`O,5?iO!#aQ`O,5<_O!#iQ`O,5<kO!#qQdO'#GYO!$PQdO'#I|O!$[QdO,5>QO!$dQ`O,5<kO!#[Q`O,5<kO!$lQdO,5<lO!$|Q`O,5<lO!%[Q`O,5<lO!%rQdO,5<zO!'wQdO,5<}O!(XOrO'#IPOOOQ'#JS'#JSO-RQaO'#GkOOOQ'#IP'#IPO!(yOrO,5=QOOQS,5=Q,5=QO!)QQaO,5=XO!)XQ`O,5=ZO!)aQeO,5=`O!)kQ`O,5=bO!)pQaO'#GxO!)aQeO,5=cO<XQaO'#G{O!)aQeO,5=fO!$[QdO,5=iO+_QdO,5=jOOQ#u,5=j,5=jO+_QdO,5=kOOQ#u,5=k,5=kO+_QdO,5=lOOQ#u,5=l,5=lO!)wQ`O,5=mO:]Q`O,5=oO!*PQdO'#JUOOQS'#JU'#JUO!$[QdO,5=pO!+iQaO,5=qO!-xQ`O'#GWO!-}QdO'#I{O!$[QdO,5=rOOQ#u,5=s,5=sO!.YQ`O,5=uO!.]Q`O,5=vO!.bQ`O,5=wO!.mQdO,5=zOOQ#u,5=z,5=zO2mQpO,5={O!.xQ`O,5={O!.}QdO'#JVO!$[QdO,5={O!/]Q`O,5={O!/eQdO'#IgO!$[QdO,5>POOQ#u-E;h-E;hO!1QQ`O,5=tOOO#u,5:_,5:_O!1]O#|O,5:_OOO#u-E;g-E;gOOOO,5>|,5>|OOQ#y1G0T1G0TO!1eQ`O1G0YO-RQaO1G0YO!2wQ`O1G0qOOQS1G0q1G0qOOQS'#Eo'#EoOOQS'#Il'#IlO-RQaO'#IlOOQS1G0r1G0rO!4ZQ`O'#IoO!5pQ`O'#IqO!5}QaO'#EwOOQO'#Io'#IoO!6XQ`O'#InO!6aQ`O,5;aO-RQaO'#FXOOQS'#FW'#FWOOQS1G1[1G1[O!6fQdO1G1dO!8kQdO1G1dO!:WQdO1G1dO!;sQdO1G1dO!=`QdO1G1dO!>{QdO1G1dO!@hQdO1G1dO!BTQdO1G1dO!CpQdO1G1dO!E]QdO1G1dO!FxQdO1G1dO!HeQdO1G1dO!JQQdO1G1dO!KmQdO1G1dO!MYQdO1G1dO!NuQdO1G1dOOQT1G0_1G0_O!#[Q`O,5<_O#!bQaO'#EYOOQS1G0[1G0[O#!iQ`O,5:zOEdQaO,5:zO#!nQaO,5;OO#!uQdO,5:|O#$tQdO,5?UO#&sQaO'#HmO#'TQ`O,5?TOOQS1G0e1G0eO#']Q`O1G0eO#'bQ`O'#IkO#(zQ`O'#IkO#)SQ`O,5;SOG|QaO,5;SOOQS1G0w1G0wOOQO,5>^,5>^OOQO-E;p-E;pOOQS1G1U1G1UO#)pQdO'#FQO#+uQ`O'#HsOJ}QpO1G1UO2wQ`O'#HpO#+zQtO,5;eO2wQ`O'#HqO#,iQtO,5;gO#-WQaO1G1OOOQS,5;h,5;hO#/gQtO'#FQO#/tQdO1G0dO-RQaO1G0dO#1aQdO1G1aO#2|QdO1G1cOOQO,5<e,5<eO#3^Q`O'#HuO#3lQ`O,5?aOOQO1G2O1G2OO:]Q`O,5?iO!$[QdO1G3^O:]Q`O1G3^OOQ#u1G3_1G3_O#3tQ`O1G3cO!1QQ`O1G3`O:]Q`O1G3`O#4PQpO'#FvO#4_Q`O'#FvO#4oQ`O'#FvO#4zQ`O'#FvO#5SQ`O'#FzO#5XQ`O'#F{OOQO'#It'#ItO#5`Q`O'#IsO#5hQ`O,5<aOOQS1G1y1G1yO2wQ`O1G1yO#5mQ`O1G1yO#5rQ`O1G1yO!#[Q`O1G5TO#5}QdO1G5TO!#[Q`O1G1yO#6]Q`O1G2VO!#[Q`O1G2VO<XQaO,5<tO#6eQdO'#H}O#6sQdO,5?hOOQ#u1G3l1G3lO-RQaO1G2VO2wQ`O1G2VO#7OQdO1G2WO9cQ`O'#GSO9cQ`O'#GTO#9bQ`O'#GUOOQS1G2W1G2WO!.]Q`O1G2WO!1TQ`O1G2WO!1QQ`O1G2WO!$|Q`O1G2WO:]O`O,5=RO#:[O`O,5=RO#:gO!bO,5=SO#:uQ`O,5=VOOOQ-E;}-E;}OOQS1G2l1G2lO#:|QaO'#GnO#;gQ$VO1G2sO#@gQ`O1G2sO#@rQ`O'#GpO#@}Q`O'#GsOOQ#u1G2u1G2uO#AYQ`O1G2uOOQ#u'#Gu'#GuOOQ#u'#JT'#JTOOQ#u1G2z1G2zO#A_Q`O1G2zO/bQ`O1G2|O#AdQaO,5=dO#AkQ`O,5=dOOQ#u1G2}1G2}O#ApQ`O1G2}O#AuQ`O,5=gOOQ#u1G3Q1G3QO#CXQ`O1G3QOOQ#u1G3T1G3TOOQ#u1G3U1G3UOOQ#u1G3V1G3VOOQ#u1G3W1G3WO#C^Q`O'#IUO;}Q`O'#IUO#CcQ$VO1G3XO#HiQ`O1G3ZO<XQaO'#ITO#HnQdO,5=eOOQ#u1G3[1G3[O#HyQ`O1G3]O<XQaO,5<rO#IOQdO'#H|O#I^QdO,5?gOOQ#u1G3^1G3^OOQ#u1G3a1G3aO!.]Q`O1G3aOOQ#u1G3b1G3bO#IiQ`O'#H^OOQ#u1G3c1G3cO#JfQ`O1G3cO#JkQ`O1G3cOOQ#u1G3f1G3fO#J|Q`O1G3gO#KRQpO1G3gO#KZQdO'#IWO#KlQdO,5?qO:]Q`O,5?qOOQ#u1G3g1G3gO2mQpO1G3gO#KwQ`O1G3gO!$[QdO1G3gO#K|QeO'#HkO#L^QdO,5?ROOQ#u1G3k1G3kOOQ#u1G3`1G3`O!.]Q`O1G3`O!1TQ`O1G3`OOO#u1G/y1G/yO-RQaO7+%tO#LlQdO7+%tOOQS7+&]7+&]O#NXQ`O,5?WO!+iQaO,5;bO#N`Q`O,5;cO$ uQaO'#HoO$!PQ`O,5?YOOQS1G0{1G0{O$!XQ`O,5;sO$!`Q`O'#EZO$!eQ`O'#IfO$!mQ`O,5:tOOQS1G0f1G0fO$!rQ`O1G0fO$!wQ`O1G0jO<XQaO1G0jOOQO,5>X,5>XOOQO-E;k-E;kOOQS7+&P7+&PO!+iQaO,5;TO$$^QaO'#HnO$$hQ`O,5?VOOQS1G0n1G0nO$$pQ`O1G0nPOQO'#FQ'#FQOOQO,5>_,5>_OOQO-E;q-E;qOOQS7+&p7+&pOOQS,5>[,5>[OOQS-E;n-E;nO$$uQtO,5>]OOQS-E;o-E;oO$%dQdO7+&jO$'iQtO'#FQO$'vQdO7+&OOOQS1G0j1G0jOOQO,5>a,5>aOOQO-E;s-E;sOOQ#u7+(x7+(xO!$[QdO7+(xOOQ#u7+(}7+(}O#JfQ`O7+(}O#JkQ`O7+(}OOQ#u7+(z7+(zO!.]Q`O7+(zO!1TQ`O7+(zO!1QQ`O7+(zO$)cQ`O,5<bO$)mQ`O,5<bO$)xQ`O,5<fO$)}QpO,5<bO$*]Q`O,5<bO!+iQaO,5<bOOQO,5<f,5<fO$*eQpO,5<gO$*pQ`O,5<gO$+OQ`O'#HwO$+iQ`O,5?_OOQS1G1{1G1{O$+qQpO7+'eO$+|Q`O'#GOO$,XQ`O7+'eOOQS7+'e7+'eO2wQ`O7+'eO#5mQ`O7+'eO$,aQdO7+*oO2wQ`O7+*oO$,oQ`O7+'eO-RQaO7+'qO2wQ`O7+'qO$,zQ`O7+'qO$-SQdO1G2`OOQS,5>i,5>iOOQS-E;{-E;{O$.lQdO7+'qO$.|QpO7+'qO$/XQdO'#IxOOQO,5<n,5<nOOQO,5<o,5<oO$/jQpO'#GXO$/uQ`O'#GXOOQO'#Iz'#IzOOQO'#H{'#H{O$0iQ`O'#GXO#JkQ`O'#GVO$1YQdO'#GXO!.mQdO'#GZO9cQ`O'#G[OOQO'#Iy'#IyOOQO'#Hz'#HzO$1eQ`O,5<pOOQ#y,5<p,5<pOOQS7+'r7+'rO!.]Q`O7+'rO!1TQ`O7+'rO!1QQ`O7+'rOOOQ1G2m1G2mO:]O`O1G2mO$2_O!bO1G2nO$2mO`O'#GiO$2rO`O1G2nOOOQ1G2q1G2qO$2wQaO,5=YO/bQ`O'#IQO$3bQ$VO7+(_OhQaO7+(_O/bQ`O'#IRO$8bQ`O7+(_O!$[QdO7+(_O$8mQ`O7+(_O$8rQaO'#GqO$;RQ`O'#GrOOQO'#IS'#ISO$;ZQ`O,5=[OOQ#u,5=[,5=[O$;fQ`O,5=_O!$[QdO7+(aO!$[QdO7+(fO!$[QdO7+(hO$;qQaO1G3OO$;xQ`O1G3OO$;}QaO1G3OO!$[QdO7+(iO<XQaO1G3RO!$[QdO7+(lO2wQ`O'#HSO;}Q`O,5>pOOQ#u,5>p,5>pOOQ#u-E<S-E<SO$<UQaO7+(uO$<mQdO,5>oOOQS-E<R-E<RO!$[QdO7+(wO$>VQdO1G2^OOQS,5>h,5>hOOQS-E;z-E;zOOQ#u7+({7+({O$?oQ`O'#GXO:]Q`O'#H_OOQO'#IV'#IVO$@fQ`O,5=xOOQ#u,5=x,5=xO$AcQ!bO'#EQO$AzQ!bO7+(}O$BYQpO7+)RO#KRQpO7+)RO$BbQ`O'#HbO!$[QdO7+)RO$BpQdO,5>rOOQS-E<U-E<UO$COQdO1G5]O$CZQ`O7+)RO#KRQpO7+)ROOQ#u7+)R7+)RO$C`QdO,5>VOOQS-E;i-E;iO$D{QdO<<I`OOQS1G4r1G4rO$FhQ`O1G0|OOQO,5>Z,5>ZOOQO-E;m-E;mOOQS1G1_1G1_O$8rQaO,5:uO$G}QaO'#HlO$H[Q`O,5?QOOQS1G0`1G0`OOQS7+&Q7+&QO$HdQ`O7+&UO$IyQ`O1G0oO$K`Q`O,5>YOOQO,5>Y,5>YOOQO-E;l-E;lOOQS7+&Y7+&YOOQS7+&U7+&UOOQ#u<<Ld<<LdOOQ#u<<Li<<LiO$AzQ!bO<<LiOOQ#u<<Lf<<LfO!.]Q`O<<LfO!1TQ`O<<LfO$LxQ`O1G1|O$MTQ`O1G2QO!+iQaO1G1|OOQO1G2Q1G2QO$MYQ`O1G1|O$MdQ`O1G1|O$NyQ`O1G2RO% XQ`O'#F|O!+iQaO1G2ROOQO1G2R1G2ROOQO,5>c,5>cOOQO-E;u-E;uOOQS<<KP<<KPO% aQ`O'#IwO% iQ`O'#IwO% nQ`O,5<jO2wQ`O<<KPO$+qQpO<<KPO% sQ`O<<KPO2wQ`O<<NZO% {QtO<<NZO#5mQ`O<<KPO%!^QdO<<K]O%!nQpO<<K]O-RQaO<<K]O2wQ`O<<K]O%!yQdO'#HyO%#bQdO,5?dO$1YQdO,5<sO$/jQpO,5<sO%#sQ`O,5<sO#JkQ`O,5<qO!.mQdO,5<uOOQO-E;y-E;yO%$dQ!bO,5<qO%$oQ!bO'#IqO!$[QdO,5<qOOQO,5<s,5<sOOQO,5<u,5<uO%$}QdO,5<vOOQO-E;x-E;xOOQ#y1G2[1G2[OOQS<<K^<<K^O!.]Q`O<<K^O!1TQ`O<<K^OOOQ7+(X7+(XO%%YO`O7+(YOOOO,5=T,5=TOOOQ7+(Y7+(YOhQaO,5>lOOQ#u-E<O-E<OOhQaO<<KyOOQ#u<<Ky<<KyO$8mQ`O,5>mOOQO-E<P-E<PO!$[QdO<<KyO$8mQ`O<<KyO%%_Q`O<<KyO%%dQ`O,5=]O%&yQaO,5=^OOQO-E<Q-E<QOOQ#u1G2v1G2vOOQ#u<<K{<<K{OOQ#u<<LQ<<LQOOQ#u<<LS<<LSOOQT7+(j7+(jO%'ZQ`O7+(jO%'`QaO7+(jO%'gQ`O7+(jOOQ#u<<LT<<LTO%'lQ`O7+(mO%)RQ`O7+(mOOQ#u<<LW<<LWO%)WQpO,5=nOOQ#u1G4[1G4[O%)fQ`O<<LaOOQ#u<<Lc<<LcO:]Q`O,5=yO%)kQdO,5=yOOQO-E<T-E<TOOQ#u1G3d1G3dO%)vQ!bO,5;eO%*XQ!bO,5;gO#JfQ`O<<LiO%*jQ!bO'#FQP%+OQpO<<LmO!$[QdO<<LmO%+WQ`O'#HcO9cQ`O'#HcO%+cQ`O'#JWO%+kQ`O,5=|OOQ#u<<Lm<<LmO:]Q`O1G4^O%+pQdO7+*wO$BYQpO<<LmO#KRQpO<<LmO%+{Q`O1G0aOOQO,5>W,5>WOOQO-E;j-E;jO!+iQaO,5;UOOQ#uANBTANBTO#JfQ`OANBTOOQ#uANBQANBQO!.]Q`OANBQO!+iQaO7+'hOOQO7+'l7+'lO%-bQ`O7+'hO%.wQ`O7+'hO%/SQ`O7+'lO!+iQaO7+'mOOQO7+'m7+'mO%/XQdO'#F}OOQO'#Hv'#HvO%/jQ`O,5<hOOQO,5<h,5<hO%/rQ`O7+'mO%1XQ`O'#HxO%1gQ`O,5?cO%1gQ`O,5?cOOQO1G2U1G2UO$+qQpOAN@kOOQSAN@kAN@kO2wQ`OAN@kO%1oQtOANCuO%2QQ`OAN@kO-RQaOAN@wO%2YQdOAN@wO%2jQpOAN@wOOQS,5>e,5>eOOQS-E;w-E;wOOQO1G2_1G2_O$1YQdO1G2_O$/jQpO1G2_O#JkQ`O1G2]O!.mQdO1G2aO%$dQ!bO1G2]O!$[QdO1G2]OOQO1G2a1G2aOOQO1G2]1G2]O%2uQaO'#G]OOQO1G2b1G2bOOQSAN@xAN@xO!.]Q`OAN@xOOOQ<<Kt<<KtOOQ#u1G4W1G4WOOQ#uANAeANAeOOQO1G4X1G4XO%4tQ`OANAeO!$[QdOANAeO%4yQaO1G2wO%5ZQaO1G2xOOQT<<LU<<LUO%5kQ`O<<LUO%5pQaO<<LUO-RQaO,5=hOOQT<<LX<<LXOOQO1G3Y1G3YO%5wQ`O1G3YO!)aQeOANA{O%5|QdO1G3eOOQO1G3e1G3eO%6XQ`O1G3eO%6aQ!bO,5>]O%6rQ!bO'#FQO!$[QdOANBXOOQ#uANBXANBXO:]Q`O,5=}O%7WQ`O,5=}O%7cQ`O'#IXO%7wQ`O,5?rOOQS1G3h1G3hOOQS7+)x7+)xP%+OQpOANBXO%8PQ`O1G0pOOQ#uG27oG27oOOQ#uG27lG27lO%9fQ`O<<KSO!+iQaO<<KSOOQO<<KW<<KWO%:{Q`O<<KXOOQO,5<i,5<iO-RQaO,5<iO%<bQ`O,5<iOOQO-E;t-E;tOOQO1G2S1G2SOOQO,5>d,5>dO%<jQ`O,5>dOOQO-E;v-E;vO%<oQ`O1G4}OOQSG26VG26VO$+qQpOG26VO2wQ`OG26VO%<wQdOG26cO-RQaOG26cOOQO7+'y7+'yO$1YQdO7+'yO%$dQ!bO7+'wO!$[QdO7+'wOOQO7+'{7+'{OOQO7+'w7+'wO%=XQ`OLD+}O%>hQ`O'#IqO%>rQ`O'#IhO!$[QdO'#IOO%@lQaO,5<wOOQO,5<w,5<wOOQSG26dG26dO!$[QdOG27POOQ#uG27PG27PO%BkQaO7+(cOOQTANApANApO%B{Q`OANApO%CQQ`O1G3SOOQO7+(t7+(tOOQ#uG27gG27gO%CXQ`OG27gOOQO7+)P7+)PO%C^Q`O7+)PO!$[QdO7+)POOQ#uG27sG27sOOQO1G3i1G3iO:]Q`O1G3iO%CfQ`O'#HdO9cQ`O'#HdOOQO,5>s,5>sOOQO-E<V-E<VP!$[QdOG27sO%CqQ`OAN@nO+_QdO1G2TOOQO1G2T1G2TO-RQaO1G2TOOQO1G4O1G4OOOQSLD+qLD+qO$+qQpOLD+qO%EWQdOLD+}OOQO<<Ke<<KeO!$[QdO<<KcOOQO<<Kc<<KcO:]Q`O,5<xO%EhQ`O,5<yOOQP,5>j,5>jOOQP-E;|-E;|OOQO1G2c1G2cOOQ#uLD,kLD,kOOQTG27[G27[O!$[QdOLD-RO!$[QdO<<LkOOQO<<Lk<<LkOOQO7+)T7+)TO:]Q`O,5>OO%EpQ`O,5>OPOQ#uLD-_LD-_OOQO7+'o7+'oO+_QdO7+'oOOQS!$( ]!$( ]OOQOAN@}AN@}OOQS1G2d1G2dOOQS1G2e1G2eO%E{QdO1G2eOOQ#u!$(!m!$(!mOOQOANBVANBVOOQO1G3j1G3jO:]Q`O1G3jOOQO<<KZ<<KZOOQS7+(P7+(POOQO7+)U7+)UO%FWQpO'#FOO%F]QpO'#FOO%FWQpO,5;jO%F]QpO,5;jO%FbQpO,5;jO%FgQpO,5;jO#JkQ`O'#E|O%FlQdO,5<lO%HbQaO,5;OO%FbQpO1G1UO%FgQpO1G1UO#JkQ`O'#HpO#JkQ`O'#HqO-RQaO1G0jO%HiQ`O'#FOO%HnQ`O'#FOO%HsQaO'#GQO#-WQaO'#G`O#-WQaO'#GcO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO#-WQaO,5;xO%H}QdO'#IjO%JmQdO'#IjO#-WQaO'#EbO#-WQaO'#IjO%LrQaO,5:xO#-WQaO,5;uO#-WQaO,5;wO%LyQdO,5<WO%NoQdO,5<XO&!eQdO,5<YO&$ZQdO,5<ZO&&PQdO,5<ZO&&aQdO,5<^O&(VQdO,5<}O#-WQaO1G0YO&){QdO1G1dO&+qQdO1G1dO&-gQdO1G1dO&/]QdO1G1dO&1RQdO1G1dO&2wQdO1G1dO&4mQdO1G1dO&6cQdO1G1dO&8XQdO1G1dO&9}QdO1G1dO&;sQdO1G1dO&=iQdO1G1dO&?_QdO1G1dO&ATQdO1G1dO&ByQdO1G1dO&DoQdO,5:|O&FeQdO,5?UO&HZQdO1G0dO#-WQaO1G0dO&JPQdO1G1aO&KuQdO1G1cO#-WQaO1G2VO#-WQaO7+%tO&MkQdO7+%tO' aQdO7+&OO#-WQaO7+'qO'#VQdO7+'qO'${QdO<<I`O'&qQdO<<K]O#-WQaO<<K]O#-WQaOAN@wO'(gQdOAN@wO'*]QdOG26cO#-WQaOG26cO',RQdOLD+}O'-wQaO,5;OO'/vQaO1G0jO'1rQdO'#IeO'2PQeO'#F]O'5vQeO'#F]O#-WQaO'#FlO'/vQaO'#FlO#-WQaO'#FmO'/vQaO'#FmO#-WQaO'#FnO'/vQaO'#FnO#-WQaO'#FoO'/vQaO'#FoO#-WQaO'#FoO'/vQaO'#FoO#-WQaO'#FrO'/vQaO'#FrO'9|QaO,5:nO':TQ`O,5<kO':]Q`O1G0YO'/vQaO1G1OO';oQ`O1G2VO';wQ`O7+'qO'<PQpO7+'qO'<[QpO<<K]O'<gQpOAN@wO'<rQaO'#GQO'/vQaO'#G`O'/vQaO'#GcO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO,5;xO'/vQaO'#EbO'/vQaO'#IjO'>tQaO,5:xO'/vQaO,5;uO'/vQaO,5;wO'@sQdO,5<WO'BxQdO,5<XO'D}QdO,5<YO'GSQdO,5<ZO'IXQdO,5<ZO'IxQdO,5<^O'K}QdO,5<}O'/vQaO1G0YO'NSQdO1G1dO(!XQdO1G1dO($^QdO1G1dO(&cQdO1G1dO((hQdO1G1dO(*mQdO1G1dO(,rQdO1G1dO(.wQdO1G1dO(0|QdO1G1dO(3RQdO1G1dO(5WQdO1G1dO(7]QdO1G1dO(9bQdO1G1dO(;gQdO1G1dO(=lQdO1G1dO(?qQdO,5:|O(AvQdO,5?UO(C{QdO1G0dO'/vQaO1G0dO(FQQdO1G1aO(HVQdO1G1cO'/vQaO1G2VO'/vQaO7+%tO(J[QdO7+%tO(LaQdO7+&OO'/vQaO7+'qO(NfQdO7+'qO)!kQdO<<I`O)$pQdO<<K]O'/vQaO<<K]O'/vQaOAN@wO)&uQdOAN@wO)(zQdOG26cO'/vQaOG26cO)+PQdOLD+}O)-UQaO,5;OO#-WQaO1G0jO)-]Q`O'#GPO)-eQpO,5;dO)-pQ`O,5<kO!#[Q`O,5<kO!#[Q`O1G2VO2wQ`O1G2VO2wQ`O7+'qO2wQ`O<<K]O)-xQdO,5<lO)/}QdO'#IjO)1vQdO'#IeO)2dQaO,5:nO)2kQ`O,5<kO)2sQ`O1G0YO)4VQ`O1G2VO)4_Q`O7+'qO)4gQpO7+'qO)4rQpO<<K]O)4}QpOAN@wO2wQ`O'#ExO<XQaO'#FlO<XQaO'#FmO<XQaO'#FnO<XQaO'#FoO<XQaO'#FoO<XQaO'#FrO)5YQaO'#GQO<XQaO'#G`O<XQaO'#GcO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO<XQaO,5;xO)5dQ`O'#FsO-RQaO'#EbO-RQaO'#IjO)5lQaO,5:xO<XQaO,5;uO<XQaO,5;wO)5sQdO,5<WO)7rQdO,5<XO)9qQdO,5<YO);pQdO,5<ZO)=oQdO,5<ZO)>YQdO,5<^O)@XQdO,5<lO)BWQdO,5<}O)DVQ`O'#JUO)ElQ`O'#IgO<XQaO1G0YO)GRQdO1G1dO)IQQdO1G1dO)KPQdO1G1dO)MOQdO1G1dO)N}QdO1G1dO*!|QdO1G1dO*${QdO1G1dO*&zQdO1G1dO*(yQdO1G1dO**xQdO1G1dO*,wQdO1G1dO*.vQdO1G1dO*0uQdO1G1dO*2tQdO1G1dO*4sQdO1G1dO*6rQaO,5;OO*6yQdO,5:|O*7ZQdO,5?UO*7kQaO'#HmO*7{Q`O,5?TO*8TQdO1G0dO<XQaO1G0dO*:SQdO1G1aO*<RQdO1G1cO<XQaO1G2VO!+iQaO'#ITO*>QQ`O,5=eO*>YQaO'#HkO*>dQ`O,5?RO<XQaO7+%tO*>lQdO7+%tO*@kQ`O1G0jO!+iQaO1G0jO*BQQdO7+&OO<XQaO7+'qO*DPQdO7+'qO*FOQ`O,5>oO*GeQ`O,5>VO*HzQdO<<I`O*JyQ`O7+&UO*L`QdO<<K]O<XQaO<<K]O<XQaOAN@wO*N_QdOAN@wO+!^QdOG26cO<XQaOG26cO+$]QdOLD+}O+&[QaO,5;OO<XQaO1G0jO+&cQdO'#IjO+'PQ`O'#GPO+'XQ`O,5<kO!#[Q`O,5<kO!#[Q`O1G2VO2wQ`O1G2VO2wQ`O7+'qO2wQ`O<<K]O+'aQdO'#IeO+'}QeO'#F]O+(nQeO'#F]O+*jQaO'#F]O+,SQaO'#F]O!+iQaO'#FlO!+iQaO'#FmO!+iQaO'#FnO!+iQaO'#FoO!+iQaO'#FoO!+iQaO'#FrO+-rQaO'#GQO!+iQaO'#G`O!+iQaO'#GcO+-|QaO,5:nO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO!+iQaO,5;xO+.TQ`O'#IjO$8rQaO'#EbO+/mQaOG26cO$8rQaO'#IjO+1iQ`O'#IiO+1qQaO,5:xO!+iQaO,5;uO!+iQaO,5;wO+1xQ`O,5<WO+3_Q`O,5<XO+4tQ`O,5<YO+6ZQ`O,5<ZO+7pQ`O,5<ZO+9VQ`O,5<^O+:lQ`O,5<kO+:tQ`O,5<lO+<ZQ`O,5<}O+=pQ`O1G0YO!+iQaO1G0YO+?SQ`O1G1dO+@iQ`O1G1dO+BOQ`O1G1dO+CeQ`O1G1dO+DzQ`O1G1dO+FaQ`O1G1dO+GvQ`O1G1dO+I]Q`O1G1dO+JrQ`O1G1dO+LXQ`O1G1dO+MnQ`O1G1dO, TQ`O1G1dO,!jQ`O1G1dO,$PQ`O1G1dO,%fQ`O1G1dO,&{Q`O1G0dO!+iQaO1G0dO,(bQ`O1G1aO,)wQ`O1G1cO,+^Q`O1G2VO$8rQaO,5<tO!+iQaO1G2VO!+iQaO7+%tO,+fQ`O7+%tO,,{Q`O7+&OO!+iQaO7+'qO,.bQ`O7+'qO,.jQ`O7+'qO,0PQpO7+'qO,0[Q`O<<I`O,1qQ`O<<K]O,3WQpO<<K]O!+iQaO<<K]O!+iQaOAN@wO,3cQ`OAN@wO,4xQpOAN@wO,5TQ`OG26cO!+iQaOG26cO,6jQ`OLD+}O,8PQaO,5;OO!+iQaO1G0jO,8WQ`O'#IjO$8rQaO'#FlO$8rQaO'#FmO$8rQaO'#FnO$8rQaO'#FoO$8rQaO'#FoO+/mQaO'#FoO$8rQaO'#FrO,9pQaO'#GQO,9zQaO'#GQO$8rQaO'#G`O+/mQaO'#G`O$8rQaO'#GcO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO$8rQaO,5;xO+/mQaO,5;xO,;|Q`O'#FsO!+iQaO'#EbO!+iQaO'#IjO,<UQaO,5:xO,<]QaO,5:xO$8rQaO,5;uO+/mQaO,5;uO$8rQaO,5;wO,>[QdO,5<WO,?}QdO,5<XO,ApQdO,5<YO,CcQdO,5<ZO,EUQdO,5<ZO,FwQ`O,5<ZO,HWQdO,5<^O,IyQdO,5<lO%=XQ`O,5<lO,KlQdO,5<}O$8rQaO1G0YO+/mQaO1G0YO,M_QdO1G1dO- QQ`O1G1dO-!aQdO1G1dO-$SQ`O1G1dO-%cQdO1G1dO-'UQ`O1G1dO-(eQdO1G1dO-*WQ`O1G1dO-+gQdO1G1dO--YQ`O1G1dO-.iQdO1G1dO-0[Q`O1G1dO-1kQdO1G1dO-3^Q`O1G1dO-4mQdO1G1dO-6`Q`O1G1dO-7oQdO1G1dO-9bQ`O1G1dO-:qQdO1G1dO-<dQ`O1G1dO-=sQdO1G1dO-?fQ`O1G1dO-@uQdO1G1dO-BhQ`O1G1dO-CwQdO1G1dO-EjQ`O1G1dO-FyQdO1G1dO-HlQ`O1G1dO-I{QdO1G1dO-KnQ`O1G1dO-L}Q`O,5:|O-NdQ`O,5?UO. yQdO1G0dO.#lQ`O1G0dO$8rQaO1G0dO+/mQaO1G0dO.${QdO1G1aO.&nQ`O1G1aO.'}QdO1G1cO$8rQaO1G2VO$8rQaO7+%tO+/mQaO7+%tO.)pQdO7+%tO.+cQ`O7+%tO.,rQdO7+&OO..eQ`O7+&OO$8rQaO7+'qO./tQdO7+'qO.1gQdO<<I`O.3YQ`O<<I`O.4iQdO<<K]O$8rQaO<<K]O$8rQaOAN@wO.6[QdOAN@wO.7}QdOG26cO$8rQaOG26cO.9pQdOLD+}O.;cQaO,5;OO.;jQaO,5;OO$8rQaO1G0jO+/mQaO1G0jO.=iQ`O'#IjO.>{QdO'#IjO.BbQ`O'#IeO.BoQ`O'#GPO.BwQaO,5:nO.COQ`O,5<kO.CWQdO'#GYO.CiQ`O,5<kO!#[Q`O,5<kO.CqQ`O1G0YO.ETQdO,5:|O.FvQdO,5?UO.HiQ`O1G2VO!#[Q`O1G2VO.HqQdO'#H}O.ISQdO,5?hO2wQ`O1G2VO2wQ`O7+'qO.IbQ`O7+'qO.IjQdO1G2`O.KVQpO7+'qO.KbQpO<<K]O2wQ`O<<K]O.KmQpOAN@wO.KxQdO'#IeO.LcQ`O'#IeO.NVQaO,5:nO.N^QaO,5:nO.NeQ`O,5<kO.NmQ`O7+'qO.NuQ`O1G0YO/!XQ`O1G0YO/#kQ`O1G2VO/#sQ`O7+'qO/#{QpO7+'qO/$WQpOAN@wO/$cQpO<<K]O/$nQpOAN@wO/$yQ`O'#GPO/%RQ`O'#FsO/%ZQ`O,5<kO/%cQdO'#I|O!#[Q`O,5<kO!#[Q`O1G2VO2wQ`O1G2VO2wQ`O7+'qO2wQ`O<<K]O/%qQ`O'#GPO/%yQ`O,5<kO/&RQ`O,5<kO!#[Q`O,5<kO!#[Q`O1G2VO!#[Q`O1G2VO2wQ`O1G2VO2wQ`O<<K]O2wQ`O7+'qO2wQ`O<<K]O/&ZQ`O'#FsO/&cQ`O'#FsO/&kQ`O'#Fs",
 		stateData: "/'Q~O!eOS!fOS'SOS!hQQ~O!jTO'TRO~OPgOQ|OS!lOU_OW}OX!XO[mO]!_O^!WO`![Oa!SOb!]Ok!dOm!lOowOp!TOq!UOsuOt!gOu!VOv!POxkOykO|!bO}aO!O^O!P!eO!QxO!R}O!TpO!VlO!WlO!X!YO!Y!QO!ZzO![!cO!]!ZO!^!^O!_!fO!a!`O!b!RO!djO!nWO!pXO!z]O#X`O#dhO#fbO#gcO#sdO$[oO$dnO$eoO$hqO$krO$u!kO%TyO%U!OO%W}O%X}O%`|O'WYO'u{O~O!h!mO~O'TRO!j!iX&|!iX'Q!iX~O!j!pO~O!e!qO!f!qO!h!mO'Q!tO'S!qO~PhO!o!vO~PhO!n!tX#T!tX#s#vX'P!tX!y!tX#P!tX!p!tX~OT!tXz!tX!S!tX!c!tX!r!tX!w!tX!z!tX#X!tX#a!tX#b!tX#y!tX$R!tX$S!tX$T!tX$U!tX$V!tX$X!tX$Y!tX$Z!tX$[!tX$]!tX$^!tX$_!tX%T!tX#O!tX#Y!tX!o!tXV!tX#|!tX$O!tXw!tX{!tX~P&sOT'eXz'eX!S'eX!c'eX!w'eX!z'eX#T'eX#X'eX#a'eX#b'eX#y'eX$R'eX$S'eX$T'eX$U'eX$V'eX$X'eX$Y'eX$Z'eX$['eX$]'eX$^'eX$_'eX%T'eX~O!r!xO!n'eX'P'eX~P)dOT#SOz#QO!S#TO!c#UO!n#bO!w!yO!z!|O#T#PO#X!zO#a!{O#b!{O#y#OO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cO'P#bO~OPgOQ|OU_OW}O[mOowOs#fOxkOykO}aO!O^O!QxO!R}O!TpO!VlO!WlO!ZzO!djO!z]O#X`O#dhO#fbO#gcO#sdO$[oO$dnO$eoO$hqO%TyO%U!OO%W}O%X}O%`|O'WYO'u{O~O!z]O~O!z#iO~OP7wOQ|OU_OW}O[7zOo>uOs#fOx7xOy7xO}aO!O^O!Q8OO!R}O!T7}O!V7yO!W7yO!Z8QO!d:QO!z]O#T#mO#V#lO#X`O#dhO#fbO#gcO#sdO$[7|O$d7{O$e7|O$hqO%T8PO%U!OO%W}O%X}O%`|O'WYO'u{O#Y']P~O#O#qO~P/lO!z#rO~O#d#tO#fbO#gcO~O'a#vO~O#s#zO~OU$OO!R$OO!w#}O#s3hO'W#{O~OT'XXz'XX!S'XX!c'XX!n'XX!w'XX!z'XX#T'XX#X'XX#a'XX#b'XX#y'XX$R'XX$S'XX$T'XX$U'XX$V'XX$X'XX$Y'XX$Z'XX$['XX$]'XX$^'XX$_'XX%T'XX'P'XX!y'XX!o'XX~O#|$QO$O$RO~P3YOP7wOQ|OU_OW}O[7zOo>uOs#fOx7xOy7xO}aO!O^O!Q8OO!R}O!T7}O!V7yO!W7yO!Z8QO!d:QO!z]O#X`O#dhO#fbO#gcO#sdO$[7|O$d7{O$e7|O$hqO%T8PO%U!OO%W}O%X}O%`|O'WYO'u{OT$PXz$PX!S$PX!c$PX!n$PX!w$PX#a$PX#b$PX#y$PX$R$PX$S$PX$T$PX$U$PX$V$PX$X$PX$Y$PX$Z$PX$]$PX$^$PX$_$PX'P$PX!y$PX!o$PX~Or$TO#T8eO#V8dO~P5^O#sdO'WYO~OS$fO]$aOk$dOm$fOs$`O!a$bO$krO$u$eO~O!z$hO#T$jO'W$gO~Oo$mOs$lO#d$nO~O!z$hO#T$rO~O!U$uO$u$tO~P-ROR${O!p$zO#d$yO#g$zO&}${O~O't$}O~P;PO!z%SO~O!z%UO~O!n#bO'P#bO~P-RO!pXO~O!z%`O~OP7wOQ|OU_OW}O[7zOo>uOs#fOx7xOy7xO}aO!O^O!Q8OO!R}O!T7}O!V7yO!W7yO!Z8QO!d:QO!z]O#X`O#dhO#fbO#gcO#sdO$[7|O$d7{O$e7|O$hqO%T8PO%U!OO%W}O%X}O%`|O'WYO'u{O~O!z%dO~O]$aO~O!pXO#sdO'WYO~O]%rOs%rO#s%nO'WYO~O!j%wO'Q%wO'TRO~O'Q%zO~PhO!o%{O~PhO!r%}O~P<XO#Y&PO~P<XO!p&SO#d&RO'a&QO~OPgOQ|OU_OW}O[:WOo?jOs#fOx:UOy:UO}aO!O^O!Q:[O!R}O!T:ZO!V:VO!W:VO!Z:^O!d:TO!z]O#V&WO#X`O#dhO#fbO#gcO#sdO$[:YO$d:XO$e:YO$hqO%T:]O%U!OO%W}O%X}O%`|O'WYO'u{O~O!y'bP~P@aO!p&[O#d&]O'W$gO~OT#SOz#QO!S#TO!c#UO!w!yO!z!|O#T#PO#X!zO#a!{O#b!{O#y#OO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cO~O!y&oO~PCVO!z$hO#T&pO~Oo$mOs$lO~O!p&qO~O#O&tO#T=PO#V=OO!y']P~P<XOT8TOz8RO!S8UO!c8VO!w:_O!z!|O#T#PO#X!zO#a!{O#b!{O#y#OO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O'^X#Y'^X~O#P&uO~PEqO#O&xO#Y']X~O#Y&zO~O#O'PO!y'_P~P<XO!o'QO~PCVO!n#uX#T#uX#s#tX'P#uX!y#uX#P#uX!p#uX~OT#uXz#uX!S#uX!c#uX!w#uX!z#uX#X#uX#a#uX#b#uX#y#uX$R#uX$S#uX$T#uX$U#uX$V#uX$X#uX$Y#uX$Z#uX$[#uX$]#uX$^#uX$_#uX%T#uX#O#uX#Y#uX!o#uXV#uX!r#uX#|#uX$O#uXw#uX~PH[O#s'RO~O'a'UO~O#n!tX#V!tX#d!tX~P&sO!y']O#T'ZO#n'XO~O#T'aO~P-RO!n$`a'P$`a!y$`a!o$`a~PCVO!n$aa'P$aa!y$aa!o$aa~PCVO!n$ba'P$ba!y$ba!o$ba~PCVO!n$ca'P$ca!y$ca!o$ca~PCVO!z!|O#X!zO#a!{O#b!{O#y#OO%T#cOT$ca!S$ca!c$ca!n$ca!w$ca#T$ca$R$ca$S$ca$T$ca$U$ca$V$ca$X$ca$Y$ca$Z$ca$[$ca$]$ca$^$ca$_$ca'P$ca!y$ca!o$ca~Oz#QO~PMVO!n$fa'P$fa!y$fa!o$fa~PCVO!z!|O#O$mX#Y$mX~O#O'eO#Y'iX~O#Y'gO~O#T'hO'W$gO~O]'jO~O$u'nO~O!a'tO#T'rO#V'sO#d'qO$krO!y'gP~P2wO!_'zO!pXO!r'yO~O!z$hO'W$gO~O!z$hO~O!z$hO#T(OO~O!z$hO#T(QO~O#|(RO!n$|X#O$|X'P$|X~O#O(SO!n'pX'P'pX~O!n#bO'P#bO~O!r(WO#P(VO~O!n$ta'P$ta!y$ta!o$ta~PCVOl(YOw(ZO!p([O!z!|O~O$u(aO~O!z!|O#X!zO#a!{O#b!{O#y#OO~OT%Saz%Sa!S%Sa!c%Sa!n%Sa!w%Sa#T%Sa$R%Sa$S%Sa$T%Sa$U%Sa$V%Sa$X%Sa$Y%Sa$Z%Sa$[%Sa$]%Sa$^%Sa$_%Sa%T%Sa'P%Sa!y%Sa#O%Sa#P%Sa#Y%Sa!o%Sa!r%SaV%Sa#|%Sa$O%Sa!p%Sa~P!%aO!n%Va'P%Va!y%Va!o%Va~PCVO#X(dO#a(bO#b(bO'O(cOR&sX!p&sX#d&sX#g&sX&}&sX't&sX~O't(gO~P;PO!r(hO~PhO!p(kO!r(lO~O!r(hO'P(oO~PhO!b(sO~O!n(tO~P<XOZ)POn)QO~OT8TOz8RO!S8UO!c8VO!w:_O#O)TO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n'xX'P'xX~P!%aOPgOQ|OU_OW}O[:WOo?jOs#fOx:UOy:UO}aO!O^O!Q:[O!R}O!T:ZO!V:VO!W:VO!Z:^O!d:TO!z]O#X`O#dhO#fbO#gcO#sdO$[:YO$d:XO$e:YO$hqO%T:]O%U!OO%W}O%X}O%`|O'WYO'u{O~O#|)XO~O#O)YO!n'oX'P'oX~Ol(YO!p([O~Ow(ZO!p)`O!r)cO~O!n#bO!pXO'P#bO~O#s)fO~OV)iO#O)gO!n'yX'P'yX~O#s)kO'WYO~OT8TOz8RO!S8UO!c8VO!w:_O#O)nO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n'ZX'P'ZX#P'ZX~P!%aOl(YOw(ZO!p([O~O!j)tO'Q)tO~OT8TOz8RO!S8UO!c8VO!r)uO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO#Y)wO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y'cX#O'cX~P!%aO!r)yO!y'eX#O'eX~P)dO!y#kX#O#kX~P!+iO#O){O!y'bX~O!y)}O~O%T#cOT$Qiz$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi$_$Qi'P$Qi!y$Qi#O$Qi#P$Qi#Y$Qi!o$Qi!r$QiV$Qi#|$Qi$O$Qi!p$Qi~P!%aOz#QO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO!w!yO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi'P$Qi!y$Qi!o$Qi~P!%aOT#SOz#QO!c#UO!w!yO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cO!S$Qi!n$Qi'P$Qi!y$Qi!o$Qi~P!%aOT#SOz#QO!w!yO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cO!S$Qi!c$Qi!n$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO#T#PO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi$R$Qi$S$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO#T#PO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi$R$Qi$S$Qi$T$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO#T#PO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi$R$Qi$S$Qi$T$Qi$U$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO#T#PO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO$[#_O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$]$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO$Z#^O$[#_O$^#aO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$]$Qi'P$Qi!y$Qi!o$Qi~P!%aOz#QO$_#aO%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi'P$Qi!y$Qi!o$Qi~P!%aO_*PO~P<XO!y*SO~O#T*VO~P<XOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O#Ua#Y#Ua#P#Ua!n#Ua'P#Ua!r#Ua!y#Ua!o#UaV#Ua!p#Ua~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O'^a#Y'^a#P'^a!n'^a'P'^a!r'^a!y'^a!o'^aV'^a!p'^a~P!%aO#T#mO#V#lO#O&aX#Y&aX~P<XO#O&xO#Y']a~O#Y*YO~OT8TOz8RO!S8UO!c8VO!w:_O#O*[O#P*ZO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!y'_X~P!%aO#O*[O!y'_X~O!y*^O~O!n#wX#T#wX#s#tX'P#wX!y#wX#P#wX!p#wX~OT#wXz#wX!S#wX!c#wX!w#wX!z#wX#X#wX#a#wX#b#wX#y#wX$R#wX$S#wX$T#wX$U#wX$V#wX$X#wX$Y#wX$Z#wX$[#wX$]#wX$^#wX$_#wX%T#wX#O#wX#Y#wX!o#wXV#wX!r#wX#|#wX$O#wXw#wX~P#)XO#s*aO~O#n'XO!y#ma#T#ma#V#ma#d#ma!p#ma#P#ma!n#ma'P#ma~O#T'ZO!y#oa#n#oa#V#oa#d#oa!p#oa#P#oa!n#oa'P#oa~OPgOQ|OU_OW}O[5jOo7dOs#fOx5fOy5fO}aO!O^O!Q3xO!R}O!T5pO!V5hO!W5hO!Z3zO!d5dO!z]O#X`O#dhO#fbO#gcO#sdO$[5nO$d5lO$e5nO$hqO%T3yO%U!OO%W}O%X}O%`|O'WYO'u{O~O#n#uX#V#uX#d#uX~PH[Oz#QO!w!yO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT#Qi!S#Qi!c#Qi!n#Qi'P#Qi!y#Qi!o#Qi~P!%aOz#QO!w!yO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT#}i!S#}i!c#}i!n#}i'P#}i!y#}i!o#}i~P!%aO!n$Pi'P$Pi!y$Pi!o$Pi~PCVO#sdO'WYO#O&iX#Y&iX~O#O'eO#Y'ia~Ow(ZO!p)`O!r*rO~O#T*wO#V*yO#d*xO#n'XO~O#T*{O#V*yO#d*xO$krO~P2wO#|*|O!y$jX#O$jX~O#V*yO#d*xO~O#d*}O~O#d+PO~P2wO#O+QO!y'gX~O!y+SO~O!z+UO~O!_+YO!pXO!r+XO~O!r+[O!p'qi!n'qi'P'qi~O!r+_O#P+^O~O#d$nO!n&qX#O&qX'P&qX~O#O(SO!n'pa'P'pa~OT$tiz$ti!S$ti!c$ti!n$ti!w$ti!z$ti#T$ti#X$ti#a$ti#b$ti#y$ti#|#ha$O#ha$R$ti$S$ti$T$ti$U$ti$V$ti$X$ti$Y$ti$Z$ti$[$ti$]$ti$^$ti$_$ti%T$ti'P$ti!y$ti#O$ti#P$ti#Y$ti!o$ti!r$tiV$ti!p$ti~OS+kO]+nOm+kOs$`O!U+kO!_+qO!`+kO!a+kO!o+uO#d>xO$hqO$krO~P2wO#X+|O#a+{O#b+{O~O#d,OO%W,OO%^+}O'W$gO~O!o,PO~PCVOc%bXd%bXh%bXj%bXf%bXg%bXe%bX~PhOc,TOd,ROP%aiQ%aiS%aiU%aiW%aiX%ai[%ai]%ai^%ai`%aia%aib%aik%aim%aio%aip%aiq%ais%ait%aiu%aiv%aix%aiy%ai|%ai}%ai!O%ai!P%ai!Q%ai!R%ai!T%ai!V%ai!W%ai!X%ai!Y%ai!Z%ai![%ai!]%ai!^%ai!_%ai!a%ai!b%ai!d%ai!n%ai!p%ai!z%ai#X%ai#d%ai#f%ai#g%ai#s%ai$[%ai$d%ai$e%ai$h%ai$k%ai$u%ai%T%ai%U%ai%W%ai%X%ai%`%ai&|%ai'W%ai'u%ai'Q%ai!o%aih%aij%aif%aig%aiY%ai_%aii%aie%ai~Oc,XOd,UOh,WO~OY,YO_,ZO!o,^O~OY,YO_,ZOi%gX~Oi,`O~Oj,aO~O!n,cO~P<XO!n,eO~Of,fO~OT8TOV,gOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aOg,hO~O!z,iO~OZ)POn)QOP%uiQ%uiS%uiU%uiW%uiX%ui[%ui]%ui^%ui`%uia%uib%uik%uim%uio%uip%uiq%uis%uit%uiu%uiv%uix%uiy%ui|%ui}%ui!O%ui!P%ui!Q%ui!R%ui!T%ui!V%ui!W%ui!X%ui!Y%ui!Z%ui![%ui!]%ui!^%ui!_%ui!a%ui!b%ui!d%ui!n%ui!p%ui!z%ui#X%ui#d%ui#f%ui#g%ui#s%ui$[%ui$d%ui$e%ui$h%ui$k%ui$u%ui%T%ui%U%ui%W%ui%X%ui%`%ui&|%ui'W%ui'u%ui'Q%ui!o%uic%uid%uih%uij%uif%uig%uiY%ui_%uii%uie%ui~O#|,mO~O#O)TO!n%ma'P%ma~O!y,pO~O'W$gO!n&pX#O&pX'P&pX~O#O)YO!n'oa'P'oa~OS+kOY,vO]+nOm+kOs$`O!U+kO!_+qO!`+kO!a+kO!o,yO#d>xO$hqO$krO~P2wO!p)`O~OU$OO!R$OO!w3nO#s3iO'W,zO~O#s,|O~O!p-OO'a'UO~O#sdO'WYO!n&zX#O&zX'P&zX~O#O)gO!n'ya'P'ya~O#s-UO~O!n&_X#O&_X'P&_X#P&_X~P<XO#O)nO!n'Za'P'Za#P'Za~Oz#QO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT!vq!S!vq!c!vq!n!vq!w!vq'P!vq!y!vq!o!vq~P!%aO!o-ZO~PCVOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y#ka#O#ka~P!%aO!y&cX#O&cX~P@aO#O){O!y'ba~O!o-_O~PCVO#P-`O~O#O-aO!o'YX~O!o-cO~O!y-dO~OT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O#Wi#Y#Wi~P!%aO!y&bX#O&bX~P<XO#O*[O!y'_a~O!y-jO~O#n'XO!y&ea#T&ea#V&ea#d&ea!p&ea#P&ea!n&ea'P&ea~OT#lqz#lq!S#lq!c#lq!n#lq!w#lq#T#lq#|#lq$O#lq$R#lq$S#lq$T#lq$U#lq$V#lq$X#lq$Y#lq$Z#lq$[#lq$]#lq$^#lq$_#lq%T#lq'P#lq!y#lq#O#lq#P#lq#Y#lq!o#lq!r#lqV#lq!p#lq~P!%aO#n#wX#V#wX#d#wX~P#)XOz#QO!w!yO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT#Qq!S#Qq!c#Qq!n#Qq'P#Qq!y#Qq!o#Qq~P!%aO#V-sO#d-rO~P2wO#|-tO!y$ja#O$ja~O#d-uO~O#T-vO#V-sO#d-rO#n'XO~O#V-sO#d-rO~O#T'ZO#d-xO#n'XO~O!p-yO#|-zO!y$oa#O$oa~O!a'tO#T'rO#V'sO#d'qO$krO!y&kX#O&kX~P2wO#O+QO!y'ga~O!pXO#T'ZO#n'XO~O#T.QO#d.PO!y'kP~O!pXO!r.SO~O!r.VO!p'qq!n'qq'P'qq~O!_.XO!pXO!r.SO~O!r.]O#P.[O~OT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n$|i#O$|i'P$|i~P!%aO!n$sq'P$sq!y$sq!o$sq~PCVO#P.[O#T'ZO#n'XO~O#O.^Ow'lX!p'lX!n'lX'P'lX~O#T'ZO#d>xO#n'XO~OS+kO].cOm+kOs$`O!U+kO!`+kO!a+kO#d>xO$hqO$krO~P2wOS+kO].cOm+kOs$`O!U+kO!`+kO!a+kO#d>xO$hqO~P2wO!n#bO!p-yO'P#bO~OS+kO]+nOm+kOs$`O!U+kO!_+qO!`+kO!a+kO!o.mO#d>xO$hqO$krO~P2wO#d.rO%W.rO%^+}O'W$gO~O%W.sO~O#Y.tO~Oc%bad%bah%baj%baf%bag%bae%ba~PhOc.wOd,ROP%aqQ%aqS%aqU%aqW%aqX%aq[%aq]%aq^%aq`%aqa%aqb%aqk%aqm%aqo%aqp%aqq%aqs%aqt%aqu%aqv%aqx%aqy%aq|%aq}%aq!O%aq!P%aq!Q%aq!R%aq!T%aq!V%aq!W%aq!X%aq!Y%aq!Z%aq![%aq!]%aq!^%aq!_%aq!a%aq!b%aq!d%aq!n%aq!p%aq!z%aq#X%aq#d%aq#f%aq#g%aq#s%aq$[%aq$d%aq$e%aq$h%aq$k%aq$u%aq%T%aq%U%aq%W%aq%X%aq%`%aq&|%aq'W%aq'u%aq'Q%aq!o%aqh%aqj%aqf%aqg%aqY%aq_%aqi%aqe%aq~Oc.|Od,UOh.{O~O!r(hO~OP7wOQ|OU_OW}O[<ROo?sOs#fOx<POy<PO}aO!O^O!Q<WO!R}O!T<VO!V<QO!W<QO!Z<[O!d:RO!z]O#X`O#dhO#fbO#gcO#sdO$[<TO$d<SO$e<TO$hqO%T<YO%U!OO%W}O%X}O%`|O'WYO'u{O~O!n/PO!r/PO~OY,YO_,ZO!o/RO~OY,YO_,ZOi%ga~O!y/VO~P!+iO!n/XO~O!n/XO~P<XOQ|OW}O!R}O%W}O%X}O%`|O'u{O~OT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n&wa#O&wa'P&wa~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n$zi#O$zi'P$zi~P!%aOS+kOY/cO].cOm+kOs$`O!U+kO!`+kO!a+kO#d>xO$hqO$krO~P2wOS+kOY,vO]+nOm+kOs$`O!U+kO!_+qO!`+kO!a+kO!o/fO#d>xO$hqO$krO~P2wOw!tX!p!tX#T!tX#n!tX#s#vX#|!tX'W!tX~Ow(ZO!p)`O#T3tO#n3sO~O!p-OO'a&fa~O]/nOs/nO#sdO'WYO~OV/rO!n&za#O&za'P&za~O#O)gO!n'yi'P'yi~O#s/tO~OT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n&_a#O&_a'P&_a#P&_a~P!%aOz#QO#T#PO$R#RO$S#VO$T#WO$U#XO$V#YO$X#[O$Y#]O$Z#^O$[#_O$]#`O$^#aO$_#aO%T#cOT!vy!S!vy!c!vy!n!vy!w!vy'P!vy!y!vy!o!vy~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y#ji#O#ji~P!%aO_*PO!o&`X#O&`X~P<XO#O-aO!o'Ya~OT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O#Wq#Y#Wq~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y#]i#O#]i~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#P/yO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!y&ba#O&ba~P!%aO#|0OO!y$ji#O$ji~O#d0PO~O#V0SO#d0RO~P2wOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$ji#O$ji~P!%aO!p-yO#|0TO!y$oi#O$oi~O!o0YO'W$gO~O#O0[O!y'kX~O#d0^O~O!y0_O~O!pXO!r0bO~O#T'ZO#n'XO!p'qy!n'qy'P'qy~O!n$sy'P$sy!y$sy!o$sy~PCVO#P0eO#T'ZO#n'XO~O#sdO'WYOw&mX!p&mX#O&mX!n&mX'P&mX~O#O.^Ow'la!p'la!n'la'P'la~OS+kO]0mOm+kOs$`O!U+kO!`+kO!a+kO#d>xO$hqO~P2wO#T3tO#n3sO'W$gO~O#|)XO#T'eX#n'eX'W'eX~O!n#bO!p0sO'P#bO~O#Y0wO~Oh0|O~OT<aOz<]O!S<cO!c<eO!n0}O!r0}O!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO~P!%aOY%fa_%fa!o%fai%fa~PhO!y1PO~O!y1PO~P!+iO!n1RO~OT8TOz8RO!S8UO!c8VO!w:_O!y1TO#P1SO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aO!y1TO~O!y1UO#T'ZO#d1VO#n'XO~O!y1WO~O!n#bO#|1ZO'P#bO~O#n3sOw#ma!p#ma#T#ma'W#ma~O#T3tOw#oa!p#oa#n#oa'W#oa~Ow#uX!p#uX#T#uX#n#uX#s#tX'W#uX~O!p-OO'a*`O~OV1`O!o&VX#O&VX~O#O1bO!o'zX~O!o1dO~O#O)gO!n'yq'P'yq~OT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!o!}i#O!}i~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$jq#O$jq~P!%aO#|1kO!y$jq#O$jq~O#d1lO~O!n#bO!pXO!z$hO#P1oO'P#bO~O!o1rO'W$gO~OT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$oq#O$oq~P!%aO#T1tO#d1sO!y&lX#O&lX~O#O0[O!y'ka~O#T'ZO#n'XO!p'q!R!n'q!R'P'q!R~O!pXO!r1yO~O!n$s!R'P$s!R!y$s!R!o$s!R~PCVO#P1{O#T'ZO#n'XO~OP7wOU_O[:rOo?tOs#fOx:rOy:rO}aO!O^O!Q<XO!T:rO!V:rO!W:rO!Z:rO!d:SO!o2XO!z]O#X`O#dhO#fbO#gcO#sdO$[<UO$d:rO$e<UO$hqO%T<ZO%U!OO'WYO~P$<UOh2ZO~OY%ei_%ei!o%eii%ei~PhOY%fi_%fi!o%fii%fi~PhO!y2^O~O!y2^O~P!+iO!y2aO~O!n#bO#|2eO'P#bO~O%W2fO%`2fO~O#n3sOw&ea!p&ea#T&ea'W&ea~Ow#wX!p#wX#T#wX#n#wX#s#tX'W#wX~OV2iO!o&Va#O&Va~O]2kOs2kO#sdO'WYO!o&{X#O&{X~O#O1bO!o'za~OT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y#^i#O#^i~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$jy#O$jy~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$oy#O$oy~P!%aO!pXO#P2rO~O#d2sO~O#O0[O!y'ki~O!n$s!Z'P$s!Z!y$s!Z!o$s!Z~PCVOT<bOz<^O!S<dO!c<fO!w?_O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cO~P!%aOV2{O{2zO~P)dOV2{O{2zOT'[Xz'[X!S'[X!c'[X!w'[X!z'[X#T'[X#X'[X#a'[X#b'[X#y'[X#|'[X$O'[X$R'[X$S'[X$T'[X$U'[X$V'[X$X'[X$Y'[X$Z'[X$['[X$]'[X$^'[X$_'[X%T'[X~OP7wOU_O[:rOo?tOs#fOx:rOy:rO}aO!O^O!Q<XO!T:rO!V:rO!W:rO!Z:rO!d:SO!o3OO!z]O#X`O#dhO#fbO#gcO#sdO$[<UO$d:rO$e<UO$hqO%T<ZO%U!OO'WYO~P$<UOY%eq_%eq!o%eqi%eq~PhO!y3QO~O!y%pi~PCVOe3RO~O%W3SO%`3SO~OV3VO!o&WX#O&WX~OT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$j!R#O$j!R~P!%aO!n$s!c'P$s!c!y$s!c!o$s!c~PCVO!a3`O'W$gO~OV3dO!o&Wa#O&Wa~O'W$gO!n%Ri'P%Ri~O'a'_O~O'a/jO~O'a*iO~O'a1]O~OT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$ta#|$ta$O$ta'P$ta!y$ta!o$ta#O$ta~P!%aO#T3uO~P-RO#s3lO~O#s3mO~O!U$uO$u$tO~P#-WOT8TOz8RO!S8UO!c8VO!w:_O#P3pO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n'^X'P'^X!y'^X!o'^X~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#P5aO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O'^X#Y'^X#|'^X$O'^X!n'^X'P'^X!r'^X!y'^X!o'^XV'^X!p'^X~P!%aO#T5OO~P#-WOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$`a#|$`a$O$`a'P$`a!y$`a!o$`a#O$`a~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$aa#|$aa$O$aa'P$aa!y$aa!o$aa#O$aa~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$ba#|$ba$O$ba'P$ba!y$ba!o$ba#O$ba~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$ca#|$ca$O$ca'P$ca!y$ca!o$ca#O$ca~P!%aOz3{O#|$ca$O$ca#O$ca~PMVOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$fa#|$fa$O$fa'P$fa!y$fa!o$fa#O$fa~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n%Va#|%Va$O%Va'P%Va!y%Va!o%Va#O%Va~P!%aOz3{O#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#|$Qi$O$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi#|$Qi$O$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOT3}Oz3{O!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!S$Qi!n$Qi#|$Qi$O$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOT3}Oz3{O!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!S$Qi!c$Qi!n$Qi#|$Qi$O$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O#T#PO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#|$Qi$O$Qi$R$Qi$S$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O#T#PO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O#T#PO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O#T#PO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O$[4YO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$]$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O$Z4XO$[4YO$^4[O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$]$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOz3{O$_4[O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!w$Qi#T$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi'P$Qi!y$Qi!o$Qi#O$Qi~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n#Ua#|#Ua$O#Ua'P#Ua!y#Ua!o#Ua#O#Ua~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n'^a#|'^a$O'^a'P'^a!y'^a!o'^a#O'^a~P!%aOz3{O!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT#Qi!S#Qi!c#Qi!n#Qi#|#Qi$O#Qi'P#Qi!y#Qi!o#Qi#O#Qi~P!%aOz3{O!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT#}i!S#}i!c#}i!n#}i#|#}i$O#}i'P#}i!y#}i!o#}i#O#}i~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$Pi#|$Pi$O$Pi'P$Pi!y$Pi!o$Pi#O$Pi~P!%aOz3{O#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT!vq!S!vq!c!vq!n!vq!w!vq#|!vq$O!vq'P!vq!y!vq!o!vq#O!vq~P!%aOz3{O!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT#Qq!S#Qq!c#Qq!n#Qq#|#Qq$O#Qq'P#Qq!y#Qq!o#Qq#O#Qq~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$sq#|$sq$O$sq'P$sq!y$sq!o$sq#O$sq~P!%aOz3{O#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cOT!vy!S!vy!c!vy!n!vy!w!vy#|!vy$O!vy'P!vy!y!vy!o!vy#O!vy~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$sy#|$sy$O$sy'P$sy!y$sy!o$sy#O$sy~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$s!R#|$s!R$O$s!R'P$s!R!y$s!R!o$s!R#O$s!R~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$s!Z#|$s!Z$O$s!Z'P$s!Z!y$s!Z!o$s!Z#O$s!Z~P!%aOT3}Oz3{O!S4OO!c4PO!w5rO#T#PO$R3|O$S4QO$T4RO$U4SO$V4TO$X4VO$Y4WO$Z4XO$[4YO$]4ZO$^4[O$_4[O%T#cO!n$s!c#|$s!c$O$s!c'P$s!c!y$s!c!o$s!c#O$s!c~P!%aOP7wOU_O[5kOo9xOs#fOx5gOy5gO}aO!O^O!Q5{O!T5qO!V5iO!W5iO!Z5}O!d5eO!z]O#T5bO#X`O#dhO#fbO#gcO#sdO$[5oO$d5mO$e5oO$hqO%T5|O%U!OO'WYO~P$<UOP7wOU_O[5kOo9xOs#fOx5gOy5gO}aO!O^O!Q5{O!T5qO!V5iO!W5iO!Z5}O!d5eO!z]O#X`O#dhO#fbO#gcO#sdO$[5oO$d5mO$e5oO$hqO%T5|O%U!OO'WYO~P$<UO#|4aO$O4bO#O'XX~P3YOP7wOU_O[5kOo9xOr4cOs#fOx5gOy5gO}aO!O^O!Q5{O!T5qO!V5iO!W5iO!Z5}O!d5eO!z]O#T4`O#V4_O#X`O#dhO#fbO#gcO#sdO$[5oO$d5mO$e5oO$hqO%T5|O%U!OO'WYOT$PXz$PX!S$PX!c$PX!n$PX!w$PX#a$PX#b$PX#y$PX#|$PX$O$PX$R$PX$S$PX$T$PX$U$PX$V$PX$X$PX$Y$PX$Z$PX$]$PX$^$PX$_$PX'P$PX!y$PX!o$PX#O$PX~P$<UOP7wOU_O[5kOo9xOr6dOs#fOx5gOy5gO}aO!O^O!Q5{O!T5qO!V5iO!W5iO!Z5}O!d5eO!z]O#T6aO#V6`O#X`O#dhO#fbO#gcO#sdO$[5oO$d5mO$e5oO$hqO%T5|O%U!OO'WYOT$PXz$PX!S$PX!c$PX!w$PX#O$PX#P$PX#Y$PX#a$PX#b$PX#y$PX#|$PX$O$PX$R$PX$S$PX$T$PX$U$PX$V$PX$X$PX$Y$PX$Z$PX$]$PX$^$PX$_$PX!n$PX'P$PX!r$PX!y$PX!o$PXV$PX!p$PX~P$<UO!r4kO~P<XO!r7iO#P5RO~OT8TOz8RO!S8UO!c8VO!r5SO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aO!r7jO#P5VO~O!r7kO#P5ZO~O#P5ZO#T'ZO#n'XO~O#P5[O#T'ZO#n'XO~O#P5_O#T'ZO#n'XO~OP7wOU_O[5kOo9xOs#fOx5gOy5gO}aO!O^O!Q5{O!T5qO!U$uO!V5iO!W5iO!Z5}O!d5eO!z]O#X`O#dhO#fbO#gcO#sdO$[5oO$d5mO$e5oO$hqO$u$tO%T5|O%U!OO'WYO~P$<UOP7wOU_O[5kOo9xOs#fOx5gOy5gO}aO!O^O!Q5{O!T5qO!V5iO!W5iO!Z5}O!d5eO!z]O#T7PO#X`O#dhO#fbO#gcO#sdO$[5oO$d5mO$e5oO$hqO%T5|O%U!OO'WYO~P$<UOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$`a#P$`a#Y$`a#|$`a$O$`a!n$`a'P$`a!r$`a!y$`a!o$`aV$`a!p$`a~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$aa#P$aa#Y$aa#|$aa$O$aa!n$aa'P$aa!r$aa!y$aa!o$aaV$aa!p$aa~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$ba#P$ba#Y$ba#|$ba$O$ba!n$ba'P$ba!r$ba!y$ba!o$baV$ba!p$ba~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$ca#P$ca#Y$ca#|$ca$O$ca!n$ca'P$ca!r$ca!y$ca!o$caV$ca!p$ca~P!%aOz6OO#O$ca#P$ca#Y$ca#|$ca$O$ca!r$caV$ca!p$ca~PMVOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$fa#P$fa#Y$fa#|$fa$O$fa!n$fa'P$fa!r$fa!y$fa!o$faV$fa!p$fa~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O%Va#P%Va#Y%Va#|%Va$O%Va!n%Va'P%Va!r%Va!y%Va!o%VaV%Va!p%Va~P!%aOz6OO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOT6QOz6OO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO!S$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOT6QOz6OO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO!S$Qi!c$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO#T#PO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO#T#PO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO#T#PO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO#T#PO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO$[6]O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$]$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO$Z6[O$[6]O$^6_O$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$]$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz6OO$_6_O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi#|$Qi$O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O#Ua#P#Ua#Y#Ua#|#Ua$O#Ua!n#Ua'P#Ua!r#Ua!y#Ua!o#UaV#Ua!p#Ua~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O'^a#P'^a#Y'^a#|'^a$O'^a!n'^a'P'^a!r'^a!y'^a!o'^aV'^a!p'^a~P!%aOz6OO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT#Qi!S#Qi!c#Qi#O#Qi#P#Qi#Y#Qi#|#Qi$O#Qi!n#Qi'P#Qi!r#Qi!y#Qi!o#QiV#Qi!p#Qi~P!%aOz6OO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT#}i!S#}i!c#}i#O#}i#P#}i#Y#}i#|#}i$O#}i!n#}i'P#}i!r#}i!y#}i!o#}iV#}i!p#}i~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$Pi#P$Pi#Y$Pi#|$Pi$O$Pi!n$Pi'P$Pi!r$Pi!y$Pi!o$PiV$Pi!p$Pi~P!%aOz6OO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT!vq!S!vq!c!vq!w!vq#O!vq#P!vq#Y!vq#|!vq$O!vq!n!vq'P!vq!r!vq!y!vq!o!vqV!vq!p!vq~P!%aOz6OO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT#Qq!S#Qq!c#Qq#O#Qq#P#Qq#Y#Qq#|#Qq$O#Qq!n#Qq'P#Qq!r#Qq!y#Qq!o#QqV#Qq!p#Qq~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$sq#P$sq#Y$sq#|$sq$O$sq!n$sq'P$sq!r$sq!y$sq!o$sqV$sq!p$sq~P!%aOz6OO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cOT!vy!S!vy!c!vy!w!vy#O!vy#P!vy#Y!vy#|!vy$O!vy!n!vy'P!vy!r!vy!y!vy!o!vyV!vy!p!vy~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$sy#P$sy#Y$sy#|$sy$O$sy!n$sy'P$sy!r$sy!y$sy!o$syV$sy!p$sy~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$s!R#P$s!R#Y$s!R#|$s!R$O$s!R!n$s!R'P$s!R!r$s!R!y$s!R!o$s!RV$s!R!p$s!R~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$s!Z#P$s!Z#Y$s!Z#|$s!Z$O$s!Z!n$s!Z'P$s!Z!r$s!Z!y$s!Z!o$s!ZV$s!Z!p$s!Z~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$s!c#P$s!c#Y$s!c#|$s!c$O$s!c!n$s!c'P$s!c!r$s!c!y$s!c!o$s!cV$s!c!p$s!c~P!%aO#T7cO~P#-WO!z$hO#T7gO~O!y5uO#T'ZO#n'XO~O!z$hO#T7hO~OT6QOz6OO!S6RO!c6SO!w7oO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO#O$ta#P$ta#Y$ta#|$ta$O$ta!n$ta'P$ta!r$ta!y$ta!o$taV$ta!p$ta~P!%aOT6QOz6OO!S6RO!c6SO!w7oO#P7bO#T#PO$R6PO$S6TO$T6UO$U6VO$V6WO$X6YO$Y6ZO$Z6[O$[6]O$]6^O$^6_O$_6_O%T#cO!n'^X#|'^X$O'^X'P'^X!y'^X!o'^X#O'^X~P!%aO#|6bO$O6cO#O'XX#P'XX#Y'XX!r'XXV'XX!p'XX~P3YO!r6lO~P<XO!r9|O#P7SO~OT8TOz8RO!S8UO!c8VO!r7TO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aO!r9}O#P7WO~O!r:OO#P7[O~O#P7[O#T'ZO#n'XO~O#P7]O#T'ZO#n'XO~O#P7`O#T'ZO#n'XO~O!U$uO$u$tO~P<XOo7fOs$lO~O#T9ZO~P<XOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$`a#P$`a#Y$`a!n$`a'P$`a!r$`a!y$`a!o$`aV$`a!p$`a~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$aa#P$aa#Y$aa!n$aa'P$aa!r$aa!y$aa!o$aaV$aa!p$aa~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$ba#P$ba#Y$ba!n$ba'P$ba!r$ba!y$ba!o$baV$ba!p$ba~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$ca#P$ca#Y$ca!n$ca'P$ca!r$ca!y$ca!o$caV$ca!p$ca~P!%aOz8RO#O$ca#P$ca#Y$ca!r$caV$ca!p$ca~PMVOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$fa#P$fa#Y$fa!n$fa'P$fa!r$fa!y$fa!o$faV$fa!p$fa~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$ta#P$ta#Y$ta!n$ta'P$ta!r$ta!y$ta!o$taV$ta!p$ta~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O%Va#P%Va#Y%Va!n%Va'P%Va!r%Va!y%Va!o%VaV%Va!p%Va~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#O9_O#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y'xX~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#O9aO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y'ZX~P!%aOz8RO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi#O$Qi#P$Qi#Y$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOT8TOz8RO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!S$Qi#O$Qi#P$Qi#Y$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOT8TOz8RO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!S$Qi!c$Qi#O$Qi#P$Qi#Y$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO#T#PO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi$R$Qi$S$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO#T#PO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi$R$Qi$S$Qi$T$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO#T#PO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO#T#PO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO$[8`O$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$]$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO$Z8_O$[8`O$^8bO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$]$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aOz8RO$_8bO%T#cOT$Qi!S$Qi!c$Qi!w$Qi#O$Qi#P$Qi#T$Qi#Y$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi!n$Qi'P$Qi!r$Qi!y$Qi!o$QiV$Qi!p$Qi~P!%aO#T9fO~P!+iO!n#Ua'P#Ua!y#Ua!o#Ua~PCVO!n'^a'P'^a!y'^a!o'^a~PCVO#T=PO#V=OO!y&aX#O&aX~P<XO#O9WO!y']a~Oz8RO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT#Qi!S#Qi!c#Qi#O#Qi#P#Qi#Y#Qi!n#Qi'P#Qi!r#Qi!y#Qi!o#QiV#Qi!p#Qi~P!%aOz8RO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT#}i!S#}i!c#}i#O#}i#P#}i#Y#}i!n#}i'P#}i!r#}i!y#}i!o#}iV#}i!p#}i~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$Pi#P$Pi#Y$Pi!n$Pi'P$Pi!r$Pi!y$Pi!o$PiV$Pi!p$Pi~P!%aO#O9_O!y%ma~O!y&_X#O&_X~P!+iO#O9aO!y'Za~Oz8RO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT!vq!S!vq!c!vq!w!vq#O!vq#P!vq#Y!vq!n!vq'P!vq!r!vq!y!vq!o!vqV!vq!p!vq~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y#Wi#O#Wi~P!%aOz8RO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT#Qq!S#Qq!c#Qq#O#Qq#P#Qq#Y#Qq!n#Qq'P#Qq!r#Qq!y#Qq!o#QqV#Qq!p#Qq~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$sq#P$sq#Y$sq!n$sq'P$sq!r$sq!y$sq!o$sqV$sq!p$sq~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y&wa#O&wa~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y&_a#O&_a~P!%aOz8RO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cOT!vy!S!vy!c!vy!w!vy#O!vy#P!vy#Y!vy!n!vy'P!vy!r!vy!y!vy!o!vyV!vy!p!vy~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y#Wq#O#Wq~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$sy#P$sy#Y$sy!n$sy'P$sy!r$sy!y$sy!o$syV$sy!p$sy~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$s!R#P$s!R#Y$s!R!n$s!R'P$s!R!r$s!R!y$s!R!o$s!RV$s!R!p$s!R~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$s!Z#P$s!Z#Y$s!Z!n$s!Z'P$s!Z!r$s!Z!y$s!Z!o$s!ZV$s!Z!p$s!Z~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO#O$s!c#P$s!c#Y$s!c!n$s!c'P$s!c!r$s!c!y$s!c!o$s!cV$s!c!p$s!c~P!%aO#T9vO~P<XO#P9uO!n'^X'P'^X!r'^X!y'^X!o'^XV'^X!p'^X~PEqO!z$hO#T9zO~O!z$hO#T9{O~O#|8fO$O8gO#O'XX#P'XX#Y'XX!r'XXV'XX!p'XX~P3YOr8hO#T#mO#V#lO#O$PX#P$PX#Y$PX!r$PXV$PX!p$PX~P5^Or=UO#T:sO#V:qOT$PXz$PX!S$PX!c$PX!n$PX!r$PX!w$PX#a$PX#b$PX#y$PX$R$PX$S$PX$T$PX$U$PX$V$PX$X$PX$Y$PX$Z$PX$]$PX$^$PX$_$PX!o$PX#O$PX!p$PX'P$PX~P<XOr:rO#T:rO#V:rOT$PXz$PX!S$PX!c$PX!w$PX#a$PX#b$PX#y$PX$R$PX$S$PX$T$PX$U$PX$V$PX$X$PX$Y$PX$Z$PX$]$PX$^$PX$_$PX~P<XOr:wO#T=PO#V=OOT$PXz$PX!S$PX!c$PX!w$PX!y$PX#O$PX#a$PX#b$PX#y$PX$R$PX$S$PX$T$PX$U$PX$V$PX$X$PX$Y$PX$Z$PX$]$PX$^$PX$_$PX~P<XO!U$uO$u$tO~P!+iO!r8sO~P<XOT8TOz8RO!S8UO!c8VO!w:_O#P9TO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!y'^X#O'^X~P!%aOP7wOU_O[:rOo?tOs#fOx:rOy:rO}aO!O^O!Q<XO!T:rO!V:rO!W:rO!Z:rO!d:SO!z]O#X`O#dhO#fbO#gcO#sdO$[<UO$d:rO$e<UO$hqO%T<ZO%U!OO'WYO~P$<UO#O9WO!y']X~O#T;eO~P!+iOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$`a#O$`a~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$aa#O$aa~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$ba#O$ba~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$ca#O$ca~P!%aOz:`O%T#cOT$ca!S$ca!c$ca!w$ca!y$ca#O$ca#T$ca$R$ca$S$ca$T$ca$U$ca$V$ca$X$ca$Y$ca$Z$ca$[$ca$]$ca$^$ca$_$ca~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$fa#O$fa~P!%aO!r?SO#P9^O~OT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$ta#O$ta~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y%Va#O%Va~P!%aOT8TOz8RO!S8UO!c8VO!r9cO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aOz:`O#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi~P!%aOz:`O!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!y$Qi#O$Qi~P!%aOT:bOz:`O!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!S$Qi!y$Qi#O$Qi~P!%aOT:bOz:`O!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!S$Qi!c$Qi!y$Qi#O$Qi~P!%aOz:`O#T#PO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi$R$Qi$S$Qi~P!%aOz:`O#T#PO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi$R$Qi$S$Qi$T$Qi~P!%aOz:`O#T#PO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi$R$Qi$S$Qi$T$Qi$U$Qi~P!%aOz:`O#T#PO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi~P!%aOz:`O$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi~P!%aOz:`O$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi~P!%aOz:`O$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi~P!%aOz:`O$[:mO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$]$Qi~P!%aOz:`O$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi~P!%aOz:`O$Z:lO$[:mO$^:oO$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$]$Qi~P!%aOz:`O$_:oO%T#cOT$Qi!S$Qi!c$Qi!w$Qi!y$Qi#O$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi~P!%aOz:`O!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT#Qi!S#Qi!c#Qi!y#Qi#O#Qi~P!%aOz:`O!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT#}i!S#}i!c#}i!y#}i#O#}i~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$Pi#O$Pi~P!%aO!r?TO#P9hO~Oz:`O#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT!vq!S!vq!c!vq!w!vq!y!vq#O!vq~P!%aOz:`O!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT#Qq!S#Qq!c#Qq!y#Qq#O#Qq~P!%aO!r?YO#P9oO~OT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$sq#O$sq~P!%aO#P9oO#T'ZO#n'XO~Oz:`O#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cOT!vy!S!vy!c!vy!w!vy!y!vy#O!vy~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$sy#O$sy~P!%aO#P9pO#T'ZO#n'XO~OT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$s!R#O$s!R~P!%aO#P9sO#T'ZO#n'XO~OT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$s!Z#O$s!Z~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y$s!c#O$s!c~P!%aO#T;}O~P!+iOT8TOz8RO!S8UO!c8VO!w:_O#P;|O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!y'^X#O'^X~P!%aO!U$uO$u$tO~P$8rOP7wOU_O[:rOo?tOs#fOx:rOy:rO}aO!O^O!Q<XO!T:rO!U$uO!V:rO!W:rO!Z:rO!d:SO!z]O#X`O#dhO#fbO#gcO#sdO$[<UO$d:rO$e<UO$hqO$u$tO%T<ZO%U!OO'WYO~P$<UOo9yOs$lO~O#T>VO~P$8rOP7wOU_O[:rOo?tOs#fOx:rOy:rO}aO!O^O!Q<XO!T:rO!V:rO!W:rO!Z:rO!d:SO!z]O#T>WO#X`O#dhO#fbO#gcO#sdO$[<UO$d:rO$e<UO$hqO%T<ZO%U!OO'WYO~P$<UOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$`a!r$`a!o$`a#O$`a!p$`a'P$`a~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$aa!r$aa!o$aa#O$aa!p$aa'P$aa~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$ba!r$ba!o$ba#O$ba!p$ba'P$ba~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$ca!r$ca!o$ca#O$ca!p$ca'P$ca~P!%aOz<]O%T#cOT$ca!S$ca!c$ca!n$ca!r$ca!w$ca#T$ca$R$ca$S$ca$T$ca$U$ca$V$ca$X$ca$Y$ca$Z$ca$[$ca$]$ca$^$ca$_$ca!o$ca#O$ca!p$ca'P$ca~P!%aOz<^O%T#cOT$ca!S$ca!c$ca!w$ca#T$ca$R$ca$S$ca$T$ca$U$ca$V$ca$X$ca$Y$ca$Z$ca$[$ca$]$ca$^$ca$_$ca~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$fa!r$fa!o$fa#O$fa!p$fa'P$fa~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$ta!r$ta!o$ta#O$ta!p$ta'P$ta~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n%Va!r%Va!o%Va#O%Va!p%Va'P%Va~P!%aOz<]O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi~P!%aOz<]O!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O!w?_O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi~P!%aOT<aOz<]O!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!S$Qi!n$Qi!r$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOT<bOz<^O!c<fO!w?_O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cO!S$Qi~P!%aOT<aOz<]O!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!S$Qi!c$Qi!n$Qi!r$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOT<bOz<^O!w?_O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cO!S$Qi!c$Qi~P!%aOz<]O#T#PO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi$R$Qi$S$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O#T#PO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi$R$Qi$S$Qi~P!%aOz<]O#T#PO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi$R$Qi$S$Qi$T$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O#T#PO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi$R$Qi$S$Qi$T$Qi~P!%aOz<]O#T#PO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi$R$Qi$S$Qi$T$Qi$U$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O#T#PO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi$R$Qi$S$Qi$T$Qi$U$Qi~P!%aOz<]O#T#PO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O#T#PO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi~P!%aOz<]O$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi~P!%aOz<]O$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi~P!%aOz<]O$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi~P!%aOz<]O$[<wO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$]$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O$[<xO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$]$Qi~P!%aOz<]O$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi~P!%aOz<]O$Z<uO$[<wO$^<{O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$]$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O$Z<vO$[<xO$^<|O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$]$Qi~P!%aOz<]O$_<{O%T#cOT$Qi!S$Qi!c$Qi!n$Qi!r$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi!o$Qi#O$Qi!p$Qi'P$Qi~P!%aOz<^O$_<|O%T#cOT$Qi!S$Qi!c$Qi!w$Qi#T$Qi$R$Qi$S$Qi$T$Qi$U$Qi$V$Qi$X$Qi$Y$Qi$Z$Qi$[$Qi$]$Qi$^$Qi~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y#Ua#O#Ua~P!%aOT:bOz:`O!S:cO!c:dO!w>vO#T#PO$R:aO$S:eO$T:fO$U:gO$V:hO$X:jO$Y:kO$Z:lO$[:mO$]:nO$^:oO$_:oO%T#cO!y'^a#O'^a~P!%aOz<]O!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT#Qi!S#Qi!c#Qi!n#Qi!r#Qi!o#Qi#O#Qi!p#Qi'P#Qi~P!%aOz<^O!w?_O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT#Qi!S#Qi!c#Qi~P!%aOz<]O!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT#}i!S#}i!c#}i!n#}i!r#}i!o#}i#O#}i!p#}i'P#}i~P!%aOz<^O!w?_O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT#}i!S#}i!c#}i~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$Pi!r$Pi!o$Pi#O$Pi!p$Pi'P$Pi~P!%aOz<]O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT!vq!S!vq!c!vq!n!vq!r!vq!w!vq!o!vq#O!vq!p!vq'P!vq~P!%aOz<^O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT!vq!S!vq!c!vq!w!vq~P!%aOz<]O!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT#Qq!S#Qq!c#Qq!n#Qq!r#Qq!o#Qq#O#Qq!p#Qq'P#Qq~P!%aOz<^O!w?_O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT#Qq!S#Qq!c#Qq~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$sq!r$sq!o$sq#O$sq!p$sq'P$sq~P!%aOz<]O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cOT!vy!S!vy!c!vy!n!vy!r!vy!w!vy!o!vy#O!vy!p!vy'P!vy~P!%aOz<^O#T#PO$R<`O$S<hO$T<jO$U<lO$V<nO$X<rO$Y<tO$Z<vO$[<xO$]<zO$^<|O$_<|O%T#cOT!vy!S!vy!c!vy!w!vy~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$sy!r$sy!o$sy#O$sy!p$sy'P$sy~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$s!R!r$s!R!o$s!R#O$s!R!p$s!R'P$s!R~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$s!Z!r$s!Z!o$s!Z#O$s!Z!p$s!Z'P$s!Z~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$s!c!r$s!c!o$s!c#O$s!c!p$s!c'P$s!c~P!%aO#T>pO~P$8rOP7wOU_O[:rOo?tOs#fOx:rOy:rO}aO!O^O!Q<XO!T:rO!V:rO!W:rO!Z:rO!d:SO!z]O#T>qO#X`O#dhO#fbO#gcO#sdO$[<UO$d:rO$e<UO$hqO%T<ZO%U!OO'WYO~P$<UOT8TOz8RO!S8UO!c8VO!w:_O#P>oO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aOT8TOz8RO!S8UO!c8VO!w:_O#P>nO#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO!n'^X!r'^X!o'^X#O'^X!p'^X'P'^X~P!%aOT'XXz'XX!S'XX!c'XX!w'XX!z'XX#O'XX#T'XX#X'XX#a'XX#b'XX#y'XX$R'XX$S'XX$T'XX$U'XX$V'XX$X'XX$Y'XX$Z'XX$['XX$]'XX$^'XX$_'XX%T'XX~O#|:uO$O:vO!y'XX~P.@qO!z$hO#T>zO~O!r;SO~P<XO!z$hO#T?PO~O#|;iO!n$|X!p$|X#O$|X'P$|X~O!r?pO#P;jO~OT8TOz8RO!S8UO!c8VO!r;kO!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n#Ua!r#Ua!o#Ua#O#Ua!p#Ua'P#Ua~P!%aOT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n'^a!r'^a!o'^a#O'^a!p'^a'P'^a~P!%aO!r?qO#P;nO~O#d>xO!n&qX!p&qX#O&qX'P&qX~O#O?QO!n'pa!p'pa'P'pa~O!r?rO#P;uO~OT<aOz<]O!S<cO!c<eO!w?^O#T#PO$R<_O$S<gO$T<iO$U<kO$V<mO$X<qO$Y<sO$Z<uO$[<wO$]<yO$^<{O$_<{O%T#cO!n$|i!p$|i#O$|i'P$|i~P!%aO#P;uO#T'ZO#n'XO~O#P;vO#T'ZO#n'XO~O#P;zO#T'ZO#n'XO~O#|=QO$O=SO!n'XX!r'XX!o'XX!p'XX'P'XX~P.@qO#|=RO$O=TOT'XXz'XX!S'XX!c'XX!w'XX!z'XX#T'XX#X'XX#a'XX#b'XX#y'XX$R'XX$S'XX$T'XX$U'XX$V'XX$X'XX$Y'XX$Z'XX$['XX$]'XX$^'XX$_'XX%T'XX~O!r=aO~P<XO!r=bO~P<XO!r?yO#P>[O~O!r?zO#P:rO~OT8TOz8RO!S8UO!c8VO!r>]O!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aOT8TOz8RO!S8UO!c8VO!r>^O!w:_O#T#PO$R8SO$S8WO$T8XO$U8YO$V8ZO$X8]O$Y8^O$Z8_O$[8`O$]8aO$^8bO$_8bO%T#cO~P!%aO!r?{O#P>cO~O!r?|O#P>hO~O#P>hO#T'ZO#n'XO~O#P:rO#T'ZO#n'XO~O#P>iO#T'ZO#n'XO~O#P>lO#T'ZO#n'XO~O!z$hO#T?nO~Oo>wOs$lO~O!z$hO#T?oO~O#O?QO!n'pX!p'pX'P'pX~O!z$hO#T?vO~O!z$hO#T?wO~O!z$hO#T?xO~Oo?lOs$lO~Oo?uOs$lO~Oo?tOs$lO~O%X$]%W$k!e$^#d%`#g'u'W#f~",
@@ -30413,8 +30633,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		dynamicPrecedences: { "298": 1 },
 		specialized: [{
 			term: 284,
-			get: (value, stack) => keywords$2(value) << 1,
-			external: keywords$2
+			get: (value, stack) => keywords$13(value) << 1,
+			external: keywords$13
 		}, {
 			term: 284,
 			get: (value) => spec_name[value] || -1
@@ -30430,7 +30650,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	*/
 	const phpLanguage = /*@__PURE__*/ LRLanguage.define({
 		name: "php",
-		parser: /*@__PURE__*/ parser.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
+		parser: /*@__PURE__*/ parser$1.configure({ props: [/*@__PURE__*/ indentNodeProp.add({
 			IfStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|else\b|elseif\b|endif\b)/ }),
 			TryStatement: /*@__PURE__*/ continuedIndent({ except: /^\s*({|catch\b|finally\b)/ }),
 			SwitchBody: (context) => {
@@ -30478,7 +30698,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		if (config.baseLanguage === null);
 		else if (config.baseLanguage) base = config.baseLanguage;
 		else {
-			let htmlSupport = html({ matchClosingTags: false });
+			let htmlSupport = html$2({ matchClosingTags: false });
 			support.push(htmlSupport.support);
 			base = htmlSupport.language;
 		}
@@ -30494,13 +30714,98 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		}), support);
 	}
 	//#endregion
-	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/shell.js
-	var words$2 = {};
-	function define(style, dict) {
-		for (var i = 0; i < dict.length; i++) words$2[dict[i]] = style;
+	//#region node_modules/.pnpm/@codemirror+lang-vue@0.1.3/node_modules/@codemirror/lang-vue/dist/index.js
+	const parser = /*@__PURE__*/ LRParser.deserialize({
+		version: 14,
+		states: "%pOVOWOOObQPOOOpOSO'#C_OOOO'#Cp'#CpQVOWOOQxQPOOO!TQQOOQ!YQPOOOOOO,58y,58yO!_OSO,58yOOOO-E6n-E6nO!dQQO'#CqQ{QPOOO!iQPOOQ{QPOOO!qQPOOOOOO1G.e1G.eOOQO,59],59]OOQO-E6o-E6oO!yOpO'#CiO#RO`O'#CiQOQPOOO#ZO#tO'#CmO#fO!bO'#CmOOQO,59T,59TO#qOpO,59TO#vO`O,59TOOOO'#Cr'#CrO#{O#tO,59XOOQO,59X,59XOOOO'#Cs'#CsO$WO!bO,59XOOQO1G.o1G.oOOOO-E6p-E6pOOQO1G.s1G.sOOOO-E6q-E6q",
+		stateData: "$g~OjOS~OQROUROkQO~OWTOXUOZUO`VO~OSXOTWO~OXUO[]OlZO~OY^O~O[_O~OT`O~OYaO~OmcOodO~OmfOogO~O^iOnhO~O_jOphO~ObkOqkOrmO~OcnOsnOtmO~OnpO~OppO~ObkOqkOrrO~OcnOsnOtrO~OWX`~",
+		goto: "!^hPPPiPPPPPPPPPmPPPpPPsy!Q!WTROSRe]Re_QSORYSS[T^Rb[QlfRqlQogRso",
+		nodeNames: "⚠ Content Text Interpolation InterpolationContent }} Entity Attribute VueAttributeName : Identifier @ Is ScriptAttributeValue AttributeScript AttributeScript AttributeName AttributeValue Entity Entity",
+		maxTerm: 36,
+		nodeProps: [[
+			"isolate",
+			-3,
+			3,
+			13,
+			17,
+			""
+		]],
+		skippedNodes: [0],
+		repeatNodeCount: 4,
+		tokenData: "'y~RdXY!aYZ!a]^!apq!ars!rwx!w}!O!|!O!P#t!Q![#y![!]$s!_!`%g!b!c%l!c!}#y#R#S#y#T#j#y#j#k%q#k#o#y%W;'S#y;'S;:j$m<%lO#y~!fSj~XY!aYZ!a]^!apq!a~!wOm~~!|Oo~!b#RX`!b}!O!|!Q![!|![!]!|!c!}!|#R#S!|#T#o!|%W;'S!|;'S;:j#n<%lO!|!b#qP;=`<%l!|~#yOl~%W$QXY#t`!b}!O!|!Q![#y![!]!|!c!}#y#R#S#y#T#o#y%W;'S#y;'S;:j$m<%lO#y%W$pP;=`<%l#y~$zXX~`!b}!O!|!Q![!|![!]!|!c!}!|#R#S!|#T#o!|%W;'S!|;'S;:j#n<%lO!|~%lO[~~%qOZ~%W%xXY#t`!b}!O&e!Q![#y![!]!|!c!}#y#R#S#y#T#o#y%W;'S#y;'S;:j$m<%lO#y!b&jX`!b}!O!|!Q![!|![!]!|!c!}'V#R#S!|#T#o'V%W;'S!|;'S;:j#n<%lO!|!b'^XW!b`!b}!O!|!Q![!|![!]!|!c!}'V#R#S!|#T#o'V%W;'S!|;'S;:j#n<%lO!|",
+		tokenizers: [
+			6,
+			7,
+			/*@__PURE__*/ new LocalTokenGroup("b~RP#q#rU~XP#q#r[~aOT~~", 17, 4),
+			/*@__PURE__*/ new LocalTokenGroup("!k~RQvwX#o#p!_~^TU~Opmq!]m!^;'Sm;'S;=`!X<%lOm~pUOpmq!]m!]!^!S!^;'Sm;'S;=`!X<%lOm~!XOU~~![P;=`<%lm~!bP#o#p!e~!jOk~~", 72, 2),
+			/*@__PURE__*/ new LocalTokenGroup("[~RPwxU~ZOp~~", 11, 15),
+			/*@__PURE__*/ new LocalTokenGroup("[~RPrsU~ZOn~~", 11, 14),
+			/*@__PURE__*/ new LocalTokenGroup("!e~RQvwXwx!_~^Tc~Opmq!]m!^;'Sm;'S;=`!X<%lOm~pUOpmq!]m!]!^!S!^;'Sm;'S;=`!X<%lOm~!XOc~~![P;=`<%lm~!dOt~~", 66, 35),
+			/*@__PURE__*/ new LocalTokenGroup("!e~RQrsXvw^~^Or~~cTb~Oprq!]r!^;'Sr;'S;=`!^<%lOr~uUOprq!]r!]!^!X!^;'Sr;'S;=`!^<%lOr~!^Ob~~!aP;=`<%lr~", 66, 33)
+		],
+		topRules: {
+			"Content": [0, 1],
+			"Attribute": [1, 7]
+		},
+		tokenPrec: 157
+	});
+	const exprParser = /*@__PURE__*/ javascriptLanguage.parser.configure({ top: "SingleExpression" });
+	const baseParser = /*@__PURE__*/ parser.configure({ props: [/*@__PURE__*/ styleTags({
+		Text: tags$1.content,
+		Is: tags$1.definitionOperator,
+		AttributeName: tags$1.attributeName,
+		VueAttributeName: tags$1.keyword,
+		Identifier: tags$1.variableName,
+		"AttributeValue ScriptAttributeValue": tags$1.attributeValue,
+		Entity: tags$1.character,
+		"{{ }}": tags$1.brace,
+		"@ :": tags$1.punctuation
+	})] });
+	const exprMixed = { parser: exprParser };
+	const textParser = /*@__PURE__*/ baseParser.configure({ wrap: /*@__PURE__*/ parseMixed((node, input) => node.name == "InterpolationContent" ? exprMixed : null) });
+	const attrParser = /*@__PURE__*/ baseParser.configure({
+		wrap: /*@__PURE__*/ parseMixed((node, input) => node.name == "AttributeScript" ? exprMixed : null),
+		top: "Attribute"
+	});
+	const textMixed = { parser: textParser };
+	const attrMixed = { parser: attrParser };
+	const baseHTML = /*@__PURE__*/ html$2();
+	function makeVue(base) {
+		return base.configure({
+			dialect: "selfClosing",
+			wrap: parseMixed(mixVue)
+		}, "vue");
 	}
-	var commonAtoms = ["true", "false"];
-	var commonKeywords = [
+	/**
+	A language provider for Vue templates.
+	*/
+	const vueLanguage = /*@__PURE__*/ makeVue(baseHTML.language);
+	function mixVue(node, input) {
+		switch (node.name) {
+			case "Attribute": return /^(@|:|v-)/.test(input.read(node.from, node.from + 2)) ? attrMixed : null;
+			case "Text": return textMixed;
+		}
+		return null;
+	}
+	/**
+	Vue template support.
+	*/
+	function vue(config = {}) {
+		let base = baseHTML;
+		if (config.base) {
+			if (config.base.language.name != "html" || !(config.base.language instanceof LRLanguage)) throw new RangeError("The base option must be the result of calling html(...)");
+			base = config.base;
+		}
+		return new LanguageSupport(base.language == baseHTML.language ? vueLanguage : makeVue(base.language), [base.support, base.language.data.of({ closeBrackets: { brackets: ["{", "\""] } })]);
+	}
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/shell.js
+	var words$5 = {};
+	function define(style, dict) {
+		for (var i = 0; i < dict.length; i++) words$5[dict[i]] = style;
+	}
+	var commonAtoms$2 = ["true", "false"];
+	var commonKeywords$2 = [
 		"if",
 		"then",
 		"do",
@@ -30590,10 +30895,10 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		"yes",
 		"zsh"
 	];
-	define("atom", commonAtoms);
-	define("keyword", commonKeywords);
+	define("atom", commonAtoms$2);
+	define("keyword", commonKeywords$2);
 	define("builtin", commonCommands);
-	function tokenBase$2(stream, state) {
+	function tokenBase$14(stream, state) {
 		if (stream.eatSpace()) return null;
 		var sol = stream.sol();
 		var ch = stream.next();
@@ -30602,8 +30907,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return null;
 		}
 		if (ch === "'" || ch === "\"" || ch === "`") {
-			state.tokens.unshift(tokenString$2(ch, ch === "`" ? "quote" : "string"));
-			return tokenize(stream, state);
+			state.tokens.unshift(tokenString$8(ch, ch === "`" ? "quote" : "string"));
+			return tokenize$1(stream, state);
 		}
 		if (ch === "#") {
 			if (sol && stream.eat("!")) {
@@ -30615,7 +30920,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		}
 		if (ch === "$") {
 			state.tokens.unshift(tokenDollar);
-			return tokenize(stream, state);
+			return tokenize$1(stream, state);
 		}
 		if (ch === "+" || ch === "=") return "operator";
 		if (ch === "-") {
@@ -30638,9 +30943,9 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		stream.eatWhile(/[\w-]/);
 		var cur = stream.current();
 		if (stream.peek() === "=" && /\w+/.test(cur)) return "def";
-		return words$2.hasOwnProperty(cur) ? words$2[cur] : null;
+		return words$5.hasOwnProperty(cur) ? words$5[cur] : null;
 	}
-	function tokenString$2(quote, style) {
+	function tokenString$8(quote, style) {
 		var close = quote == "(" ? ")" : quote == "{" ? "}" : quote;
 		return function(stream, state) {
 			var next, escaped = false;
@@ -30654,8 +30959,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 					state.tokens.unshift(tokenDollar);
 					break;
 				} else if (!escaped && quote !== close && next === quote) {
-					state.tokens.unshift(tokenString$2(quote, style));
-					return tokenize(stream, state);
+					state.tokens.unshift(tokenString$8(quote, style));
+					return tokenize$1(stream, state);
 				} else if (!escaped && /['"]/.test(next) && !/['"]/.test(quote)) {
 					state.tokens.unshift(tokenStringStart(next, "string"));
 					stream.backUp(1);
@@ -30668,17 +30973,17 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	}
 	function tokenStringStart(quote, style) {
 		return function(stream, state) {
-			state.tokens[0] = tokenString$2(quote, style);
+			state.tokens[0] = tokenString$8(quote, style);
 			stream.next();
-			return tokenize(stream, state);
+			return tokenize$1(stream, state);
 		};
 	}
 	var tokenDollar = function(stream, state) {
 		if (state.tokens.length > 1) stream.eat("$");
 		var ch = stream.next();
 		if (/['"({]/.test(ch)) {
-			state.tokens[0] = tokenString$2(ch, ch == "(" ? "quote" : ch == "{" ? "def" : "string");
-			return tokenize(stream, state);
+			state.tokens[0] = tokenString$8(ch, ch == "(" ? "quote" : ch == "{" ? "def" : "string");
+			return tokenize$1(stream, state);
 		}
 		if (!/\d/.test(ch)) stream.eatWhile(/\w/);
 		state.tokens.shift();
@@ -30691,8 +30996,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return "string.special";
 		};
 	}
-	function tokenize(stream, state) {
-		return (state.tokens[0] || tokenBase$2)(stream, state);
+	function tokenize$1(stream, state) {
+		return (state.tokens[0] || tokenBase$14)(stream, state);
 	}
 	const shell = {
 		name: "shell",
@@ -30700,10 +31005,10 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return { tokens: [] };
 		},
 		token: function(stream, state) {
-			return tokenize(stream, state);
+			return tokenize$1(stream, state);
 		},
 		languageData: {
-			autocomplete: commonAtoms.concat(commonKeywords, commonCommands),
+			autocomplete: commonAtoms$2.concat(commonKeywords$2, commonCommands),
 			closeBrackets: { brackets: [
 				"(",
 				"[",
@@ -30775,23 +31080,23 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	};
 	//#endregion
 	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/nginx.js
-	function words$1(str) {
+	function words$4(str) {
 		var obj = {}, words = str.split(" ");
 		for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
 		return obj;
 	}
-	var keywords$1 = words$1("break return rewrite set accept_mutex accept_mutex_delay access_log add_after_body add_before_body add_header addition_types aio alias allow ancient_browser ancient_browser_value auth_basic auth_basic_user_file auth_http auth_http_header auth_http_timeout autoindex autoindex_exact_size autoindex_localtime charset charset_types client_body_buffer_size client_body_in_file_only client_body_in_single_buffer client_body_temp_path client_body_timeout client_header_buffer_size client_header_timeout client_max_body_size connection_pool_size create_full_put_path daemon dav_access dav_methods debug_connection debug_points default_type degradation degrade deny devpoll_changes devpoll_events directio directio_alignment empty_gif env epoll_events error_log eventport_events expires fastcgi_bind fastcgi_buffer_size fastcgi_buffers fastcgi_busy_buffers_size fastcgi_cache fastcgi_cache_key fastcgi_cache_methods fastcgi_cache_min_uses fastcgi_cache_path fastcgi_cache_use_stale fastcgi_cache_valid fastcgi_catch_stderr fastcgi_connect_timeout fastcgi_hide_header fastcgi_ignore_client_abort fastcgi_ignore_headers fastcgi_index fastcgi_intercept_errors fastcgi_max_temp_file_size fastcgi_next_upstream fastcgi_param fastcgi_pass_header fastcgi_pass_request_body fastcgi_pass_request_headers fastcgi_read_timeout fastcgi_send_lowat fastcgi_send_timeout fastcgi_split_path_info fastcgi_store fastcgi_store_access fastcgi_temp_file_write_size fastcgi_temp_path fastcgi_upstream_fail_timeout fastcgi_upstream_max_fails flv geoip_city geoip_country google_perftools_profiles gzip gzip_buffers gzip_comp_level gzip_disable gzip_hash gzip_http_version gzip_min_length gzip_no_buffer gzip_proxied gzip_static gzip_types gzip_vary gzip_window if_modified_since ignore_invalid_headers image_filter image_filter_buffer image_filter_jpeg_quality image_filter_transparency imap_auth imap_capabilities imap_client_buffer index ip_hash keepalive_requests keepalive_timeout kqueue_changes kqueue_events large_client_header_buffers limit_conn limit_conn_log_level limit_rate limit_rate_after limit_req limit_req_log_level limit_req_zone limit_zone lingering_time lingering_timeout lock_file log_format log_not_found log_subrequest map_hash_bucket_size map_hash_max_size master_process memcached_bind memcached_buffer_size memcached_connect_timeout memcached_next_upstream memcached_read_timeout memcached_send_timeout memcached_upstream_fail_timeout memcached_upstream_max_fails merge_slashes min_delete_depth modern_browser modern_browser_value msie_padding msie_refresh multi_accept open_file_cache open_file_cache_errors open_file_cache_events open_file_cache_min_uses open_file_cache_valid open_log_file_cache output_buffers override_charset perl perl_modules perl_require perl_set pid pop3_auth pop3_capabilities port_in_redirect postpone_gzipping postpone_output protocol proxy proxy_bind proxy_buffer proxy_buffer_size proxy_buffering proxy_buffers proxy_busy_buffers_size proxy_cache proxy_cache_key proxy_cache_methods proxy_cache_min_uses proxy_cache_path proxy_cache_use_stale proxy_cache_valid proxy_connect_timeout proxy_headers_hash_bucket_size proxy_headers_hash_max_size proxy_hide_header proxy_ignore_client_abort proxy_ignore_headers proxy_intercept_errors proxy_max_temp_file_size proxy_method proxy_next_upstream proxy_pass_error_message proxy_pass_header proxy_pass_request_body proxy_pass_request_headers proxy_read_timeout proxy_redirect proxy_send_lowat proxy_send_timeout proxy_set_body proxy_set_header proxy_ssl_session_reuse proxy_store proxy_store_access proxy_temp_file_write_size proxy_temp_path proxy_timeout proxy_upstream_fail_timeout proxy_upstream_max_fails random_index read_ahead real_ip_header recursive_error_pages request_pool_size reset_timedout_connection resolver resolver_timeout rewrite_log rtsig_overflow_events rtsig_overflow_test rtsig_overflow_threshold rtsig_signo satisfy secure_link_secret send_lowat send_timeout sendfile sendfile_max_chunk server_name_in_redirect server_names_hash_bucket_size server_names_hash_max_size server_tokens set_real_ip_from smtp_auth smtp_capabilities smtp_client_buffer smtp_greeting_delay so_keepalive source_charset ssi ssi_ignore_recycled_buffers ssi_min_file_chunk ssi_silent_errors ssi_types ssi_value_length ssl ssl_certificate ssl_certificate_key ssl_ciphers ssl_client_certificate ssl_crl ssl_dhparam ssl_engine ssl_prefer_server_ciphers ssl_protocols ssl_session_cache ssl_session_timeout ssl_verify_client ssl_verify_depth starttls stub_status sub_filter sub_filter_once sub_filter_types tcp_nodelay tcp_nopush thread_stack_size timeout timer_resolution types_hash_bucket_size types_hash_max_size underscores_in_headers uninitialized_variable_warn use user userid userid_domain userid_expires userid_mark userid_name userid_p3p userid_path userid_service valid_referers variables_hash_bucket_size variables_hash_max_size worker_connections worker_cpu_affinity worker_priority worker_processes worker_rlimit_core worker_rlimit_nofile worker_rlimit_sigpending worker_threads working_directory xclient xml_entities xslt_stylesheet xslt_typesdrew@li229-23");
-	var keywords_block = words$1("http mail events server types location upstream charset_map limit_except if geo map");
-	var keywords_important = words$1("include root server server_name listen internal proxy_pass memcached_pass fastcgi_pass try_files");
-	var type;
+	var keywords$12 = words$4("break return rewrite set accept_mutex accept_mutex_delay access_log add_after_body add_before_body add_header addition_types aio alias allow ancient_browser ancient_browser_value auth_basic auth_basic_user_file auth_http auth_http_header auth_http_timeout autoindex autoindex_exact_size autoindex_localtime charset charset_types client_body_buffer_size client_body_in_file_only client_body_in_single_buffer client_body_temp_path client_body_timeout client_header_buffer_size client_header_timeout client_max_body_size connection_pool_size create_full_put_path daemon dav_access dav_methods debug_connection debug_points default_type degradation degrade deny devpoll_changes devpoll_events directio directio_alignment empty_gif env epoll_events error_log eventport_events expires fastcgi_bind fastcgi_buffer_size fastcgi_buffers fastcgi_busy_buffers_size fastcgi_cache fastcgi_cache_key fastcgi_cache_methods fastcgi_cache_min_uses fastcgi_cache_path fastcgi_cache_use_stale fastcgi_cache_valid fastcgi_catch_stderr fastcgi_connect_timeout fastcgi_hide_header fastcgi_ignore_client_abort fastcgi_ignore_headers fastcgi_index fastcgi_intercept_errors fastcgi_max_temp_file_size fastcgi_next_upstream fastcgi_param fastcgi_pass_header fastcgi_pass_request_body fastcgi_pass_request_headers fastcgi_read_timeout fastcgi_send_lowat fastcgi_send_timeout fastcgi_split_path_info fastcgi_store fastcgi_store_access fastcgi_temp_file_write_size fastcgi_temp_path fastcgi_upstream_fail_timeout fastcgi_upstream_max_fails flv geoip_city geoip_country google_perftools_profiles gzip gzip_buffers gzip_comp_level gzip_disable gzip_hash gzip_http_version gzip_min_length gzip_no_buffer gzip_proxied gzip_static gzip_types gzip_vary gzip_window if_modified_since ignore_invalid_headers image_filter image_filter_buffer image_filter_jpeg_quality image_filter_transparency imap_auth imap_capabilities imap_client_buffer index ip_hash keepalive_requests keepalive_timeout kqueue_changes kqueue_events large_client_header_buffers limit_conn limit_conn_log_level limit_rate limit_rate_after limit_req limit_req_log_level limit_req_zone limit_zone lingering_time lingering_timeout lock_file log_format log_not_found log_subrequest map_hash_bucket_size map_hash_max_size master_process memcached_bind memcached_buffer_size memcached_connect_timeout memcached_next_upstream memcached_read_timeout memcached_send_timeout memcached_upstream_fail_timeout memcached_upstream_max_fails merge_slashes min_delete_depth modern_browser modern_browser_value msie_padding msie_refresh multi_accept open_file_cache open_file_cache_errors open_file_cache_events open_file_cache_min_uses open_file_cache_valid open_log_file_cache output_buffers override_charset perl perl_modules perl_require perl_set pid pop3_auth pop3_capabilities port_in_redirect postpone_gzipping postpone_output protocol proxy proxy_bind proxy_buffer proxy_buffer_size proxy_buffering proxy_buffers proxy_busy_buffers_size proxy_cache proxy_cache_key proxy_cache_methods proxy_cache_min_uses proxy_cache_path proxy_cache_use_stale proxy_cache_valid proxy_connect_timeout proxy_headers_hash_bucket_size proxy_headers_hash_max_size proxy_hide_header proxy_ignore_client_abort proxy_ignore_headers proxy_intercept_errors proxy_max_temp_file_size proxy_method proxy_next_upstream proxy_pass_error_message proxy_pass_header proxy_pass_request_body proxy_pass_request_headers proxy_read_timeout proxy_redirect proxy_send_lowat proxy_send_timeout proxy_set_body proxy_set_header proxy_ssl_session_reuse proxy_store proxy_store_access proxy_temp_file_write_size proxy_temp_path proxy_timeout proxy_upstream_fail_timeout proxy_upstream_max_fails random_index read_ahead real_ip_header recursive_error_pages request_pool_size reset_timedout_connection resolver resolver_timeout rewrite_log rtsig_overflow_events rtsig_overflow_test rtsig_overflow_threshold rtsig_signo satisfy secure_link_secret send_lowat send_timeout sendfile sendfile_max_chunk server_name_in_redirect server_names_hash_bucket_size server_names_hash_max_size server_tokens set_real_ip_from smtp_auth smtp_capabilities smtp_client_buffer smtp_greeting_delay so_keepalive source_charset ssi ssi_ignore_recycled_buffers ssi_min_file_chunk ssi_silent_errors ssi_types ssi_value_length ssl ssl_certificate ssl_certificate_key ssl_ciphers ssl_client_certificate ssl_crl ssl_dhparam ssl_engine ssl_prefer_server_ciphers ssl_protocols ssl_session_cache ssl_session_timeout ssl_verify_client ssl_verify_depth starttls stub_status sub_filter sub_filter_once sub_filter_types tcp_nodelay tcp_nopush thread_stack_size timeout timer_resolution types_hash_bucket_size types_hash_max_size underscores_in_headers uninitialized_variable_warn use user userid userid_domain userid_expires userid_mark userid_name userid_p3p userid_path userid_service valid_referers variables_hash_bucket_size variables_hash_max_size worker_connections worker_cpu_affinity worker_priority worker_processes worker_rlimit_core worker_rlimit_nofile worker_rlimit_sigpending worker_threads working_directory xclient xml_entities xslt_stylesheet xslt_typesdrew@li229-23");
+	var keywords_block = words$4("http mail events server types location upstream charset_map limit_except if geo map");
+	var keywords_important = words$4("include root server server_name listen internal proxy_pass memcached_pass fastcgi_pass try_files");
+	var type$1;
 	function ret(style, tp) {
-		type = tp;
+		type$1 = tp;
 		return style;
 	}
-	function tokenBase$1(stream, state) {
+	function tokenBase$13(stream, state) {
 		stream.eatWhile(/[\w\$_]/);
 		var cur = stream.current();
-		if (keywords$1.propertyIsEnumerable(cur)) return "keyword";
+		if (keywords$12.propertyIsEnumerable(cur)) return "keyword";
 		else if (keywords_block.propertyIsEnumerable(cur)) return "controlKeyword";
 		else if (keywords_important.propertyIsEnumerable(cur)) return "controlKeyword";
 		var ch = stream.next();
@@ -30799,15 +31104,15 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			stream.eatWhile(/[\w\\\-]/);
 			return ret("meta", stream.current());
 		} else if (ch == "/" && stream.eat("*")) {
-			state.tokenize = tokenCComment;
-			return tokenCComment(stream, state);
+			state.tokenize = tokenCComment$2;
+			return tokenCComment$2(stream, state);
 		} else if (ch == "<" && stream.eat("!")) {
 			state.tokenize = tokenSGMLComment;
 			return tokenSGMLComment(stream, state);
 		} else if (ch == "=") ret(null, "compare");
 		else if ((ch == "~" || ch == "|") && stream.eat("=")) return ret(null, "compare");
 		else if (ch == "\"" || ch == "'") {
-			state.tokenize = tokenString$1(ch);
+			state.tokenize = tokenString$7(ch);
 			return state.tokenize(stream, state);
 		} else if (ch == "#") {
 			stream.skipToEnd();
@@ -30825,11 +31130,11 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return ret("variable", "variable");
 		}
 	}
-	function tokenCComment(stream, state) {
+	function tokenCComment$2(stream, state) {
 		var maybeEnd = false, ch;
 		while ((ch = stream.next()) != null) {
 			if (maybeEnd && ch == "/") {
-				state.tokenize = tokenBase$1;
+				state.tokenize = tokenBase$13;
 				break;
 			}
 			maybeEnd = ch == "*";
@@ -30840,21 +31145,21 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		var dashes = 0, ch;
 		while ((ch = stream.next()) != null) {
 			if (dashes >= 2 && ch == ">") {
-				state.tokenize = tokenBase$1;
+				state.tokenize = tokenBase$13;
 				break;
 			}
 			dashes = ch == "-" ? dashes + 1 : 0;
 		}
 		return ret("comment", "comment");
 	}
-	function tokenString$1(quote) {
+	function tokenString$7(quote) {
 		return function(stream, state) {
 			var escaped = false, ch;
 			while ((ch = stream.next()) != null) {
 				if (ch == quote && !escaped) break;
 				escaped = !escaped && ch == "\\";
 			}
-			if (!escaped) state.tokenize = tokenBase$1;
+			if (!escaped) state.tokenize = tokenBase$13;
 			return ret("string", "string");
 		};
 	}
@@ -30862,28 +31167,28 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		name: "nginx",
 		startState: function() {
 			return {
-				tokenize: tokenBase$1,
+				tokenize: tokenBase$13,
 				baseIndent: 0,
 				stack: []
 			};
 		},
 		token: function(stream, state) {
 			if (stream.eatSpace()) return null;
-			type = null;
+			type$1 = null;
 			var style = state.tokenize(stream, state);
 			var context = state.stack[state.stack.length - 1];
-			if (type == "hash" && context == "rule") style = "atom";
+			if (type$1 == "hash" && context == "rule") style = "atom";
 			else if (style == "variable") {
 				if (context == "rule") style = "number";
 				else if (!context || context == "@media{") style = "tag";
 			}
-			if (context == "rule" && /^[\{\};]$/.test(type)) state.stack.pop();
-			if (type == "{") {
+			if (context == "rule" && /^[\{\};]$/.test(type$1)) state.stack.pop();
+			if (type$1 == "{") {
 				if (context == "@media") state.stack[state.stack.length - 1] = "@media{";
 				else state.stack.push("{");
-			} else if (type == "}") state.stack.pop();
-			else if (type == "@media") state.stack.push("@media");
-			else if (context == "{" && type != "comment") state.stack.push("rule");
+			} else if (type$1 == "}") state.stack.pop();
+			else if (type$1 == "@media") state.stack.push("@media");
+			else if (context == "{" && type$1 != "comment") state.stack.push("rule");
 			return style;
 		},
 		indent: function(state, textAfter, cx) {
@@ -31269,7 +31574,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	};
 	//#endregion
 	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/clike.js
-	function Context$1(indented, column, type, info, align, prev) {
+	function Context$4(indented, column, type, info, align, prev) {
 		this.indented = indented;
 		this.column = column;
 		this.type = type;
@@ -31277,12 +31582,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		this.align = align;
 		this.prev = prev;
 	}
-	function pushContext$1(state, col, type, info) {
+	function pushContext$4(state, col, type, info) {
 		var indent = state.indented;
 		if (state.context && state.context.type == "statement" && type != "statement") indent = state.context.indented;
-		return state.context = new Context$1(indent, col, type, info, null, state.context);
+		return state.context = new Context$4(indent, col, type, info, null, state.context);
 	}
-	function popContext$1(state) {
+	function popContext$4(state) {
 		var t = state.context.type;
 		if (t == ")" || t == "]" || t == "}") state.indented = state.context.indented;
 		return state.context = state.context.prev;
@@ -31384,7 +31689,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			startState: function(indentUnit) {
 				return {
 					tokenize: null,
-					context: new Context$1(-indentUnit, 0, "top", null, false),
+					context: new Context$4(-indentUnit, 0, "top", null, false),
 					indented: 0,
 					startOfLine: true,
 					prevToken: null
@@ -31405,16 +31710,16 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				var style = (state.tokenize || tokenBase)(stream, state);
 				if (style == "comment" || style == "meta") return style;
 				if (ctx.align == null) ctx.align = true;
-				if (curPunc == ";" || curPunc == ":" || curPunc == "," && stream.match(/^\s*(?:\/\/.*)?$/, false)) while (state.context.type == "statement") popContext$1(state);
-				else if (curPunc == "{") pushContext$1(state, stream.column(), "}");
-				else if (curPunc == "[") pushContext$1(state, stream.column(), "]");
-				else if (curPunc == "(") pushContext$1(state, stream.column(), ")");
+				if (curPunc == ";" || curPunc == ":" || curPunc == "," && stream.match(/^\s*(?:\/\/.*)?$/, false)) while (state.context.type == "statement") popContext$4(state);
+				else if (curPunc == "{") pushContext$4(state, stream.column(), "}");
+				else if (curPunc == "[") pushContext$4(state, stream.column(), "]");
+				else if (curPunc == "(") pushContext$4(state, stream.column(), ")");
 				else if (curPunc == "}") {
-					while (ctx.type == "statement") ctx = popContext$1(state);
-					if (ctx.type == "}") ctx = popContext$1(state);
-					while (ctx.type == "statement") ctx = popContext$1(state);
-				} else if (curPunc == ctx.type) popContext$1(state);
-				else if (indentStatements && ((ctx.type == "}" || ctx.type == "top") && curPunc != ";" || ctx.type == "statement" && curPunc == "newstatement")) pushContext$1(state, stream.column(), "statement", stream.current());
+					while (ctx.type == "statement") ctx = popContext$4(state);
+					if (ctx.type == "}") ctx = popContext$4(state);
+					while (ctx.type == "statement") ctx = popContext$4(state);
+				} else if (curPunc == ctx.type) popContext$4(state);
+				else if (indentStatements && ((ctx.type == "}" || ctx.type == "top") && curPunc != ";" || ctx.type == "statement" && curPunc == "newstatement")) pushContext$4(state, stream.column(), "statement", stream.current());
 				if (style == "variable" && (state.prevToken == "def" || parserConfig.typeFirstDefinitions && typeBefore(stream, state, stream.start) && isTopScope(state.context) && stream.match(/^\s*\(/, false))) style = "def";
 				if (hooks.token) {
 					var result = hooks.token(stream, state, style);
@@ -31460,7 +31765,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			}
 		};
 	}
-	function words(str) {
+	function words$3(str) {
 		var obj = {}, words = str.split(" ");
 		for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
 		return obj;
@@ -31473,8 +31778,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	var cppKeywords = "alignas alignof and and_eq audit axiom bitand bitor catch class compl concept constexpr const_cast decltype delete dynamic_cast explicit export final friend import module mutable namespace new noexcept not not_eq operator or or_eq override private protected public reinterpret_cast requires static_assert static_cast template this thread_local throw try typeid typename using virtual xor xor_eq";
 	var objCKeywords = "bycopy byref in inout oneway out self super atomic nonatomic retain copy readwrite readonly strong weak assign typeof nullable nonnull null_resettable _cmd @interface @implementation @end @protocol @encode @property @synthesize @dynamic @class @public @package @private @protected @required @optional @try @catch @finally @import @selector @encode @defs @synchronized @autoreleasepool @compatibility_alias @available";
 	var objCBuiltins = "FOUNDATION_EXPORT FOUNDATION_EXTERN NS_INLINE NS_FORMAT_FUNCTION  NS_RETURNS_RETAINEDNS_ERROR_ENUM NS_RETURNS_NOT_RETAINED NS_RETURNS_INNER_POINTER NS_DESIGNATED_INITIALIZER NS_ENUM NS_OPTIONS NS_REQUIRES_NIL_TERMINATION NS_ASSUME_NONNULL_BEGIN NS_ASSUME_NONNULL_END NS_SWIFT_NAME NS_REFINED_FOR_SWIFT";
-	var basicCTypes = words("int long char short double float unsigned signed void bool");
-	var basicObjCTypes = words("SEL instancetype id Class Protocol BOOL");
+	var basicCTypes = words$3("int long char short double float unsigned signed void bool");
+	var basicObjCTypes = words$3("SEL instancetype id Class Protocol BOOL");
 	function cTypes(identifier) {
 		return contains(basicCTypes, identifier) || /.+_t$/.test(identifier);
 	}
@@ -31544,12 +31849,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	}
 	clike({
 		name: "c",
-		keywords: words(cKeywords),
+		keywords: words$3(cKeywords),
 		types: cTypes,
-		blockKeywords: words(cBlockKeywords),
-		defKeywords: words(cDefKeywords),
+		blockKeywords: words$3(cBlockKeywords),
+		defKeywords: words$3(cDefKeywords),
 		typeFirstDefinitions: true,
-		atoms: words("NULL true false"),
+		atoms: words$3("NULL true false"),
 		isReservedIdentifier: cIsReservedIdentifier,
 		hooks: {
 			"#": cppHook,
@@ -31558,12 +31863,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	});
 	clike({
 		name: "cpp",
-		keywords: words(cKeywords + " " + cppKeywords),
+		keywords: words$3(cKeywords + " " + cppKeywords),
 		types: cTypes,
-		blockKeywords: words(cBlockKeywords + " class try catch"),
-		defKeywords: words(cDefKeywords + " class namespace"),
+		blockKeywords: words$3(cBlockKeywords + " class try catch"),
+		defKeywords: words$3(cDefKeywords + " class namespace"),
 		typeFirstDefinitions: true,
-		atoms: words("true false NULL nullptr"),
+		atoms: words$3("true false NULL nullptr"),
 		dontIndentStatements: /^template$/,
 		isIdentifierChar: /[\w\$_~\xa1-\uffff]/,
 		isReservedIdentifier: cIsReservedIdentifier,
@@ -31592,12 +31897,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	});
 	clike({
 		name: "java",
-		keywords: words("abstract assert break case catch class const continue default do else enum extends final finally for goto if implements import instanceof interface native new package private protected public return static strictfp super switch synchronized this throw throws transient try volatile while @interface"),
-		types: words("var byte short int long float double boolean char void Boolean Byte Character Double Float Integer Long Number Object Short String StringBuffer StringBuilder Void"),
-		blockKeywords: words("catch class do else finally for if switch try while"),
-		defKeywords: words("class interface enum @interface"),
+		keywords: words$3("abstract assert break case catch class const continue default do else enum extends final finally for goto if implements import instanceof interface native new package private protected public return static strictfp super switch synchronized this throw throws transient try volatile while @interface"),
+		types: words$3("var byte short int long float double boolean char void Boolean Byte Character Double Float Integer Long Number Object Short String StringBuffer StringBuilder Void"),
+		blockKeywords: words$3("catch class do else finally for if switch try while"),
+		defKeywords: words$3("class interface enum @interface"),
 		typeFirstDefinitions: true,
-		atoms: words("true false null"),
+		atoms: words$3("true false null"),
 		number: /^(?:0x[a-f\d_]+|0b[01_]+|(?:[\d_]+\.?\d*|\.\d+)(?:e[-+]?[\d_]+)?)(u|ll?|l|f)?/i,
 		hooks: {
 			"@": function(stream) {
@@ -31614,12 +31919,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	});
 	const csharp = clike({
 		name: "csharp",
-		keywords: words("abstract as async await base break case catch checked class const continue default delegate do else enum event explicit extern finally fixed for foreach goto if implicit in init interface internal is lock namespace new operator out override params private protected public readonly record ref required return sealed sizeof stackalloc static struct switch this throw try typeof unchecked unsafe using virtual void volatile while add alias ascending descending dynamic from get global group into join let orderby partial remove select set value var yield"),
-		types: words("Action Boolean Byte Char DateTime DateTimeOffset Decimal Double Func Guid Int16 Int32 Int64 Object SByte Single String Task TimeSpan UInt16 UInt32 UInt64 bool byte char decimal double short int long object sbyte float string ushort uint ulong"),
-		blockKeywords: words("catch class do else finally for foreach if struct switch try while"),
-		defKeywords: words("class interface namespace record struct var"),
+		keywords: words$3("abstract as async await base break case catch checked class const continue default delegate do else enum event explicit extern finally fixed for foreach goto if implicit in init interface internal is lock namespace new operator out override params private protected public readonly record ref required return sealed sizeof stackalloc static struct switch this throw try typeof unchecked unsafe using virtual void volatile while add alias ascending descending dynamic from get global group into join let orderby partial remove select set value var yield"),
+		types: words$3("Action Boolean Byte Char DateTime DateTimeOffset Decimal Double Func Guid Int16 Int32 Int64 Object SByte Single String Task TimeSpan UInt16 UInt32 UInt64 bool byte char decimal double short int long object sbyte float string ushort uint ulong"),
+		blockKeywords: words$3("catch class do else finally for foreach if struct switch try while"),
+		defKeywords: words$3("class interface namespace record struct var"),
 		typeFirstDefinitions: true,
-		atoms: words("true false null"),
+		atoms: words$3("true false null"),
 		hooks: { "@": function(stream, state) {
 			if (stream.eat("\"")) {
 				state.tokenize = tokenAtString;
@@ -31658,14 +31963,14 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return "comment";
 		};
 	}
-	clike({
+	const scala = clike({
 		name: "scala",
-		keywords: words("abstract case catch class def do else extends final finally for forSome if implicit import lazy match new null object override package private protected return sealed super this throw trait try type val var while with yield _ assert assume require print println printf readLine readBoolean readByte readShort readChar readInt readLong readFloat readDouble"),
-		types: words("AnyVal App Application Array BufferedIterator BigDecimal BigInt Char Console Either Enumeration Equiv Error Exception Fractional Function IndexedSeq Int Integral Iterable Iterator List Map Numeric Nil NotNull Option Ordered Ordering PartialFunction PartialOrdering Product Proxy Range Responder Seq Serializable Set Specializable Stream StringBuilder StringContext Symbol Throwable Traversable TraversableOnce Tuple Unit Vector Boolean Byte Character CharSequence Class ClassLoader Cloneable Comparable Compiler Double Exception Float Integer Long Math Number Object Package Pair Process Runtime Runnable SecurityManager Short StackTraceElement StrictMath String StringBuffer System Thread ThreadGroup ThreadLocal Throwable Triple Void"),
+		keywords: words$3("abstract case catch class def do else extends final finally for forSome if implicit import lazy match new null object override package private protected return sealed super this throw trait try type val var while with yield _ assert assume require print println printf readLine readBoolean readByte readShort readChar readInt readLong readFloat readDouble"),
+		types: words$3("AnyVal App Application Array BufferedIterator BigDecimal BigInt Char Console Either Enumeration Equiv Error Exception Fractional Function IndexedSeq Int Integral Iterable Iterator List Map Numeric Nil NotNull Option Ordered Ordering PartialFunction PartialOrdering Product Proxy Range Responder Seq Serializable Set Specializable Stream StringBuilder StringContext Symbol Throwable Traversable TraversableOnce Tuple Unit Vector Boolean Byte Character CharSequence Class ClassLoader Cloneable Comparable Compiler Double Exception Float Integer Long Math Number Object Package Pair Process Runtime Runnable SecurityManager Short StackTraceElement StrictMath String StringBuffer System Thread ThreadGroup ThreadLocal Throwable Triple Void"),
 		multiLineStrings: true,
-		blockKeywords: words("catch class enum do else finally for forSome if match switch try while"),
-		defKeywords: words("class enum def object package trait type val var"),
-		atoms: words("true false null"),
+		blockKeywords: words$3("catch class enum do else finally for forSome if match switch try while"),
+		defKeywords: words$3("class enum def object package trait type val var"),
+		atoms: words$3("true false null"),
 		indentStatements: false,
 		indentSwitch: false,
 		isOperatorChar: /[+\-*&%=<>!?|\/#:@]/,
@@ -31687,7 +31992,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			"=": function(stream, state) {
 				var cx = state.context;
 				if (cx.type == "}" && cx.align && stream.eat(">")) {
-					state.context = new Context$1(cx.indented, cx.column, cx.type, cx.info, null, cx.prev);
+					state.context = new Context$4(cx.indented, cx.column, cx.type, cx.info, null, cx.prev);
 					return "operator";
 				} else return false;
 			},
@@ -31728,15 +32033,15 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	}
 	const kotlin = clike({
 		name: "kotlin",
-		keywords: words("package as typealias class interface this super val operator var fun for is in This throw return annotation break continue object if else while do try when !in !is as? file import where by get set abstract enum open inner override private public internal protected catch finally out final vararg reified dynamic companion constructor init sealed field property receiver param sparam lateinit data inline noinline tailrec external annotation crossinline const operator infix suspend actual expect setparam"),
-		types: words("Boolean Byte Character CharSequence Class ClassLoader Cloneable Comparable Compiler Double Exception Float Integer Long Math Number Object Package Pair Process Runtime Runnable SecurityManager Short StackTraceElement StrictMath String StringBuffer System Thread ThreadGroup ThreadLocal Throwable Triple Void Annotation Any BooleanArray ByteArray Char CharArray DeprecationLevel DoubleArray Enum FloatArray Function Int IntArray Lazy LazyThreadSafetyMode LongArray Nothing ShortArray Unit"),
+		keywords: words$3("package as typealias class interface this super val operator var fun for is in This throw return annotation break continue object if else while do try when !in !is as? file import where by get set abstract enum open inner override private public internal protected catch finally out final vararg reified dynamic companion constructor init sealed field property receiver param sparam lateinit data inline noinline tailrec external annotation crossinline const operator infix suspend actual expect setparam"),
+		types: words$3("Boolean Byte Character CharSequence Class ClassLoader Cloneable Comparable Compiler Double Exception Float Integer Long Math Number Object Package Pair Process Runtime Runnable SecurityManager Short StackTraceElement StrictMath String StringBuffer System Thread ThreadGroup ThreadLocal Throwable Triple Void Annotation Any BooleanArray ByteArray Char CharArray DeprecationLevel DoubleArray Enum FloatArray Function Int IntArray Lazy LazyThreadSafetyMode LongArray Nothing ShortArray Unit"),
 		intendSwitch: false,
 		indentStatements: false,
 		multiLineStrings: true,
 		number: /^(?:0x[a-f\d_]+|0b[01_]+|(?:[\d_]+(\.\d+)?|\.\d+)(?:e[-+]?[\d_]+)?)(ul?|l|f)?/i,
-		blockKeywords: words("catch class do else finally for if where try while enum"),
-		defKeywords: words("class val var object interface fun"),
-		atoms: words("true false null this"),
+		blockKeywords: words$3("catch class do else finally for if where try while enum"),
+		defKeywords: words$3("class val var object interface fun"),
+		atoms: words$3("true false null this"),
 		hooks: {
 			"@": function(stream) {
 				stream.eatWhile(/[\w\$_]/);
@@ -31772,48 +32077,48 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	});
 	clike({
 		name: "shader",
-		keywords: words("sampler1D sampler2D sampler3D samplerCube sampler1DShadow sampler2DShadow const attribute uniform varying break continue discard return for while do if else struct in out inout"),
-		types: words("float int bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 mat2 mat3 mat4"),
-		blockKeywords: words("for while do if else struct"),
-		builtin: words("radians degrees sin cos tan asin acos atan pow exp log exp2 sqrt inversesqrt abs sign floor ceil fract mod min max clamp mix step smoothstep length distance dot cross normalize ftransform faceforward reflect refract matrixCompMult lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not texture1D texture1DProj texture1DLod texture1DProjLod texture2D texture2DProj texture2DLod texture2DProjLod texture3D texture3DProj texture3DLod texture3DProjLod textureCube textureCubeLod shadow1D shadow2D shadow1DProj shadow2DProj shadow1DLod shadow2DLod shadow1DProjLod shadow2DProjLod dFdx dFdy fwidth noise1 noise2 noise3 noise4"),
-		atoms: words("true false gl_FragColor gl_SecondaryColor gl_Normal gl_Vertex gl_MultiTexCoord0 gl_MultiTexCoord1 gl_MultiTexCoord2 gl_MultiTexCoord3 gl_MultiTexCoord4 gl_MultiTexCoord5 gl_MultiTexCoord6 gl_MultiTexCoord7 gl_FogCoord gl_PointCoord gl_Position gl_PointSize gl_ClipVertex gl_FrontColor gl_BackColor gl_FrontSecondaryColor gl_BackSecondaryColor gl_TexCoord gl_FogFragCoord gl_FragCoord gl_FrontFacing gl_FragData gl_FragDepth gl_ModelViewMatrix gl_ProjectionMatrix gl_ModelViewProjectionMatrix gl_TextureMatrix gl_NormalMatrix gl_ModelViewMatrixInverse gl_ProjectionMatrixInverse gl_ModelViewProjectionMatrixInverse gl_TextureMatrixTranspose gl_ModelViewMatrixInverseTranspose gl_ProjectionMatrixInverseTranspose gl_ModelViewProjectionMatrixInverseTranspose gl_TextureMatrixInverseTranspose gl_NormalScale gl_DepthRange gl_ClipPlane gl_Point gl_FrontMaterial gl_BackMaterial gl_LightSource gl_LightModel gl_FrontLightModelProduct gl_BackLightModelProduct gl_TextureColor gl_EyePlaneS gl_EyePlaneT gl_EyePlaneR gl_EyePlaneQ gl_FogParameters gl_MaxLights gl_MaxClipPlanes gl_MaxTextureUnits gl_MaxTextureCoords gl_MaxVertexAttribs gl_MaxVertexUniformComponents gl_MaxVaryingFloats gl_MaxVertexTextureImageUnits gl_MaxTextureImageUnits gl_MaxFragmentUniformComponents gl_MaxCombineTextureImageUnits gl_MaxDrawBuffers"),
+		keywords: words$3("sampler1D sampler2D sampler3D samplerCube sampler1DShadow sampler2DShadow const attribute uniform varying break continue discard return for while do if else struct in out inout"),
+		types: words$3("float int bool void vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 mat2 mat3 mat4"),
+		blockKeywords: words$3("for while do if else struct"),
+		builtin: words$3("radians degrees sin cos tan asin acos atan pow exp log exp2 sqrt inversesqrt abs sign floor ceil fract mod min max clamp mix step smoothstep length distance dot cross normalize ftransform faceforward reflect refract matrixCompMult lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not texture1D texture1DProj texture1DLod texture1DProjLod texture2D texture2DProj texture2DLod texture2DProjLod texture3D texture3DProj texture3DLod texture3DProjLod textureCube textureCubeLod shadow1D shadow2D shadow1DProj shadow2DProj shadow1DLod shadow2DLod shadow1DProjLod shadow2DProjLod dFdx dFdy fwidth noise1 noise2 noise3 noise4"),
+		atoms: words$3("true false gl_FragColor gl_SecondaryColor gl_Normal gl_Vertex gl_MultiTexCoord0 gl_MultiTexCoord1 gl_MultiTexCoord2 gl_MultiTexCoord3 gl_MultiTexCoord4 gl_MultiTexCoord5 gl_MultiTexCoord6 gl_MultiTexCoord7 gl_FogCoord gl_PointCoord gl_Position gl_PointSize gl_ClipVertex gl_FrontColor gl_BackColor gl_FrontSecondaryColor gl_BackSecondaryColor gl_TexCoord gl_FogFragCoord gl_FragCoord gl_FrontFacing gl_FragData gl_FragDepth gl_ModelViewMatrix gl_ProjectionMatrix gl_ModelViewProjectionMatrix gl_TextureMatrix gl_NormalMatrix gl_ModelViewMatrixInverse gl_ProjectionMatrixInverse gl_ModelViewProjectionMatrixInverse gl_TextureMatrixTranspose gl_ModelViewMatrixInverseTranspose gl_ProjectionMatrixInverseTranspose gl_ModelViewProjectionMatrixInverseTranspose gl_TextureMatrixInverseTranspose gl_NormalScale gl_DepthRange gl_ClipPlane gl_Point gl_FrontMaterial gl_BackMaterial gl_LightSource gl_LightModel gl_FrontLightModelProduct gl_BackLightModelProduct gl_TextureColor gl_EyePlaneS gl_EyePlaneT gl_EyePlaneR gl_EyePlaneQ gl_FogParameters gl_MaxLights gl_MaxClipPlanes gl_MaxTextureUnits gl_MaxTextureCoords gl_MaxVertexAttribs gl_MaxVertexUniformComponents gl_MaxVaryingFloats gl_MaxVertexTextureImageUnits gl_MaxTextureImageUnits gl_MaxFragmentUniformComponents gl_MaxCombineTextureImageUnits gl_MaxDrawBuffers"),
 		indentSwitch: false,
 		hooks: { "#": cppHook }
 	});
 	clike({
 		name: "nesc",
-		keywords: words(cKeywords + " as atomic async call command component components configuration event generic implementation includes interface module new norace nx_struct nx_union post provides signal task uses abstract extends"),
+		keywords: words$3(cKeywords + " as atomic async call command component components configuration event generic implementation includes interface module new norace nx_struct nx_union post provides signal task uses abstract extends"),
 		types: cTypes,
-		blockKeywords: words(cBlockKeywords),
-		atoms: words("null true false"),
+		blockKeywords: words$3(cBlockKeywords),
+		atoms: words$3("null true false"),
 		hooks: { "#": cppHook }
 	});
 	clike({
 		name: "objectivec",
-		keywords: words(cKeywords + " " + objCKeywords),
+		keywords: words$3(cKeywords + " " + objCKeywords),
 		types: objCTypes,
-		builtin: words(objCBuiltins),
-		blockKeywords: words(cBlockKeywords + " @synthesize @try @catch @finally @autoreleasepool @synchronized"),
-		defKeywords: words(cDefKeywords + " @interface @implementation @protocol @class"),
+		builtin: words$3(objCBuiltins),
+		blockKeywords: words$3(cBlockKeywords + " @synthesize @try @catch @finally @autoreleasepool @synchronized"),
+		defKeywords: words$3(cDefKeywords + " @interface @implementation @protocol @class"),
 		dontIndentStatements: /^@.*$/,
 		typeFirstDefinitions: true,
-		atoms: words("YES NO NULL Nil nil true false nullptr"),
+		atoms: words$3("YES NO NULL Nil nil true false nullptr"),
 		isReservedIdentifier: cIsReservedIdentifier,
 		hooks: {
 			"#": cppHook,
 			"*": pointerHook
 		}
 	});
-	clike({
+	const objectiveCpp = clike({
 		name: "objectivecpp",
-		keywords: words(cKeywords + " " + objCKeywords + " " + cppKeywords),
+		keywords: words$3(cKeywords + " " + objCKeywords + " " + cppKeywords),
 		types: objCTypes,
-		builtin: words(objCBuiltins),
-		blockKeywords: words(cBlockKeywords + " @synthesize @try @catch @finally @autoreleasepool @synchronized class try catch"),
-		defKeywords: words(cDefKeywords + " @interface @implementation @protocol @class class namespace"),
+		builtin: words$3(objCBuiltins),
+		blockKeywords: words$3(cBlockKeywords + " @synthesize @try @catch @finally @autoreleasepool @synchronized class try catch"),
+		defKeywords: words$3(cDefKeywords + " @interface @implementation @protocol @class class namespace"),
 		dontIndentStatements: /^@.*$|^template$/,
 		typeFirstDefinitions: true,
-		atoms: words("YES NO NULL Nil nil true false nullptr"),
+		atoms: words$3("YES NO NULL Nil nil true false nullptr"),
 		isReservedIdentifier: cIsReservedIdentifier,
 		hooks: {
 			"#": cppHook,
@@ -31840,12 +32145,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	});
 	clike({
 		name: "squirrel",
-		keywords: words("base break clone continue const default delete enum extends function in class foreach local resume return this throw typeof yield constructor instanceof static"),
+		keywords: words$3("base break clone continue const default delete enum extends function in class foreach local resume return this throw typeof yield constructor instanceof static"),
 		types: cTypes,
-		blockKeywords: words("case catch class else for foreach if switch try while"),
-		defKeywords: words("function local class"),
+		blockKeywords: words$3("case catch class else for foreach if switch try while"),
+		defKeywords: words$3("function local class"),
 		typeFirstDefinitions: true,
-		atoms: words("true false null"),
+		atoms: words$3("true false null"),
 		hooks: { "#": cppHook }
 	});
 	var stringTokenizer = null;
@@ -31871,21 +32176,21 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	}
 	clike({
 		name: "ceylon",
-		keywords: words("abstracts alias assembly assert assign break case catch class continue dynamic else exists extends finally for function given if import in interface is let module new nonempty object of out outer package return satisfies super switch then this throw try value void while"),
+		keywords: words$3("abstracts alias assembly assert assign break case catch class continue dynamic else exists extends finally for function given if import in interface is let module new nonempty object of out outer package return satisfies super switch then this throw try value void while"),
 		types: function(word) {
 			var first = word.charAt(0);
 			return first === first.toUpperCase() && first !== first.toLowerCase();
 		},
-		blockKeywords: words("case catch class dynamic else finally for function if interface module new object switch try while"),
-		defKeywords: words("class dynamic function interface module object package value"),
-		builtin: words("abstract actual aliased annotation by default deprecated doc final formal late license native optional sealed see serializable shared suppressWarnings tagged throws variable"),
+		blockKeywords: words$3("case catch class dynamic else finally for function if interface module new object switch try while"),
+		defKeywords: words$3("class dynamic function interface module object package value"),
+		builtin: words$3("abstract actual aliased annotation by default deprecated doc final formal late license native optional sealed see serializable shared suppressWarnings tagged throws variable"),
 		isPunctuationChar: /[\[\]{}\(\),;\:\.`]/,
 		isOperatorChar: /[+\-*&%=<>!?|^~:\/]/,
 		numberStart: /[\d#$]/,
 		number: /^(?:#[\da-fA-F_]+|\$[01_]+|[\d_]+[kMGTPmunpf]?|[\d_]+\.[\d_]+(?:[eE][-+]?\d+|[kMGTPmunpf]|)|)/i,
 		multiLineStrings: true,
 		typeFirstDefinitions: true,
-		atoms: words("true false null larger smaller equal empty finished"),
+		atoms: words$3("true false null larger smaller equal empty finished"),
 		indentSwitch: false,
 		styleDefs: false,
 		hooks: {
@@ -31941,7 +32246,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			while (!stream.eol()) {
 				if (!raw && !escaped && stream.peek() == "$") {
 					pushInterpolationStack(state);
-					state.tokenize = tokenInterpolation;
+					state.tokenize = tokenInterpolation$1;
 					return "string";
 				}
 				var next = stream.next();
@@ -31956,7 +32261,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		state.tokenize = tokenStringHelper;
 		return tokenStringHelper(stream, state);
 	}
-	function tokenInterpolation(stream, state) {
+	function tokenInterpolation$1(stream, state) {
 		stream.eat("$");
 		if (stream.eat("{")) state.tokenize = null;
 		else state.tokenize = tokenInterpolationIdentifier;
@@ -31967,12 +32272,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		state.tokenize = popInterpolationStack(state);
 		return "variable";
 	}
-	clike({
+	const dart = clike({
 		name: "dart",
-		keywords: words("this super static final const abstract class extends external factory implements mixin get native set typedef with enum throw rethrow assert break case continue default in return new deferred async await covariant try catch finally do else for if switch while import library export part of show hide is as extension on yield late required sealed base interface when inline"),
-		blockKeywords: words("try catch finally do else for if switch while"),
-		builtin: words("void bool num int double dynamic var String Null Never"),
-		atoms: words("true false null"),
+		keywords: words$3("this super static final const abstract class extends external factory implements mixin get native set typedef with enum throw rethrow assert break case continue default in return new deferred async await covariant try catch finally do else for if switch while import library export part of show hide is as extension on yield late required sealed base interface when inline"),
+		blockKeywords: words$3("try catch finally do else for if switch while"),
+		builtin: words$3("void bool num int double dynamic var String Null Never"),
+		atoms: words$3("true false null"),
 		number: /^(?:0x[a-f\d_]+|(?:[\d_]+\.?[\d_]*|\.[\d_]+)(?:e[-+]?[\d_]+)?)/i,
 		hooks: {
 			"@": function(stream) {
@@ -32016,7 +32321,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		for (var i = 0; i < words.length; i++) set[words[i]] = true;
 		return set;
 	}
-	var keywords = wordSet([
+	var keywords$11 = wordSet([
 		"_",
 		"var",
 		"let",
@@ -32125,7 +32430,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		"associatedtype",
 		"for"
 	]);
-	var atoms = wordSet([
+	var atoms$5 = wordSet([
 		"true",
 		"false",
 		"nil",
@@ -32133,7 +32438,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		"super",
 		"_"
 	]);
-	var types = wordSet([
+	var types$1 = wordSet([
 		"Array",
 		"Bool",
 		"Character",
@@ -32155,7 +32460,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		"UInt64",
 		"Void"
 	]);
-	var operators = "+-/*%=|&<>~^?!";
+	var operators$1 = "+-/*%=|&<>~^?!";
 	var punc = ":;,.(){}[]";
 	var binary = /^\-?0b[01][01_]*/;
 	var octal = /^\-?0o[0-7][0-7_]*/;
@@ -32165,7 +32470,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	var property = /^\.(?:\$\d+|(`?)[_A-Za-z][_A-Za-z$0-9]*\1)/;
 	var instruction = /^\#[A-Za-z]+/;
 	var attribute = /^@(?:\$\d+|(`?)[_A-Za-z][_A-Za-z$0-9]*\1)/;
-	function tokenBase(stream, state, prev) {
+	function tokenBase$12(stream, state, prev) {
 		if (stream.sol()) state.indented = stream.indentation();
 		if (stream.eatSpace()) return null;
 		var ch = stream.peek();
@@ -32175,8 +32480,8 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				return "comment";
 			}
 			if (stream.match("/*")) {
-				state.tokenize.push(tokenComment);
-				return tokenComment(stream, state);
+				state.tokenize.push(tokenComment$5);
+				return tokenComment$5(stream, state);
 			}
 		}
 		if (stream.match(instruction)) return "builtin";
@@ -32186,7 +32491,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		if (stream.match(hexadecimal)) return "number";
 		if (stream.match(decimal)) return "number";
 		if (stream.match(property)) return "property";
-		if (operators.indexOf(ch) > -1) {
+		if (operators$1.indexOf(ch) > -1) {
 			stream.next();
 			return "operator";
 		}
@@ -32197,15 +32502,15 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		}
 		var stringMatch;
 		if (stringMatch = stream.match(/("""|"|')/)) {
-			var tokenize = tokenString.bind(null, stringMatch[0]);
+			var tokenize = tokenString$6.bind(null, stringMatch[0]);
 			state.tokenize.push(tokenize);
 			return tokenize(stream, state);
 		}
 		if (stream.match(identifier)) {
 			var ident = stream.current();
-			if (types.hasOwnProperty(ident)) return "type";
-			if (atoms.hasOwnProperty(ident)) return "atom";
-			if (keywords.hasOwnProperty(ident)) {
+			if (types$1.hasOwnProperty(ident)) return "type";
+			if (atoms$5.hasOwnProperty(ident)) return "atom";
+			if (keywords$11.hasOwnProperty(ident)) {
 				if (definingKeywords.hasOwnProperty(ident)) state.prev = "define";
 				return "keyword";
 			}
@@ -32218,7 +32523,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	function tokenUntilClosingParen() {
 		var depth = 0;
 		return function(stream, state, prev) {
-			var inner = tokenBase(stream, state, prev);
+			var inner = tokenBase$12(stream, state, prev);
 			if (inner == "punctuation") {
 				if (stream.current() == "(") ++depth;
 				else if (stream.current() == ")") {
@@ -32232,7 +32537,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			return inner;
 		};
 	}
-	function tokenString(openQuote, stream, state) {
+	function tokenString$6(openQuote, stream, state) {
 		var singleLine = openQuote.length == 1;
 		var ch, escaped = false;
 		while (ch = stream.peek()) if (escaped) {
@@ -32252,25 +32557,25 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		if (singleLine) state.tokenize.pop();
 		return "string";
 	}
-	function tokenComment(stream, state) {
+	function tokenComment$5(stream, state) {
 		var ch;
-		while (ch = stream.next()) if (ch === "/" && stream.eat("*")) state.tokenize.push(tokenComment);
+		while (ch = stream.next()) if (ch === "/" && stream.eat("*")) state.tokenize.push(tokenComment$5);
 		else if (ch === "*" && stream.eat("/")) {
 			state.tokenize.pop();
 			break;
 		}
 		return "comment";
 	}
-	function Context(prev, align, indented) {
+	function Context$3(prev, align, indented) {
 		this.prev = prev;
 		this.align = align;
 		this.indented = indented;
 	}
-	function pushContext(state, stream) {
+	function pushContext$3(state, stream) {
 		var align = stream.match(/^\s*($|\/[\/\*]|[)}\]])/, false) ? null : stream.column() + 1;
-		state.context = new Context(state.context, align, state.indented);
+		state.context = new Context$3(state.context, align, state.indented);
 	}
-	function popContext(state) {
+	function popContext$3(state) {
 		if (state.context) {
 			state.indented = state.context.indented;
 			state.context = state.context.prev;
@@ -32289,12 +32594,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		token: function(stream, state) {
 			var prev = state.prev;
 			state.prev = null;
-			var style = (state.tokenize[state.tokenize.length - 1] || tokenBase)(stream, state, prev);
+			var style = (state.tokenize[state.tokenize.length - 1] || tokenBase$12)(stream, state, prev);
 			if (!style || style == "comment") state.prev = prev;
 			else if (!state.prev) state.prev = style;
 			if (style == "punctuation") {
 				var bracket = /[\(\[\{]|([\]\)\}])/.exec(stream.current());
-				if (bracket) (bracket[1] ? popContext : pushContext)(state, stream);
+				if (bracket) (bracket[1] ? popContext$3 : pushContext$3)(state, stream);
 			}
 			return style;
 		},
@@ -32324,6 +32629,10231 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			] }
 		}
 	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/css.js
+	function mkCSS(parserConfig) {
+		parserConfig = {
+			...defaults,
+			...parserConfig
+		};
+		var inline = parserConfig.inline;
+		var tokenHooks = parserConfig.tokenHooks, documentTypes = parserConfig.documentTypes || {}, mediaTypes = parserConfig.mediaTypes || {}, mediaFeatures = parserConfig.mediaFeatures || {}, mediaValueKeywords = parserConfig.mediaValueKeywords || {}, propertyKeywords = parserConfig.propertyKeywords || {}, nonStandardPropertyKeywords = parserConfig.nonStandardPropertyKeywords || {}, fontProperties = parserConfig.fontProperties || {}, counterDescriptors = parserConfig.counterDescriptors || {}, colorKeywords = parserConfig.colorKeywords || {}, valueKeywords = parserConfig.valueKeywords || {}, allowNested = parserConfig.allowNested, lineComment = parserConfig.lineComment, supportsAtComponent = parserConfig.supportsAtComponent === true, highlightNonStandardPropertyKeywords = parserConfig.highlightNonStandardPropertyKeywords !== false;
+		var type, override;
+		function ret(style, tp) {
+			type = tp;
+			return style;
+		}
+		function tokenBase(stream, state) {
+			var ch = stream.next();
+			if (tokenHooks[ch]) {
+				var result = tokenHooks[ch](stream, state);
+				if (result !== false) return result;
+			}
+			if (ch == "@") {
+				stream.eatWhile(/[\w\\\-]/);
+				return ret("def", stream.current());
+			} else if (ch == "=" || (ch == "~" || ch == "|") && stream.eat("=")) return ret(null, "compare");
+			else if (ch == "\"" || ch == "'") {
+				state.tokenize = tokenString(ch);
+				return state.tokenize(stream, state);
+			} else if (ch == "#") {
+				stream.eatWhile(/[\w\\\-]/);
+				return ret("atom", "hash");
+			} else if (ch == "!") {
+				stream.match(/^\s*\w*/);
+				return ret("keyword", "important");
+			} else if (/\d/.test(ch) || ch == "." && stream.eat(/\d/)) {
+				stream.eatWhile(/[\w.%]/);
+				return ret("number", "unit");
+			} else if (ch === "-") {
+				if (/[\d.]/.test(stream.peek())) {
+					stream.eatWhile(/[\w.%]/);
+					return ret("number", "unit");
+				} else if (stream.match(/^-[\w\\\-]*/)) {
+					stream.eatWhile(/[\w\\\-]/);
+					if (stream.match(/^\s*:/, false)) return ret("def", "variable-definition");
+					return ret("variableName", "variable");
+				} else if (stream.match(/^\w+-/)) return ret("meta", "meta");
+			} else if (/[,+>*\/]/.test(ch)) return ret(null, "select-op");
+			else if (ch == "." && stream.match(/^-?[_a-z][_a-z0-9-]*/i)) return ret("qualifier", "qualifier");
+			else if (/[:;{}\[\]\(\)]/.test(ch)) return ret(null, ch);
+			else if (stream.match(/^[\w-.]+(?=\()/)) {
+				if (/^(url(-prefix)?|domain|regexp)$/i.test(stream.current())) state.tokenize = tokenParenthesized;
+				return ret("variableName.function", "variable");
+			} else if (/[\w\\\-]/.test(ch)) {
+				stream.eatWhile(/[\w\\\-]/);
+				return ret("property", "word");
+			} else return ret(null, null);
+		}
+		function tokenString(quote) {
+			return function(stream, state) {
+				var escaped = false, ch;
+				while ((ch = stream.next()) != null) {
+					if (ch == quote && !escaped) {
+						if (quote == ")") stream.backUp(1);
+						break;
+					}
+					escaped = !escaped && ch == "\\";
+				}
+				if (ch == quote || !escaped && quote != ")") state.tokenize = null;
+				return ret("string", "string");
+			};
+		}
+		function tokenParenthesized(stream, state) {
+			stream.next();
+			if (!stream.match(/^\s*[\"\')]/, false)) state.tokenize = tokenString(")");
+			else state.tokenize = null;
+			return ret(null, "(");
+		}
+		function Context(type, indent, prev) {
+			this.type = type;
+			this.indent = indent;
+			this.prev = prev;
+		}
+		function pushContext(state, stream, type, indent) {
+			state.context = new Context(type, stream.indentation() + (indent === false ? 0 : stream.indentUnit), state.context);
+			return type;
+		}
+		function popContext(state) {
+			if (state.context.prev) state.context = state.context.prev;
+			return state.context.type;
+		}
+		function pass(type, stream, state) {
+			return states[state.context.type](type, stream, state);
+		}
+		function popAndPass(type, stream, state, n) {
+			for (var i = n || 1; i > 0; i--) state.context = state.context.prev;
+			return pass(type, stream, state);
+		}
+		function wordAsValue(stream) {
+			var word = stream.current().toLowerCase();
+			if (valueKeywords.hasOwnProperty(word)) override = "atom";
+			else if (colorKeywords.hasOwnProperty(word)) override = "keyword";
+			else override = "variable";
+		}
+		var states = {};
+		states.top = function(type, stream, state) {
+			if (type == "{") return pushContext(state, stream, "block");
+			else if (type == "}" && state.context.prev) return popContext(state);
+			else if (supportsAtComponent && /@component/i.test(type)) return pushContext(state, stream, "atComponentBlock");
+			else if (/^@(-moz-)?document$/i.test(type)) return pushContext(state, stream, "documentTypes");
+			else if (/^@(media|supports|(-moz-)?document|import)$/i.test(type)) return pushContext(state, stream, "atBlock");
+			else if (/^@(font-face|counter-style)/i.test(type)) {
+				state.stateArg = type;
+				return "restricted_atBlock_before";
+			} else if (/^@(-(moz|ms|o|webkit)-)?keyframes$/i.test(type)) return "keyframes";
+			else if (type && type.charAt(0) == "@") return pushContext(state, stream, "at");
+			else if (type == "hash") override = "builtin";
+			else if (type == "word") override = "tag";
+			else if (type == "variable-definition") return "maybeprop";
+			else if (type == "interpolation") return pushContext(state, stream, "interpolation");
+			else if (type == ":") return "pseudo";
+			else if (allowNested && type == "(") return pushContext(state, stream, "parens");
+			return state.context.type;
+		};
+		states.block = function(type, stream, state) {
+			if (type == "word") {
+				var word = stream.current().toLowerCase();
+				if (propertyKeywords.hasOwnProperty(word)) {
+					override = "property";
+					return "maybeprop";
+				} else if (nonStandardPropertyKeywords.hasOwnProperty(word)) {
+					override = highlightNonStandardPropertyKeywords ? "string.special" : "property";
+					return "maybeprop";
+				} else if (allowNested) {
+					override = stream.match(/^\s*:(?:\s|$)/, false) ? "property" : "tag";
+					return "block";
+				} else {
+					override = "error";
+					return "maybeprop";
+				}
+			} else if (type == "meta") return "block";
+			else if (!allowNested && (type == "hash" || type == "qualifier")) {
+				override = "error";
+				return "block";
+			} else return states.top(type, stream, state);
+		};
+		states.maybeprop = function(type, stream, state) {
+			if (type == ":") return pushContext(state, stream, "prop");
+			return pass(type, stream, state);
+		};
+		states.prop = function(type, stream, state) {
+			if (type == ";") return popContext(state);
+			if (type == "{" && allowNested) return pushContext(state, stream, "propBlock");
+			if (type == "}" || type == "{") return popAndPass(type, stream, state);
+			if (type == "(") return pushContext(state, stream, "parens");
+			if (type == "hash" && !/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(stream.current())) override = "error";
+			else if (type == "word") wordAsValue(stream);
+			else if (type == "interpolation") return pushContext(state, stream, "interpolation");
+			return "prop";
+		};
+		states.propBlock = function(type, _stream, state) {
+			if (type == "}") return popContext(state);
+			if (type == "word") {
+				override = "property";
+				return "maybeprop";
+			}
+			return state.context.type;
+		};
+		states.parens = function(type, stream, state) {
+			if (type == "{" || type == "}") return popAndPass(type, stream, state);
+			if (type == ")") return popContext(state);
+			if (type == "(") return pushContext(state, stream, "parens");
+			if (type == "interpolation") return pushContext(state, stream, "interpolation");
+			if (type == "word") wordAsValue(stream);
+			return "parens";
+		};
+		states.pseudo = function(type, stream, state) {
+			if (type == "meta") return "pseudo";
+			if (type == "word") {
+				override = "variableName.constant";
+				return state.context.type;
+			}
+			return pass(type, stream, state);
+		};
+		states.documentTypes = function(type, stream, state) {
+			if (type == "word" && documentTypes.hasOwnProperty(stream.current())) {
+				override = "tag";
+				return state.context.type;
+			} else return states.atBlock(type, stream, state);
+		};
+		states.atBlock = function(type, stream, state) {
+			if (type == "(") return pushContext(state, stream, "atBlock_parens");
+			if (type == "}" || type == ";") return popAndPass(type, stream, state);
+			if (type == "{") return popContext(state) && pushContext(state, stream, allowNested ? "block" : "top");
+			if (type == "interpolation") return pushContext(state, stream, "interpolation");
+			if (type == "word") {
+				var word = stream.current().toLowerCase();
+				if (word == "only" || word == "not" || word == "and" || word == "or") override = "keyword";
+				else if (mediaTypes.hasOwnProperty(word)) override = "attribute";
+				else if (mediaFeatures.hasOwnProperty(word)) override = "property";
+				else if (mediaValueKeywords.hasOwnProperty(word)) override = "keyword";
+				else if (propertyKeywords.hasOwnProperty(word)) override = "property";
+				else if (nonStandardPropertyKeywords.hasOwnProperty(word)) override = highlightNonStandardPropertyKeywords ? "string.special" : "property";
+				else if (valueKeywords.hasOwnProperty(word)) override = "atom";
+				else if (colorKeywords.hasOwnProperty(word)) override = "keyword";
+				else override = "error";
+			}
+			return state.context.type;
+		};
+		states.atComponentBlock = function(type, stream, state) {
+			if (type == "}") return popAndPass(type, stream, state);
+			if (type == "{") return popContext(state) && pushContext(state, stream, allowNested ? "block" : "top", false);
+			if (type == "word") override = "error";
+			return state.context.type;
+		};
+		states.atBlock_parens = function(type, stream, state) {
+			if (type == ")") return popContext(state);
+			if (type == "{" || type == "}") return popAndPass(type, stream, state, 2);
+			return states.atBlock(type, stream, state);
+		};
+		states.restricted_atBlock_before = function(type, stream, state) {
+			if (type == "{") return pushContext(state, stream, "restricted_atBlock");
+			if (type == "word" && state.stateArg == "@counter-style") {
+				override = "variable";
+				return "restricted_atBlock_before";
+			}
+			return pass(type, stream, state);
+		};
+		states.restricted_atBlock = function(type, stream, state) {
+			if (type == "}") {
+				state.stateArg = null;
+				return popContext(state);
+			}
+			if (type == "word") {
+				if (state.stateArg == "@font-face" && !fontProperties.hasOwnProperty(stream.current().toLowerCase()) || state.stateArg == "@counter-style" && !counterDescriptors.hasOwnProperty(stream.current().toLowerCase())) override = "error";
+				else override = "property";
+				return "maybeprop";
+			}
+			return "restricted_atBlock";
+		};
+		states.keyframes = function(type, stream, state) {
+			if (type == "word") {
+				override = "variable";
+				return "keyframes";
+			}
+			if (type == "{") return pushContext(state, stream, "top");
+			return pass(type, stream, state);
+		};
+		states.at = function(type, stream, state) {
+			if (type == ";") return popContext(state);
+			if (type == "{" || type == "}") return popAndPass(type, stream, state);
+			if (type == "word") override = "tag";
+			else if (type == "hash") override = "builtin";
+			return "at";
+		};
+		states.interpolation = function(type, stream, state) {
+			if (type == "}") return popContext(state);
+			if (type == "{" || type == ";") return popAndPass(type, stream, state);
+			if (type == "word") override = "variable";
+			else if (type != "variable" && type != "(" && type != ")") override = "error";
+			return "interpolation";
+		};
+		return {
+			name: parserConfig.name,
+			startState: function() {
+				return {
+					tokenize: null,
+					state: inline ? "block" : "top",
+					stateArg: null,
+					context: new Context(inline ? "block" : "top", 0, null)
+				};
+			},
+			token: function(stream, state) {
+				if (!state.tokenize && stream.eatSpace()) return null;
+				var style = (state.tokenize || tokenBase)(stream, state);
+				if (style && typeof style == "object") {
+					type = style[1];
+					style = style[0];
+				}
+				override = style;
+				if (type != "comment") state.state = states[state.state](type, stream, state);
+				return override;
+			},
+			indent: function(state, textAfter, iCx) {
+				var cx = state.context, ch = textAfter && textAfter.charAt(0);
+				var indent = cx.indent;
+				if (cx.type == "prop" && (ch == "}" || ch == ")")) cx = cx.prev;
+				if (cx.prev) {
+					if (ch == "}" && (cx.type == "block" || cx.type == "top" || cx.type == "interpolation" || cx.type == "restricted_atBlock")) {
+						cx = cx.prev;
+						indent = cx.indent;
+					} else if (ch == ")" && (cx.type == "parens" || cx.type == "atBlock_parens") || ch == "{" && (cx.type == "at" || cx.type == "atBlock")) indent = Math.max(0, cx.indent - iCx.unit);
+				}
+				return indent;
+			},
+			languageData: {
+				indentOnInput: /^\s*\}$/,
+				commentTokens: {
+					line: lineComment,
+					block: {
+						open: "/*",
+						close: "*/"
+					}
+				},
+				autocomplete: allWords
+			}
+		};
+	}
+	function keySet$1(array) {
+		var keys = {};
+		for (var i = 0; i < array.length; ++i) keys[array[i].toLowerCase()] = true;
+		return keys;
+	}
+	var documentTypes_$1 = [
+		"domain",
+		"regexp",
+		"url",
+		"url-prefix"
+	];
+	var documentTypes$1 = keySet$1(documentTypes_$1);
+	var mediaTypes_$1 = [
+		"all",
+		"aural",
+		"braille",
+		"handheld",
+		"print",
+		"projection",
+		"screen",
+		"tty",
+		"tv",
+		"embossed"
+	];
+	var mediaTypes$1 = keySet$1(mediaTypes_$1);
+	var mediaFeatures_$1 = [
+		"width",
+		"min-width",
+		"max-width",
+		"height",
+		"min-height",
+		"max-height",
+		"device-width",
+		"min-device-width",
+		"max-device-width",
+		"device-height",
+		"min-device-height",
+		"max-device-height",
+		"aspect-ratio",
+		"min-aspect-ratio",
+		"max-aspect-ratio",
+		"device-aspect-ratio",
+		"min-device-aspect-ratio",
+		"max-device-aspect-ratio",
+		"color",
+		"min-color",
+		"max-color",
+		"color-index",
+		"min-color-index",
+		"max-color-index",
+		"monochrome",
+		"min-monochrome",
+		"max-monochrome",
+		"resolution",
+		"min-resolution",
+		"max-resolution",
+		"scan",
+		"grid",
+		"orientation",
+		"device-pixel-ratio",
+		"min-device-pixel-ratio",
+		"max-device-pixel-ratio",
+		"pointer",
+		"any-pointer",
+		"hover",
+		"any-hover",
+		"prefers-color-scheme",
+		"dynamic-range",
+		"video-dynamic-range"
+	];
+	var mediaFeatures$1 = keySet$1(mediaFeatures_$1);
+	var mediaValueKeywords_ = [
+		"landscape",
+		"portrait",
+		"none",
+		"coarse",
+		"fine",
+		"on-demand",
+		"hover",
+		"interlace",
+		"progressive",
+		"dark",
+		"light",
+		"standard",
+		"high"
+	];
+	var mediaValueKeywords = keySet$1(mediaValueKeywords_);
+	var propertyKeywords_$1 = [
+		"align-content",
+		"align-items",
+		"align-self",
+		"alignment-adjust",
+		"alignment-baseline",
+		"all",
+		"anchor-point",
+		"animation",
+		"animation-delay",
+		"animation-direction",
+		"animation-duration",
+		"animation-fill-mode",
+		"animation-iteration-count",
+		"animation-name",
+		"animation-play-state",
+		"animation-timing-function",
+		"appearance",
+		"azimuth",
+		"backdrop-filter",
+		"backface-visibility",
+		"background",
+		"background-attachment",
+		"background-blend-mode",
+		"background-clip",
+		"background-color",
+		"background-image",
+		"background-origin",
+		"background-position",
+		"background-position-x",
+		"background-position-y",
+		"background-repeat",
+		"background-size",
+		"baseline-shift",
+		"binding",
+		"bleed",
+		"block-size",
+		"bookmark-label",
+		"bookmark-level",
+		"bookmark-state",
+		"bookmark-target",
+		"border",
+		"border-bottom",
+		"border-bottom-color",
+		"border-bottom-left-radius",
+		"border-bottom-right-radius",
+		"border-bottom-style",
+		"border-bottom-width",
+		"border-collapse",
+		"border-color",
+		"border-image",
+		"border-image-outset",
+		"border-image-repeat",
+		"border-image-slice",
+		"border-image-source",
+		"border-image-width",
+		"border-left",
+		"border-left-color",
+		"border-left-style",
+		"border-left-width",
+		"border-radius",
+		"border-right",
+		"border-right-color",
+		"border-right-style",
+		"border-right-width",
+		"border-spacing",
+		"border-style",
+		"border-top",
+		"border-top-color",
+		"border-top-left-radius",
+		"border-top-right-radius",
+		"border-top-style",
+		"border-top-width",
+		"border-width",
+		"bottom",
+		"box-decoration-break",
+		"box-shadow",
+		"box-sizing",
+		"break-after",
+		"break-before",
+		"break-inside",
+		"caption-side",
+		"caret-color",
+		"clear",
+		"clip",
+		"color",
+		"color-profile",
+		"column-count",
+		"column-fill",
+		"column-gap",
+		"column-rule",
+		"column-rule-color",
+		"column-rule-style",
+		"column-rule-width",
+		"column-span",
+		"column-width",
+		"columns",
+		"contain",
+		"content",
+		"counter-increment",
+		"counter-reset",
+		"crop",
+		"cue",
+		"cue-after",
+		"cue-before",
+		"cursor",
+		"direction",
+		"display",
+		"dominant-baseline",
+		"drop-initial-after-adjust",
+		"drop-initial-after-align",
+		"drop-initial-before-adjust",
+		"drop-initial-before-align",
+		"drop-initial-size",
+		"drop-initial-value",
+		"elevation",
+		"empty-cells",
+		"fit",
+		"fit-content",
+		"fit-position",
+		"flex",
+		"flex-basis",
+		"flex-direction",
+		"flex-flow",
+		"flex-grow",
+		"flex-shrink",
+		"flex-wrap",
+		"float",
+		"float-offset",
+		"flow-from",
+		"flow-into",
+		"font",
+		"font-family",
+		"font-feature-settings",
+		"font-kerning",
+		"font-language-override",
+		"font-optical-sizing",
+		"font-size",
+		"font-size-adjust",
+		"font-stretch",
+		"font-style",
+		"font-synthesis",
+		"font-variant",
+		"font-variant-alternates",
+		"font-variant-caps",
+		"font-variant-east-asian",
+		"font-variant-ligatures",
+		"font-variant-numeric",
+		"font-variant-position",
+		"font-variation-settings",
+		"font-weight",
+		"gap",
+		"grid",
+		"grid-area",
+		"grid-auto-columns",
+		"grid-auto-flow",
+		"grid-auto-rows",
+		"grid-column",
+		"grid-column-end",
+		"grid-column-gap",
+		"grid-column-start",
+		"grid-gap",
+		"grid-row",
+		"grid-row-end",
+		"grid-row-gap",
+		"grid-row-start",
+		"grid-template",
+		"grid-template-areas",
+		"grid-template-columns",
+		"grid-template-rows",
+		"hanging-punctuation",
+		"height",
+		"hyphens",
+		"icon",
+		"image-orientation",
+		"image-rendering",
+		"image-resolution",
+		"inline-box-align",
+		"inset",
+		"inset-block",
+		"inset-block-end",
+		"inset-block-start",
+		"inset-inline",
+		"inset-inline-end",
+		"inset-inline-start",
+		"isolation",
+		"justify-content",
+		"justify-items",
+		"justify-self",
+		"left",
+		"letter-spacing",
+		"line-break",
+		"line-height",
+		"line-height-step",
+		"line-stacking",
+		"line-stacking-ruby",
+		"line-stacking-shift",
+		"line-stacking-strategy",
+		"list-style",
+		"list-style-image",
+		"list-style-position",
+		"list-style-type",
+		"margin",
+		"margin-bottom",
+		"margin-left",
+		"margin-right",
+		"margin-top",
+		"marks",
+		"marquee-direction",
+		"marquee-loop",
+		"marquee-play-count",
+		"marquee-speed",
+		"marquee-style",
+		"mask-clip",
+		"mask-composite",
+		"mask-image",
+		"mask-mode",
+		"mask-origin",
+		"mask-position",
+		"mask-repeat",
+		"mask-size",
+		"mask-type",
+		"max-block-size",
+		"max-height",
+		"max-inline-size",
+		"max-width",
+		"min-block-size",
+		"min-height",
+		"min-inline-size",
+		"min-width",
+		"mix-blend-mode",
+		"move-to",
+		"nav-down",
+		"nav-index",
+		"nav-left",
+		"nav-right",
+		"nav-up",
+		"object-fit",
+		"object-position",
+		"offset",
+		"offset-anchor",
+		"offset-distance",
+		"offset-path",
+		"offset-position",
+		"offset-rotate",
+		"opacity",
+		"order",
+		"orphans",
+		"outline",
+		"outline-color",
+		"outline-offset",
+		"outline-style",
+		"outline-width",
+		"overflow",
+		"overflow-style",
+		"overflow-wrap",
+		"overflow-x",
+		"overflow-y",
+		"padding",
+		"padding-bottom",
+		"padding-left",
+		"padding-right",
+		"padding-top",
+		"page",
+		"page-break-after",
+		"page-break-before",
+		"page-break-inside",
+		"page-policy",
+		"pause",
+		"pause-after",
+		"pause-before",
+		"perspective",
+		"perspective-origin",
+		"pitch",
+		"pitch-range",
+		"place-content",
+		"place-items",
+		"place-self",
+		"play-during",
+		"position",
+		"presentation-level",
+		"punctuation-trim",
+		"quotes",
+		"region-break-after",
+		"region-break-before",
+		"region-break-inside",
+		"region-fragment",
+		"rendering-intent",
+		"resize",
+		"rest",
+		"rest-after",
+		"rest-before",
+		"richness",
+		"right",
+		"rotate",
+		"rotation",
+		"rotation-point",
+		"row-gap",
+		"ruby-align",
+		"ruby-overhang",
+		"ruby-position",
+		"ruby-span",
+		"scale",
+		"scroll-behavior",
+		"scroll-margin",
+		"scroll-margin-block",
+		"scroll-margin-block-end",
+		"scroll-margin-block-start",
+		"scroll-margin-bottom",
+		"scroll-margin-inline",
+		"scroll-margin-inline-end",
+		"scroll-margin-inline-start",
+		"scroll-margin-left",
+		"scroll-margin-right",
+		"scroll-margin-top",
+		"scroll-padding",
+		"scroll-padding-block",
+		"scroll-padding-block-end",
+		"scroll-padding-block-start",
+		"scroll-padding-bottom",
+		"scroll-padding-inline",
+		"scroll-padding-inline-end",
+		"scroll-padding-inline-start",
+		"scroll-padding-left",
+		"scroll-padding-right",
+		"scroll-padding-top",
+		"scroll-snap-align",
+		"scroll-snap-type",
+		"shape-image-threshold",
+		"shape-inside",
+		"shape-margin",
+		"shape-outside",
+		"size",
+		"speak",
+		"speak-as",
+		"speak-header",
+		"speak-numeral",
+		"speak-punctuation",
+		"speech-rate",
+		"stress",
+		"string-set",
+		"tab-size",
+		"table-layout",
+		"target",
+		"target-name",
+		"target-new",
+		"target-position",
+		"text-align",
+		"text-align-last",
+		"text-combine-upright",
+		"text-decoration",
+		"text-decoration-color",
+		"text-decoration-line",
+		"text-decoration-skip",
+		"text-decoration-skip-ink",
+		"text-decoration-style",
+		"text-emphasis",
+		"text-emphasis-color",
+		"text-emphasis-position",
+		"text-emphasis-style",
+		"text-height",
+		"text-indent",
+		"text-justify",
+		"text-orientation",
+		"text-outline",
+		"text-overflow",
+		"text-rendering",
+		"text-shadow",
+		"text-size-adjust",
+		"text-space-collapse",
+		"text-transform",
+		"text-underline-position",
+		"text-wrap",
+		"top",
+		"touch-action",
+		"transform",
+		"transform-origin",
+		"transform-style",
+		"transition",
+		"transition-delay",
+		"transition-duration",
+		"transition-property",
+		"transition-timing-function",
+		"translate",
+		"unicode-bidi",
+		"user-select",
+		"vertical-align",
+		"visibility",
+		"voice-balance",
+		"voice-duration",
+		"voice-family",
+		"voice-pitch",
+		"voice-range",
+		"voice-rate",
+		"voice-stress",
+		"voice-volume",
+		"volume",
+		"white-space",
+		"widows",
+		"width",
+		"will-change",
+		"word-break",
+		"word-spacing",
+		"word-wrap",
+		"writing-mode",
+		"z-index",
+		"clip-path",
+		"clip-rule",
+		"mask",
+		"enable-background",
+		"filter",
+		"flood-color",
+		"flood-opacity",
+		"lighting-color",
+		"stop-color",
+		"stop-opacity",
+		"pointer-events",
+		"color-interpolation",
+		"color-interpolation-filters",
+		"color-rendering",
+		"fill",
+		"fill-opacity",
+		"fill-rule",
+		"image-rendering",
+		"marker",
+		"marker-end",
+		"marker-mid",
+		"marker-start",
+		"paint-order",
+		"shape-rendering",
+		"stroke",
+		"stroke-dasharray",
+		"stroke-dashoffset",
+		"stroke-linecap",
+		"stroke-linejoin",
+		"stroke-miterlimit",
+		"stroke-opacity",
+		"stroke-width",
+		"text-rendering",
+		"baseline-shift",
+		"dominant-baseline",
+		"glyph-orientation-horizontal",
+		"glyph-orientation-vertical",
+		"text-anchor",
+		"writing-mode"
+	];
+	var propertyKeywords$2 = keySet$1(propertyKeywords_$1);
+	var nonStandardPropertyKeywords_$1 = [
+		"accent-color",
+		"aspect-ratio",
+		"border-block",
+		"border-block-color",
+		"border-block-end",
+		"border-block-end-color",
+		"border-block-end-style",
+		"border-block-end-width",
+		"border-block-start",
+		"border-block-start-color",
+		"border-block-start-style",
+		"border-block-start-width",
+		"border-block-style",
+		"border-block-width",
+		"border-inline",
+		"border-inline-color",
+		"border-inline-end",
+		"border-inline-end-color",
+		"border-inline-end-style",
+		"border-inline-end-width",
+		"border-inline-start",
+		"border-inline-start-color",
+		"border-inline-start-style",
+		"border-inline-start-width",
+		"border-inline-style",
+		"border-inline-width",
+		"content-visibility",
+		"margin-block",
+		"margin-block-end",
+		"margin-block-start",
+		"margin-inline",
+		"margin-inline-end",
+		"margin-inline-start",
+		"overflow-anchor",
+		"overscroll-behavior",
+		"padding-block",
+		"padding-block-end",
+		"padding-block-start",
+		"padding-inline",
+		"padding-inline-end",
+		"padding-inline-start",
+		"scroll-snap-stop",
+		"scrollbar-3d-light-color",
+		"scrollbar-arrow-color",
+		"scrollbar-base-color",
+		"scrollbar-dark-shadow-color",
+		"scrollbar-face-color",
+		"scrollbar-highlight-color",
+		"scrollbar-shadow-color",
+		"scrollbar-track-color",
+		"searchfield-cancel-button",
+		"searchfield-decoration",
+		"searchfield-results-button",
+		"searchfield-results-decoration",
+		"shape-inside",
+		"zoom"
+	];
+	var nonStandardPropertyKeywords$1 = keySet$1(nonStandardPropertyKeywords_$1);
+	var fontProperties_$1 = [
+		"font-display",
+		"font-family",
+		"src",
+		"unicode-range",
+		"font-variant",
+		"font-feature-settings",
+		"font-stretch",
+		"font-weight",
+		"font-style"
+	];
+	var fontProperties$2 = keySet$1(fontProperties_$1);
+	var counterDescriptors = keySet$1([
+		"additive-symbols",
+		"fallback",
+		"negative",
+		"pad",
+		"prefix",
+		"range",
+		"speak-as",
+		"suffix",
+		"symbols",
+		"system"
+	]);
+	var colorKeywords_$1 = [
+		"aliceblue",
+		"antiquewhite",
+		"aqua",
+		"aquamarine",
+		"azure",
+		"beige",
+		"bisque",
+		"black",
+		"blanchedalmond",
+		"blue",
+		"blueviolet",
+		"brown",
+		"burlywood",
+		"cadetblue",
+		"chartreuse",
+		"chocolate",
+		"coral",
+		"cornflowerblue",
+		"cornsilk",
+		"crimson",
+		"cyan",
+		"darkblue",
+		"darkcyan",
+		"darkgoldenrod",
+		"darkgray",
+		"darkgreen",
+		"darkgrey",
+		"darkkhaki",
+		"darkmagenta",
+		"darkolivegreen",
+		"darkorange",
+		"darkorchid",
+		"darkred",
+		"darksalmon",
+		"darkseagreen",
+		"darkslateblue",
+		"darkslategray",
+		"darkslategrey",
+		"darkturquoise",
+		"darkviolet",
+		"deeppink",
+		"deepskyblue",
+		"dimgray",
+		"dimgrey",
+		"dodgerblue",
+		"firebrick",
+		"floralwhite",
+		"forestgreen",
+		"fuchsia",
+		"gainsboro",
+		"ghostwhite",
+		"gold",
+		"goldenrod",
+		"gray",
+		"grey",
+		"green",
+		"greenyellow",
+		"honeydew",
+		"hotpink",
+		"indianred",
+		"indigo",
+		"ivory",
+		"khaki",
+		"lavender",
+		"lavenderblush",
+		"lawngreen",
+		"lemonchiffon",
+		"lightblue",
+		"lightcoral",
+		"lightcyan",
+		"lightgoldenrodyellow",
+		"lightgray",
+		"lightgreen",
+		"lightgrey",
+		"lightpink",
+		"lightsalmon",
+		"lightseagreen",
+		"lightskyblue",
+		"lightslategray",
+		"lightslategrey",
+		"lightsteelblue",
+		"lightyellow",
+		"lime",
+		"limegreen",
+		"linen",
+		"magenta",
+		"maroon",
+		"mediumaquamarine",
+		"mediumblue",
+		"mediumorchid",
+		"mediumpurple",
+		"mediumseagreen",
+		"mediumslateblue",
+		"mediumspringgreen",
+		"mediumturquoise",
+		"mediumvioletred",
+		"midnightblue",
+		"mintcream",
+		"mistyrose",
+		"moccasin",
+		"navajowhite",
+		"navy",
+		"oldlace",
+		"olive",
+		"olivedrab",
+		"orange",
+		"orangered",
+		"orchid",
+		"palegoldenrod",
+		"palegreen",
+		"paleturquoise",
+		"palevioletred",
+		"papayawhip",
+		"peachpuff",
+		"peru",
+		"pink",
+		"plum",
+		"powderblue",
+		"purple",
+		"rebeccapurple",
+		"red",
+		"rosybrown",
+		"royalblue",
+		"saddlebrown",
+		"salmon",
+		"sandybrown",
+		"seagreen",
+		"seashell",
+		"sienna",
+		"silver",
+		"skyblue",
+		"slateblue",
+		"slategray",
+		"slategrey",
+		"snow",
+		"springgreen",
+		"steelblue",
+		"tan",
+		"teal",
+		"thistle",
+		"tomato",
+		"turquoise",
+		"violet",
+		"wheat",
+		"white",
+		"whitesmoke",
+		"yellow",
+		"yellowgreen"
+	];
+	var colorKeywords$2 = keySet$1(colorKeywords_$1);
+	var valueKeywords_$1 = [
+		"above",
+		"absolute",
+		"activeborder",
+		"additive",
+		"activecaption",
+		"afar",
+		"after-white-space",
+		"ahead",
+		"alias",
+		"all",
+		"all-scroll",
+		"alphabetic",
+		"alternate",
+		"always",
+		"amharic",
+		"amharic-abegede",
+		"antialiased",
+		"appworkspace",
+		"arabic-indic",
+		"armenian",
+		"asterisks",
+		"attr",
+		"auto",
+		"auto-flow",
+		"avoid",
+		"avoid-column",
+		"avoid-page",
+		"avoid-region",
+		"axis-pan",
+		"background",
+		"backwards",
+		"baseline",
+		"below",
+		"bidi-override",
+		"binary",
+		"bengali",
+		"blink",
+		"block",
+		"block-axis",
+		"blur",
+		"bold",
+		"bolder",
+		"border",
+		"border-box",
+		"both",
+		"bottom",
+		"break",
+		"break-all",
+		"break-word",
+		"brightness",
+		"bullets",
+		"button",
+		"buttonface",
+		"buttonhighlight",
+		"buttonshadow",
+		"buttontext",
+		"calc",
+		"cambodian",
+		"capitalize",
+		"caps-lock-indicator",
+		"caption",
+		"captiontext",
+		"caret",
+		"cell",
+		"center",
+		"checkbox",
+		"circle",
+		"cjk-decimal",
+		"cjk-earthly-branch",
+		"cjk-heavenly-stem",
+		"cjk-ideographic",
+		"clear",
+		"clip",
+		"close-quote",
+		"col-resize",
+		"collapse",
+		"color",
+		"color-burn",
+		"color-dodge",
+		"column",
+		"column-reverse",
+		"compact",
+		"condensed",
+		"conic-gradient",
+		"contain",
+		"content",
+		"contents",
+		"content-box",
+		"context-menu",
+		"continuous",
+		"contrast",
+		"copy",
+		"counter",
+		"counters",
+		"cover",
+		"crop",
+		"cross",
+		"crosshair",
+		"cubic-bezier",
+		"currentcolor",
+		"cursive",
+		"cyclic",
+		"darken",
+		"dashed",
+		"decimal",
+		"decimal-leading-zero",
+		"default",
+		"default-button",
+		"dense",
+		"destination-atop",
+		"destination-in",
+		"destination-out",
+		"destination-over",
+		"devanagari",
+		"difference",
+		"disc",
+		"discard",
+		"disclosure-closed",
+		"disclosure-open",
+		"document",
+		"dot-dash",
+		"dot-dot-dash",
+		"dotted",
+		"double",
+		"down",
+		"drop-shadow",
+		"e-resize",
+		"ease",
+		"ease-in",
+		"ease-in-out",
+		"ease-out",
+		"element",
+		"ellipse",
+		"ellipsis",
+		"embed",
+		"end",
+		"ethiopic",
+		"ethiopic-abegede",
+		"ethiopic-abegede-am-et",
+		"ethiopic-abegede-gez",
+		"ethiopic-abegede-ti-er",
+		"ethiopic-abegede-ti-et",
+		"ethiopic-halehame-aa-er",
+		"ethiopic-halehame-aa-et",
+		"ethiopic-halehame-am-et",
+		"ethiopic-halehame-gez",
+		"ethiopic-halehame-om-et",
+		"ethiopic-halehame-sid-et",
+		"ethiopic-halehame-so-et",
+		"ethiopic-halehame-ti-er",
+		"ethiopic-halehame-ti-et",
+		"ethiopic-halehame-tig",
+		"ethiopic-numeric",
+		"ew-resize",
+		"exclusion",
+		"expanded",
+		"extends",
+		"extra-condensed",
+		"extra-expanded",
+		"fantasy",
+		"fast",
+		"fill",
+		"fill-box",
+		"fixed",
+		"flat",
+		"flex",
+		"flex-end",
+		"flex-start",
+		"footnotes",
+		"forwards",
+		"from",
+		"geometricPrecision",
+		"georgian",
+		"grayscale",
+		"graytext",
+		"grid",
+		"groove",
+		"gujarati",
+		"gurmukhi",
+		"hand",
+		"hangul",
+		"hangul-consonant",
+		"hard-light",
+		"hebrew",
+		"help",
+		"hidden",
+		"hide",
+		"higher",
+		"highlight",
+		"highlighttext",
+		"hiragana",
+		"hiragana-iroha",
+		"horizontal",
+		"hsl",
+		"hsla",
+		"hue",
+		"hue-rotate",
+		"icon",
+		"ignore",
+		"inactiveborder",
+		"inactivecaption",
+		"inactivecaptiontext",
+		"infinite",
+		"infobackground",
+		"infotext",
+		"inherit",
+		"initial",
+		"inline",
+		"inline-axis",
+		"inline-block",
+		"inline-flex",
+		"inline-grid",
+		"inline-table",
+		"inset",
+		"inside",
+		"intrinsic",
+		"invert",
+		"italic",
+		"japanese-formal",
+		"japanese-informal",
+		"justify",
+		"kannada",
+		"katakana",
+		"katakana-iroha",
+		"keep-all",
+		"khmer",
+		"korean-hangul-formal",
+		"korean-hanja-formal",
+		"korean-hanja-informal",
+		"landscape",
+		"lao",
+		"large",
+		"larger",
+		"left",
+		"level",
+		"lighter",
+		"lighten",
+		"line-through",
+		"linear",
+		"linear-gradient",
+		"lines",
+		"list-item",
+		"listbox",
+		"listitem",
+		"local",
+		"logical",
+		"loud",
+		"lower",
+		"lower-alpha",
+		"lower-armenian",
+		"lower-greek",
+		"lower-hexadecimal",
+		"lower-latin",
+		"lower-norwegian",
+		"lower-roman",
+		"lowercase",
+		"ltr",
+		"luminosity",
+		"malayalam",
+		"manipulation",
+		"match",
+		"matrix",
+		"matrix3d",
+		"media-play-button",
+		"media-slider",
+		"media-sliderthumb",
+		"media-volume-slider",
+		"media-volume-sliderthumb",
+		"medium",
+		"menu",
+		"menulist",
+		"menulist-button",
+		"menutext",
+		"message-box",
+		"middle",
+		"min-intrinsic",
+		"mix",
+		"mongolian",
+		"monospace",
+		"move",
+		"multiple",
+		"multiple_mask_images",
+		"multiply",
+		"myanmar",
+		"n-resize",
+		"narrower",
+		"ne-resize",
+		"nesw-resize",
+		"no-close-quote",
+		"no-drop",
+		"no-open-quote",
+		"no-repeat",
+		"none",
+		"normal",
+		"not-allowed",
+		"nowrap",
+		"ns-resize",
+		"numbers",
+		"numeric",
+		"nw-resize",
+		"nwse-resize",
+		"oblique",
+		"octal",
+		"opacity",
+		"open-quote",
+		"optimizeLegibility",
+		"optimizeSpeed",
+		"oriya",
+		"oromo",
+		"outset",
+		"outside",
+		"outside-shape",
+		"overlay",
+		"overline",
+		"padding",
+		"padding-box",
+		"painted",
+		"page",
+		"paused",
+		"persian",
+		"perspective",
+		"pinch-zoom",
+		"plus-darker",
+		"plus-lighter",
+		"pointer",
+		"polygon",
+		"portrait",
+		"pre",
+		"pre-line",
+		"pre-wrap",
+		"preserve-3d",
+		"progress",
+		"push-button",
+		"radial-gradient",
+		"radio",
+		"read-only",
+		"read-write",
+		"read-write-plaintext-only",
+		"rectangle",
+		"region",
+		"relative",
+		"repeat",
+		"repeating-linear-gradient",
+		"repeating-radial-gradient",
+		"repeating-conic-gradient",
+		"repeat-x",
+		"repeat-y",
+		"reset",
+		"reverse",
+		"rgb",
+		"rgba",
+		"ridge",
+		"right",
+		"rotate",
+		"rotate3d",
+		"rotateX",
+		"rotateY",
+		"rotateZ",
+		"round",
+		"row",
+		"row-resize",
+		"row-reverse",
+		"rtl",
+		"run-in",
+		"running",
+		"s-resize",
+		"sans-serif",
+		"saturate",
+		"saturation",
+		"scale",
+		"scale3d",
+		"scaleX",
+		"scaleY",
+		"scaleZ",
+		"screen",
+		"scroll",
+		"scrollbar",
+		"scroll-position",
+		"se-resize",
+		"searchfield",
+		"searchfield-cancel-button",
+		"searchfield-decoration",
+		"searchfield-results-button",
+		"searchfield-results-decoration",
+		"self-start",
+		"self-end",
+		"semi-condensed",
+		"semi-expanded",
+		"separate",
+		"sepia",
+		"serif",
+		"show",
+		"sidama",
+		"simp-chinese-formal",
+		"simp-chinese-informal",
+		"single",
+		"skew",
+		"skewX",
+		"skewY",
+		"skip-white-space",
+		"slide",
+		"slider-horizontal",
+		"slider-vertical",
+		"sliderthumb-horizontal",
+		"sliderthumb-vertical",
+		"slow",
+		"small",
+		"small-caps",
+		"small-caption",
+		"smaller",
+		"soft-light",
+		"solid",
+		"somali",
+		"source-atop",
+		"source-in",
+		"source-out",
+		"source-over",
+		"space",
+		"space-around",
+		"space-between",
+		"space-evenly",
+		"spell-out",
+		"square",
+		"square-button",
+		"start",
+		"static",
+		"status-bar",
+		"stretch",
+		"stroke",
+		"stroke-box",
+		"sub",
+		"subpixel-antialiased",
+		"svg_masks",
+		"super",
+		"sw-resize",
+		"symbolic",
+		"symbols",
+		"system-ui",
+		"table",
+		"table-caption",
+		"table-cell",
+		"table-column",
+		"table-column-group",
+		"table-footer-group",
+		"table-header-group",
+		"table-row",
+		"table-row-group",
+		"tamil",
+		"telugu",
+		"text",
+		"text-bottom",
+		"text-top",
+		"textarea",
+		"textfield",
+		"thai",
+		"thick",
+		"thin",
+		"threeddarkshadow",
+		"threedface",
+		"threedhighlight",
+		"threedlightshadow",
+		"threedshadow",
+		"tibetan",
+		"tigre",
+		"tigrinya-er",
+		"tigrinya-er-abegede",
+		"tigrinya-et",
+		"tigrinya-et-abegede",
+		"to",
+		"top",
+		"trad-chinese-formal",
+		"trad-chinese-informal",
+		"transform",
+		"translate",
+		"translate3d",
+		"translateX",
+		"translateY",
+		"translateZ",
+		"transparent",
+		"ultra-condensed",
+		"ultra-expanded",
+		"underline",
+		"unidirectional-pan",
+		"unset",
+		"up",
+		"upper-alpha",
+		"upper-armenian",
+		"upper-greek",
+		"upper-hexadecimal",
+		"upper-latin",
+		"upper-norwegian",
+		"upper-roman",
+		"uppercase",
+		"urdu",
+		"url",
+		"var",
+		"vertical",
+		"vertical-text",
+		"view-box",
+		"visible",
+		"visibleFill",
+		"visiblePainted",
+		"visibleStroke",
+		"visual",
+		"w-resize",
+		"wait",
+		"wave",
+		"wider",
+		"window",
+		"windowframe",
+		"windowtext",
+		"words",
+		"wrap",
+		"wrap-reverse",
+		"x-large",
+		"x-small",
+		"xor",
+		"xx-large",
+		"xx-small"
+	];
+	var valueKeywords$2 = keySet$1(valueKeywords_$1);
+	var allWords = documentTypes_$1.concat(mediaTypes_$1).concat(mediaFeatures_$1).concat(mediaValueKeywords_).concat(propertyKeywords_$1).concat(nonStandardPropertyKeywords_$1).concat(colorKeywords_$1).concat(valueKeywords_$1);
+	const keywords$10 = {
+		properties: propertyKeywords_$1,
+		colors: colorKeywords_$1,
+		fonts: fontProperties_$1,
+		values: valueKeywords_$1,
+		all: allWords
+	};
+	const defaults = {
+		documentTypes: documentTypes$1,
+		mediaTypes: mediaTypes$1,
+		mediaFeatures: mediaFeatures$1,
+		mediaValueKeywords,
+		propertyKeywords: propertyKeywords$2,
+		nonStandardPropertyKeywords: nonStandardPropertyKeywords$1,
+		fontProperties: fontProperties$2,
+		counterDescriptors,
+		colorKeywords: colorKeywords$2,
+		valueKeywords: valueKeywords$2,
+		tokenHooks: { "/": function(stream, state) {
+			if (!stream.eat("*")) return false;
+			state.tokenize = tokenCComment$1;
+			return tokenCComment$1(stream, state);
+		} }
+	};
+	mkCSS({ name: "css" });
+	function tokenCComment$1(stream, state) {
+		var maybeEnd = false, ch;
+		while ((ch = stream.next()) != null) {
+			if (maybeEnd && ch == "/") {
+				state.tokenize = null;
+				break;
+			}
+			maybeEnd = ch == "*";
+		}
+		return ["comment", "comment"];
+	}
+	const sCSS = mkCSS({
+		name: "scss",
+		mediaTypes: mediaTypes$1,
+		mediaFeatures: mediaFeatures$1,
+		mediaValueKeywords,
+		propertyKeywords: propertyKeywords$2,
+		nonStandardPropertyKeywords: nonStandardPropertyKeywords$1,
+		colorKeywords: colorKeywords$2,
+		valueKeywords: valueKeywords$2,
+		fontProperties: fontProperties$2,
+		allowNested: true,
+		lineComment: "//",
+		tokenHooks: {
+			"/": function(stream, state) {
+				if (stream.eat("/")) {
+					stream.skipToEnd();
+					return ["comment", "comment"];
+				} else if (stream.eat("*")) {
+					state.tokenize = tokenCComment$1;
+					return tokenCComment$1(stream, state);
+				} else return ["operator", "operator"];
+			},
+			":": function(stream) {
+				if (stream.match(/^\s*\{/, false)) return [null, null];
+				return false;
+			},
+			"$": function(stream) {
+				stream.match(/^[\w-]+/);
+				if (stream.match(/^\s*:/, false)) return ["def", "variable-definition"];
+				return ["variableName.special", "variable"];
+			},
+			"#": function(stream) {
+				if (!stream.eat("{")) return false;
+				return [null, "interpolation"];
+			}
+		}
+	});
+	const less = mkCSS({
+		name: "less",
+		mediaTypes: mediaTypes$1,
+		mediaFeatures: mediaFeatures$1,
+		mediaValueKeywords,
+		propertyKeywords: propertyKeywords$2,
+		nonStandardPropertyKeywords: nonStandardPropertyKeywords$1,
+		colorKeywords: colorKeywords$2,
+		valueKeywords: valueKeywords$2,
+		fontProperties: fontProperties$2,
+		allowNested: true,
+		lineComment: "//",
+		tokenHooks: {
+			"/": function(stream, state) {
+				if (stream.eat("/")) {
+					stream.skipToEnd();
+					return ["comment", "comment"];
+				} else if (stream.eat("*")) {
+					state.tokenize = tokenCComment$1;
+					return tokenCComment$1(stream, state);
+				} else return ["operator", "operator"];
+			},
+			"@": function(stream) {
+				if (stream.eat("{")) return [null, "interpolation"];
+				if (stream.match(/^(charset|document|font-face|import|(-(moz|ms|o|webkit)-)?keyframes|media|namespace|page|supports)\b/i, false)) return false;
+				stream.eatWhile(/[\w\\\-]/);
+				if (stream.match(/^\s*:/, false)) return ["def", "variable-definition"];
+				return ["variableName", "variable"];
+			},
+			"&": function() {
+				return ["atom", "atom"];
+			}
+		}
+	});
+	mkCSS({
+		name: "gss",
+		documentTypes: documentTypes$1,
+		mediaTypes: mediaTypes$1,
+		mediaFeatures: mediaFeatures$1,
+		propertyKeywords: propertyKeywords$2,
+		nonStandardPropertyKeywords: nonStandardPropertyKeywords$1,
+		fontProperties: fontProperties$2,
+		counterDescriptors,
+		colorKeywords: colorKeywords$2,
+		valueKeywords: valueKeywords$2,
+		supportsAtComponent: true,
+		tokenHooks: { "/": function(stream, state) {
+			if (!stream.eat("*")) return false;
+			state.tokenize = tokenCComment$1;
+			return tokenCComment$1(stream, state);
+		} }
+	});
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/sass.js
+	const propertyKeywords$1 = new Set(keywords$10.properties);
+	const colorKeywords$1 = new Set(keywords$10.colors);
+	const valueKeywords$1 = new Set(keywords$10.values);
+	const fontProperties$1 = new Set(keywords$10.fonts);
+	function tokenRegexp(words) {
+		return new RegExp("^" + words.join("|"));
+	}
+	let keywordsRegexp = new RegExp("^" + [
+		"true",
+		"false",
+		"null",
+		"auto"
+	].join("|"));
+	let opRegexp = tokenRegexp([
+		"\\(",
+		"\\)",
+		"=",
+		">",
+		"<",
+		"==",
+		">=",
+		"<=",
+		"\\+",
+		"-",
+		"\\!=",
+		"/",
+		"\\*",
+		"%",
+		"and",
+		"or",
+		"not",
+		";",
+		"\\{",
+		"\\}",
+		":"
+	]);
+	let pseudoElementsRegexp = /^::?[a-zA-Z_][\w\-]*/;
+	let word;
+	function isEndLine(stream) {
+		return !stream.peek() || stream.match(/\s+$/, false);
+	}
+	function urlTokens(stream, state) {
+		let ch = stream.peek();
+		if (ch === ")") {
+			stream.next();
+			state.tokenizer = tokenBase$11;
+			return "operator";
+		} else if (ch === "(") {
+			stream.next();
+			stream.eatSpace();
+			return "operator";
+		} else if (ch === "'" || ch === "\"") {
+			state.tokenizer = buildStringTokenizer(stream.next());
+			return "string";
+		} else {
+			state.tokenizer = buildStringTokenizer(")", false);
+			return "string";
+		}
+	}
+	function comment$1(indentation, multiLine) {
+		return function(stream, state) {
+			if (stream.sol() && stream.indentation() <= indentation) {
+				state.tokenizer = tokenBase$11;
+				return tokenBase$11(stream, state);
+			}
+			if (multiLine && stream.skipTo("*/")) {
+				stream.next();
+				stream.next();
+				state.tokenizer = tokenBase$11;
+			} else stream.skipToEnd();
+			return "comment";
+		};
+	}
+	function buildStringTokenizer(quote, greedy) {
+		if (greedy == null) greedy = true;
+		function stringTokenizer(stream, state) {
+			let nextChar = stream.next();
+			let peekChar = stream.peek();
+			let previousChar = stream.string.charAt(stream.pos - 2);
+			if (nextChar !== "\\" && peekChar === quote || nextChar === quote && previousChar !== "\\") {
+				if (nextChar !== quote && greedy) stream.next();
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				state.tokenizer = tokenBase$11;
+				return "string";
+			} else if (nextChar === "#" && peekChar === "{") {
+				state.tokenizer = buildInterpolationTokenizer(stringTokenizer);
+				stream.next();
+				return "operator";
+			} else return "string";
+		}
+		return stringTokenizer;
+	}
+	function buildInterpolationTokenizer(currentTokenizer) {
+		return function(stream, state) {
+			if (stream.peek() === "}") {
+				stream.next();
+				state.tokenizer = currentTokenizer;
+				return "operator";
+			} else return tokenBase$11(stream, state);
+		};
+	}
+	function indent$2(state, stream) {
+		if (state.indentCount == 0) {
+			state.indentCount++;
+			let currentOffset = state.scopes[0].offset + stream.indentUnit;
+			state.scopes.unshift({ offset: currentOffset });
+		}
+	}
+	function dedent$1(state) {
+		if (state.scopes.length == 1) return;
+		state.scopes.shift();
+	}
+	function tokenBase$11(stream, state) {
+		let ch = stream.peek();
+		if (stream.match("/*")) {
+			state.tokenizer = comment$1(stream.indentation(), true);
+			return state.tokenizer(stream, state);
+		}
+		if (stream.match("//")) {
+			state.tokenizer = comment$1(stream.indentation(), false);
+			return state.tokenizer(stream, state);
+		}
+		if (stream.match("#{")) {
+			state.tokenizer = buildInterpolationTokenizer(tokenBase$11);
+			return "operator";
+		}
+		if (ch === "\"" || ch === "'") {
+			stream.next();
+			state.tokenizer = buildStringTokenizer(ch);
+			return "string";
+		}
+		if (!state.cursorHalf) {
+			if (ch === "-") {
+				if (stream.match(/^-\w+-/)) return "meta";
+			}
+			if (ch === ".") {
+				stream.next();
+				if (stream.match(/^[\w-]+/)) {
+					indent$2(state, stream);
+					return "qualifier";
+				} else if (stream.peek() === "#") {
+					indent$2(state, stream);
+					return "tag";
+				}
+			}
+			if (ch === "#") {
+				stream.next();
+				if (stream.match(/^[\w-]+/)) {
+					indent$2(state, stream);
+					return "builtin";
+				}
+				if (stream.peek() === "#") {
+					indent$2(state, stream);
+					return "tag";
+				}
+			}
+			if (ch === "$") {
+				stream.next();
+				stream.eatWhile(/[\w-]/);
+				return "variable-2";
+			}
+			if (stream.match(/^-?[0-9\.]+/)) return "number";
+			if (stream.match(/^(px|em|in)\b/)) return "unit";
+			if (stream.match(keywordsRegexp)) return "keyword";
+			if (stream.match(/^url/) && stream.peek() === "(") {
+				state.tokenizer = urlTokens;
+				return "atom";
+			}
+			if (ch === "=") {
+				if (stream.match(/^=[\w-]+/)) {
+					indent$2(state, stream);
+					return "meta";
+				}
+			}
+			if (ch === "+") {
+				if (stream.match(/^\+[\w-]+/)) return "meta";
+			}
+			if (ch === "@") {
+				if (stream.match("@extend")) {
+					if (!stream.match(/\s*[\w]/)) dedent$1(state);
+				}
+			}
+			if (stream.match(/^@(else if|if|media|else|for|each|while|mixin|function)/)) {
+				indent$2(state, stream);
+				return "def";
+			}
+			if (ch === "@") {
+				stream.next();
+				stream.eatWhile(/[\w-]/);
+				return "def";
+			}
+			if (stream.eatWhile(/[\w-]/)) {
+				if (stream.match(/ *: *[\w-\+\$#!\("']/, false)) {
+					word = stream.current().toLowerCase();
+					let prop = state.prevProp + "-" + word;
+					if (propertyKeywords$1.has(prop)) return "property";
+					else if (propertyKeywords$1.has(word)) {
+						state.prevProp = word;
+						return "property";
+					} else if (fontProperties$1.has(word)) return "property";
+					return "tag";
+				} else if (stream.match(/ *:/, false)) {
+					indent$2(state, stream);
+					state.cursorHalf = 1;
+					state.prevProp = stream.current().toLowerCase();
+					return "property";
+				} else if (stream.match(/ *,/, false)) return "tag";
+				else {
+					indent$2(state, stream);
+					return "tag";
+				}
+			}
+			if (ch === ":") {
+				if (stream.match(pseudoElementsRegexp)) return "type";
+				stream.next();
+				state.cursorHalf = 1;
+				return "operator";
+			}
+		} else {
+			if (ch === "#") {
+				stream.next();
+				if (stream.match(/[0-9a-fA-F]{6}|[0-9a-fA-F]{3}/)) {
+					if (isEndLine(stream)) state.cursorHalf = 0;
+					return "number";
+				}
+			}
+			if (stream.match(/^-?[0-9\.]+/)) {
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				return "number";
+			}
+			if (stream.match(/^(px|em|in)\b/)) {
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				return "unit";
+			}
+			if (stream.match(keywordsRegexp)) {
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				return "keyword";
+			}
+			if (stream.match(/^url/) && stream.peek() === "(") {
+				state.tokenizer = urlTokens;
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				return "atom";
+			}
+			if (ch === "$") {
+				stream.next();
+				stream.eatWhile(/[\w-]/);
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				return "variable-2";
+			}
+			if (ch === "!") {
+				stream.next();
+				state.cursorHalf = 0;
+				return stream.match(/^[\w]+/) ? "keyword" : "operator";
+			}
+			if (stream.match(opRegexp)) {
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				return "operator";
+			}
+			if (stream.eatWhile(/[\w-]/)) {
+				if (isEndLine(stream)) state.cursorHalf = 0;
+				word = stream.current().toLowerCase();
+				if (valueKeywords$1.has(word)) return "atom";
+				else if (colorKeywords$1.has(word)) return "keyword";
+				else if (propertyKeywords$1.has(word)) {
+					state.prevProp = stream.current().toLowerCase();
+					return "property";
+				} else return "tag";
+			}
+			if (isEndLine(stream)) {
+				state.cursorHalf = 0;
+				return null;
+			}
+		}
+		if (stream.match(opRegexp)) return "operator";
+		stream.next();
+		return null;
+	}
+	function tokenLexer$1(stream, state) {
+		if (stream.sol()) state.indentCount = 0;
+		let style = state.tokenizer(stream, state);
+		let current = stream.current();
+		if (current === "@return" || current === "}") dedent$1(state);
+		if (style !== null) {
+			let withCurrentIndent = stream.pos - current.length + stream.indentUnit * state.indentCount;
+			let newScopes = [];
+			for (let i = 0; i < state.scopes.length; i++) {
+				let scope = state.scopes[i];
+				if (scope.offset <= withCurrentIndent) newScopes.push(scope);
+			}
+			state.scopes = newScopes;
+		}
+		return style;
+	}
+	const sass = {
+		name: "sass",
+		startState: function() {
+			return {
+				tokenizer: tokenBase$11,
+				scopes: [{
+					offset: 0,
+					type: "sass"
+				}],
+				indentCount: 0,
+				cursorHalf: 0,
+				definedVars: [],
+				definedMixins: []
+			};
+		},
+		token: function(stream, state) {
+			let style = tokenLexer$1(stream, state);
+			state.lastToken = {
+				style,
+				content: stream.current()
+			};
+			return style;
+		},
+		indent: function(state) {
+			return state.scopes[0].offset;
+		},
+		languageData: {
+			commentTokens: {
+				line: "//",
+				block: {
+					open: "/*",
+					close: "*/"
+				}
+			},
+			autocomplete: keywords$10.all
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/stylus.js
+	var tagKeywords_ = [
+		"a",
+		"abbr",
+		"address",
+		"area",
+		"article",
+		"aside",
+		"audio",
+		"b",
+		"base",
+		"bdi",
+		"bdo",
+		"bgsound",
+		"blockquote",
+		"body",
+		"br",
+		"button",
+		"canvas",
+		"caption",
+		"cite",
+		"code",
+		"col",
+		"colgroup",
+		"data",
+		"datalist",
+		"dd",
+		"del",
+		"details",
+		"dfn",
+		"div",
+		"dl",
+		"dt",
+		"em",
+		"embed",
+		"fieldset",
+		"figcaption",
+		"figure",
+		"footer",
+		"form",
+		"h1",
+		"h2",
+		"h3",
+		"h4",
+		"h5",
+		"h6",
+		"head",
+		"header",
+		"hgroup",
+		"hr",
+		"html",
+		"i",
+		"iframe",
+		"img",
+		"input",
+		"ins",
+		"kbd",
+		"keygen",
+		"label",
+		"legend",
+		"li",
+		"link",
+		"main",
+		"map",
+		"mark",
+		"marquee",
+		"menu",
+		"menuitem",
+		"meta",
+		"meter",
+		"nav",
+		"nobr",
+		"noframes",
+		"noscript",
+		"object",
+		"ol",
+		"optgroup",
+		"option",
+		"output",
+		"p",
+		"param",
+		"pre",
+		"progress",
+		"q",
+		"rp",
+		"rt",
+		"ruby",
+		"s",
+		"samp",
+		"script",
+		"section",
+		"select",
+		"small",
+		"source",
+		"span",
+		"strong",
+		"style",
+		"sub",
+		"summary",
+		"sup",
+		"table",
+		"tbody",
+		"td",
+		"textarea",
+		"tfoot",
+		"th",
+		"thead",
+		"time",
+		"tr",
+		"track",
+		"u",
+		"ul",
+		"var",
+		"video"
+	];
+	var documentTypes_ = [
+		"domain",
+		"regexp",
+		"url-prefix",
+		"url"
+	];
+	var mediaTypes_ = [
+		"all",
+		"aural",
+		"braille",
+		"handheld",
+		"print",
+		"projection",
+		"screen",
+		"tty",
+		"tv",
+		"embossed"
+	];
+	var mediaFeatures_ = [
+		"width",
+		"min-width",
+		"max-width",
+		"height",
+		"min-height",
+		"max-height",
+		"device-width",
+		"min-device-width",
+		"max-device-width",
+		"device-height",
+		"min-device-height",
+		"max-device-height",
+		"aspect-ratio",
+		"min-aspect-ratio",
+		"max-aspect-ratio",
+		"device-aspect-ratio",
+		"min-device-aspect-ratio",
+		"max-device-aspect-ratio",
+		"color",
+		"min-color",
+		"max-color",
+		"color-index",
+		"min-color-index",
+		"max-color-index",
+		"monochrome",
+		"min-monochrome",
+		"max-monochrome",
+		"resolution",
+		"min-resolution",
+		"max-resolution",
+		"scan",
+		"grid",
+		"dynamic-range",
+		"video-dynamic-range"
+	];
+	var propertyKeywords_ = [
+		"align-content",
+		"align-items",
+		"align-self",
+		"alignment-adjust",
+		"alignment-baseline",
+		"anchor-point",
+		"animation",
+		"animation-delay",
+		"animation-direction",
+		"animation-duration",
+		"animation-fill-mode",
+		"animation-iteration-count",
+		"animation-name",
+		"animation-play-state",
+		"animation-timing-function",
+		"appearance",
+		"azimuth",
+		"backface-visibility",
+		"background",
+		"background-attachment",
+		"background-clip",
+		"background-color",
+		"background-image",
+		"background-origin",
+		"background-position",
+		"background-repeat",
+		"background-size",
+		"baseline-shift",
+		"binding",
+		"bleed",
+		"bookmark-label",
+		"bookmark-level",
+		"bookmark-state",
+		"bookmark-target",
+		"border",
+		"border-bottom",
+		"border-bottom-color",
+		"border-bottom-left-radius",
+		"border-bottom-right-radius",
+		"border-bottom-style",
+		"border-bottom-width",
+		"border-collapse",
+		"border-color",
+		"border-image",
+		"border-image-outset",
+		"border-image-repeat",
+		"border-image-slice",
+		"border-image-source",
+		"border-image-width",
+		"border-left",
+		"border-left-color",
+		"border-left-style",
+		"border-left-width",
+		"border-radius",
+		"border-right",
+		"border-right-color",
+		"border-right-style",
+		"border-right-width",
+		"border-spacing",
+		"border-style",
+		"border-top",
+		"border-top-color",
+		"border-top-left-radius",
+		"border-top-right-radius",
+		"border-top-style",
+		"border-top-width",
+		"border-width",
+		"bottom",
+		"box-decoration-break",
+		"box-shadow",
+		"box-sizing",
+		"break-after",
+		"break-before",
+		"break-inside",
+		"caption-side",
+		"clear",
+		"clip",
+		"color",
+		"color-profile",
+		"column-count",
+		"column-fill",
+		"column-gap",
+		"column-rule",
+		"column-rule-color",
+		"column-rule-style",
+		"column-rule-width",
+		"column-span",
+		"column-width",
+		"columns",
+		"content",
+		"counter-increment",
+		"counter-reset",
+		"crop",
+		"cue",
+		"cue-after",
+		"cue-before",
+		"cursor",
+		"direction",
+		"display",
+		"dominant-baseline",
+		"drop-initial-after-adjust",
+		"drop-initial-after-align",
+		"drop-initial-before-adjust",
+		"drop-initial-before-align",
+		"drop-initial-size",
+		"drop-initial-value",
+		"elevation",
+		"empty-cells",
+		"fit",
+		"fit-position",
+		"flex",
+		"flex-basis",
+		"flex-direction",
+		"flex-flow",
+		"flex-grow",
+		"flex-shrink",
+		"flex-wrap",
+		"float",
+		"float-offset",
+		"flow-from",
+		"flow-into",
+		"font",
+		"font-feature-settings",
+		"font-family",
+		"font-kerning",
+		"font-language-override",
+		"font-size",
+		"font-size-adjust",
+		"font-stretch",
+		"font-style",
+		"font-synthesis",
+		"font-variant",
+		"font-variant-alternates",
+		"font-variant-caps",
+		"font-variant-east-asian",
+		"font-variant-ligatures",
+		"font-variant-numeric",
+		"font-variant-position",
+		"font-weight",
+		"grid",
+		"grid-area",
+		"grid-auto-columns",
+		"grid-auto-flow",
+		"grid-auto-position",
+		"grid-auto-rows",
+		"grid-column",
+		"grid-column-end",
+		"grid-column-start",
+		"grid-row",
+		"grid-row-end",
+		"grid-row-start",
+		"grid-template",
+		"grid-template-areas",
+		"grid-template-columns",
+		"grid-template-rows",
+		"hanging-punctuation",
+		"height",
+		"hyphens",
+		"icon",
+		"image-orientation",
+		"image-rendering",
+		"image-resolution",
+		"inline-box-align",
+		"justify-content",
+		"left",
+		"letter-spacing",
+		"line-break",
+		"line-height",
+		"line-stacking",
+		"line-stacking-ruby",
+		"line-stacking-shift",
+		"line-stacking-strategy",
+		"list-style",
+		"list-style-image",
+		"list-style-position",
+		"list-style-type",
+		"margin",
+		"margin-bottom",
+		"margin-left",
+		"margin-right",
+		"margin-top",
+		"marker-offset",
+		"marks",
+		"marquee-direction",
+		"marquee-loop",
+		"marquee-play-count",
+		"marquee-speed",
+		"marquee-style",
+		"max-height",
+		"max-width",
+		"min-height",
+		"min-width",
+		"move-to",
+		"nav-down",
+		"nav-index",
+		"nav-left",
+		"nav-right",
+		"nav-up",
+		"object-fit",
+		"object-position",
+		"opacity",
+		"order",
+		"orphans",
+		"outline",
+		"outline-color",
+		"outline-offset",
+		"outline-style",
+		"outline-width",
+		"overflow",
+		"overflow-style",
+		"overflow-wrap",
+		"overflow-x",
+		"overflow-y",
+		"padding",
+		"padding-bottom",
+		"padding-left",
+		"padding-right",
+		"padding-top",
+		"page",
+		"page-break-after",
+		"page-break-before",
+		"page-break-inside",
+		"page-policy",
+		"pause",
+		"pause-after",
+		"pause-before",
+		"perspective",
+		"perspective-origin",
+		"pitch",
+		"pitch-range",
+		"play-during",
+		"position",
+		"presentation-level",
+		"punctuation-trim",
+		"quotes",
+		"region-break-after",
+		"region-break-before",
+		"region-break-inside",
+		"region-fragment",
+		"rendering-intent",
+		"resize",
+		"rest",
+		"rest-after",
+		"rest-before",
+		"richness",
+		"right",
+		"rotation",
+		"rotation-point",
+		"ruby-align",
+		"ruby-overhang",
+		"ruby-position",
+		"ruby-span",
+		"shape-image-threshold",
+		"shape-inside",
+		"shape-margin",
+		"shape-outside",
+		"size",
+		"speak",
+		"speak-as",
+		"speak-header",
+		"speak-numeral",
+		"speak-punctuation",
+		"speech-rate",
+		"stress",
+		"string-set",
+		"tab-size",
+		"table-layout",
+		"target",
+		"target-name",
+		"target-new",
+		"target-position",
+		"text-align",
+		"text-align-last",
+		"text-decoration",
+		"text-decoration-color",
+		"text-decoration-line",
+		"text-decoration-skip",
+		"text-decoration-style",
+		"text-emphasis",
+		"text-emphasis-color",
+		"text-emphasis-position",
+		"text-emphasis-style",
+		"text-height",
+		"text-indent",
+		"text-justify",
+		"text-outline",
+		"text-overflow",
+		"text-shadow",
+		"text-size-adjust",
+		"text-space-collapse",
+		"text-transform",
+		"text-underline-position",
+		"text-wrap",
+		"top",
+		"transform",
+		"transform-origin",
+		"transform-style",
+		"transition",
+		"transition-delay",
+		"transition-duration",
+		"transition-property",
+		"transition-timing-function",
+		"unicode-bidi",
+		"vertical-align",
+		"visibility",
+		"voice-balance",
+		"voice-duration",
+		"voice-family",
+		"voice-pitch",
+		"voice-range",
+		"voice-rate",
+		"voice-stress",
+		"voice-volume",
+		"volume",
+		"white-space",
+		"widows",
+		"width",
+		"will-change",
+		"word-break",
+		"word-spacing",
+		"word-wrap",
+		"z-index",
+		"clip-path",
+		"clip-rule",
+		"mask",
+		"enable-background",
+		"filter",
+		"flood-color",
+		"flood-opacity",
+		"lighting-color",
+		"stop-color",
+		"stop-opacity",
+		"pointer-events",
+		"color-interpolation",
+		"color-interpolation-filters",
+		"color-rendering",
+		"fill",
+		"fill-opacity",
+		"fill-rule",
+		"image-rendering",
+		"marker",
+		"marker-end",
+		"marker-mid",
+		"marker-start",
+		"shape-rendering",
+		"stroke",
+		"stroke-dasharray",
+		"stroke-dashoffset",
+		"stroke-linecap",
+		"stroke-linejoin",
+		"stroke-miterlimit",
+		"stroke-opacity",
+		"stroke-width",
+		"text-rendering",
+		"baseline-shift",
+		"dominant-baseline",
+		"glyph-orientation-horizontal",
+		"glyph-orientation-vertical",
+		"text-anchor",
+		"writing-mode",
+		"font-smoothing",
+		"osx-font-smoothing"
+	];
+	var nonStandardPropertyKeywords_ = [
+		"scrollbar-arrow-color",
+		"scrollbar-base-color",
+		"scrollbar-dark-shadow-color",
+		"scrollbar-face-color",
+		"scrollbar-highlight-color",
+		"scrollbar-shadow-color",
+		"scrollbar-3d-light-color",
+		"scrollbar-track-color",
+		"shape-inside",
+		"searchfield-cancel-button",
+		"searchfield-decoration",
+		"searchfield-results-button",
+		"searchfield-results-decoration",
+		"zoom"
+	];
+	var fontProperties_ = [
+		"font-family",
+		"src",
+		"unicode-range",
+		"font-variant",
+		"font-feature-settings",
+		"font-stretch",
+		"font-weight",
+		"font-style"
+	];
+	var colorKeywords_ = [
+		"aliceblue",
+		"antiquewhite",
+		"aqua",
+		"aquamarine",
+		"azure",
+		"beige",
+		"bisque",
+		"black",
+		"blanchedalmond",
+		"blue",
+		"blueviolet",
+		"brown",
+		"burlywood",
+		"cadetblue",
+		"chartreuse",
+		"chocolate",
+		"coral",
+		"cornflowerblue",
+		"cornsilk",
+		"crimson",
+		"cyan",
+		"darkblue",
+		"darkcyan",
+		"darkgoldenrod",
+		"darkgray",
+		"darkgreen",
+		"darkkhaki",
+		"darkmagenta",
+		"darkolivegreen",
+		"darkorange",
+		"darkorchid",
+		"darkred",
+		"darksalmon",
+		"darkseagreen",
+		"darkslateblue",
+		"darkslategray",
+		"darkturquoise",
+		"darkviolet",
+		"deeppink",
+		"deepskyblue",
+		"dimgray",
+		"dodgerblue",
+		"firebrick",
+		"floralwhite",
+		"forestgreen",
+		"fuchsia",
+		"gainsboro",
+		"ghostwhite",
+		"gold",
+		"goldenrod",
+		"gray",
+		"grey",
+		"green",
+		"greenyellow",
+		"honeydew",
+		"hotpink",
+		"indianred",
+		"indigo",
+		"ivory",
+		"khaki",
+		"lavender",
+		"lavenderblush",
+		"lawngreen",
+		"lemonchiffon",
+		"lightblue",
+		"lightcoral",
+		"lightcyan",
+		"lightgoldenrodyellow",
+		"lightgray",
+		"lightgreen",
+		"lightpink",
+		"lightsalmon",
+		"lightseagreen",
+		"lightskyblue",
+		"lightslategray",
+		"lightsteelblue",
+		"lightyellow",
+		"lime",
+		"limegreen",
+		"linen",
+		"magenta",
+		"maroon",
+		"mediumaquamarine",
+		"mediumblue",
+		"mediumorchid",
+		"mediumpurple",
+		"mediumseagreen",
+		"mediumslateblue",
+		"mediumspringgreen",
+		"mediumturquoise",
+		"mediumvioletred",
+		"midnightblue",
+		"mintcream",
+		"mistyrose",
+		"moccasin",
+		"navajowhite",
+		"navy",
+		"oldlace",
+		"olive",
+		"olivedrab",
+		"orange",
+		"orangered",
+		"orchid",
+		"palegoldenrod",
+		"palegreen",
+		"paleturquoise",
+		"palevioletred",
+		"papayawhip",
+		"peachpuff",
+		"peru",
+		"pink",
+		"plum",
+		"powderblue",
+		"purple",
+		"rebeccapurple",
+		"red",
+		"rosybrown",
+		"royalblue",
+		"saddlebrown",
+		"salmon",
+		"sandybrown",
+		"seagreen",
+		"seashell",
+		"sienna",
+		"silver",
+		"skyblue",
+		"slateblue",
+		"slategray",
+		"snow",
+		"springgreen",
+		"steelblue",
+		"tan",
+		"teal",
+		"thistle",
+		"tomato",
+		"turquoise",
+		"violet",
+		"wheat",
+		"white",
+		"whitesmoke",
+		"yellow",
+		"yellowgreen"
+	];
+	var valueKeywords_ = [
+		"above",
+		"absolute",
+		"activeborder",
+		"additive",
+		"activecaption",
+		"afar",
+		"after-white-space",
+		"ahead",
+		"alias",
+		"all",
+		"all-scroll",
+		"alphabetic",
+		"alternate",
+		"always",
+		"amharic",
+		"amharic-abegede",
+		"antialiased",
+		"appworkspace",
+		"arabic-indic",
+		"armenian",
+		"asterisks",
+		"attr",
+		"auto",
+		"avoid",
+		"avoid-column",
+		"avoid-page",
+		"avoid-region",
+		"background",
+		"backwards",
+		"baseline",
+		"below",
+		"bidi-override",
+		"binary",
+		"bengali",
+		"blink",
+		"block",
+		"block-axis",
+		"bold",
+		"bolder",
+		"border",
+		"border-box",
+		"both",
+		"bottom",
+		"break",
+		"break-all",
+		"break-word",
+		"bullets",
+		"button",
+		"buttonface",
+		"buttonhighlight",
+		"buttonshadow",
+		"buttontext",
+		"calc",
+		"cambodian",
+		"capitalize",
+		"caps-lock-indicator",
+		"caption",
+		"captiontext",
+		"caret",
+		"cell",
+		"center",
+		"checkbox",
+		"circle",
+		"cjk-decimal",
+		"cjk-earthly-branch",
+		"cjk-heavenly-stem",
+		"cjk-ideographic",
+		"clear",
+		"clip",
+		"close-quote",
+		"col-resize",
+		"collapse",
+		"column",
+		"compact",
+		"condensed",
+		"conic-gradient",
+		"contain",
+		"content",
+		"contents",
+		"content-box",
+		"context-menu",
+		"continuous",
+		"copy",
+		"counter",
+		"counters",
+		"cover",
+		"crop",
+		"cross",
+		"crosshair",
+		"currentcolor",
+		"cursive",
+		"cyclic",
+		"dashed",
+		"decimal",
+		"decimal-leading-zero",
+		"default",
+		"default-button",
+		"destination-atop",
+		"destination-in",
+		"destination-out",
+		"destination-over",
+		"devanagari",
+		"disc",
+		"discard",
+		"disclosure-closed",
+		"disclosure-open",
+		"document",
+		"dot-dash",
+		"dot-dot-dash",
+		"dotted",
+		"double",
+		"down",
+		"e-resize",
+		"ease",
+		"ease-in",
+		"ease-in-out",
+		"ease-out",
+		"element",
+		"ellipse",
+		"ellipsis",
+		"embed",
+		"end",
+		"ethiopic",
+		"ethiopic-abegede",
+		"ethiopic-abegede-am-et",
+		"ethiopic-abegede-gez",
+		"ethiopic-abegede-ti-er",
+		"ethiopic-abegede-ti-et",
+		"ethiopic-halehame-aa-er",
+		"ethiopic-halehame-aa-et",
+		"ethiopic-halehame-am-et",
+		"ethiopic-halehame-gez",
+		"ethiopic-halehame-om-et",
+		"ethiopic-halehame-sid-et",
+		"ethiopic-halehame-so-et",
+		"ethiopic-halehame-ti-er",
+		"ethiopic-halehame-ti-et",
+		"ethiopic-halehame-tig",
+		"ethiopic-numeric",
+		"ew-resize",
+		"expanded",
+		"extends",
+		"extra-condensed",
+		"extra-expanded",
+		"fantasy",
+		"fast",
+		"fill",
+		"fixed",
+		"flat",
+		"flex",
+		"footnotes",
+		"forwards",
+		"from",
+		"geometricPrecision",
+		"georgian",
+		"graytext",
+		"groove",
+		"gujarati",
+		"gurmukhi",
+		"hand",
+		"hangul",
+		"hangul-consonant",
+		"hebrew",
+		"help",
+		"hidden",
+		"hide",
+		"high",
+		"higher",
+		"highlight",
+		"highlighttext",
+		"hiragana",
+		"hiragana-iroha",
+		"horizontal",
+		"hsl",
+		"hsla",
+		"icon",
+		"ignore",
+		"inactiveborder",
+		"inactivecaption",
+		"inactivecaptiontext",
+		"infinite",
+		"infobackground",
+		"infotext",
+		"inherit",
+		"initial",
+		"inline",
+		"inline-axis",
+		"inline-block",
+		"inline-flex",
+		"inline-table",
+		"inset",
+		"inside",
+		"intrinsic",
+		"invert",
+		"italic",
+		"japanese-formal",
+		"japanese-informal",
+		"justify",
+		"kannada",
+		"katakana",
+		"katakana-iroha",
+		"keep-all",
+		"khmer",
+		"korean-hangul-formal",
+		"korean-hanja-formal",
+		"korean-hanja-informal",
+		"landscape",
+		"lao",
+		"large",
+		"larger",
+		"left",
+		"level",
+		"lighter",
+		"line-through",
+		"linear",
+		"linear-gradient",
+		"lines",
+		"list-item",
+		"listbox",
+		"listitem",
+		"local",
+		"logical",
+		"loud",
+		"lower",
+		"lower-alpha",
+		"lower-armenian",
+		"lower-greek",
+		"lower-hexadecimal",
+		"lower-latin",
+		"lower-norwegian",
+		"lower-roman",
+		"lowercase",
+		"ltr",
+		"malayalam",
+		"match",
+		"matrix",
+		"matrix3d",
+		"media-play-button",
+		"media-slider",
+		"media-sliderthumb",
+		"media-volume-slider",
+		"media-volume-sliderthumb",
+		"medium",
+		"menu",
+		"menulist",
+		"menulist-button",
+		"menutext",
+		"message-box",
+		"middle",
+		"min-intrinsic",
+		"mix",
+		"mongolian",
+		"monospace",
+		"move",
+		"multiple",
+		"myanmar",
+		"n-resize",
+		"narrower",
+		"ne-resize",
+		"nesw-resize",
+		"no-close-quote",
+		"no-drop",
+		"no-open-quote",
+		"no-repeat",
+		"none",
+		"normal",
+		"not-allowed",
+		"nowrap",
+		"ns-resize",
+		"numbers",
+		"numeric",
+		"nw-resize",
+		"nwse-resize",
+		"oblique",
+		"octal",
+		"open-quote",
+		"optimizeLegibility",
+		"optimizeSpeed",
+		"oriya",
+		"oromo",
+		"outset",
+		"outside",
+		"outside-shape",
+		"overlay",
+		"overline",
+		"padding",
+		"padding-box",
+		"painted",
+		"page",
+		"paused",
+		"persian",
+		"perspective",
+		"plus-darker",
+		"plus-lighter",
+		"pointer",
+		"polygon",
+		"portrait",
+		"pre",
+		"pre-line",
+		"pre-wrap",
+		"preserve-3d",
+		"progress",
+		"push-button",
+		"radial-gradient",
+		"radio",
+		"read-only",
+		"read-write",
+		"read-write-plaintext-only",
+		"rectangle",
+		"region",
+		"relative",
+		"repeat",
+		"repeating-linear-gradient",
+		"repeating-radial-gradient",
+		"repeating-conic-gradient",
+		"repeat-x",
+		"repeat-y",
+		"reset",
+		"reverse",
+		"rgb",
+		"rgba",
+		"ridge",
+		"right",
+		"rotate",
+		"rotate3d",
+		"rotateX",
+		"rotateY",
+		"rotateZ",
+		"round",
+		"row-resize",
+		"rtl",
+		"run-in",
+		"running",
+		"s-resize",
+		"sans-serif",
+		"scale",
+		"scale3d",
+		"scaleX",
+		"scaleY",
+		"scaleZ",
+		"scroll",
+		"scrollbar",
+		"scroll-position",
+		"se-resize",
+		"searchfield",
+		"searchfield-cancel-button",
+		"searchfield-decoration",
+		"searchfield-results-button",
+		"searchfield-results-decoration",
+		"semi-condensed",
+		"semi-expanded",
+		"separate",
+		"serif",
+		"show",
+		"sidama",
+		"simp-chinese-formal",
+		"simp-chinese-informal",
+		"single",
+		"skew",
+		"skewX",
+		"skewY",
+		"skip-white-space",
+		"slide",
+		"slider-horizontal",
+		"slider-vertical",
+		"sliderthumb-horizontal",
+		"sliderthumb-vertical",
+		"slow",
+		"small",
+		"small-caps",
+		"small-caption",
+		"smaller",
+		"solid",
+		"somali",
+		"source-atop",
+		"source-in",
+		"source-out",
+		"source-over",
+		"space",
+		"spell-out",
+		"square",
+		"square-button",
+		"standard",
+		"start",
+		"static",
+		"status-bar",
+		"stretch",
+		"stroke",
+		"sub",
+		"subpixel-antialiased",
+		"super",
+		"sw-resize",
+		"symbolic",
+		"symbols",
+		"table",
+		"table-caption",
+		"table-cell",
+		"table-column",
+		"table-column-group",
+		"table-footer-group",
+		"table-header-group",
+		"table-row",
+		"table-row-group",
+		"tamil",
+		"telugu",
+		"text",
+		"text-bottom",
+		"text-top",
+		"textarea",
+		"textfield",
+		"thai",
+		"thick",
+		"thin",
+		"threeddarkshadow",
+		"threedface",
+		"threedhighlight",
+		"threedlightshadow",
+		"threedshadow",
+		"tibetan",
+		"tigre",
+		"tigrinya-er",
+		"tigrinya-er-abegede",
+		"tigrinya-et",
+		"tigrinya-et-abegede",
+		"to",
+		"top",
+		"trad-chinese-formal",
+		"trad-chinese-informal",
+		"translate",
+		"translate3d",
+		"translateX",
+		"translateY",
+		"translateZ",
+		"transparent",
+		"ultra-condensed",
+		"ultra-expanded",
+		"underline",
+		"up",
+		"upper-alpha",
+		"upper-armenian",
+		"upper-greek",
+		"upper-hexadecimal",
+		"upper-latin",
+		"upper-norwegian",
+		"upper-roman",
+		"uppercase",
+		"urdu",
+		"url",
+		"var",
+		"vertical",
+		"vertical-text",
+		"visible",
+		"visibleFill",
+		"visiblePainted",
+		"visibleStroke",
+		"visual",
+		"w-resize",
+		"wait",
+		"wave",
+		"wider",
+		"window",
+		"windowframe",
+		"windowtext",
+		"words",
+		"x-large",
+		"x-small",
+		"xor",
+		"xx-large",
+		"xx-small",
+		"bicubic",
+		"optimizespeed",
+		"grayscale",
+		"row",
+		"row-reverse",
+		"wrap",
+		"wrap-reverse",
+		"column-reverse",
+		"flex-start",
+		"flex-end",
+		"space-between",
+		"space-around",
+		"unset"
+	];
+	var wordOperatorKeywords_ = [
+		"in",
+		"and",
+		"or",
+		"not",
+		"is not",
+		"is a",
+		"is",
+		"isnt",
+		"defined",
+		"if unless"
+	];
+	var blockKeywords_ = [
+		"for",
+		"if",
+		"else",
+		"unless",
+		"from",
+		"to"
+	];
+	var commonAtoms_ = [
+		"null",
+		"true",
+		"false",
+		"href",
+		"title",
+		"type",
+		"not-allowed",
+		"readonly",
+		"disabled"
+	];
+	var hintWords = tagKeywords_.concat(documentTypes_, mediaTypes_, mediaFeatures_, propertyKeywords_, nonStandardPropertyKeywords_, colorKeywords_, valueKeywords_, fontProperties_, wordOperatorKeywords_, blockKeywords_, commonAtoms_, [
+		"@font-face",
+		"@keyframes",
+		"@media",
+		"@viewport",
+		"@page",
+		"@host",
+		"@supports",
+		"@block",
+		"@css"
+	]);
+	function wordRegexp$3(words) {
+		words = words.sort(function(a, b) {
+			return b > a;
+		});
+		return new RegExp("^((" + words.join(")|(") + "))\\b");
+	}
+	function keySet(array) {
+		var keys = {};
+		for (var i = 0; i < array.length; ++i) keys[array[i]] = true;
+		return keys;
+	}
+	function escapeRegExp(text) {
+		return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+	}
+	var tagKeywords = keySet(tagKeywords_);
+	var tagVariablesRegexp = /^(a|b|i|s|col|em)$/i;
+	var propertyKeywords = keySet(propertyKeywords_);
+	var nonStandardPropertyKeywords = keySet(nonStandardPropertyKeywords_);
+	var valueKeywords = keySet(valueKeywords_);
+	var colorKeywords = keySet(colorKeywords_);
+	var documentTypes = keySet(documentTypes_);
+	var documentTypesRegexp = wordRegexp$3(documentTypes_);
+	var mediaFeatures = keySet(mediaFeatures_);
+	var mediaTypes = keySet(mediaTypes_);
+	var fontProperties = keySet(fontProperties_);
+	var operatorsRegexp = /^\s*([.]{2,3}|&&|\|\||\*\*|[?!=:]?=|[-+*\/%<>]=?|\?:|\~)/;
+	var wordOperatorKeywordsRegexp = wordRegexp$3(wordOperatorKeywords_);
+	var blockKeywords$2 = keySet(blockKeywords_);
+	var vendorPrefixesRegexp = /* @__PURE__ */ new RegExp(/^\-(moz|ms|o|webkit)-/i);
+	var commonAtoms$1 = keySet(commonAtoms_);
+	var firstWordMatch = "";
+	var states = {};
+	var ch;
+	var style;
+	var type;
+	var override;
+	/**
+	* Tokenizers
+	*/
+	function tokenBase$10(stream, state) {
+		firstWordMatch = stream.string.match(/(^[\w-]+\s*=\s*$)|(^\s*[\w-]+\s*=\s*[\w-])|(^\s*(\.|#|@|\$|\&|\[|\d|\+|::?|\{|\>|~|\/)?\s*[\w-]*([a-z0-9-]|\*|\/\*)(\(|,)?)/);
+		state.context.line.firstWord = firstWordMatch ? firstWordMatch[0].replace(/^\s*/, "") : "";
+		state.context.line.indent = stream.indentation();
+		ch = stream.peek();
+		if (stream.match("//")) {
+			stream.skipToEnd();
+			return ["comment", "comment"];
+		}
+		if (stream.match("/*")) {
+			state.tokenize = tokenCComment;
+			return tokenCComment(stream, state);
+		}
+		if (ch == "\"" || ch == "'") {
+			stream.next();
+			state.tokenize = tokenString$5(ch);
+			return state.tokenize(stream, state);
+		}
+		if (ch == "@") {
+			stream.next();
+			stream.eatWhile(/[\w\\-]/);
+			return ["def", stream.current()];
+		}
+		if (ch == "#") {
+			stream.next();
+			if (stream.match(/^[0-9a-f]{3}([0-9a-f]([0-9a-f]{2}){0,2})?\b(?!-)/i)) return ["atom", "atom"];
+			if (stream.match(/^[a-z][\w-]*/i)) return ["builtin", "hash"];
+		}
+		if (stream.match(vendorPrefixesRegexp)) return ["meta", "vendor-prefixes"];
+		if (stream.match(/^-?[0-9]?\.?[0-9]/)) {
+			stream.eatWhile(/[a-z%]/i);
+			return ["number", "unit"];
+		}
+		if (ch == "!") {
+			stream.next();
+			return [stream.match(/^(important|optional)/i) ? "keyword" : "operator", "important"];
+		}
+		if (ch == "." && stream.match(/^\.[a-z][\w-]*/i)) return ["qualifier", "qualifier"];
+		if (stream.match(documentTypesRegexp)) {
+			if (stream.peek() == "(") state.tokenize = tokenParenthesized;
+			return ["property", "word"];
+		}
+		if (stream.match(/^[a-z][\w-]*\(/i)) {
+			stream.backUp(1);
+			return ["keyword", "mixin"];
+		}
+		if (stream.match(/^(\+|-)[a-z][\w-]*\(/i)) {
+			stream.backUp(1);
+			return ["keyword", "block-mixin"];
+		}
+		if (stream.string.match(/^\s*&/) && stream.match(/^[-_]+[a-z][\w-]*/)) return ["qualifier", "qualifier"];
+		if (stream.match(/^(\/|&)(-|_|:|\.|#|[a-z])/)) {
+			stream.backUp(1);
+			return ["variableName.special", "reference"];
+		}
+		if (stream.match(/^&{1}\s*$/)) return ["variableName.special", "reference"];
+		if (stream.match(wordOperatorKeywordsRegexp)) return ["operator", "operator"];
+		if (stream.match(/^\$?[-_]*[a-z0-9]+[\w-]*/i)) {
+			if (stream.match(/^(\.|\[)[\w-\'\"\]]+/i, false)) {
+				if (!wordIsTag(stream.current())) {
+					stream.match(".");
+					return ["variable", "variable-name"];
+				}
+			}
+			return ["variable", "word"];
+		}
+		if (stream.match(operatorsRegexp)) return ["operator", stream.current()];
+		if (/[:;,{}\[\]\(\)]/.test(ch)) {
+			stream.next();
+			return [null, ch];
+		}
+		stream.next();
+		return [null, null];
+	}
+	/**
+	* Token comment
+	*/
+	function tokenCComment(stream, state) {
+		var maybeEnd = false, ch;
+		while ((ch = stream.next()) != null) {
+			if (maybeEnd && ch == "/") {
+				state.tokenize = null;
+				break;
+			}
+			maybeEnd = ch == "*";
+		}
+		return ["comment", "comment"];
+	}
+	/**
+	* Token string
+	*/
+	function tokenString$5(quote) {
+		return function(stream, state) {
+			var escaped = false, ch;
+			while ((ch = stream.next()) != null) {
+				if (ch == quote && !escaped) {
+					if (quote == ")") stream.backUp(1);
+					break;
+				}
+				escaped = !escaped && ch == "\\";
+			}
+			if (ch == quote || !escaped && quote != ")") state.tokenize = null;
+			return ["string", "string"];
+		};
+	}
+	/**
+	* Token parenthesized
+	*/
+	function tokenParenthesized(stream, state) {
+		stream.next();
+		if (!stream.match(/\s*[\"\')]/, false)) state.tokenize = tokenString$5(")");
+		else state.tokenize = null;
+		return [null, "("];
+	}
+	/**
+	* Context management
+	*/
+	function Context$2(type, indent, prev, line) {
+		this.type = type;
+		this.indent = indent;
+		this.prev = prev;
+		this.line = line || {
+			firstWord: "",
+			indent: 0
+		};
+	}
+	function pushContext$2(state, stream, type, indent) {
+		indent = indent >= 0 ? indent : stream.indentUnit;
+		state.context = new Context$2(type, stream.indentation() + indent, state.context);
+		return type;
+	}
+	function popContext$2(state, stream, currentIndent) {
+		var contextIndent = state.context.indent - stream.indentUnit;
+		currentIndent = currentIndent || false;
+		state.context = state.context.prev;
+		if (currentIndent) state.context.indent = contextIndent;
+		return state.context.type;
+	}
+	function pass(type, stream, state) {
+		return states[state.context.type](type, stream, state);
+	}
+	function popAndPass(type, stream, state, n) {
+		for (var i = n || 1; i > 0; i--) state.context = state.context.prev;
+		return pass(type, stream, state);
+	}
+	/**
+	* Parser
+	*/
+	function wordIsTag(word) {
+		return word.toLowerCase() in tagKeywords;
+	}
+	function wordIsProperty(word) {
+		word = word.toLowerCase();
+		return word in propertyKeywords || word in fontProperties;
+	}
+	function wordIsBlock(word) {
+		return word.toLowerCase() in blockKeywords$2;
+	}
+	function wordIsVendorPrefix(word) {
+		return word.toLowerCase().match(vendorPrefixesRegexp);
+	}
+	function wordAsValue(word) {
+		var wordLC = word.toLowerCase();
+		var override = "variable";
+		if (wordIsTag(word)) override = "tag";
+		else if (wordIsBlock(word)) override = "block-keyword";
+		else if (wordIsProperty(word)) override = "property";
+		else if (wordLC in valueKeywords || wordLC in commonAtoms$1) override = "atom";
+		else if (wordLC == "return" || wordLC in colorKeywords) override = "keyword";
+		else if (word.match(/^[A-Z]/)) override = "string";
+		return override;
+	}
+	function typeIsBlock(type, stream) {
+		return endOfLine(stream) && (type == "{" || type == "]" || type == "hash" || type == "qualifier") || type == "block-mixin";
+	}
+	function typeIsInterpolation(type, stream) {
+		return type == "{" && stream.match(/^\s*\$?[\w-]+/i, false);
+	}
+	function typeIsPseudo(type, stream) {
+		return type == ":" && stream.match(/^[a-z-]+/, false);
+	}
+	function startOfLine(stream) {
+		return stream.sol() || stream.string.match(new RegExp("^\\s*" + escapeRegExp(stream.current())));
+	}
+	function endOfLine(stream) {
+		return stream.eol() || stream.match(/^\s*$/, false);
+	}
+	function firstWordOfLine(line) {
+		var re = /^\s*[-_]*[a-z0-9]+[\w-]*/i;
+		var result = typeof line == "string" ? line.match(re) : line.string.match(re);
+		return result ? result[0].replace(/^\s*/, "") : "";
+	}
+	/**
+	* Block
+	*/
+	states.block = function(type, stream, state) {
+		if (type == "comment" && startOfLine(stream) || type == "," && endOfLine(stream) || type == "mixin") return pushContext$2(state, stream, "block", 0);
+		if (typeIsInterpolation(type, stream)) return pushContext$2(state, stream, "interpolation");
+		if (endOfLine(stream) && type == "]") {
+			if (!/^\s*(\.|#|:|\[|\*|&)/.test(stream.string) && !wordIsTag(firstWordOfLine(stream))) return pushContext$2(state, stream, "block", 0);
+		}
+		if (typeIsBlock(type, stream)) return pushContext$2(state, stream, "block");
+		if (type == "}" && endOfLine(stream)) return pushContext$2(state, stream, "block", 0);
+		if (type == "variable-name") {
+			if (stream.string.match(/^\s?\$[\w-\.\[\]\'\"]+$/) || wordIsBlock(firstWordOfLine(stream))) return pushContext$2(state, stream, "variableName");
+			else return pushContext$2(state, stream, "variableName", 0);
+		}
+		if (type == "=") {
+			if (!endOfLine(stream) && !wordIsBlock(firstWordOfLine(stream))) return pushContext$2(state, stream, "block", 0);
+			return pushContext$2(state, stream, "block");
+		}
+		if (type == "*") {
+			if (endOfLine(stream) || stream.match(/\s*(,|\.|#|\[|:|{)/, false)) {
+				override = "tag";
+				return pushContext$2(state, stream, "block");
+			}
+		}
+		if (typeIsPseudo(type, stream)) return pushContext$2(state, stream, "pseudo");
+		if (/@(font-face|media|supports|(-moz-)?document)/.test(type)) return pushContext$2(state, stream, endOfLine(stream) ? "block" : "atBlock");
+		if (/@(-(moz|ms|o|webkit)-)?keyframes$/.test(type)) return pushContext$2(state, stream, "keyframes");
+		if (/@extends?/.test(type)) return pushContext$2(state, stream, "extend", 0);
+		if (type && type.charAt(0) == "@") {
+			if (stream.indentation() > 0 && wordIsProperty(stream.current().slice(1))) {
+				override = "variable";
+				return "block";
+			}
+			if (/(@import|@require|@charset)/.test(type)) return pushContext$2(state, stream, "block", 0);
+			return pushContext$2(state, stream, "block");
+		}
+		if (type == "reference" && endOfLine(stream)) return pushContext$2(state, stream, "block");
+		if (type == "(") return pushContext$2(state, stream, "parens");
+		if (type == "vendor-prefixes") return pushContext$2(state, stream, "vendorPrefixes");
+		if (type == "word") {
+			var word = stream.current();
+			override = wordAsValue(word);
+			if (override == "property") {
+				if (startOfLine(stream)) return pushContext$2(state, stream, "block", 0);
+				else {
+					override = "atom";
+					return "block";
+				}
+			}
+			if (override == "tag") {
+				if (/embed|menu|pre|progress|sub|table/.test(word)) {
+					if (wordIsProperty(firstWordOfLine(stream))) {
+						override = "atom";
+						return "block";
+					}
+				}
+				if (stream.string.match(new RegExp("\\[\\s*" + word + "|" + word + "\\s*\\]"))) {
+					override = "atom";
+					return "block";
+				}
+				if (tagVariablesRegexp.test(word)) {
+					if (startOfLine(stream) && stream.string.match(/=/) || !startOfLine(stream) && !stream.string.match(/^(\s*\.|#|\&|\[|\/|>|\*)/) && !wordIsTag(firstWordOfLine(stream))) {
+						override = "variable";
+						if (wordIsBlock(firstWordOfLine(stream))) return "block";
+						return pushContext$2(state, stream, "block", 0);
+					}
+				}
+				if (endOfLine(stream)) return pushContext$2(state, stream, "block");
+			}
+			if (override == "block-keyword") {
+				override = "keyword";
+				if (stream.current(/(if|unless)/) && !startOfLine(stream)) return "block";
+				return pushContext$2(state, stream, "block");
+			}
+			if (word == "return") return pushContext$2(state, stream, "block", 0);
+			if (override == "variable" && stream.string.match(/^\s?\$[\w-\.\[\]\'\"]+$/)) return pushContext$2(state, stream, "block");
+		}
+		return state.context.type;
+	};
+	/**
+	* Parens
+	*/
+	states.parens = function(type, stream, state) {
+		if (type == "(") return pushContext$2(state, stream, "parens");
+		if (type == ")") {
+			if (state.context.prev.type == "parens") return popContext$2(state, stream);
+			if (stream.string.match(/^[a-z][\w-]*\(/i) && endOfLine(stream) || wordIsBlock(firstWordOfLine(stream)) || /(\.|#|:|\[|\*|&|>|~|\+|\/)/.test(firstWordOfLine(stream)) || !stream.string.match(/^-?[a-z][\w-\.\[\]\'\"]*\s*=/) && wordIsTag(firstWordOfLine(stream))) return pushContext$2(state, stream, "block");
+			if (stream.string.match(/^[\$-]?[a-z][\w-\.\[\]\'\"]*\s*=/) || stream.string.match(/^\s*(\(|\)|[0-9])/) || stream.string.match(/^\s+[a-z][\w-]*\(/i) || stream.string.match(/^\s+[\$-]?[a-z]/i)) return pushContext$2(state, stream, "block", 0);
+			if (endOfLine(stream)) return pushContext$2(state, stream, "block");
+			else return pushContext$2(state, stream, "block", 0);
+		}
+		if (type && type.charAt(0) == "@" && wordIsProperty(stream.current().slice(1))) override = "variable";
+		if (type == "word") {
+			var word = stream.current();
+			override = wordAsValue(word);
+			if (override == "tag" && tagVariablesRegexp.test(word)) override = "variable";
+			if (override == "property" || word == "to") override = "atom";
+		}
+		if (type == "variable-name") return pushContext$2(state, stream, "variableName");
+		if (typeIsPseudo(type, stream)) return pushContext$2(state, stream, "pseudo");
+		return state.context.type;
+	};
+	/**
+	* Vendor prefixes
+	*/
+	states.vendorPrefixes = function(type, stream, state) {
+		if (type == "word") {
+			override = "property";
+			return pushContext$2(state, stream, "block", 0);
+		}
+		return popContext$2(state, stream);
+	};
+	/**
+	* Pseudo
+	*/
+	states.pseudo = function(type, stream, state) {
+		if (!wordIsProperty(firstWordOfLine(stream.string))) {
+			stream.match(/^[a-z-]+/);
+			override = "variableName.special";
+			if (endOfLine(stream)) return pushContext$2(state, stream, "block");
+			return popContext$2(state, stream);
+		}
+		return popAndPass(type, stream, state);
+	};
+	/**
+	* atBlock
+	*/
+	states.atBlock = function(type, stream, state) {
+		if (type == "(") return pushContext$2(state, stream, "atBlock_parens");
+		if (typeIsBlock(type, stream)) return pushContext$2(state, stream, "block");
+		if (typeIsInterpolation(type, stream)) return pushContext$2(state, stream, "interpolation");
+		if (type == "word") {
+			var word = stream.current().toLowerCase();
+			if (/^(only|not|and|or)$/.test(word)) override = "keyword";
+			else if (documentTypes.hasOwnProperty(word)) override = "tag";
+			else if (mediaTypes.hasOwnProperty(word)) override = "attribute";
+			else if (mediaFeatures.hasOwnProperty(word)) override = "property";
+			else if (nonStandardPropertyKeywords.hasOwnProperty(word)) override = "string.special";
+			else override = wordAsValue(stream.current());
+			if (override == "tag" && endOfLine(stream)) return pushContext$2(state, stream, "block");
+		}
+		if (type == "operator" && /^(not|and|or)$/.test(stream.current())) override = "keyword";
+		return state.context.type;
+	};
+	states.atBlock_parens = function(type, stream, state) {
+		if (type == "{" || type == "}") return state.context.type;
+		if (type == ")") {
+			if (endOfLine(stream)) return pushContext$2(state, stream, "block");
+			else return pushContext$2(state, stream, "atBlock");
+		}
+		if (type == "word") {
+			var word = stream.current().toLowerCase();
+			override = wordAsValue(word);
+			if (/^(max|min)/.test(word)) override = "property";
+			if (override == "tag") tagVariablesRegexp.test(word) ? override = "variable" : override = "atom";
+			return state.context.type;
+		}
+		return states.atBlock(type, stream, state);
+	};
+	/**
+	* Keyframes
+	*/
+	states.keyframes = function(type, stream, state) {
+		if (stream.indentation() == "0" && (type == "}" && startOfLine(stream) || type == "]" || type == "hash" || type == "qualifier" || wordIsTag(stream.current()))) return popAndPass(type, stream, state);
+		if (type == "{") return pushContext$2(state, stream, "keyframes");
+		if (type == "}") {
+			if (startOfLine(stream)) return popContext$2(state, stream, true);
+			else return pushContext$2(state, stream, "keyframes");
+		}
+		if (type == "unit" && /^[0-9]+\%$/.test(stream.current())) return pushContext$2(state, stream, "keyframes");
+		if (type == "word") {
+			override = wordAsValue(stream.current());
+			if (override == "block-keyword") {
+				override = "keyword";
+				return pushContext$2(state, stream, "keyframes");
+			}
+		}
+		if (/@(font-face|media|supports|(-moz-)?document)/.test(type)) return pushContext$2(state, stream, endOfLine(stream) ? "block" : "atBlock");
+		if (type == "mixin") return pushContext$2(state, stream, "block", 0);
+		return state.context.type;
+	};
+	/**
+	* Interpolation
+	*/
+	states.interpolation = function(type, stream, state) {
+		if (type == "{") popContext$2(state, stream) && pushContext$2(state, stream, "block");
+		if (type == "}") {
+			if (stream.string.match(/^\s*(\.|#|:|\[|\*|&|>|~|\+|\/)/i) || stream.string.match(/^\s*[a-z]/i) && wordIsTag(firstWordOfLine(stream))) return pushContext$2(state, stream, "block");
+			if (!stream.string.match(/^(\{|\s*\&)/) || stream.match(/\s*[\w-]/, false)) return pushContext$2(state, stream, "block", 0);
+			return pushContext$2(state, stream, "block");
+		}
+		if (type == "variable-name") return pushContext$2(state, stream, "variableName", 0);
+		if (type == "word") {
+			override = wordAsValue(stream.current());
+			if (override == "tag") override = "atom";
+		}
+		return state.context.type;
+	};
+	/**
+	* Extend/s
+	*/
+	states.extend = function(type, stream, state) {
+		if (type == "[" || type == "=") return "extend";
+		if (type == "]") return popContext$2(state, stream);
+		if (type == "word") {
+			override = wordAsValue(stream.current());
+			return "extend";
+		}
+		return popContext$2(state, stream);
+	};
+	/**
+	* Variable name
+	*/
+	states.variableName = function(type, stream, state) {
+		if (type == "string" || type == "[" || type == "]" || stream.current().match(/^(\.|\$)/)) {
+			if (stream.current().match(/^\.[\w-]+/i)) override = "variable";
+			return "variableName";
+		}
+		return popAndPass(type, stream, state);
+	};
+	const stylus = {
+		name: "stylus",
+		startState: function() {
+			return {
+				tokenize: null,
+				state: "block",
+				context: new Context$2("block", 0, null)
+			};
+		},
+		token: function(stream, state) {
+			if (!state.tokenize && stream.eatSpace()) return null;
+			style = (state.tokenize || tokenBase$10)(stream, state);
+			if (style && typeof style == "object") {
+				type = style[1];
+				style = style[0];
+			}
+			override = style;
+			state.state = states[state.state](type, stream, state);
+			return override;
+		},
+		indent: function(state, textAfter, iCx) {
+			var cx = state.context, ch = textAfter && textAfter.charAt(0), indent = cx.indent, lineFirstWord = firstWordOfLine(textAfter), lineIndent = cx.line.indent, prevLineFirstWord = state.context.prev ? state.context.prev.line.firstWord : "", prevLineIndent = state.context.prev ? state.context.prev.line.indent : lineIndent;
+			if (cx.prev && (ch == "}" && (cx.type == "block" || cx.type == "atBlock" || cx.type == "keyframes") || ch == ")" && (cx.type == "parens" || cx.type == "atBlock_parens") || ch == "{" && cx.type == "at")) indent = cx.indent - iCx.unit;
+			else if (!/(\})/.test(ch)) {
+				if (/@|\$|\d/.test(ch) || /^\{/.test(textAfter) || /^\s*\/(\/|\*)/.test(textAfter) || /^\s*\/\*/.test(prevLineFirstWord) || /^\s*[\w-\.\[\]\'\"]+\s*(\?|:|\+)?=/i.test(textAfter) || /^(\+|-)?[a-z][\w-]*\(/i.test(textAfter) || /^return/.test(textAfter) || wordIsBlock(lineFirstWord)) indent = lineIndent;
+				else if (/(\.|#|:|\[|\*|&|>|~|\+|\/)/.test(ch) || wordIsTag(lineFirstWord)) {
+					if (/\,\s*$/.test(prevLineFirstWord)) indent = prevLineIndent;
+					else if (/(\.|#|:|\[|\*|&|>|~|\+|\/)/.test(prevLineFirstWord) || wordIsTag(prevLineFirstWord)) indent = lineIndent <= prevLineIndent ? prevLineIndent : prevLineIndent + iCx.unit;
+					else indent = lineIndent;
+				} else if (!/,\s*$/.test(textAfter) && (wordIsVendorPrefix(lineFirstWord) || wordIsProperty(lineFirstWord))) {
+					if (wordIsBlock(prevLineFirstWord)) indent = lineIndent <= prevLineIndent ? prevLineIndent : prevLineIndent + iCx.unit;
+					else if (/^\{/.test(prevLineFirstWord)) indent = lineIndent <= prevLineIndent ? lineIndent : prevLineIndent + iCx.unit;
+					else if (wordIsVendorPrefix(prevLineFirstWord) || wordIsProperty(prevLineFirstWord)) indent = lineIndent >= prevLineIndent ? prevLineIndent : lineIndent;
+					else if (/^(\.|#|:|\[|\*|&|@|\+|\-|>|~|\/)/.test(prevLineFirstWord) || /=\s*$/.test(prevLineFirstWord) || wordIsTag(prevLineFirstWord) || /^\$[\w-\.\[\]\'\"]/.test(prevLineFirstWord)) indent = prevLineIndent + iCx.unit;
+					else indent = lineIndent;
+				}
+			}
+			return indent;
+		},
+		languageData: {
+			indentOnInput: /^\s*\}$/,
+			commentTokens: {
+				line: "//",
+				block: {
+					open: "/*",
+					close: "*/"
+				}
+			},
+			autocomplete: hintWords
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/ruby.js
+	function wordObj$1(words) {
+		var o = {};
+		for (var i = 0, e = words.length; i < e; ++i) o[words[i]] = true;
+		return o;
+	}
+	var keywordList = [
+		"alias",
+		"and",
+		"BEGIN",
+		"begin",
+		"break",
+		"case",
+		"class",
+		"def",
+		"defined?",
+		"do",
+		"else",
+		"elsif",
+		"END",
+		"end",
+		"ensure",
+		"false",
+		"for",
+		"if",
+		"in",
+		"module",
+		"next",
+		"not",
+		"or",
+		"redo",
+		"rescue",
+		"retry",
+		"return",
+		"self",
+		"super",
+		"then",
+		"true",
+		"undef",
+		"unless",
+		"until",
+		"when",
+		"while",
+		"yield",
+		"nil",
+		"raise",
+		"throw",
+		"catch",
+		"fail",
+		"loop",
+		"callcc",
+		"caller",
+		"lambda",
+		"proc",
+		"public",
+		"protected",
+		"private",
+		"require",
+		"load",
+		"require_relative",
+		"extend",
+		"autoload",
+		"__END__",
+		"__FILE__",
+		"__LINE__",
+		"__dir__"
+	];
+	var keywords$9 = wordObj$1(keywordList);
+	var indentWords = wordObj$1([
+		"def",
+		"class",
+		"case",
+		"for",
+		"while",
+		"until",
+		"module",
+		"catch",
+		"loop",
+		"proc",
+		"begin"
+	]);
+	var dedentWords = wordObj$1(["end", "until"]);
+	var opening$1 = {
+		"[": "]",
+		"{": "}",
+		"(": ")"
+	};
+	var closing$1 = {
+		"]": "[",
+		"}": "{",
+		")": "("
+	};
+	var curPunc$3;
+	function chain$1(newtok, stream, state) {
+		state.tokenize.push(newtok);
+		return newtok(stream, state);
+	}
+	function tokenBase$9(stream, state) {
+		if (stream.sol() && stream.match("=begin") && stream.eol()) {
+			state.tokenize.push(readBlockComment);
+			return "comment";
+		}
+		if (stream.eatSpace()) return null;
+		var ch = stream.next(), m;
+		if (ch == "`" || ch == "'" || ch == "\"") return chain$1(readQuoted(ch, "string", ch == "\"" || ch == "`"), stream, state);
+		else if (ch == "/") {
+			if (regexpAhead(stream)) return chain$1(readQuoted(ch, "string.special", true), stream, state);
+			else return "operator";
+		} else if (ch == "%") {
+			var style = "string", embed = true;
+			if (stream.eat("s")) style = "atom";
+			else if (stream.eat(/[WQ]/)) style = "string";
+			else if (stream.eat(/[r]/)) style = "string.special";
+			else if (stream.eat(/[wxq]/)) {
+				style = "string";
+				embed = false;
+			}
+			var delim = stream.eat(/[^\w\s=]/);
+			if (!delim) return "operator";
+			if (opening$1.propertyIsEnumerable(delim)) delim = opening$1[delim];
+			return chain$1(readQuoted(delim, style, embed, true), stream, state);
+		} else if (ch == "#") {
+			stream.skipToEnd();
+			return "comment";
+		} else if (ch == "<" && (m = stream.match(/^<([-~])[\`\"\']?([a-zA-Z_?]\w*)[\`\"\']?(?:;|$)/))) return chain$1(readHereDoc(m[2], m[1]), stream, state);
+		else if (ch == "0") {
+			if (stream.eat("x")) stream.eatWhile(/[\da-fA-F]/);
+			else if (stream.eat("b")) stream.eatWhile(/[01]/);
+			else stream.eatWhile(/[0-7]/);
+			return "number";
+		} else if (/\d/.test(ch)) {
+			stream.match(/^[\d_]*(?:\.[\d_]+)?(?:[eE][+\-]?[\d_]+)?/);
+			return "number";
+		} else if (ch == "?") {
+			while (stream.match(/^\\[CM]-/));
+			if (stream.eat("\\")) stream.eatWhile(/\w/);
+			else stream.next();
+			return "string";
+		} else if (ch == ":") {
+			if (stream.eat("'")) return chain$1(readQuoted("'", "atom", false), stream, state);
+			if (stream.eat("\"")) return chain$1(readQuoted("\"", "atom", true), stream, state);
+			if (stream.eat(/[\<\>]/)) {
+				stream.eat(/[\<\>]/);
+				return "atom";
+			}
+			if (stream.eat(/[\+\-\*\/\&\|\:\!]/)) return "atom";
+			if (stream.eat(/[a-zA-Z$@_\xa1-\uffff]/)) {
+				stream.eatWhile(/[\w$\xa1-\uffff]/);
+				stream.eat(/[\?\!\=]/);
+				return "atom";
+			}
+			return "operator";
+		} else if (ch == "@" && stream.match(/^@?[a-zA-Z_\xa1-\uffff]/)) {
+			stream.eat("@");
+			stream.eatWhile(/[\w\xa1-\uffff]/);
+			return "propertyName";
+		} else if (ch == "$") {
+			if (stream.eat(/[a-zA-Z_]/)) stream.eatWhile(/[\w]/);
+			else if (stream.eat(/\d/)) stream.eat(/\d/);
+			else stream.next();
+			return "variableName.special";
+		} else if (/[a-zA-Z_\xa1-\uffff]/.test(ch)) {
+			stream.eatWhile(/[\w\xa1-\uffff]/);
+			stream.eat(/[\?\!]/);
+			if (stream.eat(":")) return "atom";
+			return "variable";
+		} else if (ch == "|" && (state.varList || state.lastTok == "{" || state.lastTok == "do")) {
+			curPunc$3 = "|";
+			return null;
+		} else if (/[\(\)\[\]{}\\;]/.test(ch)) {
+			curPunc$3 = ch;
+			return null;
+		} else if (ch == "-" && stream.eat(">")) return "operator";
+		else if (/[=+\-\/*:\.^%<>~|]/.test(ch)) {
+			var more = stream.eatWhile(/[=+\-\/*:\.^%<>~|]/);
+			if (ch == "." && !more) curPunc$3 = ".";
+			return "operator";
+		} else return null;
+	}
+	function regexpAhead(stream) {
+		var start = stream.pos, depth = 0, next, found = false, escaped = false;
+		while ((next = stream.next()) != null) if (!escaped) {
+			if ("[{(".indexOf(next) > -1) depth++;
+			else if ("]})".indexOf(next) > -1) {
+				depth--;
+				if (depth < 0) break;
+			} else if (next == "/" && depth == 0) {
+				found = true;
+				break;
+			}
+			escaped = next == "\\";
+		} else escaped = false;
+		stream.backUp(stream.pos - start);
+		return found;
+	}
+	function tokenBaseUntilBrace$1(depth) {
+		if (!depth) depth = 1;
+		return function(stream, state) {
+			if (stream.peek() == "}") {
+				if (depth == 1) {
+					state.tokenize.pop();
+					return state.tokenize[state.tokenize.length - 1](stream, state);
+				} else state.tokenize[state.tokenize.length - 1] = tokenBaseUntilBrace$1(depth - 1);
+			} else if (stream.peek() == "{") state.tokenize[state.tokenize.length - 1] = tokenBaseUntilBrace$1(depth + 1);
+			return tokenBase$9(stream, state);
+		};
+	}
+	function tokenBaseOnce() {
+		var alreadyCalled = false;
+		return function(stream, state) {
+			if (alreadyCalled) {
+				state.tokenize.pop();
+				return state.tokenize[state.tokenize.length - 1](stream, state);
+			}
+			alreadyCalled = true;
+			return tokenBase$9(stream, state);
+		};
+	}
+	function readQuoted(quote, style, embed, unescaped) {
+		return function(stream, state) {
+			var escaped = false, ch;
+			if (state.context.type === "read-quoted-paused") {
+				state.context = state.context.prev;
+				stream.eat("}");
+			}
+			while ((ch = stream.next()) != null) {
+				if (ch == quote && (unescaped || !escaped)) {
+					state.tokenize.pop();
+					break;
+				}
+				if (embed && ch == "#" && !escaped) {
+					if (stream.eat("{")) {
+						if (quote == "}") state.context = {
+							prev: state.context,
+							type: "read-quoted-paused"
+						};
+						state.tokenize.push(tokenBaseUntilBrace$1());
+						break;
+					} else if (/[@\$]/.test(stream.peek())) {
+						state.tokenize.push(tokenBaseOnce());
+						break;
+					}
+				}
+				escaped = !escaped && ch == "\\";
+			}
+			return style;
+		};
+	}
+	function readHereDoc(phrase, mayIndent) {
+		return function(stream, state) {
+			if (mayIndent) stream.eatSpace();
+			if (stream.match(phrase)) state.tokenize.pop();
+			else stream.skipToEnd();
+			return "string";
+		};
+	}
+	function readBlockComment(stream, state) {
+		if (stream.sol() && stream.match("=end") && stream.eol()) state.tokenize.pop();
+		stream.skipToEnd();
+		return "comment";
+	}
+	const ruby = {
+		name: "ruby",
+		startState: function(indentUnit) {
+			return {
+				tokenize: [tokenBase$9],
+				indented: 0,
+				context: {
+					type: "top",
+					indented: -indentUnit
+				},
+				continuedLine: false,
+				lastTok: null,
+				varList: false
+			};
+		},
+		token: function(stream, state) {
+			curPunc$3 = null;
+			if (stream.sol()) state.indented = stream.indentation();
+			var style = state.tokenize[state.tokenize.length - 1](stream, state), kwtype;
+			var thisTok = curPunc$3;
+			if (style == "variable") {
+				var word = stream.current();
+				style = state.lastTok == "." ? "property" : keywords$9.propertyIsEnumerable(stream.current()) ? "keyword" : /^[A-Z]/.test(word) ? "tag" : state.lastTok == "def" || state.lastTok == "class" || state.varList ? "def" : "variable";
+				if (style == "keyword") {
+					thisTok = word;
+					if (indentWords.propertyIsEnumerable(word)) kwtype = "indent";
+					else if (dedentWords.propertyIsEnumerable(word)) kwtype = "dedent";
+					else if ((word == "if" || word == "unless") && stream.column() == stream.indentation()) kwtype = "indent";
+					else if (word == "do" && state.context.indented < state.indented) kwtype = "indent";
+				}
+			}
+			if (curPunc$3 || style && style != "comment") state.lastTok = thisTok;
+			if (curPunc$3 == "|") state.varList = !state.varList;
+			if (kwtype == "indent" || /[\(\[\{]/.test(curPunc$3)) state.context = {
+				prev: state.context,
+				type: curPunc$3 || style,
+				indented: state.indented
+			};
+			else if ((kwtype == "dedent" || /[\)\]\}]/.test(curPunc$3)) && state.context.prev) state.context = state.context.prev;
+			if (stream.eol()) state.continuedLine = curPunc$3 == "\\" || style == "operator";
+			return style;
+		},
+		indent: function(state, textAfter, cx) {
+			if (state.tokenize[state.tokenize.length - 1] != tokenBase$9) return null;
+			var firstChar = textAfter && textAfter.charAt(0);
+			var ct = state.context;
+			var closed = ct.type == closing$1[firstChar] || ct.type == "keyword" && /^(?:end|until|else|elsif|when|rescue)\b/.test(textAfter);
+			return ct.indented + (closed ? 0 : cx.unit) + (state.continuedLine ? cx.unit : 0);
+		},
+		languageData: {
+			indentOnInput: /^\s*(?:end|rescue|elsif|else|\})$/,
+			commentTokens: { line: "#" },
+			autocomplete: keywordList
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/lua.js
+	function prefixRE(words) {
+		return new RegExp("^(?:" + words.join("|") + ")", "i");
+	}
+	function wordRE(words) {
+		return new RegExp("^(?:" + words.join("|") + ")$", "i");
+	}
+	var builtins$2 = wordRE([
+		"_G",
+		"_VERSION",
+		"assert",
+		"collectgarbage",
+		"dofile",
+		"error",
+		"getfenv",
+		"getmetatable",
+		"ipairs",
+		"load",
+		"loadfile",
+		"loadstring",
+		"module",
+		"next",
+		"pairs",
+		"pcall",
+		"print",
+		"rawequal",
+		"rawget",
+		"rawset",
+		"require",
+		"select",
+		"setfenv",
+		"setmetatable",
+		"tonumber",
+		"tostring",
+		"type",
+		"unpack",
+		"xpcall",
+		"coroutine.create",
+		"coroutine.resume",
+		"coroutine.running",
+		"coroutine.status",
+		"coroutine.wrap",
+		"coroutine.yield",
+		"debug.debug",
+		"debug.getfenv",
+		"debug.gethook",
+		"debug.getinfo",
+		"debug.getlocal",
+		"debug.getmetatable",
+		"debug.getregistry",
+		"debug.getupvalue",
+		"debug.setfenv",
+		"debug.sethook",
+		"debug.setlocal",
+		"debug.setmetatable",
+		"debug.setupvalue",
+		"debug.traceback",
+		"close",
+		"flush",
+		"lines",
+		"read",
+		"seek",
+		"setvbuf",
+		"write",
+		"io.close",
+		"io.flush",
+		"io.input",
+		"io.lines",
+		"io.open",
+		"io.output",
+		"io.popen",
+		"io.read",
+		"io.stderr",
+		"io.stdin",
+		"io.stdout",
+		"io.tmpfile",
+		"io.type",
+		"io.write",
+		"math.abs",
+		"math.acos",
+		"math.asin",
+		"math.atan",
+		"math.atan2",
+		"math.ceil",
+		"math.cos",
+		"math.cosh",
+		"math.deg",
+		"math.exp",
+		"math.floor",
+		"math.fmod",
+		"math.frexp",
+		"math.huge",
+		"math.ldexp",
+		"math.log",
+		"math.log10",
+		"math.max",
+		"math.min",
+		"math.modf",
+		"math.pi",
+		"math.pow",
+		"math.rad",
+		"math.random",
+		"math.randomseed",
+		"math.sin",
+		"math.sinh",
+		"math.sqrt",
+		"math.tan",
+		"math.tanh",
+		"os.clock",
+		"os.date",
+		"os.difftime",
+		"os.execute",
+		"os.exit",
+		"os.getenv",
+		"os.remove",
+		"os.rename",
+		"os.setlocale",
+		"os.time",
+		"os.tmpname",
+		"package.cpath",
+		"package.loaded",
+		"package.loaders",
+		"package.loadlib",
+		"package.path",
+		"package.preload",
+		"package.seeall",
+		"string.byte",
+		"string.char",
+		"string.dump",
+		"string.find",
+		"string.format",
+		"string.gmatch",
+		"string.gsub",
+		"string.len",
+		"string.lower",
+		"string.match",
+		"string.rep",
+		"string.reverse",
+		"string.sub",
+		"string.upper",
+		"table.concat",
+		"table.insert",
+		"table.maxn",
+		"table.remove",
+		"table.sort"
+	]);
+	var keywords$8 = wordRE([
+		"and",
+		"break",
+		"elseif",
+		"false",
+		"nil",
+		"not",
+		"or",
+		"return",
+		"true",
+		"function",
+		"end",
+		"if",
+		"then",
+		"else",
+		"do",
+		"while",
+		"repeat",
+		"until",
+		"for",
+		"in",
+		"local"
+	]);
+	var indentTokens = wordRE([
+		"function",
+		"if",
+		"repeat",
+		"do",
+		"\\(",
+		"{"
+	]);
+	var dedentTokens = wordRE([
+		"end",
+		"until",
+		"\\)",
+		"}"
+	]);
+	var dedentPartial = prefixRE([
+		"end",
+		"until",
+		"\\)",
+		"}",
+		"else",
+		"elseif"
+	]);
+	function readBracket(stream) {
+		var level = 0;
+		while (stream.eat("=")) ++level;
+		stream.eat("[");
+		return level;
+	}
+	function normal$1(stream, state) {
+		var ch = stream.next();
+		if (ch == "-" && stream.eat("-")) {
+			if (stream.eat("[") && /[\[=]/.test(stream.peek())) return (state.cur = bracketed(readBracket(stream), "comment"))(stream, state);
+			stream.skipToEnd();
+			return "comment";
+		}
+		if (ch == "\"" || ch == "'") return (state.cur = string(ch))(stream, state);
+		if (ch == "[" && /[\[=]/.test(stream.peek())) return (state.cur = bracketed(readBracket(stream), "string"))(stream, state);
+		if (/\d/.test(ch)) {
+			stream.eatWhile(/[\w.%]/);
+			return "number";
+		}
+		if (/[\w_]/.test(ch)) {
+			stream.eatWhile(/[\w\\\-_.]/);
+			return "variable";
+		}
+		return null;
+	}
+	function bracketed(level, style) {
+		return function(stream, state) {
+			var curlev = null, ch;
+			while ((ch = stream.next()) != null) if (curlev == null) {
+				if (ch == "]") curlev = 0;
+			} else if (ch == "=") ++curlev;
+			else if (ch == "]" && curlev == level) {
+				state.cur = normal$1;
+				break;
+			} else curlev = null;
+			return style;
+		};
+	}
+	function string(quote) {
+		return function(stream, state) {
+			var escaped = false, ch;
+			while ((ch = stream.next()) != null) {
+				if (ch == quote && !escaped) break;
+				escaped = !escaped && ch == "\\";
+			}
+			if (!escaped) state.cur = normal$1;
+			return "string";
+		};
+	}
+	const lua = {
+		name: "lua",
+		startState: function() {
+			return {
+				basecol: 0,
+				indentDepth: 0,
+				cur: normal$1
+			};
+		},
+		token: function(stream, state) {
+			if (stream.eatSpace()) return null;
+			var style = state.cur(stream, state);
+			var word = stream.current();
+			if (style == "variable") {
+				if (keywords$8.test(word)) style = "keyword";
+				else if (builtins$2.test(word)) style = "builtin";
+			}
+			if (style != "comment" && style != "string") {
+				if (indentTokens.test(word)) ++state.indentDepth;
+				else if (dedentTokens.test(word)) --state.indentDepth;
+			}
+			return style;
+		},
+		indent: function(state, textAfter, cx) {
+			var closing = dedentPartial.test(textAfter);
+			return state.basecol + cx.unit * (state.indentDepth - (closing ? 1 : 0));
+		},
+		languageData: {
+			indentOnInput: /^\s*(?:end|until|else|\)|\})$/,
+			commentTokens: {
+				line: "--",
+				block: {
+					open: "--[[",
+					close: "]]--"
+				}
+			}
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/perl.js
+	function look(stream, c) {
+		return stream.string.charAt(stream.pos + (c || 0));
+	}
+	function prefix(stream, c) {
+		if (c) {
+			var x = stream.pos - c;
+			return stream.string.substr(x >= 0 ? x : 0, c);
+		} else return stream.string.substr(0, stream.pos - 1);
+	}
+	function suffix(stream, c) {
+		var y = stream.string.length;
+		var x = y - stream.pos + 1;
+		return stream.string.substr(stream.pos, c && c < y ? c : x);
+	}
+	function eatSuffix(stream, c) {
+		var x = stream.pos + c;
+		var y;
+		if (x <= 0) stream.pos = 0;
+		else if (x >= (y = stream.string.length - 1)) stream.pos = y;
+		else stream.pos = x;
+	}
+	var PERL = {
+		"->": 4,
+		"++": 4,
+		"--": 4,
+		"**": 4,
+		"=~": 4,
+		"!~": 4,
+		"*": 4,
+		"/": 4,
+		"%": 4,
+		"x": 4,
+		"+": 4,
+		"-": 4,
+		".": 4,
+		"<<": 4,
+		">>": 4,
+		"<": 4,
+		">": 4,
+		"<=": 4,
+		">=": 4,
+		"lt": 4,
+		"gt": 4,
+		"le": 4,
+		"ge": 4,
+		"==": 4,
+		"!=": 4,
+		"<=>": 4,
+		"eq": 4,
+		"ne": 4,
+		"cmp": 4,
+		"~~": 4,
+		"&": 4,
+		"|": 4,
+		"^": 4,
+		"&&": 4,
+		"||": 4,
+		"//": 4,
+		"..": 4,
+		"...": 4,
+		"?": 4,
+		":": 4,
+		"=": 4,
+		"+=": 4,
+		"-=": 4,
+		"*=": 4,
+		",": 4,
+		"=>": 4,
+		"::": 4,
+		"not": 4,
+		"and": 4,
+		"or": 4,
+		"xor": 4,
+		"BEGIN": [5, 1],
+		"END": [5, 1],
+		"PRINT": [5, 1],
+		"PRINTF": [5, 1],
+		"GETC": [5, 1],
+		"READ": [5, 1],
+		"READLINE": [5, 1],
+		"DESTROY": [5, 1],
+		"TIE": [5, 1],
+		"TIEHANDLE": [5, 1],
+		"UNTIE": [5, 1],
+		"STDIN": 5,
+		"STDIN_TOP": 5,
+		"STDOUT": 5,
+		"STDOUT_TOP": 5,
+		"STDERR": 5,
+		"STDERR_TOP": 5,
+		"$ARG": 5,
+		"$_": 5,
+		"@ARG": 5,
+		"@_": 5,
+		"$LIST_SEPARATOR": 5,
+		"$\"": 5,
+		"$PROCESS_ID": 5,
+		"$PID": 5,
+		"$$": 5,
+		"$REAL_GROUP_ID": 5,
+		"$GID": 5,
+		"$(": 5,
+		"$EFFECTIVE_GROUP_ID": 5,
+		"$EGID": 5,
+		"$)": 5,
+		"$PROGRAM_NAME": 5,
+		"$0": 5,
+		"$SUBSCRIPT_SEPARATOR": 5,
+		"$SUBSEP": 5,
+		"$;": 5,
+		"$REAL_USER_ID": 5,
+		"$UID": 5,
+		"$<": 5,
+		"$EFFECTIVE_USER_ID": 5,
+		"$EUID": 5,
+		"$>": 5,
+		"$a": 5,
+		"$b": 5,
+		"$COMPILING": 5,
+		"$^C": 5,
+		"$DEBUGGING": 5,
+		"$^D": 5,
+		"${^ENCODING}": 5,
+		"$ENV": 5,
+		"%ENV": 5,
+		"$SYSTEM_FD_MAX": 5,
+		"$^F": 5,
+		"@F": 5,
+		"${^GLOBAL_PHASE}": 5,
+		"$^H": 5,
+		"%^H": 5,
+		"@INC": 5,
+		"%INC": 5,
+		"$INPLACE_EDIT": 5,
+		"$^I": 5,
+		"$^M": 5,
+		"$OSNAME": 5,
+		"$^O": 5,
+		"${^OPEN}": 5,
+		"$PERLDB": 5,
+		"$^P": 5,
+		"$SIG": 5,
+		"%SIG": 5,
+		"$BASETIME": 5,
+		"$^T": 5,
+		"${^TAINT}": 5,
+		"${^UNICODE}": 5,
+		"${^UTF8CACHE}": 5,
+		"${^UTF8LOCALE}": 5,
+		"$PERL_VERSION": 5,
+		"$^V": 5,
+		"${^WIN32_SLOPPY_STAT}": 5,
+		"$EXECUTABLE_NAME": 5,
+		"$^X": 5,
+		"$1": 5,
+		"$MATCH": 5,
+		"$&": 5,
+		"${^MATCH}": 5,
+		"$PREMATCH": 5,
+		"$`": 5,
+		"${^PREMATCH}": 5,
+		"$POSTMATCH": 5,
+		"$'": 5,
+		"${^POSTMATCH}": 5,
+		"$LAST_PAREN_MATCH": 5,
+		"$+": 5,
+		"$LAST_SUBMATCH_RESULT": 5,
+		"$^N": 5,
+		"@LAST_MATCH_END": 5,
+		"@+": 5,
+		"%LAST_PAREN_MATCH": 5,
+		"%+": 5,
+		"@LAST_MATCH_START": 5,
+		"@-": 5,
+		"%LAST_MATCH_START": 5,
+		"%-": 5,
+		"$LAST_REGEXP_CODE_RESULT": 5,
+		"$^R": 5,
+		"${^RE_DEBUG_FLAGS}": 5,
+		"${^RE_TRIE_MAXBUF}": 5,
+		"$ARGV": 5,
+		"@ARGV": 5,
+		"ARGV": 5,
+		"ARGVOUT": 5,
+		"$OUTPUT_FIELD_SEPARATOR": 5,
+		"$OFS": 5,
+		"$,": 5,
+		"$INPUT_LINE_NUMBER": 5,
+		"$NR": 5,
+		"$.": 5,
+		"$INPUT_RECORD_SEPARATOR": 5,
+		"$RS": 5,
+		"$/": 5,
+		"$OUTPUT_RECORD_SEPARATOR": 5,
+		"$ORS": 5,
+		"$\\": 5,
+		"$OUTPUT_AUTOFLUSH": 5,
+		"$|": 5,
+		"$ACCUMULATOR": 5,
+		"$^A": 5,
+		"$FORMAT_FORMFEED": 5,
+		"$^L": 5,
+		"$FORMAT_PAGE_NUMBER": 5,
+		"$%": 5,
+		"$FORMAT_LINES_LEFT": 5,
+		"$-": 5,
+		"$FORMAT_LINE_BREAK_CHARACTERS": 5,
+		"$:": 5,
+		"$FORMAT_LINES_PER_PAGE": 5,
+		"$=": 5,
+		"$FORMAT_TOP_NAME": 5,
+		"$^": 5,
+		"$FORMAT_NAME": 5,
+		"$~": 5,
+		"${^CHILD_ERROR_NATIVE}": 5,
+		"$EXTENDED_OS_ERROR": 5,
+		"$^E": 5,
+		"$EXCEPTIONS_BEING_CAUGHT": 5,
+		"$^S": 5,
+		"$WARNING": 5,
+		"$^W": 5,
+		"${^WARNING_BITS}": 5,
+		"$OS_ERROR": 5,
+		"$ERRNO": 5,
+		"$!": 5,
+		"%OS_ERROR": 5,
+		"%ERRNO": 5,
+		"%!": 5,
+		"$CHILD_ERROR": 5,
+		"$?": 5,
+		"$EVAL_ERROR": 5,
+		"$@": 5,
+		"$OFMT": 5,
+		"$#": 5,
+		"$*": 5,
+		"$ARRAY_BASE": 5,
+		"$[": 5,
+		"$OLD_PERL_VERSION": 5,
+		"$]": 5,
+		"if": [1, 1],
+		elsif: [1, 1],
+		"else": [1, 1],
+		"while": [1, 1],
+		unless: [1, 1],
+		"for": [1, 1],
+		foreach: [1, 1],
+		"abs": 1,
+		accept: 1,
+		alarm: 1,
+		"atan2": 1,
+		bind: 1,
+		binmode: 1,
+		bless: 1,
+		bootstrap: 1,
+		"break": 1,
+		caller: 1,
+		chdir: 1,
+		chmod: 1,
+		chomp: 1,
+		chop: 1,
+		chown: 1,
+		chr: 1,
+		chroot: 1,
+		close: 1,
+		closedir: 1,
+		connect: 1,
+		"continue": [1, 1],
+		"cos": 1,
+		crypt: 1,
+		dbmclose: 1,
+		dbmopen: 1,
+		"default": 1,
+		defined: 1,
+		"delete": 1,
+		die: 1,
+		"do": 1,
+		dump: 1,
+		each: 1,
+		endgrent: 1,
+		endhostent: 1,
+		endnetent: 1,
+		endprotoent: 1,
+		endpwent: 1,
+		endservent: 1,
+		eof: 1,
+		"eval": 1,
+		"exec": 1,
+		exists: 1,
+		exit: 1,
+		"exp": 1,
+		fcntl: 1,
+		fileno: 1,
+		flock: 1,
+		fork: 1,
+		format: 1,
+		formline: 1,
+		getc: 1,
+		getgrent: 1,
+		getgrgid: 1,
+		getgrnam: 1,
+		gethostbyaddr: 1,
+		gethostbyname: 1,
+		gethostent: 1,
+		getlogin: 1,
+		getnetbyaddr: 1,
+		getnetbyname: 1,
+		getnetent: 1,
+		getpeername: 1,
+		getpgrp: 1,
+		getppid: 1,
+		getpriority: 1,
+		getprotobyname: 1,
+		getprotobynumber: 1,
+		getprotoent: 1,
+		getpwent: 1,
+		getpwnam: 1,
+		getpwuid: 1,
+		getservbyname: 1,
+		getservbyport: 1,
+		getservent: 1,
+		getsockname: 1,
+		getsockopt: 1,
+		given: 1,
+		glob: 1,
+		gmtime: 1,
+		"goto": 1,
+		grep: 1,
+		hex: 1,
+		"import": 1,
+		index: 1,
+		"int": 1,
+		ioctl: 1,
+		"join": 1,
+		keys: 1,
+		kill: 1,
+		last: 1,
+		lc: 1,
+		lcfirst: 1,
+		length: 1,
+		"link": 1,
+		listen: 1,
+		local: 2,
+		localtime: 1,
+		lock: 1,
+		"log": 1,
+		lstat: 1,
+		m: null,
+		map: 1,
+		mkdir: 1,
+		msgctl: 1,
+		msgget: 1,
+		msgrcv: 1,
+		msgsnd: 1,
+		my: 2,
+		"new": 1,
+		next: 1,
+		no: 1,
+		oct: 1,
+		open: 1,
+		opendir: 1,
+		ord: 1,
+		our: 2,
+		pack: 1,
+		"package": 1,
+		pipe: 1,
+		pop: 1,
+		pos: 1,
+		print: 1,
+		printf: 1,
+		prototype: 1,
+		push: 1,
+		q: null,
+		qq: null,
+		qr: null,
+		quotemeta: null,
+		qw: null,
+		qx: null,
+		rand: 1,
+		read: 1,
+		readdir: 1,
+		readline: 1,
+		readlink: 1,
+		readpipe: 1,
+		recv: 1,
+		redo: 1,
+		ref: 1,
+		rename: 1,
+		require: 1,
+		reset: 1,
+		"return": 1,
+		reverse: 1,
+		rewinddir: 1,
+		rindex: 1,
+		rmdir: 1,
+		s: null,
+		say: 1,
+		scalar: 1,
+		seek: 1,
+		seekdir: 1,
+		select: 1,
+		semctl: 1,
+		semget: 1,
+		semop: 1,
+		send: 1,
+		setgrent: 1,
+		sethostent: 1,
+		setnetent: 1,
+		setpgrp: 1,
+		setpriority: 1,
+		setprotoent: 1,
+		setpwent: 1,
+		setservent: 1,
+		setsockopt: 1,
+		shift: 1,
+		shmctl: 1,
+		shmget: 1,
+		shmread: 1,
+		shmwrite: 1,
+		shutdown: 1,
+		"sin": 1,
+		sleep: 1,
+		socket: 1,
+		socketpair: 1,
+		"sort": 1,
+		splice: 1,
+		"split": 1,
+		sprintf: 1,
+		"sqrt": 1,
+		srand: 1,
+		stat: 1,
+		state: 1,
+		study: 1,
+		"sub": 1,
+		"substr": 1,
+		symlink: 1,
+		syscall: 1,
+		sysopen: 1,
+		sysread: 1,
+		sysseek: 1,
+		system: 1,
+		syswrite: 1,
+		tell: 1,
+		telldir: 1,
+		tie: 1,
+		tied: 1,
+		time: 1,
+		times: 1,
+		tr: null,
+		truncate: 1,
+		uc: 1,
+		ucfirst: 1,
+		umask: 1,
+		undef: 1,
+		unlink: 1,
+		unpack: 1,
+		unshift: 1,
+		untie: 1,
+		use: 1,
+		utime: 1,
+		values: 1,
+		vec: 1,
+		wait: 1,
+		waitpid: 1,
+		wantarray: 1,
+		warn: 1,
+		when: 1,
+		write: 1,
+		y: null
+	};
+	var RXstyle = "string.special";
+	var RXmodifiers = /[goseximacplud]/;
+	function tokenChain(stream, state, chain, style, tail) {
+		state.chain = null;
+		state.style = null;
+		state.tail = null;
+		state.tokenize = function(stream, state) {
+			var e = false, c, i = 0;
+			while (c = stream.next()) {
+				if (c === chain[i] && !e) {
+					if (chain[++i] !== void 0) {
+						state.chain = chain[i];
+						state.style = style;
+						state.tail = tail;
+					} else if (tail) stream.eatWhile(tail);
+					state.tokenize = tokenPerl;
+					return style;
+				}
+				e = !e && c == "\\";
+			}
+			return style;
+		};
+		return state.tokenize(stream, state);
+	}
+	function tokenSOMETHING(stream, state, string) {
+		state.tokenize = function(stream, state) {
+			if (stream.string == string) state.tokenize = tokenPerl;
+			stream.skipToEnd();
+			return "string";
+		};
+		return state.tokenize(stream, state);
+	}
+	function tokenPerl(stream, state) {
+		if (stream.eatSpace()) return null;
+		if (state.chain) return tokenChain(stream, state, state.chain, state.style, state.tail);
+		if (stream.match(/^(\-?((\d[\d_]*)?\.\d+(e[+-]?\d+)?|\d+\.\d*)|0x[\da-fA-F_]+|0b[01_]+|\d[\d_]*(e[+-]?\d+)?)/)) return "number";
+		if (stream.match(/^<<(?=[_a-zA-Z])/)) {
+			stream.eatWhile(/\w/);
+			return tokenSOMETHING(stream, state, stream.current().substr(2));
+		}
+		if (stream.sol() && stream.match(/^\=item(?!\w)/)) return tokenSOMETHING(stream, state, "=cut");
+		var ch = stream.next();
+		if (ch == "\"" || ch == "'") {
+			if (prefix(stream, 3) == "<<" + ch) {
+				var p = stream.pos;
+				stream.eatWhile(/\w/);
+				var n = stream.current().substr(1);
+				if (n && stream.eat(ch)) return tokenSOMETHING(stream, state, n);
+				stream.pos = p;
+			}
+			return tokenChain(stream, state, [ch], "string");
+		}
+		if (ch == "q") {
+			var c = look(stream, -2);
+			if (!(c && /\w/.test(c))) {
+				c = look(stream, 0);
+				if (c == "x") {
+					c = look(stream, 1);
+					if (c == "(") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [")"], RXstyle, RXmodifiers);
+					}
+					if (c == "[") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["]"], RXstyle, RXmodifiers);
+					}
+					if (c == "{") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["}"], RXstyle, RXmodifiers);
+					}
+					if (c == "<") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [">"], RXstyle, RXmodifiers);
+					}
+					if (/[\^'"!~\/]/.test(c)) {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, [stream.eat(c)], RXstyle, RXmodifiers);
+					}
+				} else if (c == "q") {
+					c = look(stream, 1);
+					if (c == "(") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [")"], "string");
+					}
+					if (c == "[") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["]"], "string");
+					}
+					if (c == "{") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["}"], "string");
+					}
+					if (c == "<") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [">"], "string");
+					}
+					if (/[\^'"!~\/]/.test(c)) {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, [stream.eat(c)], "string");
+					}
+				} else if (c == "w") {
+					c = look(stream, 1);
+					if (c == "(") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [")"], "bracket");
+					}
+					if (c == "[") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["]"], "bracket");
+					}
+					if (c == "{") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["}"], "bracket");
+					}
+					if (c == "<") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [">"], "bracket");
+					}
+					if (/[\^'"!~\/]/.test(c)) {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, [stream.eat(c)], "bracket");
+					}
+				} else if (c == "r") {
+					c = look(stream, 1);
+					if (c == "(") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [")"], RXstyle, RXmodifiers);
+					}
+					if (c == "[") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["]"], RXstyle, RXmodifiers);
+					}
+					if (c == "{") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, ["}"], RXstyle, RXmodifiers);
+					}
+					if (c == "<") {
+						eatSuffix(stream, 2);
+						return tokenChain(stream, state, [">"], RXstyle, RXmodifiers);
+					}
+					if (/[\^'"!~\/]/.test(c)) {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, [stream.eat(c)], RXstyle, RXmodifiers);
+					}
+				} else if (/[\^'"!~\/(\[{<]/.test(c)) {
+					if (c == "(") {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, [")"], "string");
+					}
+					if (c == "[") {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, ["]"], "string");
+					}
+					if (c == "{") {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, ["}"], "string");
+					}
+					if (c == "<") {
+						eatSuffix(stream, 1);
+						return tokenChain(stream, state, [">"], "string");
+					}
+					if (/[\^'"!~\/]/.test(c)) return tokenChain(stream, state, [stream.eat(c)], "string");
+				}
+			}
+		}
+		if (ch == "m") {
+			var c = look(stream, -2);
+			if (!(c && /\w/.test(c))) {
+				c = stream.eat(/[(\[{<\^'"!~\/]/);
+				if (c) {
+					if (/[\^'"!~\/]/.test(c)) return tokenChain(stream, state, [c], RXstyle, RXmodifiers);
+					if (c == "(") return tokenChain(stream, state, [")"], RXstyle, RXmodifiers);
+					if (c == "[") return tokenChain(stream, state, ["]"], RXstyle, RXmodifiers);
+					if (c == "{") return tokenChain(stream, state, ["}"], RXstyle, RXmodifiers);
+					if (c == "<") return tokenChain(stream, state, [">"], RXstyle, RXmodifiers);
+				}
+			}
+		}
+		if (ch == "s") {
+			var c = /[\/>\]})\w]/.test(look(stream, -2));
+			if (!c) {
+				c = stream.eat(/[(\[{<\^'"!~\/]/);
+				if (c) {
+					if (c == "[") return tokenChain(stream, state, ["]", "]"], RXstyle, RXmodifiers);
+					if (c == "{") return tokenChain(stream, state, ["}", "}"], RXstyle, RXmodifiers);
+					if (c == "<") return tokenChain(stream, state, [">", ">"], RXstyle, RXmodifiers);
+					if (c == "(") return tokenChain(stream, state, [")", ")"], RXstyle, RXmodifiers);
+					return tokenChain(stream, state, [c, c], RXstyle, RXmodifiers);
+				}
+			}
+		}
+		if (ch == "y") {
+			var c = /[\/>\]})\w]/.test(look(stream, -2));
+			if (!c) {
+				c = stream.eat(/[(\[{<\^'"!~\/]/);
+				if (c) {
+					if (c == "[") return tokenChain(stream, state, ["]", "]"], RXstyle, RXmodifiers);
+					if (c == "{") return tokenChain(stream, state, ["}", "}"], RXstyle, RXmodifiers);
+					if (c == "<") return tokenChain(stream, state, [">", ">"], RXstyle, RXmodifiers);
+					if (c == "(") return tokenChain(stream, state, [")", ")"], RXstyle, RXmodifiers);
+					return tokenChain(stream, state, [c, c], RXstyle, RXmodifiers);
+				}
+			}
+		}
+		if (ch == "t") {
+			var c = /[\/>\]})\w]/.test(look(stream, -2));
+			if (!c) {
+				c = stream.eat("r");
+				if (c) {
+					c = stream.eat(/[(\[{<\^'"!~\/]/);
+					if (c) {
+						if (c == "[") return tokenChain(stream, state, ["]", "]"], RXstyle, RXmodifiers);
+						if (c == "{") return tokenChain(stream, state, ["}", "}"], RXstyle, RXmodifiers);
+						if (c == "<") return tokenChain(stream, state, [">", ">"], RXstyle, RXmodifiers);
+						if (c == "(") return tokenChain(stream, state, [")", ")"], RXstyle, RXmodifiers);
+						return tokenChain(stream, state, [c, c], RXstyle, RXmodifiers);
+					}
+				}
+			}
+		}
+		if (ch == "`") return tokenChain(stream, state, [ch], "builtin");
+		if (ch == "/") {
+			if (!/~\s*$/.test(prefix(stream))) return "operator";
+			else return tokenChain(stream, state, [ch], RXstyle, RXmodifiers);
+		}
+		if (ch == "$") {
+			var p = stream.pos;
+			if (stream.eatWhile(/\d/) || stream.eat("{") && stream.eatWhile(/\d/) && stream.eat("}")) return "builtin";
+			else stream.pos = p;
+		}
+		if (/[$@%]/.test(ch)) {
+			var p = stream.pos;
+			if (stream.eat("^") && stream.eat(/[A-Z]/) || !/[@$%&]/.test(look(stream, -2)) && stream.eat(/[=|\\\-#?@;:&`~\^!\[\]*'"$+.,\/<>()]/)) {
+				var c = stream.current();
+				if (PERL[c]) return "builtin";
+			}
+			stream.pos = p;
+		}
+		if (/[$@%&]/.test(ch)) {
+			if (stream.eatWhile(/[\w$]/) || stream.eat("{") && stream.eatWhile(/[\w$]/) && stream.eat("}")) {
+				var c = stream.current();
+				if (PERL[c]) return "builtin";
+				else return "variable";
+			}
+		}
+		if (ch == "#") {
+			if (look(stream, -2) != "$") {
+				stream.skipToEnd();
+				return "comment";
+			}
+		}
+		if (/[:+\-\^*$&%@=<>!?|\/~\.]/.test(ch)) {
+			var p = stream.pos;
+			stream.eatWhile(/[:+\-\^*$&%@=<>!?|\/~\.]/);
+			if (PERL[stream.current()]) return "operator";
+			else stream.pos = p;
+		}
+		if (ch == "_") {
+			if (stream.pos == 1) {
+				if (suffix(stream, 6) == "_END__") return tokenChain(stream, state, ["\0"], "comment");
+				else if (suffix(stream, 7) == "_DATA__") return tokenChain(stream, state, ["\0"], "builtin");
+				else if (suffix(stream, 7) == "_C__") return tokenChain(stream, state, ["\0"], "string");
+			}
+		}
+		if (/\w/.test(ch)) {
+			var p = stream.pos;
+			if (look(stream, -2) == "{" && (look(stream, 0) == "}" || stream.eatWhile(/\w/) && look(stream, 0) == "}")) return "string";
+			else stream.pos = p;
+		}
+		if (/[A-Z]/.test(ch)) {
+			var l = look(stream, -2);
+			var p = stream.pos;
+			stream.eatWhile(/[A-Z_]/);
+			if (/[\da-z]/.test(look(stream, 0))) stream.pos = p;
+			else {
+				var c = PERL[stream.current()];
+				if (!c) return "meta";
+				if (c[1]) c = c[0];
+				if (l != ":") {
+					if (c == 1) return "keyword";
+					else if (c == 2) return "def";
+					else if (c == 3) return "atom";
+					else if (c == 4) return "operator";
+					else if (c == 5) return "builtin";
+					else return "meta";
+				} else return "meta";
+			}
+		}
+		if (/[a-zA-Z_]/.test(ch)) {
+			var l = look(stream, -2);
+			stream.eatWhile(/\w/);
+			var c = PERL[stream.current()];
+			if (!c) return "meta";
+			if (c[1]) c = c[0];
+			if (l != ":") {
+				if (c == 1) return "keyword";
+				else if (c == 2) return "def";
+				else if (c == 3) return "atom";
+				else if (c == 4) return "operator";
+				else if (c == 5) return "builtin";
+				else return "meta";
+			} else return "meta";
+		}
+		return null;
+	}
+	const perl = {
+		name: "perl",
+		startState: function() {
+			return {
+				tokenize: tokenPerl,
+				chain: null,
+				style: null,
+				tail: null
+			};
+		},
+		token: function(stream, state) {
+			return (state.tokenize || tokenPerl)(stream, state);
+		},
+		languageData: {
+			commentTokens: { line: "#" },
+			wordChars: "$"
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/r.js
+	function wordObj(words) {
+		var res = {};
+		for (var i = 0; i < words.length; ++i) res[words[i]] = true;
+		return res;
+	}
+	var commonAtoms = [
+		"NULL",
+		"NA",
+		"Inf",
+		"NaN",
+		"NA_integer_",
+		"NA_real_",
+		"NA_complex_",
+		"NA_character_",
+		"TRUE",
+		"FALSE"
+	];
+	var commonBuiltins = [
+		"list",
+		"quote",
+		"bquote",
+		"eval",
+		"return",
+		"call",
+		"parse",
+		"deparse"
+	];
+	var commonKeywords$1 = [
+		"if",
+		"else",
+		"repeat",
+		"while",
+		"function",
+		"for",
+		"in",
+		"next",
+		"break"
+	];
+	var commonBlockKeywords = [
+		"if",
+		"else",
+		"repeat",
+		"while",
+		"function",
+		"for"
+	];
+	var atoms$4 = wordObj(commonAtoms);
+	var builtins$1 = wordObj(commonBuiltins);
+	var keywords$7 = wordObj(commonKeywords$1);
+	var blockkeywords = wordObj(commonBlockKeywords);
+	var opChars = /[+\-*\/^<>=!&|~$:]/;
+	var curPunc$2;
+	function tokenBase$8(stream, state) {
+		curPunc$2 = null;
+		var ch = stream.next();
+		if (ch == "#") {
+			stream.skipToEnd();
+			return "comment";
+		} else if (ch == "0" && stream.eat("x")) {
+			stream.eatWhile(/[\da-f]/i);
+			return "number";
+		} else if (ch == "." && stream.eat(/\d/)) {
+			stream.match(/\d*(?:e[+\-]?\d+)?/);
+			return "number";
+		} else if (/\d/.test(ch)) {
+			stream.match(/\d*(?:\.\d+)?(?:e[+\-]\d+)?L?/);
+			return "number";
+		} else if (ch == "'" || ch == "\"") {
+			state.tokenize = tokenString$4(ch);
+			return "string";
+		} else if (ch == "`") {
+			stream.match(/[^`]+`/);
+			return "string.special";
+		} else if (ch == "." && stream.match(/.(?:[.]|\d+)/)) return "keyword";
+		else if (/[a-zA-Z\.]/.test(ch)) {
+			stream.eatWhile(/[\w\.]/);
+			var word = stream.current();
+			if (atoms$4.propertyIsEnumerable(word)) return "atom";
+			if (keywords$7.propertyIsEnumerable(word)) {
+				if (blockkeywords.propertyIsEnumerable(word) && !stream.match(/\s*if(\s+|$)/, false)) curPunc$2 = "block";
+				return "keyword";
+			}
+			if (builtins$1.propertyIsEnumerable(word)) return "builtin";
+			return "variable";
+		} else if (ch == "%") {
+			if (stream.skipTo("%")) stream.next();
+			return "variableName.special";
+		} else if (ch == "<" && stream.eat("-") || ch == "<" && stream.match("<-") || ch == "-" && stream.match(/>>?/)) return "operator";
+		else if (ch == "=" && state.ctx.argList) return "operator";
+		else if (opChars.test(ch)) {
+			if (ch == "$") return "operator";
+			stream.eatWhile(opChars);
+			return "operator";
+		} else if (/[\(\){}\[\];]/.test(ch)) {
+			curPunc$2 = ch;
+			if (ch == ";") return "punctuation";
+			return null;
+		} else return null;
+	}
+	function tokenString$4(quote) {
+		return function(stream, state) {
+			if (stream.eat("\\")) {
+				var ch = stream.next();
+				if (ch == "x") stream.match(/^[a-f0-9]{2}/i);
+				else if ((ch == "u" || ch == "U") && stream.eat("{") && stream.skipTo("}")) stream.next();
+				else if (ch == "u") stream.match(/^[a-f0-9]{4}/i);
+				else if (ch == "U") stream.match(/^[a-f0-9]{8}/i);
+				else if (/[0-7]/.test(ch)) stream.match(/^[0-7]{1,2}/);
+				return "string.special";
+			} else {
+				var next;
+				while ((next = stream.next()) != null) {
+					if (next == quote) {
+						state.tokenize = tokenBase$8;
+						break;
+					}
+					if (next == "\\") {
+						stream.backUp(1);
+						break;
+					}
+				}
+				return "string";
+			}
+		};
+	}
+	var ALIGN_YES = 1;
+	var ALIGN_NO = 2;
+	var BRACELESS = 4;
+	function push(state, type, stream) {
+		state.ctx = {
+			type,
+			indent: state.indent,
+			flags: 0,
+			column: stream.column(),
+			prev: state.ctx
+		};
+	}
+	function setFlag(state, flag) {
+		var ctx = state.ctx;
+		state.ctx = {
+			type: ctx.type,
+			indent: ctx.indent,
+			flags: ctx.flags | flag,
+			column: ctx.column,
+			prev: ctx.prev
+		};
+	}
+	function pop(state) {
+		state.indent = state.ctx.indent;
+		state.ctx = state.ctx.prev;
+	}
+	const r = {
+		name: "r",
+		startState: function(indentUnit) {
+			return {
+				tokenize: tokenBase$8,
+				ctx: {
+					type: "top",
+					indent: -indentUnit,
+					flags: ALIGN_NO
+				},
+				indent: 0,
+				afterIdent: false
+			};
+		},
+		token: function(stream, state) {
+			if (stream.sol()) {
+				if ((state.ctx.flags & 3) == 0) state.ctx.flags |= ALIGN_NO;
+				if (state.ctx.flags & BRACELESS) pop(state);
+				state.indent = stream.indentation();
+			}
+			if (stream.eatSpace()) return null;
+			var style = state.tokenize(stream, state);
+			if (style != "comment" && (state.ctx.flags & ALIGN_NO) == 0) setFlag(state, ALIGN_YES);
+			if ((curPunc$2 == ";" || curPunc$2 == "{" || curPunc$2 == "}") && state.ctx.type == "block") pop(state);
+			if (curPunc$2 == "{") push(state, "}", stream);
+			else if (curPunc$2 == "(") {
+				push(state, ")", stream);
+				if (state.afterIdent) state.ctx.argList = true;
+			} else if (curPunc$2 == "[") push(state, "]", stream);
+			else if (curPunc$2 == "block") push(state, "block", stream);
+			else if (curPunc$2 == state.ctx.type) pop(state);
+			else if (state.ctx.type == "block" && style != "comment") setFlag(state, BRACELESS);
+			state.afterIdent = style == "variable" || style == "keyword";
+			return style;
+		},
+		indent: function(state, textAfter, cx) {
+			if (state.tokenize != tokenBase$8) return 0;
+			var firstChar = textAfter && textAfter.charAt(0), ctx = state.ctx, closing = firstChar == ctx.type;
+			if (ctx.flags & BRACELESS) ctx = ctx.prev;
+			if (ctx.type == "block") return ctx.indent + (firstChar == "{" ? 0 : cx.unit);
+			else if (ctx.flags & ALIGN_YES) return ctx.column + (closing ? 0 : 1);
+			else return ctx.indent + (closing ? 0 : cx.unit);
+		},
+		languageData: {
+			wordChars: ".",
+			commentTokens: { line: "#" },
+			autocomplete: commonAtoms.concat(commonBuiltins, commonKeywords$1)
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/groovy.js
+	function words$2(str) {
+		var obj = {}, words = str.split(" ");
+		for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
+		return obj;
+	}
+	var keywords$6 = words$2("abstract as assert boolean break byte case catch char class const continue def default do double else enum extends final finally float for goto if implements import in instanceof int interface long native new package private protected public return short static strictfp super switch synchronized threadsafe throw throws trait transient try void volatile while");
+	var blockKeywords$1 = words$2("catch class def do else enum finally for if interface switch trait try while");
+	var standaloneKeywords = words$2("return break continue");
+	var atoms$3 = words$2("null true false this");
+	var curPunc$1;
+	function tokenBase$7(stream, state) {
+		var ch = stream.next();
+		if (ch == "\"" || ch == "'") return startString(ch, stream, state);
+		if (/[\[\]{}\(\),;\:\.]/.test(ch)) {
+			curPunc$1 = ch;
+			return null;
+		}
+		if (/\d/.test(ch)) {
+			stream.eatWhile(/[\w\.]/);
+			if (stream.eat(/eE/)) {
+				stream.eat(/\+\-/);
+				stream.eatWhile(/\d/);
+			}
+			return "number";
+		}
+		if (ch == "/") {
+			if (stream.eat("*")) {
+				state.tokenize.push(tokenComment$4);
+				return tokenComment$4(stream, state);
+			}
+			if (stream.eat("/")) {
+				stream.skipToEnd();
+				return "comment";
+			}
+			if (expectExpression(state.lastToken, false)) return startString(ch, stream, state);
+		}
+		if (ch == "-" && stream.eat(">")) {
+			curPunc$1 = "->";
+			return null;
+		}
+		if (/[+\-*&%=<>!?|\/~]/.test(ch)) {
+			stream.eatWhile(/[+\-*&%=<>|~]/);
+			return "operator";
+		}
+		stream.eatWhile(/[\w\$_]/);
+		if (ch == "@") {
+			stream.eatWhile(/[\w\$_\.]/);
+			return "meta";
+		}
+		if (state.lastToken == ".") return "property";
+		if (stream.eat(":")) {
+			curPunc$1 = "proplabel";
+			return "property";
+		}
+		var cur = stream.current();
+		if (atoms$3.propertyIsEnumerable(cur)) return "atom";
+		if (keywords$6.propertyIsEnumerable(cur)) {
+			if (blockKeywords$1.propertyIsEnumerable(cur)) curPunc$1 = "newstatement";
+			else if (standaloneKeywords.propertyIsEnumerable(cur)) curPunc$1 = "standalone";
+			return "keyword";
+		}
+		return "variable";
+	}
+	tokenBase$7.isBase = true;
+	function startString(quote, stream, state) {
+		var tripleQuoted = false;
+		if (quote != "/" && stream.eat(quote)) {
+			if (stream.eat(quote)) tripleQuoted = true;
+			else return "string";
+		}
+		function t(stream, state) {
+			var escaped = false, next, end = !tripleQuoted;
+			while ((next = stream.next()) != null) {
+				if (next == quote && !escaped) {
+					if (!tripleQuoted) break;
+					if (stream.match(quote + quote)) {
+						end = true;
+						break;
+					}
+				}
+				if (quote == "\"" && next == "$" && !escaped) {
+					if (stream.eat("{")) {
+						state.tokenize.push(tokenBaseUntilBrace());
+						return "string";
+					} else if (stream.match(/^\w/, false)) {
+						state.tokenize.push(tokenVariableDeref);
+						return "string";
+					}
+				}
+				escaped = !escaped && next == "\\";
+			}
+			if (end) state.tokenize.pop();
+			return "string";
+		}
+		state.tokenize.push(t);
+		return t(stream, state);
+	}
+	function tokenBaseUntilBrace() {
+		var depth = 1;
+		function t(stream, state) {
+			if (stream.peek() == "}") {
+				depth--;
+				if (depth == 0) {
+					state.tokenize.pop();
+					return state.tokenize[state.tokenize.length - 1](stream, state);
+				}
+			} else if (stream.peek() == "{") depth++;
+			return tokenBase$7(stream, state);
+		}
+		t.isBase = true;
+		return t;
+	}
+	function tokenVariableDeref(stream, state) {
+		var next = stream.match(/^(\.|[\w\$_]+)/);
+		if (!next || !stream.match(next[0] == "." ? /^[\w$_]/ : /^\./)) state.tokenize.pop();
+		if (!next) return state.tokenize[state.tokenize.length - 1](stream, state);
+		return next[0] == "." ? null : "variable";
+	}
+	function tokenComment$4(stream, state) {
+		var maybeEnd = false, ch;
+		while (ch = stream.next()) {
+			if (ch == "/" && maybeEnd) {
+				state.tokenize.pop();
+				break;
+			}
+			maybeEnd = ch == "*";
+		}
+		return "comment";
+	}
+	function expectExpression(last, newline) {
+		return !last || last == "operator" || last == "->" || /[\.\[\{\(,;:]/.test(last) || last == "newstatement" || last == "keyword" || last == "proplabel" || last == "standalone" && !newline;
+	}
+	function Context$1(indented, column, type, align, prev) {
+		this.indented = indented;
+		this.column = column;
+		this.type = type;
+		this.align = align;
+		this.prev = prev;
+	}
+	function pushContext$1(state, col, type) {
+		return state.context = new Context$1(state.indented, col, type, null, state.context);
+	}
+	function popContext$1(state) {
+		var t = state.context.type;
+		if (t == ")" || t == "]" || t == "}") state.indented = state.context.indented;
+		return state.context = state.context.prev;
+	}
+	const groovy = {
+		name: "groovy",
+		startState: function(indentUnit) {
+			return {
+				tokenize: [tokenBase$7],
+				context: new Context$1(-indentUnit, 0, "top", false),
+				indented: 0,
+				startOfLine: true,
+				lastToken: null
+			};
+		},
+		token: function(stream, state) {
+			var ctx = state.context;
+			if (stream.sol()) {
+				if (ctx.align == null) ctx.align = false;
+				state.indented = stream.indentation();
+				state.startOfLine = true;
+				if (ctx.type == "statement" && !expectExpression(state.lastToken, true)) {
+					popContext$1(state);
+					ctx = state.context;
+				}
+			}
+			if (stream.eatSpace()) return null;
+			curPunc$1 = null;
+			var style = state.tokenize[state.tokenize.length - 1](stream, state);
+			if (style == "comment") return style;
+			if (ctx.align == null) ctx.align = true;
+			if ((curPunc$1 == ";" || curPunc$1 == ":") && ctx.type == "statement") popContext$1(state);
+			else if (curPunc$1 == "->" && ctx.type == "statement" && ctx.prev.type == "}") {
+				popContext$1(state);
+				state.context.align = false;
+			} else if (curPunc$1 == "{") pushContext$1(state, stream.column(), "}");
+			else if (curPunc$1 == "[") pushContext$1(state, stream.column(), "]");
+			else if (curPunc$1 == "(") pushContext$1(state, stream.column(), ")");
+			else if (curPunc$1 == "}") {
+				while (ctx.type == "statement") ctx = popContext$1(state);
+				if (ctx.type == "}") ctx = popContext$1(state);
+				while (ctx.type == "statement") ctx = popContext$1(state);
+			} else if (curPunc$1 == ctx.type) popContext$1(state);
+			else if (ctx.type == "}" || ctx.type == "top" || ctx.type == "statement" && curPunc$1 == "newstatement") pushContext$1(state, stream.column(), "statement");
+			state.startOfLine = false;
+			state.lastToken = curPunc$1 || style;
+			return style;
+		},
+		indent: function(state, textAfter, cx) {
+			if (!state.tokenize[state.tokenize.length - 1].isBase) return null;
+			var firstChar = textAfter && textAfter.charAt(0), ctx = state.context;
+			if (ctx.type == "statement" && !expectExpression(state.lastToken, true)) ctx = ctx.prev;
+			var closing = firstChar == ctx.type;
+			if (ctx.type == "statement") return ctx.indented + (firstChar == "{" ? 0 : cx.unit);
+			else if (ctx.align) return ctx.column + (closing ? 0 : 1);
+			else return ctx.indented + (closing ? 0 : cx.unit);
+		},
+		languageData: {
+			indentOnInput: /^\s*[{}]$/,
+			commentTokens: {
+				line: "//",
+				block: {
+					open: "/*",
+					close: "*/"
+				}
+			},
+			closeBrackets: { brackets: [
+				"(",
+				"[",
+				"{",
+				"'",
+				"\"",
+				"'''",
+				"\"\"\""
+			] }
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/powershell.js
+	function buildRegexp(patterns, options) {
+		options = options || {};
+		var prefix = options.prefix !== void 0 ? options.prefix : "^";
+		var suffix = options.suffix !== void 0 ? options.suffix : "\\b";
+		for (var i = 0; i < patterns.length; i++) if (patterns[i] instanceof RegExp) patterns[i] = patterns[i].source;
+		else patterns[i] = patterns[i].replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+		return new RegExp(prefix + "(" + patterns.join("|") + ")" + suffix, "i");
+	}
+	var notCharacterOrDash = "(?=[^A-Za-z\\d\\-_]|$)";
+	var varNames = /[\w\-:]/;
+	var grammar = {
+		keyword: buildRegexp([
+			/begin|break|catch|continue|data|default|do|dynamicparam/,
+			/else|elseif|end|exit|filter|finally|for|foreach|from|function|if|in/,
+			/param|process|return|switch|throw|trap|try|until|where|while/
+		], { suffix: notCharacterOrDash }),
+		number: /^((0x[\da-f]+)|((\d+\.\d+|\d\.|\.\d+|\d+)(e[\+\-]?\d+)?))[ld]?([kmgtp]b)?/i,
+		operator: buildRegexp([buildRegexp([
+			"f",
+			/b?not/,
+			/[ic]?split/,
+			"join",
+			/is(not)?/,
+			"as",
+			/[ic]?(eq|ne|[gl][te])/,
+			/[ic]?(not)?(like|match|contains)/,
+			/[ic]?replace/,
+			/b?(and|or|xor)/
+		], { prefix: "-" }), /[+\-*\/%]=|\+\+|--|\.\.|[+\-*&^%:=!|\/]|<(?!#)|(?!#)>/], { suffix: "" }),
+		builtin: buildRegexp([
+			/[A-Z]:|%|\?/i,
+			buildRegexp([
+				/Add-(Computer|Content|History|Member|PSSnapin|Type)/,
+				/Checkpoint-Computer/,
+				/Clear-(Content|EventLog|History|Host|Item(Property)?|Variable)/,
+				/Compare-Object/,
+				/Complete-Transaction/,
+				/Connect-PSSession/,
+				/ConvertFrom-(Csv|Json|SecureString|StringData)/,
+				/Convert-Path/,
+				/ConvertTo-(Csv|Html|Json|SecureString|Xml)/,
+				/Copy-Item(Property)?/,
+				/Debug-Process/,
+				/Disable-(ComputerRestore|PSBreakpoint|PSRemoting|PSSessionConfiguration)/,
+				/Disconnect-PSSession/,
+				/Enable-(ComputerRestore|PSBreakpoint|PSRemoting|PSSessionConfiguration)/,
+				/(Enter|Exit)-PSSession/,
+				/Export-(Alias|Clixml|Console|Counter|Csv|FormatData|ModuleMember|PSSession)/,
+				/ForEach-Object/,
+				/Format-(Custom|List|Table|Wide)/,
+				/* @__PURE__ */ new RegExp("Get-(Acl|Alias|AuthenticodeSignature|ChildItem|Command|ComputerRestorePoint|Content|ControlPanelItem|Counter|Credential|Culture|Date|Event|EventLog|EventSubscriber|ExecutionPolicy|FormatData|Help|History|Host|HotFix|Item|ItemProperty|Job|Location|Member|Module|PfxCertificate|Process|PSBreakpoint|PSCallStack|PSDrive|PSProvider|PSSession|PSSessionConfiguration|PSSnapin|Random|Service|TraceSource|Transaction|TypeData|UICulture|Unique|Variable|Verb|WinEvent|WmiObject)"),
+				/Group-Object/,
+				/Import-(Alias|Clixml|Counter|Csv|LocalizedData|Module|PSSession)/,
+				/ImportSystemModules/,
+				/Invoke-(Command|Expression|History|Item|RestMethod|WebRequest|WmiMethod)/,
+				/Join-Path/,
+				/Limit-EventLog/,
+				/Measure-(Command|Object)/,
+				/Move-Item(Property)?/,
+				/* @__PURE__ */ new RegExp("New-(Alias|Event|EventLog|Item(Property)?|Module|ModuleManifest|Object|PSDrive|PSSession|PSSessionConfigurationFile|PSSessionOption|PSTransportOption|Service|TimeSpan|Variable|WebServiceProxy|WinEvent)"),
+				/Out-(Default|File|GridView|Host|Null|Printer|String)/,
+				/Pause/,
+				/(Pop|Push)-Location/,
+				/Read-Host/,
+				/Receive-(Job|PSSession)/,
+				/Register-(EngineEvent|ObjectEvent|PSSessionConfiguration|WmiEvent)/,
+				/Remove-(Computer|Event|EventLog|Item(Property)?|Job|Module|PSBreakpoint|PSDrive|PSSession|PSSnapin|TypeData|Variable|WmiObject)/,
+				/Rename-(Computer|Item(Property)?)/,
+				/Reset-ComputerMachinePassword/,
+				/Resolve-Path/,
+				/Restart-(Computer|Service)/,
+				/Restore-Computer/,
+				/Resume-(Job|Service)/,
+				/Save-Help/,
+				/Select-(Object|String|Xml)/,
+				/Send-MailMessage/,
+				/* @__PURE__ */ new RegExp("Set-(Acl|Alias|AuthenticodeSignature|Content|Date|ExecutionPolicy|Item(Property)?|Location|PSBreakpoint|PSDebug|PSSessionConfiguration|Service|StrictMode|TraceSource|Variable|WmiInstance)"),
+				/Show-(Command|ControlPanelItem|EventLog)/,
+				/Sort-Object/,
+				/Split-Path/,
+				/Start-(Job|Process|Service|Sleep|Transaction|Transcript)/,
+				/Stop-(Computer|Job|Process|Service|Transcript)/,
+				/Suspend-(Job|Service)/,
+				/TabExpansion2/,
+				/Tee-Object/,
+				/Test-(ComputerSecureChannel|Connection|ModuleManifest|Path|PSSessionConfigurationFile)/,
+				/Trace-Command/,
+				/Unblock-File/,
+				/Undo-Transaction/,
+				/Unregister-(Event|PSSessionConfiguration)/,
+				/Update-(FormatData|Help|List|TypeData)/,
+				/Use-Transaction/,
+				/Wait-(Event|Job|Process)/,
+				/Where-Object/,
+				/Write-(Debug|Error|EventLog|Host|Output|Progress|Verbose|Warning)/,
+				/cd|help|mkdir|more|oss|prompt/,
+				/ac|asnp|cat|cd|chdir|clc|clear|clhy|cli|clp|cls|clv|cnsn|compare|copy|cp|cpi|cpp|cvpa|dbp|del|diff|dir|dnsn|ebp/,
+				/echo|epal|epcsv|epsn|erase|etsn|exsn|fc|fl|foreach|ft|fw|gal|gbp|gc|gci|gcm|gcs|gdr|ghy|gi|gjb|gl|gm|gmo|gp|gps/,
+				/group|gsn|gsnp|gsv|gu|gv|gwmi|h|history|icm|iex|ihy|ii|ipal|ipcsv|ipmo|ipsn|irm|ise|iwmi|iwr|kill|lp|ls|man|md/,
+				/measure|mi|mount|move|mp|mv|nal|ndr|ni|nmo|npssc|nsn|nv|ogv|oh|popd|ps|pushd|pwd|r|rbp|rcjb|rcsn|rd|rdr|ren|ri/,
+				/rjb|rm|rmdir|rmo|rni|rnp|rp|rsn|rsnp|rujb|rv|rvpa|rwmi|sajb|sal|saps|sasv|sbp|sc|select|set|shcm|si|sl|sleep|sls/,
+				/sort|sp|spjb|spps|spsv|start|sujb|sv|swmi|tee|trcm|type|where|wjb|write/
+			], {
+				prefix: "",
+				suffix: ""
+			}),
+			buildRegexp([
+				/[$?^_]|Args|ConfirmPreference|ConsoleFileName|DebugPreference|Error|ErrorActionPreference|ErrorView|ExecutionContext/,
+				/FormatEnumerationLimit|Home|Host|Input|MaximumAliasCount|MaximumDriveCount|MaximumErrorCount|MaximumFunctionCount/,
+				/MaximumHistoryCount|MaximumVariableCount|MyInvocation|NestedPromptLevel|OutputEncoding|Pid|Profile|ProgressPreference/,
+				/PSBoundParameters|PSCommandPath|PSCulture|PSDefaultParameterValues|PSEmailServer|PSHome|PSScriptRoot|PSSessionApplicationName/,
+				/PSSessionConfigurationName|PSSessionOption|PSUICulture|PSVersionTable|Pwd|ShellId|StackTrace|VerbosePreference/,
+				/WarningPreference|WhatIfPreference/,
+				/Event|EventArgs|EventSubscriber|Sender/,
+				/Matches|Ofs|ForEach|LastExitCode|PSCmdlet|PSItem|PSSenderInfo|This/,
+				/true|false|null/
+			], {
+				prefix: "\\$",
+				suffix: ""
+			})
+		], { suffix: notCharacterOrDash }),
+		punctuation: /[\[\]{},;`\\\.]|@[({]/,
+		variable: /^[A-Za-z\_][A-Za-z\-\_\d]*\b/
+	};
+	function tokenBase$6(stream, state) {
+		var parent = state.returnStack[state.returnStack.length - 1];
+		if (parent && parent.shouldReturnFrom(state)) {
+			state.tokenize = parent.tokenize;
+			state.returnStack.pop();
+			return state.tokenize(stream, state);
+		}
+		if (stream.eatSpace()) return null;
+		if (stream.eat("(")) {
+			state.bracketNesting += 1;
+			return "punctuation";
+		}
+		if (stream.eat(")")) {
+			state.bracketNesting -= 1;
+			return "punctuation";
+		}
+		for (var key in grammar) if (stream.match(grammar[key])) return key;
+		var ch = stream.next();
+		if (ch === "'") return tokenSingleQuoteString(stream, state);
+		if (ch === "$") return tokenVariable(stream, state);
+		if (ch === "\"") return tokenDoubleQuoteString(stream, state);
+		if (ch === "<" && stream.eat("#")) {
+			state.tokenize = tokenComment$3;
+			return tokenComment$3(stream, state);
+		}
+		if (ch === "#") {
+			stream.skipToEnd();
+			return "comment";
+		}
+		if (ch === "@") {
+			var quoteMatch = stream.eat(/["']/);
+			if (quoteMatch && stream.eol()) {
+				state.tokenize = tokenMultiString;
+				state.startQuote = quoteMatch[0];
+				return tokenMultiString(stream, state);
+			} else if (stream.eol()) return "error";
+			else if (stream.peek().match(/[({]/)) return "punctuation";
+			else if (stream.peek().match(varNames)) return tokenVariable(stream, state);
+		}
+		return "error";
+	}
+	function tokenSingleQuoteString(stream, state) {
+		var ch;
+		while ((ch = stream.peek()) != null) {
+			stream.next();
+			if (ch === "'" && !stream.eat("'")) {
+				state.tokenize = tokenBase$6;
+				return "string";
+			}
+		}
+		return "error";
+	}
+	function tokenDoubleQuoteString(stream, state) {
+		var ch;
+		while ((ch = stream.peek()) != null) {
+			if (ch === "$") {
+				state.tokenize = tokenStringInterpolation;
+				return "string";
+			}
+			stream.next();
+			if (ch === "`") {
+				stream.next();
+				continue;
+			}
+			if (ch === "\"" && !stream.eat("\"")) {
+				state.tokenize = tokenBase$6;
+				return "string";
+			}
+		}
+		return "error";
+	}
+	function tokenStringInterpolation(stream, state) {
+		return tokenInterpolation(stream, state, tokenDoubleQuoteString);
+	}
+	function tokenMultiStringReturn(stream, state) {
+		state.tokenize = tokenMultiString;
+		state.startQuote = "\"";
+		return tokenMultiString(stream, state);
+	}
+	function tokenHereStringInterpolation(stream, state) {
+		return tokenInterpolation(stream, state, tokenMultiStringReturn);
+	}
+	function tokenInterpolation(stream, state, parentTokenize) {
+		if (stream.match("$(")) {
+			var savedBracketNesting = state.bracketNesting;
+			state.returnStack.push({
+				shouldReturnFrom: function(state) {
+					return state.bracketNesting === savedBracketNesting;
+				},
+				tokenize: parentTokenize
+			});
+			state.tokenize = tokenBase$6;
+			state.bracketNesting += 1;
+			return "punctuation";
+		} else {
+			stream.next();
+			state.returnStack.push({
+				shouldReturnFrom: function() {
+					return true;
+				},
+				tokenize: parentTokenize
+			});
+			state.tokenize = tokenVariable;
+			return state.tokenize(stream, state);
+		}
+	}
+	function tokenComment$3(stream, state) {
+		var maybeEnd = false, ch;
+		while ((ch = stream.next()) != null) {
+			if (maybeEnd && ch == ">") {
+				state.tokenize = tokenBase$6;
+				break;
+			}
+			maybeEnd = ch === "#";
+		}
+		return "comment";
+	}
+	function tokenVariable(stream, state) {
+		var ch = stream.peek();
+		if (stream.eat("{")) {
+			state.tokenize = tokenVariableWithBraces;
+			return tokenVariableWithBraces(stream, state);
+		} else if (ch != void 0 && ch.match(varNames)) {
+			stream.eatWhile(varNames);
+			state.tokenize = tokenBase$6;
+			return "variable";
+		} else {
+			state.tokenize = tokenBase$6;
+			return "error";
+		}
+	}
+	function tokenVariableWithBraces(stream, state) {
+		var ch;
+		while ((ch = stream.next()) != null) if (ch === "}") {
+			state.tokenize = tokenBase$6;
+			break;
+		}
+		return "variable";
+	}
+	function tokenMultiString(stream, state) {
+		var quote = state.startQuote;
+		if (stream.sol() && stream.match(new RegExp(quote + "@"))) state.tokenize = tokenBase$6;
+		else if (quote === "\"") while (!stream.eol()) {
+			var ch = stream.peek();
+			if (ch === "$") {
+				state.tokenize = tokenHereStringInterpolation;
+				return "string";
+			}
+			stream.next();
+			if (ch === "`") stream.next();
+		}
+		else stream.skipToEnd();
+		return "string";
+	}
+	const powerShell = {
+		name: "powershell",
+		startState: function() {
+			return {
+				returnStack: [],
+				bracketNesting: 0,
+				tokenize: tokenBase$6
+			};
+		},
+		token: function(stream, state) {
+			return state.tokenize(stream, state);
+		},
+		languageData: { commentTokens: {
+			line: "#",
+			block: {
+				open: "<#",
+				close: "#>"
+			}
+		} }
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/diff.js
+	var TOKEN_NAMES = {
+		"+": "inserted",
+		"-": "deleted",
+		"@": "meta"
+	};
+	const diff = {
+		name: "diff",
+		token: function(stream) {
+			var tw_pos = stream.string.search(/[\t ]+?$/);
+			if (!stream.sol() || tw_pos === 0) {
+				stream.skipToEnd();
+				return ("error " + (TOKEN_NAMES[stream.string.charAt(0)] || "")).replace(/ $/, "");
+			}
+			var token_name = TOKEN_NAMES[stream.peek()] || stream.skipToEnd();
+			if (tw_pos === -1) stream.skipToEnd();
+			else stream.pos = tw_pos;
+			return token_name;
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/protobuf.js
+	function wordRegexp$2(words) {
+		return new RegExp("^((" + words.join(")|(") + "))\\b", "i");
+	}
+	var keywordArray = [
+		"package",
+		"message",
+		"import",
+		"syntax",
+		"required",
+		"optional",
+		"repeated",
+		"reserved",
+		"default",
+		"extensions",
+		"packed",
+		"bool",
+		"bytes",
+		"double",
+		"enum",
+		"float",
+		"string",
+		"int32",
+		"int64",
+		"uint32",
+		"uint64",
+		"sint32",
+		"sint64",
+		"fixed32",
+		"fixed64",
+		"sfixed32",
+		"sfixed64",
+		"option",
+		"service",
+		"rpc",
+		"returns"
+	];
+	var keywords$5 = wordRegexp$2(keywordArray);
+	var identifiers$2 = /* @__PURE__ */ new RegExp("^[_A-Za-z¡-￿][_A-Za-z0-9¡-￿]*");
+	function tokenBase$5(stream) {
+		if (stream.eatSpace()) return null;
+		if (stream.match("//")) {
+			stream.skipToEnd();
+			return "comment";
+		}
+		if (stream.match(/^[0-9\.+-]/, false)) {
+			if (stream.match(/^[+-]?0x[0-9a-fA-F]+/)) return "number";
+			if (stream.match(/^[+-]?\d*\.\d+([EeDd][+-]?\d+)?/)) return "number";
+			if (stream.match(/^[+-]?\d+([EeDd][+-]?\d+)?/)) return "number";
+		}
+		if (stream.match(/^"([^"]|(""))*"/)) return "string";
+		if (stream.match(/^'([^']|(''))*'/)) return "string";
+		if (stream.match(keywords$5)) return "keyword";
+		if (stream.match(identifiers$2)) return "variable";
+		stream.next();
+		return null;
+	}
+	const protobuf = {
+		name: "protobuf",
+		token: tokenBase$5,
+		languageData: { autocomplete: keywordArray }
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/cmake.js
+	var variable_regex = /({)?[a-zA-Z0-9_]+(})?/;
+	function tokenString$3(stream, state) {
+		var current, prev, found_var = false;
+		while (!stream.eol() && (current = stream.next()) != state.pending) {
+			if (current === "$" && prev != "\\" && state.pending == "\"") {
+				found_var = true;
+				break;
+			}
+			prev = current;
+		}
+		if (found_var) stream.backUp(1);
+		if (current == state.pending) state.continueString = false;
+		else state.continueString = true;
+		return "string";
+	}
+	function tokenize(stream, state) {
+		var ch = stream.next();
+		if (ch === "$") {
+			if (stream.match(variable_regex)) return "variableName.special";
+			return "variable";
+		}
+		if (state.continueString) {
+			stream.backUp(1);
+			return tokenString$3(stream, state);
+		}
+		if (stream.match(/(\s+)?\w+\(/) || stream.match(/(\s+)?\w+\ \(/)) {
+			stream.backUp(1);
+			return "def";
+		}
+		if (ch == "#") {
+			stream.skipToEnd();
+			return "comment";
+		}
+		if (ch == "'" || ch == "\"") {
+			state.pending = ch;
+			return tokenString$3(stream, state);
+		}
+		if (ch == "(" || ch == ")") return "bracket";
+		if (ch.match(/[0-9]/)) return "number";
+		stream.eatWhile(/[\w-]/);
+		return null;
+	}
+	const cmake = {
+		name: "cmake",
+		startState: function() {
+			var state = {};
+			state.inDefinition = false;
+			state.inInclude = false;
+			state.continueString = false;
+			state.pending = false;
+			return state;
+		},
+		token: function(stream, state) {
+			if (stream.eatSpace()) return null;
+			return tokenize(stream, state);
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/javascript.js
+	function mkJavaScript(parserConfig) {
+		var statementIndent = parserConfig.statementIndent;
+		var jsonldMode = parserConfig.jsonld;
+		var jsonMode = parserConfig.json || jsonldMode;
+		var isTS = parserConfig.typescript;
+		var wordRE = parserConfig.wordCharacters || /[\w$\xa1-\uffff]/;
+		var keywords = function() {
+			function kw(type) {
+				return {
+					type,
+					style: "keyword"
+				};
+			}
+			var A = kw("keyword a"), B = kw("keyword b"), C = kw("keyword c"), D = kw("keyword d");
+			var operator = kw("operator"), atom = {
+				type: "atom",
+				style: "atom"
+			};
+			return {
+				"if": kw("if"),
+				"while": A,
+				"with": A,
+				"else": B,
+				"do": B,
+				"try": B,
+				"finally": B,
+				"return": D,
+				"break": D,
+				"continue": D,
+				"new": kw("new"),
+				"delete": C,
+				"void": C,
+				"throw": C,
+				"debugger": kw("debugger"),
+				"var": kw("var"),
+				"const": kw("var"),
+				"let": kw("var"),
+				"function": kw("function"),
+				"catch": kw("catch"),
+				"for": kw("for"),
+				"switch": kw("switch"),
+				"case": kw("case"),
+				"default": kw("default"),
+				"in": operator,
+				"typeof": operator,
+				"instanceof": operator,
+				"true": atom,
+				"false": atom,
+				"null": atom,
+				"undefined": atom,
+				"NaN": atom,
+				"Infinity": atom,
+				"this": kw("this"),
+				"class": kw("class"),
+				"super": kw("atom"),
+				"yield": C,
+				"export": kw("export"),
+				"import": kw("import"),
+				"extends": C,
+				"await": C
+			};
+		}();
+		var isOperatorChar = /[+\-*&%=<>!?|~^@]/;
+		var isJsonldKeyword = /^@(context|id|value|language|type|container|list|set|reverse|index|base|vocab|graph)"/;
+		function readRegexp(stream) {
+			var escaped = false, next, inSet = false;
+			while ((next = stream.next()) != null) {
+				if (!escaped) {
+					if (next == "/" && !inSet) return;
+					if (next == "[") inSet = true;
+					else if (inSet && next == "]") inSet = false;
+				}
+				escaped = !escaped && next == "\\";
+			}
+		}
+		var type, content;
+		function ret(tp, style, cont) {
+			type = tp;
+			content = cont;
+			return style;
+		}
+		function tokenBase(stream, state) {
+			var ch = stream.next();
+			if (ch == "\"" || ch == "'") {
+				state.tokenize = tokenString(ch);
+				return state.tokenize(stream, state);
+			} else if (ch == "." && stream.match(/^\d[\d_]*(?:[eE][+\-]?[\d_]+)?/)) return ret("number", "number");
+			else if (ch == "." && stream.match("..")) return ret("spread", "meta");
+			else if (/[\[\]{}\(\),;\:\.]/.test(ch)) return ret(ch);
+			else if (ch == "=" && stream.eat(">")) return ret("=>", "operator");
+			else if (ch == "0" && stream.match(/^(?:x[\dA-Fa-f_]+|o[0-7_]+|b[01_]+)n?/)) return ret("number", "number");
+			else if (/\d/.test(ch)) {
+				stream.match(/^[\d_]*(?:n|(?:\.[\d_]*)?(?:[eE][+\-]?[\d_]+)?)?/);
+				return ret("number", "number");
+			} else if (ch == "/") {
+				if (stream.eat("*")) {
+					state.tokenize = tokenComment;
+					return tokenComment(stream, state);
+				} else if (stream.eat("/")) {
+					stream.skipToEnd();
+					return ret("comment", "comment");
+				} else if (expressionAllowed(stream, state, 1)) {
+					readRegexp(stream);
+					stream.match(/^\b(([gimyus])(?![gimyus]*\2))+\b/);
+					return ret("regexp", "string.special");
+				} else {
+					stream.eat("=");
+					return ret("operator", "operator", stream.current());
+				}
+			} else if (ch == "`") {
+				state.tokenize = tokenQuasi;
+				return tokenQuasi(stream, state);
+			} else if (ch == "#" && stream.peek() == "!") {
+				stream.skipToEnd();
+				return ret("meta", "meta");
+			} else if (ch == "#" && stream.eatWhile(wordRE)) return ret("variable", "property");
+			else if (ch == "<" && stream.match("!--") || ch == "-" && stream.match("->") && !/\S/.test(stream.string.slice(0, stream.start))) {
+				stream.skipToEnd();
+				return ret("comment", "comment");
+			} else if (isOperatorChar.test(ch)) {
+				if (ch != ">" || !state.lexical || state.lexical.type != ">") {
+					if (stream.eat("=")) {
+						if (ch == "!" || ch == "=") stream.eat("=");
+					} else if (/[<>*+\-|&?]/.test(ch)) {
+						stream.eat(ch);
+						if (ch == ">") stream.eat(ch);
+					}
+				}
+				if (ch == "?" && stream.eat(".")) return ret(".");
+				return ret("operator", "operator", stream.current());
+			} else if (wordRE.test(ch)) {
+				stream.eatWhile(wordRE);
+				var word = stream.current();
+				if (state.lastType != ".") {
+					if (keywords.propertyIsEnumerable(word)) {
+						var kw = keywords[word];
+						return ret(kw.type, kw.style, word);
+					}
+					if (word == "async" && stream.match(/^(\s|\/\*([^*]|\*(?!\/))*?\*\/)*[\[\(\w]/, false)) return ret("async", "keyword", word);
+				}
+				return ret("variable", "variable", word);
+			}
+		}
+		function tokenString(quote) {
+			return function(stream, state) {
+				var escaped = false, next;
+				if (jsonldMode && stream.peek() == "@" && stream.match(isJsonldKeyword)) {
+					state.tokenize = tokenBase;
+					return ret("jsonld-keyword", "meta");
+				}
+				while ((next = stream.next()) != null) {
+					if (next == quote && !escaped) break;
+					escaped = !escaped && next == "\\";
+				}
+				if (!escaped) state.tokenize = tokenBase;
+				return ret("string", "string");
+			};
+		}
+		function tokenComment(stream, state) {
+			var maybeEnd = false, ch;
+			while (ch = stream.next()) {
+				if (ch == "/" && maybeEnd) {
+					state.tokenize = tokenBase;
+					break;
+				}
+				maybeEnd = ch == "*";
+			}
+			return ret("comment", "comment");
+		}
+		function tokenQuasi(stream, state) {
+			var escaped = false, next;
+			while ((next = stream.next()) != null) {
+				if (!escaped && (next == "`" || next == "$" && stream.eat("{"))) {
+					state.tokenize = tokenBase;
+					break;
+				}
+				escaped = !escaped && next == "\\";
+			}
+			return ret("quasi", "string.special", stream.current());
+		}
+		var brackets = "([{}])";
+		function findFatArrow(stream, state) {
+			if (state.fatArrowAt) state.fatArrowAt = null;
+			var arrow = stream.string.indexOf("=>", stream.start);
+			if (arrow < 0) return;
+			if (isTS) {
+				var m = /:\s*(?:\w+(?:<[^>]*>|\[\])?|\{[^}]*\})\s*$/.exec(stream.string.slice(stream.start, arrow));
+				if (m) arrow = m.index;
+			}
+			var depth = 0, sawSomething = false;
+			for (var pos = arrow - 1; pos >= 0; --pos) {
+				var ch = stream.string.charAt(pos);
+				var bracket = brackets.indexOf(ch);
+				if (bracket >= 0 && bracket < 3) {
+					if (!depth) {
+						++pos;
+						break;
+					}
+					if (--depth == 0) {
+						if (ch == "(") sawSomething = true;
+						break;
+					}
+				} else if (bracket >= 3 && bracket < 6) ++depth;
+				else if (wordRE.test(ch)) sawSomething = true;
+				else if (/["'\/`]/.test(ch)) for (;; --pos) {
+					if (pos == 0) return;
+					if (stream.string.charAt(pos - 1) == ch && stream.string.charAt(pos - 2) != "\\") {
+						pos--;
+						break;
+					}
+				}
+				else if (sawSomething && !depth) {
+					++pos;
+					break;
+				}
+			}
+			if (sawSomething && !depth) state.fatArrowAt = pos;
+		}
+		var atomicTypes = {
+			"atom": true,
+			"number": true,
+			"variable": true,
+			"string": true,
+			"regexp": true,
+			"this": true,
+			"import": true,
+			"jsonld-keyword": true
+		};
+		function JSLexical(indented, column, type, align, prev, info) {
+			this.indented = indented;
+			this.column = column;
+			this.type = type;
+			this.prev = prev;
+			this.info = info;
+			if (align != null) this.align = align;
+		}
+		function inScope(state, varname) {
+			for (var v = state.localVars; v; v = v.next) if (v.name == varname) return true;
+			for (var cx = state.context; cx; cx = cx.prev) for (var v = cx.vars; v; v = v.next) if (v.name == varname) return true;
+		}
+		function parseJS(state, style, type, content, stream) {
+			var cc = state.cc;
+			cx.state = state;
+			cx.stream = stream;
+			cx.marked = null;
+			cx.cc = cc;
+			cx.style = style;
+			if (!state.lexical.hasOwnProperty("align")) state.lexical.align = true;
+			while (true) if ((cc.length ? cc.pop() : jsonMode ? expression : statement)(type, content)) {
+				while (cc.length && cc[cc.length - 1].lex) cc.pop()();
+				if (cx.marked) return cx.marked;
+				if (type == "variable" && inScope(state, content)) return "variableName.local";
+				return style;
+			}
+		}
+		var cx = {
+			state: null,
+			column: null,
+			marked: null,
+			cc: null
+		};
+		function pass() {
+			for (var i = arguments.length - 1; i >= 0; i--) cx.cc.push(arguments[i]);
+		}
+		function cont() {
+			pass.apply(null, arguments);
+			return true;
+		}
+		function inList(name, list) {
+			for (var v = list; v; v = v.next) if (v.name == name) return true;
+			return false;
+		}
+		function register(varname) {
+			var state = cx.state;
+			cx.marked = "def";
+			if (state.context) {
+				if (state.lexical.info == "var" && state.context && state.context.block) {
+					var newContext = registerVarScoped(varname, state.context);
+					if (newContext != null) {
+						state.context = newContext;
+						return;
+					}
+				} else if (!inList(varname, state.localVars)) {
+					state.localVars = new Var(varname, state.localVars);
+					return;
+				}
+			}
+			if (parserConfig.globalVars && !inList(varname, state.globalVars)) state.globalVars = new Var(varname, state.globalVars);
+		}
+		function registerVarScoped(varname, context) {
+			if (!context) return null;
+			else if (context.block) {
+				var inner = registerVarScoped(varname, context.prev);
+				if (!inner) return null;
+				if (inner == context.prev) return context;
+				return new Context(inner, context.vars, true);
+			} else if (inList(varname, context.vars)) return context;
+			else return new Context(context.prev, new Var(varname, context.vars), false);
+		}
+		function isModifier(name) {
+			return name == "public" || name == "private" || name == "protected" || name == "abstract" || name == "readonly";
+		}
+		function Context(prev, vars, block) {
+			this.prev = prev;
+			this.vars = vars;
+			this.block = block;
+		}
+		function Var(name, next) {
+			this.name = name;
+			this.next = next;
+		}
+		var defaultVars = new Var("this", new Var("arguments", null));
+		function pushcontext() {
+			cx.state.context = new Context(cx.state.context, cx.state.localVars, false);
+			cx.state.localVars = defaultVars;
+		}
+		function pushblockcontext() {
+			cx.state.context = new Context(cx.state.context, cx.state.localVars, true);
+			cx.state.localVars = null;
+		}
+		pushcontext.lex = pushblockcontext.lex = true;
+		function popcontext() {
+			cx.state.localVars = cx.state.context.vars;
+			cx.state.context = cx.state.context.prev;
+		}
+		popcontext.lex = true;
+		function pushlex(type, info) {
+			var result = function() {
+				var state = cx.state, indent = state.indented;
+				if (state.lexical.type == "stat") indent = state.lexical.indented;
+				else for (var outer = state.lexical; outer && outer.type == ")" && outer.align; outer = outer.prev) indent = outer.indented;
+				state.lexical = new JSLexical(indent, cx.stream.column(), type, null, state.lexical, info);
+			};
+			result.lex = true;
+			return result;
+		}
+		function poplex() {
+			var state = cx.state;
+			if (state.lexical.prev) {
+				if (state.lexical.type == ")") state.indented = state.lexical.indented;
+				state.lexical = state.lexical.prev;
+			}
+		}
+		poplex.lex = true;
+		function expect(wanted) {
+			function exp(type) {
+				if (type == wanted) return cont();
+				else if (wanted == ";" || type == "}" || type == ")" || type == "]") return pass();
+				else return cont(exp);
+			}
+			return exp;
+		}
+		function statement(type, value) {
+			if (type == "var") return cont(pushlex("vardef", value), vardef, expect(";"), poplex);
+			if (type == "keyword a") return cont(pushlex("form"), parenExpr, statement, poplex);
+			if (type == "keyword b") return cont(pushlex("form"), statement, poplex);
+			if (type == "keyword d") return cx.stream.match(/^\s*$/, false) ? cont() : cont(pushlex("stat"), maybeexpression, expect(";"), poplex);
+			if (type == "debugger") return cont(expect(";"));
+			if (type == "{") return cont(pushlex("}"), pushblockcontext, block, poplex, popcontext);
+			if (type == ";") return cont();
+			if (type == "if") {
+				if (cx.state.lexical.info == "else" && cx.state.cc[cx.state.cc.length - 1] == poplex) cx.state.cc.pop()();
+				return cont(pushlex("form"), parenExpr, statement, poplex, maybeelse);
+			}
+			if (type == "function") return cont(functiondef);
+			if (type == "for") return cont(pushlex("form"), pushblockcontext, forspec, statement, popcontext, poplex);
+			if (type == "class" || isTS && value == "interface") {
+				cx.marked = "keyword";
+				return cont(pushlex("form", type == "class" ? type : value), className, poplex);
+			}
+			if (type == "variable") {
+				if (isTS && value == "declare") {
+					cx.marked = "keyword";
+					return cont(statement);
+				} else if (isTS && (value == "module" || value == "enum" || value == "type") && cx.stream.match(/^\s*\w/, false)) {
+					cx.marked = "keyword";
+					if (value == "enum") return cont(enumdef);
+					else if (value == "type") return cont(typename, expect("operator"), typeexpr, expect(";"));
+					else return cont(pushlex("form"), pattern, expect("{"), pushlex("}"), block, poplex, poplex);
+				} else if (isTS && value == "namespace") {
+					cx.marked = "keyword";
+					return cont(pushlex("form"), expression, statement, poplex);
+				} else if (isTS && value == "abstract") {
+					cx.marked = "keyword";
+					return cont(statement);
+				} else return cont(pushlex("stat"), maybelabel);
+			}
+			if (type == "switch") return cont(pushlex("form"), parenExpr, expect("{"), pushlex("}", "switch"), pushblockcontext, block, poplex, poplex, popcontext);
+			if (type == "case") return cont(expression, expect(":"));
+			if (type == "default") return cont(expect(":"));
+			if (type == "catch") return cont(pushlex("form"), pushcontext, maybeCatchBinding, statement, poplex, popcontext);
+			if (type == "export") return cont(pushlex("stat"), afterExport, poplex);
+			if (type == "import") return cont(pushlex("stat"), afterImport, poplex);
+			if (type == "async") return cont(statement);
+			if (value == "@") return cont(expression, statement);
+			return pass(pushlex("stat"), expression, expect(";"), poplex);
+		}
+		function maybeCatchBinding(type) {
+			if (type == "(") return cont(funarg, expect(")"));
+		}
+		function expression(type, value) {
+			return expressionInner(type, value, false);
+		}
+		function expressionNoComma(type, value) {
+			return expressionInner(type, value, true);
+		}
+		function parenExpr(type) {
+			if (type != "(") return pass();
+			return cont(pushlex(")"), maybeexpression, expect(")"), poplex);
+		}
+		function expressionInner(type, value, noComma) {
+			if (cx.state.fatArrowAt == cx.stream.start) {
+				var body = noComma ? arrowBodyNoComma : arrowBody;
+				if (type == "(") return cont(pushcontext, pushlex(")"), commasep(funarg, ")"), poplex, expect("=>"), body, popcontext);
+				else if (type == "variable") return pass(pushcontext, pattern, expect("=>"), body, popcontext);
+			}
+			var maybeop = noComma ? maybeoperatorNoComma : maybeoperatorComma;
+			if (atomicTypes.hasOwnProperty(type)) return cont(maybeop);
+			if (type == "function") return cont(functiondef, maybeop);
+			if (type == "class" || isTS && value == "interface") {
+				cx.marked = "keyword";
+				return cont(pushlex("form"), classExpression, poplex);
+			}
+			if (type == "keyword c" || type == "async") return cont(noComma ? expressionNoComma : expression);
+			if (type == "(") return cont(pushlex(")"), maybeexpression, expect(")"), poplex, maybeop);
+			if (type == "operator" || type == "spread") return cont(noComma ? expressionNoComma : expression);
+			if (type == "[") return cont(pushlex("]"), arrayLiteral, poplex, maybeop);
+			if (type == "{") return contCommasep(objprop, "}", null, maybeop);
+			if (type == "quasi") return pass(quasi, maybeop);
+			if (type == "new") return cont(maybeTarget(noComma));
+			return cont();
+		}
+		function maybeexpression(type) {
+			if (type.match(/[;\}\)\],]/)) return pass();
+			return pass(expression);
+		}
+		function maybeoperatorComma(type, value) {
+			if (type == ",") return cont(maybeexpression);
+			return maybeoperatorNoComma(type, value, false);
+		}
+		function maybeoperatorNoComma(type, value, noComma) {
+			var me = noComma == false ? maybeoperatorComma : maybeoperatorNoComma;
+			var expr = noComma == false ? expression : expressionNoComma;
+			if (type == "=>") return cont(pushcontext, noComma ? arrowBodyNoComma : arrowBody, popcontext);
+			if (type == "operator") {
+				if (/\+\+|--/.test(value) || isTS && value == "!") return cont(me);
+				if (isTS && value == "<" && cx.stream.match(/^([^<>]|<[^<>]*>)*>\s*\(/, false)) return cont(pushlex(">"), commasep(typeexpr, ">"), poplex, me);
+				if (value == "?") return cont(expression, expect(":"), expr);
+				return cont(expr);
+			}
+			if (type == "quasi") return pass(quasi, me);
+			if (type == ";") return;
+			if (type == "(") return contCommasep(expressionNoComma, ")", "call", me);
+			if (type == ".") return cont(property, me);
+			if (type == "[") return cont(pushlex("]"), maybeexpression, expect("]"), poplex, me);
+			if (isTS && value == "as") {
+				cx.marked = "keyword";
+				return cont(typeexpr, me);
+			}
+			if (type == "regexp") {
+				cx.state.lastType = cx.marked = "operator";
+				cx.stream.backUp(cx.stream.pos - cx.stream.start - 1);
+				return cont(expr);
+			}
+		}
+		function quasi(type, value) {
+			if (type != "quasi") return pass();
+			if (value.slice(value.length - 2) != "${") return cont(quasi);
+			return cont(maybeexpression, continueQuasi);
+		}
+		function continueQuasi(type) {
+			if (type == "}") {
+				cx.marked = "string.special";
+				cx.state.tokenize = tokenQuasi;
+				return cont(quasi);
+			}
+		}
+		function arrowBody(type) {
+			findFatArrow(cx.stream, cx.state);
+			return pass(type == "{" ? statement : expression);
+		}
+		function arrowBodyNoComma(type) {
+			findFatArrow(cx.stream, cx.state);
+			return pass(type == "{" ? statement : expressionNoComma);
+		}
+		function maybeTarget(noComma) {
+			return function(type) {
+				if (type == ".") return cont(noComma ? targetNoComma : target);
+				else if (type == "variable" && isTS) return cont(maybeTypeArgs, noComma ? maybeoperatorNoComma : maybeoperatorComma);
+				else return pass(noComma ? expressionNoComma : expression);
+			};
+		}
+		function target(_, value) {
+			if (value == "target") {
+				cx.marked = "keyword";
+				return cont(maybeoperatorComma);
+			}
+		}
+		function targetNoComma(_, value) {
+			if (value == "target") {
+				cx.marked = "keyword";
+				return cont(maybeoperatorNoComma);
+			}
+		}
+		function maybelabel(type) {
+			if (type == ":") return cont(poplex, statement);
+			return pass(maybeoperatorComma, expect(";"), poplex);
+		}
+		function property(type) {
+			if (type == "variable") {
+				cx.marked = "property";
+				return cont();
+			}
+		}
+		function objprop(type, value) {
+			if (type == "async") {
+				cx.marked = "property";
+				return cont(objprop);
+			} else if (type == "variable" || cx.style == "keyword") {
+				cx.marked = "property";
+				if (value == "get" || value == "set") return cont(getterSetter);
+				var m;
+				if (isTS && cx.state.fatArrowAt == cx.stream.start && (m = cx.stream.match(/^\s*:\s*/, false))) cx.state.fatArrowAt = cx.stream.pos + m[0].length;
+				return cont(afterprop);
+			} else if (type == "number" || type == "string") {
+				cx.marked = jsonldMode ? "property" : cx.style + " property";
+				return cont(afterprop);
+			} else if (type == "jsonld-keyword") return cont(afterprop);
+			else if (isTS && isModifier(value)) {
+				cx.marked = "keyword";
+				return cont(objprop);
+			} else if (type == "[") return cont(expression, maybetype, expect("]"), afterprop);
+			else if (type == "spread") return cont(expressionNoComma, afterprop);
+			else if (value == "*") {
+				cx.marked = "keyword";
+				return cont(objprop);
+			} else if (type == ":") return pass(afterprop);
+		}
+		function getterSetter(type) {
+			if (type != "variable") return pass(afterprop);
+			cx.marked = "property";
+			return cont(functiondef);
+		}
+		function afterprop(type) {
+			if (type == ":") return cont(expressionNoComma);
+			if (type == "(") return pass(functiondef);
+		}
+		function commasep(what, end, sep) {
+			function proceed(type, value) {
+				if (sep ? sep.indexOf(type) > -1 : type == ",") {
+					var lex = cx.state.lexical;
+					if (lex.info == "call") lex.pos = (lex.pos || 0) + 1;
+					return cont(function(type, value) {
+						if (type == end || value == end) return pass();
+						return pass(what);
+					}, proceed);
+				}
+				if (type == end || value == end) return cont();
+				if (sep && sep.indexOf(";") > -1) return pass(what);
+				return cont(expect(end));
+			}
+			return function(type, value) {
+				if (type == end || value == end) return cont();
+				return pass(what, proceed);
+			};
+		}
+		function contCommasep(what, end, info) {
+			for (var i = 3; i < arguments.length; i++) cx.cc.push(arguments[i]);
+			return cont(pushlex(end, info), commasep(what, end), poplex);
+		}
+		function block(type) {
+			if (type == "}") return cont();
+			return pass(statement, block);
+		}
+		function maybetype(type, value) {
+			if (isTS) {
+				if (type == ":") return cont(typeexpr);
+				if (value == "?") return cont(maybetype);
+			}
+		}
+		function maybetypeOrIn(type, value) {
+			if (isTS && (type == ":" || value == "in")) return cont(typeexpr);
+		}
+		function mayberettype(type) {
+			if (isTS && type == ":") {
+				if (cx.stream.match(/^\s*\w+\s+is\b/, false)) return cont(expression, isKW, typeexpr);
+				else return cont(typeexpr);
+			}
+		}
+		function isKW(_, value) {
+			if (value == "is") {
+				cx.marked = "keyword";
+				return cont();
+			}
+		}
+		function typeexpr(type, value) {
+			if (value == "keyof" || value == "typeof" || value == "infer" || value == "readonly") {
+				cx.marked = "keyword";
+				return cont(value == "typeof" ? expressionNoComma : typeexpr);
+			}
+			if (type == "variable" || value == "void") {
+				cx.marked = "type";
+				return cont(afterType);
+			}
+			if (value == "|" || value == "&") return cont(typeexpr);
+			if (type == "string" || type == "number" || type == "atom") return cont(afterType);
+			if (type == "[") return cont(pushlex("]"), commasep(typeexpr, "]", ","), poplex, afterType);
+			if (type == "{") return cont(pushlex("}"), typeprops, poplex, afterType);
+			if (type == "(") return cont(commasep(typearg, ")"), maybeReturnType, afterType);
+			if (type == "<") return cont(commasep(typeexpr, ">"), typeexpr);
+			if (type == "quasi") return pass(quasiType, afterType);
+		}
+		function maybeReturnType(type) {
+			if (type == "=>") return cont(typeexpr);
+		}
+		function typeprops(type) {
+			if (type.match(/[\}\)\]]/)) return cont();
+			if (type == "," || type == ";") return cont(typeprops);
+			return pass(typeprop, typeprops);
+		}
+		function typeprop(type, value) {
+			if (type == "variable" || cx.style == "keyword") {
+				cx.marked = "property";
+				return cont(typeprop);
+			} else if (value == "?" || type == "number" || type == "string") return cont(typeprop);
+			else if (type == ":") return cont(typeexpr);
+			else if (type == "[") return cont(expect("variable"), maybetypeOrIn, expect("]"), typeprop);
+			else if (type == "(") return pass(functiondecl, typeprop);
+			else if (!type.match(/[;\}\)\],]/)) return cont();
+		}
+		function quasiType(type, value) {
+			if (type != "quasi") return pass();
+			if (value.slice(value.length - 2) != "${") return cont(quasiType);
+			return cont(typeexpr, continueQuasiType);
+		}
+		function continueQuasiType(type) {
+			if (type == "}") {
+				cx.marked = "string.special";
+				cx.state.tokenize = tokenQuasi;
+				return cont(quasiType);
+			}
+		}
+		function typearg(type, value) {
+			if (type == "variable" && cx.stream.match(/^\s*[?:]/, false) || value == "?") return cont(typearg);
+			if (type == ":") return cont(typeexpr);
+			if (type == "spread") return cont(typearg);
+			return pass(typeexpr);
+		}
+		function afterType(type, value) {
+			if (value == "<") return cont(pushlex(">"), commasep(typeexpr, ">"), poplex, afterType);
+			if (value == "|" || type == "." || value == "&") return cont(typeexpr);
+			if (type == "[") return cont(typeexpr, expect("]"), afterType);
+			if (value == "extends" || value == "implements") {
+				cx.marked = "keyword";
+				return cont(typeexpr);
+			}
+			if (value == "?") return cont(typeexpr, expect(":"), typeexpr);
+		}
+		function maybeTypeArgs(_, value) {
+			if (value == "<") return cont(pushlex(">"), commasep(typeexpr, ">"), poplex, afterType);
+		}
+		function typeparam() {
+			return pass(typeexpr, maybeTypeDefault);
+		}
+		function maybeTypeDefault(_, value) {
+			if (value == "=") return cont(typeexpr);
+		}
+		function vardef(_, value) {
+			if (value == "enum") {
+				cx.marked = "keyword";
+				return cont(enumdef);
+			}
+			return pass(pattern, maybetype, maybeAssign, vardefCont);
+		}
+		function pattern(type, value) {
+			if (isTS && isModifier(value)) {
+				cx.marked = "keyword";
+				return cont(pattern);
+			}
+			if (type == "variable") {
+				register(value);
+				return cont();
+			}
+			if (type == "spread") return cont(pattern);
+			if (type == "[") return contCommasep(eltpattern, "]");
+			if (type == "{") return contCommasep(proppattern, "}");
+		}
+		function proppattern(type, value) {
+			if (type == "variable" && !cx.stream.match(/^\s*:/, false)) {
+				register(value);
+				return cont(maybeAssign);
+			}
+			if (type == "variable") cx.marked = "property";
+			if (type == "spread") return cont(pattern);
+			if (type == "}") return pass();
+			if (type == "[") return cont(expression, expect("]"), expect(":"), proppattern);
+			return cont(expect(":"), pattern, maybeAssign);
+		}
+		function eltpattern() {
+			return pass(pattern, maybeAssign);
+		}
+		function maybeAssign(_type, value) {
+			if (value == "=") return cont(expressionNoComma);
+		}
+		function vardefCont(type) {
+			if (type == ",") return cont(vardef);
+		}
+		function maybeelse(type, value) {
+			if (type == "keyword b" && value == "else") return cont(pushlex("form", "else"), statement, poplex);
+		}
+		function forspec(type, value) {
+			if (value == "await") return cont(forspec);
+			if (type == "(") return cont(pushlex(")"), forspec1, poplex);
+		}
+		function forspec1(type) {
+			if (type == "var") return cont(vardef, forspec2);
+			if (type == "variable") return cont(forspec2);
+			return pass(forspec2);
+		}
+		function forspec2(type, value) {
+			if (type == ")") return cont();
+			if (type == ";") return cont(forspec2);
+			if (value == "in" || value == "of") {
+				cx.marked = "keyword";
+				return cont(expression, forspec2);
+			}
+			return pass(expression, forspec2);
+		}
+		function functiondef(type, value) {
+			if (value == "*") {
+				cx.marked = "keyword";
+				return cont(functiondef);
+			}
+			if (type == "variable") {
+				register(value);
+				return cont(functiondef);
+			}
+			if (type == "(") return cont(pushcontext, pushlex(")"), commasep(funarg, ")"), poplex, mayberettype, statement, popcontext);
+			if (isTS && value == "<") return cont(pushlex(">"), commasep(typeparam, ">"), poplex, functiondef);
+		}
+		function functiondecl(type, value) {
+			if (value == "*") {
+				cx.marked = "keyword";
+				return cont(functiondecl);
+			}
+			if (type == "variable") {
+				register(value);
+				return cont(functiondecl);
+			}
+			if (type == "(") return cont(pushcontext, pushlex(")"), commasep(funarg, ")"), poplex, mayberettype, popcontext);
+			if (isTS && value == "<") return cont(pushlex(">"), commasep(typeparam, ">"), poplex, functiondecl);
+		}
+		function typename(type, value) {
+			if (type == "keyword" || type == "variable") {
+				cx.marked = "type";
+				return cont(typename);
+			} else if (value == "<") return cont(pushlex(">"), commasep(typeparam, ">"), poplex);
+		}
+		function funarg(type, value) {
+			if (value == "@") cont(expression, funarg);
+			if (type == "spread") return cont(funarg);
+			if (isTS && isModifier(value)) {
+				cx.marked = "keyword";
+				return cont(funarg);
+			}
+			if (isTS && type == "this") return cont(maybetype, maybeAssign);
+			return pass(pattern, maybetype, maybeAssign);
+		}
+		function classExpression(type, value) {
+			if (type == "variable") return className(type, value);
+			return classNameAfter(type, value);
+		}
+		function className(type, value) {
+			if (type == "variable") {
+				register(value);
+				return cont(classNameAfter);
+			}
+		}
+		function classNameAfter(type, value) {
+			if (value == "<") return cont(pushlex(">"), commasep(typeparam, ">"), poplex, classNameAfter);
+			if (value == "extends" || value == "implements" || isTS && type == ",") {
+				if (value == "implements") cx.marked = "keyword";
+				return cont(isTS ? typeexpr : expression, classNameAfter);
+			}
+			if (type == "{") return cont(pushlex("}"), classBody, poplex);
+		}
+		function classBody(type, value) {
+			if (type == "async" || type == "variable" && (value == "static" || value == "get" || value == "set" || isTS && isModifier(value)) && cx.stream.match(/^\s+#?[\w$\xa1-\uffff]/, false)) {
+				cx.marked = "keyword";
+				return cont(classBody);
+			}
+			if (type == "variable" || cx.style == "keyword") {
+				cx.marked = "property";
+				return cont(classfield, classBody);
+			}
+			if (type == "number" || type == "string") return cont(classfield, classBody);
+			if (type == "[") return cont(expression, maybetype, expect("]"), classfield, classBody);
+			if (value == "*") {
+				cx.marked = "keyword";
+				return cont(classBody);
+			}
+			if (isTS && type == "(") return pass(functiondecl, classBody);
+			if (type == ";" || type == ",") return cont(classBody);
+			if (type == "}") return cont();
+			if (value == "@") return cont(expression, classBody);
+		}
+		function classfield(type, value) {
+			if (value == "!" || value == "?") return cont(classfield);
+			if (type == ":") return cont(typeexpr, maybeAssign);
+			if (value == "=") return cont(expressionNoComma);
+			var context = cx.state.lexical.prev;
+			return pass(context && context.info == "interface" ? functiondecl : functiondef);
+		}
+		function afterExport(type, value) {
+			if (value == "*") {
+				cx.marked = "keyword";
+				return cont(maybeFrom, expect(";"));
+			}
+			if (value == "default") {
+				cx.marked = "keyword";
+				return cont(expression, expect(";"));
+			}
+			if (type == "{") return cont(commasep(exportField, "}"), maybeFrom, expect(";"));
+			return pass(statement);
+		}
+		function exportField(type, value) {
+			if (value == "as") {
+				cx.marked = "keyword";
+				return cont(expect("variable"));
+			}
+			if (type == "variable") return pass(expressionNoComma, exportField);
+		}
+		function afterImport(type) {
+			if (type == "string") return cont();
+			if (type == "(") return pass(expression);
+			if (type == ".") return pass(maybeoperatorComma);
+			return pass(importSpec, maybeMoreImports, maybeFrom);
+		}
+		function importSpec(type, value) {
+			if (type == "{") return contCommasep(importSpec, "}");
+			if (type == "variable") register(value);
+			if (value == "*") cx.marked = "keyword";
+			return cont(maybeAs);
+		}
+		function maybeMoreImports(type) {
+			if (type == ",") return cont(importSpec, maybeMoreImports);
+		}
+		function maybeAs(_type, value) {
+			if (value == "as") {
+				cx.marked = "keyword";
+				return cont(importSpec);
+			}
+		}
+		function maybeFrom(_type, value) {
+			if (value == "from") {
+				cx.marked = "keyword";
+				return cont(expression);
+			}
+		}
+		function arrayLiteral(type) {
+			if (type == "]") return cont();
+			return pass(commasep(expressionNoComma, "]"));
+		}
+		function enumdef() {
+			return pass(pushlex("form"), pattern, expect("{"), pushlex("}"), commasep(enummember, "}"), poplex, poplex);
+		}
+		function enummember() {
+			return pass(pattern, maybeAssign);
+		}
+		function isContinuedStatement(state, textAfter) {
+			return state.lastType == "operator" || state.lastType == "," || isOperatorChar.test(textAfter.charAt(0)) || /[,.]/.test(textAfter.charAt(0));
+		}
+		function expressionAllowed(stream, state, backUp) {
+			return state.tokenize == tokenBase && /^(?:operator|sof|keyword [bcd]|case|new|export|default|spread|[\[{}\(,;:]|=>)$/.test(state.lastType) || state.lastType == "quasi" && /\{\s*$/.test(stream.string.slice(0, stream.pos - (backUp || 0)));
+		}
+		return {
+			name: parserConfig.name,
+			startState: function(indentUnit) {
+				var state = {
+					tokenize: tokenBase,
+					lastType: "sof",
+					cc: [],
+					lexical: new JSLexical(-indentUnit, 0, "block", false),
+					localVars: parserConfig.localVars,
+					context: parserConfig.localVars && new Context(null, null, false),
+					indented: 0
+				};
+				if (parserConfig.globalVars && typeof parserConfig.globalVars == "object") state.globalVars = parserConfig.globalVars;
+				return state;
+			},
+			token: function(stream, state) {
+				if (stream.sol()) {
+					if (!state.lexical.hasOwnProperty("align")) state.lexical.align = false;
+					state.indented = stream.indentation();
+					findFatArrow(stream, state);
+				}
+				if (state.tokenize != tokenComment && stream.eatSpace()) return null;
+				var style = state.tokenize(stream, state);
+				if (type == "comment") return style;
+				state.lastType = type == "operator" && (content == "++" || content == "--") ? "incdec" : type;
+				return parseJS(state, style, type, content, stream);
+			},
+			indent: function(state, textAfter, cx) {
+				if (state.tokenize == tokenComment || state.tokenize == tokenQuasi) return null;
+				if (state.tokenize != tokenBase) return 0;
+				var firstChar = textAfter && textAfter.charAt(0), lexical = state.lexical, top;
+				if (!/^\s*else\b/.test(textAfter)) for (var i = state.cc.length - 1; i >= 0; --i) {
+					var c = state.cc[i];
+					if (c == poplex) lexical = lexical.prev;
+					else if (c != maybeelse && c != popcontext) break;
+				}
+				while ((lexical.type == "stat" || lexical.type == "form") && (firstChar == "}" || (top = state.cc[state.cc.length - 1]) && (top == maybeoperatorComma || top == maybeoperatorNoComma) && !/^[,\.=+\-*:?[\(]/.test(textAfter))) lexical = lexical.prev;
+				if (statementIndent && lexical.type == ")" && lexical.prev.type == "stat") lexical = lexical.prev;
+				var type = lexical.type, closing = firstChar == type;
+				if (type == "vardef") return lexical.indented + (state.lastType == "operator" || state.lastType == "," ? lexical.info.length + 1 : 0);
+				else if (type == "form" && firstChar == "{") return lexical.indented;
+				else if (type == "form") return lexical.indented + cx.unit;
+				else if (type == "stat") return lexical.indented + (isContinuedStatement(state, textAfter) ? statementIndent || cx.unit : 0);
+				else if (lexical.info == "switch" && !closing && parserConfig.doubleIndentSwitch != false) return lexical.indented + (/^(?:case|default)\b/.test(textAfter) ? cx.unit : 2 * cx.unit);
+				else if (lexical.align) return lexical.column + (closing ? 0 : 1);
+				else return lexical.indented + (closing ? 0 : cx.unit);
+			},
+			languageData: {
+				indentOnInput: /^\s*(?:case .*?:|default:|\{|\})$/,
+				commentTokens: jsonMode ? void 0 : {
+					line: "//",
+					block: {
+						open: "/*",
+						close: "*/"
+					}
+				},
+				closeBrackets: { brackets: [
+					"(",
+					"[",
+					"{",
+					"'",
+					"\"",
+					"`"
+				] },
+				wordChars: "$"
+			}
+		};
+	}
+	const javascript = mkJavaScript({ name: "javascript" });
+	mkJavaScript({
+		name: "json",
+		json: true
+	});
+	mkJavaScript({
+		name: "json",
+		jsonld: true
+	});
+	mkJavaScript({
+		name: "typescript",
+		typescript: true
+	});
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/pug.js
+	var ATTRS_NEST = {
+		"{": "}",
+		"(": ")",
+		"[": "]"
+	};
+	function defaultCopyState(state) {
+		if (typeof state != "object") return state;
+		let newState = {};
+		for (let prop in state) {
+			let val = state[prop];
+			newState[prop] = val instanceof Array ? val.slice() : val;
+		}
+		return newState;
+	}
+	var State = class State {
+		constructor(indentUnit) {
+			this.indentUnit = indentUnit;
+			this.javaScriptLine = false;
+			this.javaScriptLineExcludesColon = false;
+			this.javaScriptArguments = false;
+			this.javaScriptArgumentsDepth = 0;
+			this.isInterpolating = false;
+			this.interpolationNesting = 0;
+			this.jsState = javascript.startState(indentUnit);
+			this.restOfLine = "";
+			this.isIncludeFiltered = false;
+			this.isEach = false;
+			this.lastTag = "";
+			this.isAttrs = false;
+			this.attrsNest = [];
+			this.inAttributeName = true;
+			this.attributeIsType = false;
+			this.attrValue = "";
+			this.indentOf = Infinity;
+			this.indentToken = "";
+		}
+		copy() {
+			var res = new State(this.indentUnit);
+			res.javaScriptLine = this.javaScriptLine;
+			res.javaScriptLineExcludesColon = this.javaScriptLineExcludesColon;
+			res.javaScriptArguments = this.javaScriptArguments;
+			res.javaScriptArgumentsDepth = this.javaScriptArgumentsDepth;
+			res.isInterpolating = this.isInterpolating;
+			res.interpolationNesting = this.interpolationNesting;
+			res.jsState = (javascript.copyState || defaultCopyState)(this.jsState);
+			res.restOfLine = this.restOfLine;
+			res.isIncludeFiltered = this.isIncludeFiltered;
+			res.isEach = this.isEach;
+			res.lastTag = this.lastTag;
+			res.isAttrs = this.isAttrs;
+			res.attrsNest = this.attrsNest.slice();
+			res.inAttributeName = this.inAttributeName;
+			res.attributeIsType = this.attributeIsType;
+			res.attrValue = this.attrValue;
+			res.indentOf = this.indentOf;
+			res.indentToken = this.indentToken;
+			return res;
+		}
+	};
+	function javaScript(stream, state) {
+		if (stream.sol()) {
+			state.javaScriptLine = false;
+			state.javaScriptLineExcludesColon = false;
+		}
+		if (state.javaScriptLine) {
+			if (state.javaScriptLineExcludesColon && stream.peek() === ":") {
+				state.javaScriptLine = false;
+				state.javaScriptLineExcludesColon = false;
+				return;
+			}
+			var tok = javascript.token(stream, state.jsState);
+			if (stream.eol()) state.javaScriptLine = false;
+			return tok || true;
+		}
+	}
+	function javaScriptArguments(stream, state) {
+		if (state.javaScriptArguments) {
+			if (state.javaScriptArgumentsDepth === 0 && stream.peek() !== "(") {
+				state.javaScriptArguments = false;
+				return;
+			}
+			if (stream.peek() === "(") state.javaScriptArgumentsDepth++;
+			else if (stream.peek() === ")") state.javaScriptArgumentsDepth--;
+			if (state.javaScriptArgumentsDepth === 0) {
+				state.javaScriptArguments = false;
+				return;
+			}
+			return javascript.token(stream, state.jsState) || true;
+		}
+	}
+	function yieldStatement(stream) {
+		if (stream.match(/^yield\b/)) return "keyword";
+	}
+	function doctype(stream) {
+		if (stream.match(/^(?:doctype) *([^\n]+)?/)) return "meta";
+	}
+	function interpolation(stream, state) {
+		if (stream.match("#{")) {
+			state.isInterpolating = true;
+			state.interpolationNesting = 0;
+			return "punctuation";
+		}
+	}
+	function interpolationContinued(stream, state) {
+		if (state.isInterpolating) {
+			if (stream.peek() === "}") {
+				state.interpolationNesting--;
+				if (state.interpolationNesting < 0) {
+					stream.next();
+					state.isInterpolating = false;
+					return "punctuation";
+				}
+			} else if (stream.peek() === "{") state.interpolationNesting++;
+			return javascript.token(stream, state.jsState) || true;
+		}
+	}
+	function caseStatement(stream, state) {
+		if (stream.match(/^case\b/)) {
+			state.javaScriptLine = true;
+			return "keyword";
+		}
+	}
+	function when(stream, state) {
+		if (stream.match(/^when\b/)) {
+			state.javaScriptLine = true;
+			state.javaScriptLineExcludesColon = true;
+			return "keyword";
+		}
+	}
+	function defaultStatement(stream) {
+		if (stream.match(/^default\b/)) return "keyword";
+	}
+	function extendsStatement(stream, state) {
+		if (stream.match(/^extends?\b/)) {
+			state.restOfLine = "string";
+			return "keyword";
+		}
+	}
+	function append(stream, state) {
+		if (stream.match(/^append\b/)) {
+			state.restOfLine = "variable";
+			return "keyword";
+		}
+	}
+	function prepend(stream, state) {
+		if (stream.match(/^prepend\b/)) {
+			state.restOfLine = "variable";
+			return "keyword";
+		}
+	}
+	function block(stream, state) {
+		if (stream.match(/^block\b *(?:(prepend|append)\b)?/)) {
+			state.restOfLine = "variable";
+			return "keyword";
+		}
+	}
+	function include(stream, state) {
+		if (stream.match(/^include\b/)) {
+			state.restOfLine = "string";
+			return "keyword";
+		}
+	}
+	function includeFiltered(stream, state) {
+		if (stream.match(/^include:([a-zA-Z0-9\-]+)/, false) && stream.match("include")) {
+			state.isIncludeFiltered = true;
+			return "keyword";
+		}
+	}
+	function includeFilteredContinued(stream, state) {
+		if (state.isIncludeFiltered) {
+			var tok = filter(stream, state);
+			state.isIncludeFiltered = false;
+			state.restOfLine = "string";
+			return tok;
+		}
+	}
+	function mixin(stream, state) {
+		if (stream.match(/^mixin\b/)) {
+			state.javaScriptLine = true;
+			return "keyword";
+		}
+	}
+	function call(stream, state) {
+		if (stream.match(/^\+([-\w]+)/)) {
+			if (!stream.match(/^\( *[-\w]+ *=/, false)) {
+				state.javaScriptArguments = true;
+				state.javaScriptArgumentsDepth = 0;
+			}
+			return "variable";
+		}
+		if (stream.match("+#{", false)) {
+			stream.next();
+			state.mixinCallAfter = true;
+			return interpolation(stream, state);
+		}
+	}
+	function callArguments(stream, state) {
+		if (state.mixinCallAfter) {
+			state.mixinCallAfter = false;
+			if (!stream.match(/^\( *[-\w]+ *=/, false)) {
+				state.javaScriptArguments = true;
+				state.javaScriptArgumentsDepth = 0;
+			}
+			return true;
+		}
+	}
+	function conditional(stream, state) {
+		if (stream.match(/^(if|unless|else if|else)\b/)) {
+			state.javaScriptLine = true;
+			return "keyword";
+		}
+	}
+	function each(stream, state) {
+		if (stream.match(/^(- *)?(each|for)\b/)) {
+			state.isEach = true;
+			return "keyword";
+		}
+	}
+	function eachContinued(stream, state) {
+		if (state.isEach) {
+			if (stream.match(/^ in\b/)) {
+				state.javaScriptLine = true;
+				state.isEach = false;
+				return "keyword";
+			} else if (stream.sol() || stream.eol()) state.isEach = false;
+			else if (stream.next()) {
+				while (!stream.match(/^ in\b/, false) && stream.next());
+				return "variable";
+			}
+		}
+	}
+	function whileStatement(stream, state) {
+		if (stream.match(/^while\b/)) {
+			state.javaScriptLine = true;
+			return "keyword";
+		}
+	}
+	function tag(stream, state) {
+		var captures;
+		if (captures = stream.match(/^(\w(?:[-:\w]*\w)?)\/?/)) {
+			state.lastTag = captures[1].toLowerCase();
+			return "tag";
+		}
+	}
+	function filter(stream, state) {
+		if (stream.match(/^:([\w\-]+)/)) {
+			setStringMode(stream, state);
+			return "atom";
+		}
+	}
+	function code(stream, state) {
+		if (stream.match(/^(!?=|-)/)) {
+			state.javaScriptLine = true;
+			return "punctuation";
+		}
+	}
+	function id(stream) {
+		if (stream.match(/^#([\w-]+)/)) return "builtin";
+	}
+	function className(stream) {
+		if (stream.match(/^\.([\w-]+)/)) return "className";
+	}
+	function attrs(stream, state) {
+		if (stream.peek() == "(") {
+			stream.next();
+			state.isAttrs = true;
+			state.attrsNest = [];
+			state.inAttributeName = true;
+			state.attrValue = "";
+			state.attributeIsType = false;
+			return "punctuation";
+		}
+	}
+	function attrsContinued(stream, state) {
+		if (state.isAttrs) {
+			if (ATTRS_NEST[stream.peek()]) state.attrsNest.push(ATTRS_NEST[stream.peek()]);
+			if (state.attrsNest[state.attrsNest.length - 1] === stream.peek()) state.attrsNest.pop();
+			else if (stream.eat(")")) {
+				state.isAttrs = false;
+				return "punctuation";
+			}
+			if (state.inAttributeName && stream.match(/^[^=,\)!]+/)) {
+				if (stream.peek() === "=" || stream.peek() === "!") {
+					state.inAttributeName = false;
+					state.jsState = javascript.startState(2);
+					if (state.lastTag === "script" && stream.current().trim().toLowerCase() === "type") state.attributeIsType = true;
+					else state.attributeIsType = false;
+				}
+				return "attribute";
+			}
+			var tok = javascript.token(stream, state.jsState);
+			if (state.attrsNest.length === 0 && (tok === "string" || tok === "variable" || tok === "keyword")) try {
+				Function("", "var x " + state.attrValue.replace(/,\s*$/, "").replace(/^!/, ""));
+				state.inAttributeName = true;
+				state.attrValue = "";
+				stream.backUp(stream.current().length);
+				return attrsContinued(stream, state);
+			} catch (ex) {}
+			state.attrValue += stream.current();
+			return tok || true;
+		}
+	}
+	function attributesBlock(stream, state) {
+		if (stream.match(/^&attributes\b/)) {
+			state.javaScriptArguments = true;
+			state.javaScriptArgumentsDepth = 0;
+			return "keyword";
+		}
+	}
+	function indent$1(stream) {
+		if (stream.sol() && stream.eatSpace()) return "indent";
+	}
+	function comment(stream, state) {
+		if (stream.match(/^ *\/\/(-)?([^\n]*)/)) {
+			state.indentOf = stream.indentation();
+			state.indentToken = "comment";
+			return "comment";
+		}
+	}
+	function colon(stream) {
+		if (stream.match(/^: */)) return "colon";
+	}
+	function text$1(stream, state) {
+		if (stream.match(/^(?:\| ?| )([^\n]+)/)) return "string";
+		if (stream.match(/^(<[^\n]*)/, false)) {
+			setStringMode(stream, state);
+			stream.skipToEnd();
+			return state.indentToken;
+		}
+	}
+	function dot(stream, state) {
+		if (stream.eat(".")) {
+			setStringMode(stream, state);
+			return "dot";
+		}
+	}
+	function fail(stream) {
+		stream.next();
+		return null;
+	}
+	function setStringMode(stream, state) {
+		state.indentOf = stream.indentation();
+		state.indentToken = "string";
+	}
+	function restOfLine(stream, state) {
+		if (stream.sol()) state.restOfLine = "";
+		if (state.restOfLine) {
+			stream.skipToEnd();
+			var tok = state.restOfLine;
+			state.restOfLine = "";
+			return tok;
+		}
+	}
+	function startState(indentUnit) {
+		return new State(indentUnit);
+	}
+	function copyState(state) {
+		return state.copy();
+	}
+	function nextToken(stream, state) {
+		var tok = restOfLine(stream, state) || interpolationContinued(stream, state) || includeFilteredContinued(stream, state) || eachContinued(stream, state) || attrsContinued(stream, state) || javaScript(stream, state) || javaScriptArguments(stream, state) || callArguments(stream, state) || yieldStatement(stream) || doctype(stream) || interpolation(stream, state) || caseStatement(stream, state) || when(stream, state) || defaultStatement(stream) || extendsStatement(stream, state) || append(stream, state) || prepend(stream, state) || block(stream, state) || include(stream, state) || includeFiltered(stream, state) || mixin(stream, state) || call(stream, state) || conditional(stream, state) || each(stream, state) || whileStatement(stream, state) || tag(stream, state) || filter(stream, state) || code(stream, state) || id(stream) || className(stream) || attrs(stream, state) || attributesBlock(stream, state) || indent$1(stream) || text$1(stream, state) || comment(stream, state) || colon(stream) || dot(stream, state) || fail(stream);
+		return tok === true ? null : tok;
+	}
+	const pug = {
+		startState,
+		copyState,
+		token: nextToken
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/tcl.js
+	function parseWords(str) {
+		var obj = {}, words = str.split(" ");
+		for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
+		return obj;
+	}
+	var keywords$4 = parseWords("Tcl safe after append array auto_execok auto_import auto_load auto_mkindex auto_mkindex_old auto_qualify auto_reset bgerror binary break catch cd close concat continue dde eof encoding error eval exec exit expr fblocked fconfigure fcopy file fileevent filename filename flush for foreach format gets glob global history http if incr info interp join lappend lindex linsert list llength load lrange lreplace lsearch lset lsort memory msgcat namespace open package parray pid pkg::create pkg_mkIndex proc puts pwd re_syntax read regex regexp registry regsub rename resource return scan seek set socket source split string subst switch tcl_endOfWord tcl_findLibrary tcl_startOfNextWord tcl_wordBreakAfter tcl_startOfPreviousWord tcl_wordBreakBefore tcltest tclvars tell time trace unknown unset update uplevel upvar variable vwait");
+	var functions = parseWords("if elseif else and not or eq ne in ni for foreach while switch");
+	var isOperatorChar$2 = /[+\-*&%=<>!?^\/\|]/;
+	function chain(stream, state, f) {
+		state.tokenize = f;
+		return f(stream, state);
+	}
+	function tokenBase$4(stream, state) {
+		var beforeParams = state.beforeParams;
+		state.beforeParams = false;
+		var ch = stream.next();
+		if ((ch == "\"" || ch == "'") && state.inParams) return chain(stream, state, tokenString$2(ch));
+		else if (/[\[\]{}\(\),;\.]/.test(ch)) {
+			if (ch == "(" && beforeParams) state.inParams = true;
+			else if (ch == ")") state.inParams = false;
+			return null;
+		} else if (/\d/.test(ch)) {
+			stream.eatWhile(/[\w\.]/);
+			return "number";
+		} else if (ch == "#") {
+			if (stream.eat("*")) return chain(stream, state, tokenComment$2);
+			if (ch == "#" && stream.match(/ *\[ *\[/)) return chain(stream, state, tokenUnparsed);
+			stream.skipToEnd();
+			return "comment";
+		} else if (ch == "\"") {
+			stream.skipTo(/"/);
+			return "comment";
+		} else if (ch == "$") {
+			stream.eatWhile(/[$_a-z0-9A-Z\.{:]/);
+			stream.eatWhile(/}/);
+			state.beforeParams = true;
+			return "builtin";
+		} else if (isOperatorChar$2.test(ch)) {
+			stream.eatWhile(isOperatorChar$2);
+			return "comment";
+		} else {
+			stream.eatWhile(/[\w\$_{}\xa1-\uffff]/);
+			var word = stream.current().toLowerCase();
+			if (keywords$4 && keywords$4.propertyIsEnumerable(word)) return "keyword";
+			if (functions && functions.propertyIsEnumerable(word)) {
+				state.beforeParams = true;
+				return "keyword";
+			}
+			return null;
+		}
+	}
+	function tokenString$2(quote) {
+		return function(stream, state) {
+			var escaped = false, next, end = false;
+			while ((next = stream.next()) != null) {
+				if (next == quote && !escaped) {
+					end = true;
+					break;
+				}
+				escaped = !escaped && next == "\\";
+			}
+			if (end) state.tokenize = tokenBase$4;
+			return "string";
+		};
+	}
+	function tokenComment$2(stream, state) {
+		var maybeEnd = false, ch;
+		while (ch = stream.next()) {
+			if (ch == "#" && maybeEnd) {
+				state.tokenize = tokenBase$4;
+				break;
+			}
+			maybeEnd = ch == "*";
+		}
+		return "comment";
+	}
+	function tokenUnparsed(stream, state) {
+		var maybeEnd = 0, ch;
+		while (ch = stream.next()) {
+			if (ch == "#" && maybeEnd == 2) {
+				state.tokenize = tokenBase$4;
+				break;
+			}
+			if (ch == "]") maybeEnd++;
+			else if (ch != " ") maybeEnd = 0;
+		}
+		return "meta";
+	}
+	const tcl = {
+		name: "tcl",
+		startState: function() {
+			return {
+				tokenize: tokenBase$4,
+				beforeParams: false,
+				inParams: false
+			};
+		},
+		token: function(stream, state) {
+			if (stream.eatSpace()) return null;
+			return state.tokenize(stream, state);
+		},
+		languageData: { commentTokens: { line: "#" } }
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/haskell.js
+	function switchState(source, setState, f) {
+		setState(f);
+		return f(source, setState);
+	}
+	var smallRE = /[a-z_]/;
+	var largeRE = /[A-Z]/;
+	var digitRE = /\d/;
+	var hexitRE = /[0-9A-Fa-f]/;
+	var octitRE = /[0-7]/;
+	var idRE = /[a-z_A-Z0-9'\xa1-\uffff]/;
+	var symbolRE = /[-!#$%&*+.\/<=>?@\\^|~:]/;
+	var specialRE = /[(),;[\]`{}]/;
+	var whiteCharRE = /[ \t\v\f]/;
+	function normal(source, setState) {
+		if (source.eatWhile(whiteCharRE)) return null;
+		var ch = source.next();
+		if (specialRE.test(ch)) {
+			if (ch == "{" && source.eat("-")) {
+				var t = "comment";
+				if (source.eat("#")) t = "meta";
+				return switchState(source, setState, ncomment(t, 1));
+			}
+			return null;
+		}
+		if (ch == "'") {
+			if (source.eat("\\")) source.next();
+			else source.next();
+			if (source.eat("'")) return "string";
+			return "error";
+		}
+		if (ch == "\"") return switchState(source, setState, stringLiteral);
+		if (largeRE.test(ch)) {
+			source.eatWhile(idRE);
+			if (source.eat(".")) return "qualifier";
+			return "type";
+		}
+		if (smallRE.test(ch)) {
+			source.eatWhile(idRE);
+			return "variable";
+		}
+		if (digitRE.test(ch)) {
+			if (ch == "0") {
+				if (source.eat(/[xX]/)) {
+					source.eatWhile(hexitRE);
+					return "integer";
+				}
+				if (source.eat(/[oO]/)) {
+					source.eatWhile(octitRE);
+					return "number";
+				}
+			}
+			source.eatWhile(digitRE);
+			var t = "number";
+			if (source.match(/^\.\d+/)) t = "number";
+			if (source.eat(/[eE]/)) {
+				t = "number";
+				source.eat(/[-+]/);
+				source.eatWhile(digitRE);
+			}
+			return t;
+		}
+		if (ch == "." && source.eat(".")) return "keyword";
+		if (symbolRE.test(ch)) {
+			if (ch == "-" && source.eat(/-/)) {
+				source.eatWhile(/-/);
+				if (!source.eat(symbolRE)) {
+					source.skipToEnd();
+					return "comment";
+				}
+			}
+			source.eatWhile(symbolRE);
+			return "variable";
+		}
+		return "error";
+	}
+	function ncomment(type, nest) {
+		if (nest == 0) return normal;
+		return function(source, setState) {
+			var currNest = nest;
+			while (!source.eol()) {
+				var ch = source.next();
+				if (ch == "{" && source.eat("-")) ++currNest;
+				else if (ch == "-" && source.eat("}")) {
+					--currNest;
+					if (currNest == 0) {
+						setState(normal);
+						return type;
+					}
+				}
+			}
+			setState(ncomment(type, currNest));
+			return type;
+		};
+	}
+	function stringLiteral(source, setState) {
+		while (!source.eol()) {
+			var ch = source.next();
+			if (ch == "\"") {
+				setState(normal);
+				return "string";
+			}
+			if (ch == "\\") {
+				if (source.eol() || source.eat(whiteCharRE)) {
+					setState(stringGap);
+					return "string";
+				}
+				if (source.eat("&")) {} else source.next();
+			}
+		}
+		setState(normal);
+		return "error";
+	}
+	function stringGap(source, setState) {
+		if (source.eat("\\")) return switchState(source, setState, stringLiteral);
+		source.next();
+		setState(normal);
+		return "error";
+	}
+	var wellKnownWords = (function() {
+		var wkw = {};
+		function setType(t) {
+			return function() {
+				for (var i = 0; i < arguments.length; i++) wkw[arguments[i]] = t;
+			};
+		}
+		setType("keyword")("case", "class", "data", "default", "deriving", "do", "else", "foreign", "if", "import", "in", "infix", "infixl", "infixr", "instance", "let", "module", "newtype", "of", "then", "type", "where", "_");
+		setType("keyword")("..", ":", "::", "=", "\\", "<-", "->", "@", "~", "=>");
+		setType("builtin")("!!", "$!", "$", "&&", "+", "++", "-", ".", "/", "/=", "<", "<*", "<=", "<$>", "<*>", "=<<", "==", ">", ">=", ">>", ">>=", "^", "^^", "||", "*", "*>", "**");
+		setType("builtin")("Applicative", "Bool", "Bounded", "Char", "Double", "EQ", "Either", "Enum", "Eq", "False", "FilePath", "Float", "Floating", "Fractional", "Functor", "GT", "IO", "IOError", "Int", "Integer", "Integral", "Just", "LT", "Left", "Maybe", "Monad", "Nothing", "Num", "Ord", "Ordering", "Rational", "Read", "ReadS", "Real", "RealFloat", "RealFrac", "Right", "Show", "ShowS", "String", "True");
+		setType("builtin")("abs", "acos", "acosh", "all", "and", "any", "appendFile", "asTypeOf", "asin", "asinh", "atan", "atan2", "atanh", "break", "catch", "ceiling", "compare", "concat", "concatMap", "const", "cos", "cosh", "curry", "cycle", "decodeFloat", "div", "divMod", "drop", "dropWhile", "either", "elem", "encodeFloat", "enumFrom", "enumFromThen", "enumFromThenTo", "enumFromTo", "error", "even", "exp", "exponent", "fail", "filter", "flip", "floatDigits", "floatRadix", "floatRange", "floor", "fmap", "foldl", "foldl1", "foldr", "foldr1", "fromEnum", "fromInteger", "fromIntegral", "fromRational", "fst", "gcd", "getChar", "getContents", "getLine", "head", "id", "init", "interact", "ioError", "isDenormalized", "isIEEE", "isInfinite", "isNaN", "isNegativeZero", "iterate", "last", "lcm", "length", "lex", "lines", "log", "logBase", "lookup", "map", "mapM", "mapM_", "max", "maxBound", "maximum", "maybe", "min", "minBound", "minimum", "mod", "negate", "not", "notElem", "null", "odd", "or", "otherwise", "pi", "pred", "print", "product", "properFraction", "pure", "putChar", "putStr", "putStrLn", "quot", "quotRem", "read", "readFile", "readIO", "readList", "readLn", "readParen", "reads", "readsPrec", "realToFrac", "recip", "rem", "repeat", "replicate", "return", "reverse", "round", "scaleFloat", "scanl", "scanl1", "scanr", "scanr1", "seq", "sequence", "sequence_", "show", "showChar", "showList", "showParen", "showString", "shows", "showsPrec", "significand", "signum", "sin", "sinh", "snd", "span", "splitAt", "sqrt", "subtract", "succ", "sum", "tail", "take", "takeWhile", "tan", "tanh", "toEnum", "toInteger", "toRational", "truncate", "uncurry", "undefined", "unlines", "until", "unwords", "unzip", "unzip3", "userError", "words", "writeFile", "zip", "zip3", "zipWith", "zipWith3");
+		return wkw;
+	})();
+	const haskell = {
+		name: "haskell",
+		startState: function() {
+			return { f: normal };
+		},
+		copyState: function(s) {
+			return { f: s.f };
+		},
+		token: function(stream, state) {
+			var t = state.f(stream, function(s) {
+				state.f = s;
+			});
+			var w = stream.current();
+			return wellKnownWords.hasOwnProperty(w) ? wellKnownWords[w] : t;
+		},
+		languageData: { commentTokens: {
+			line: "--",
+			block: {
+				open: "{-",
+				close: "-}"
+			}
+		} }
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/clojure.js
+	var atoms$2 = [
+		"false",
+		"nil",
+		"true"
+	];
+	var specialForms = [
+		".",
+		"catch",
+		"def",
+		"do",
+		"if",
+		"monitor-enter",
+		"monitor-exit",
+		"new",
+		"quote",
+		"recur",
+		"set!",
+		"throw",
+		"try",
+		"var"
+	];
+	var coreSymbols = [
+		"*",
+		"*'",
+		"*1",
+		"*2",
+		"*3",
+		"*agent*",
+		"*allow-unresolved-vars*",
+		"*assert*",
+		"*clojure-version*",
+		"*command-line-args*",
+		"*compile-files*",
+		"*compile-path*",
+		"*compiler-options*",
+		"*data-readers*",
+		"*default-data-reader-fn*",
+		"*e",
+		"*err*",
+		"*file*",
+		"*flush-on-newline*",
+		"*fn-loader*",
+		"*in*",
+		"*math-context*",
+		"*ns*",
+		"*out*",
+		"*print-dup*",
+		"*print-length*",
+		"*print-level*",
+		"*print-meta*",
+		"*print-namespace-maps*",
+		"*print-readably*",
+		"*read-eval*",
+		"*reader-resolver*",
+		"*source-path*",
+		"*suppress-read*",
+		"*unchecked-math*",
+		"*use-context-classloader*",
+		"*verbose-defrecords*",
+		"*warn-on-reflection*",
+		"+",
+		"+'",
+		"-",
+		"-'",
+		"->",
+		"->>",
+		"->ArrayChunk",
+		"->Eduction",
+		"->Vec",
+		"->VecNode",
+		"->VecSeq",
+		"-cache-protocol-fn",
+		"-reset-methods",
+		"..",
+		"/",
+		"<",
+		"<=",
+		"=",
+		"==",
+		">",
+		">=",
+		"EMPTY-NODE",
+		"Inst",
+		"StackTraceElement->vec",
+		"Throwable->map",
+		"accessor",
+		"aclone",
+		"add-classpath",
+		"add-watch",
+		"agent",
+		"agent-error",
+		"agent-errors",
+		"aget",
+		"alength",
+		"alias",
+		"all-ns",
+		"alter",
+		"alter-meta!",
+		"alter-var-root",
+		"amap",
+		"ancestors",
+		"and",
+		"any?",
+		"apply",
+		"areduce",
+		"array-map",
+		"as->",
+		"aset",
+		"aset-boolean",
+		"aset-byte",
+		"aset-char",
+		"aset-double",
+		"aset-float",
+		"aset-int",
+		"aset-long",
+		"aset-short",
+		"assert",
+		"assoc",
+		"assoc!",
+		"assoc-in",
+		"associative?",
+		"atom",
+		"await",
+		"await-for",
+		"await1",
+		"bases",
+		"bean",
+		"bigdec",
+		"bigint",
+		"biginteger",
+		"binding",
+		"bit-and",
+		"bit-and-not",
+		"bit-clear",
+		"bit-flip",
+		"bit-not",
+		"bit-or",
+		"bit-set",
+		"bit-shift-left",
+		"bit-shift-right",
+		"bit-test",
+		"bit-xor",
+		"boolean",
+		"boolean-array",
+		"boolean?",
+		"booleans",
+		"bound-fn",
+		"bound-fn*",
+		"bound?",
+		"bounded-count",
+		"butlast",
+		"byte",
+		"byte-array",
+		"bytes",
+		"bytes?",
+		"case",
+		"cast",
+		"cat",
+		"char",
+		"char-array",
+		"char-escape-string",
+		"char-name-string",
+		"char?",
+		"chars",
+		"chunk",
+		"chunk-append",
+		"chunk-buffer",
+		"chunk-cons",
+		"chunk-first",
+		"chunk-next",
+		"chunk-rest",
+		"chunked-seq?",
+		"class",
+		"class?",
+		"clear-agent-errors",
+		"clojure-version",
+		"coll?",
+		"comment",
+		"commute",
+		"comp",
+		"comparator",
+		"compare",
+		"compare-and-set!",
+		"compile",
+		"complement",
+		"completing",
+		"concat",
+		"cond",
+		"cond->",
+		"cond->>",
+		"condp",
+		"conj",
+		"conj!",
+		"cons",
+		"constantly",
+		"construct-proxy",
+		"contains?",
+		"count",
+		"counted?",
+		"create-ns",
+		"create-struct",
+		"cycle",
+		"dec",
+		"dec'",
+		"decimal?",
+		"declare",
+		"dedupe",
+		"default-data-readers",
+		"definline",
+		"definterface",
+		"defmacro",
+		"defmethod",
+		"defmulti",
+		"defn",
+		"defn-",
+		"defonce",
+		"defprotocol",
+		"defrecord",
+		"defstruct",
+		"deftype",
+		"delay",
+		"delay?",
+		"deliver",
+		"denominator",
+		"deref",
+		"derive",
+		"descendants",
+		"destructure",
+		"disj",
+		"disj!",
+		"dissoc",
+		"dissoc!",
+		"distinct",
+		"distinct?",
+		"doall",
+		"dorun",
+		"doseq",
+		"dosync",
+		"dotimes",
+		"doto",
+		"double",
+		"double-array",
+		"double?",
+		"doubles",
+		"drop",
+		"drop-last",
+		"drop-while",
+		"eduction",
+		"empty",
+		"empty?",
+		"ensure",
+		"ensure-reduced",
+		"enumeration-seq",
+		"error-handler",
+		"error-mode",
+		"eval",
+		"even?",
+		"every-pred",
+		"every?",
+		"ex-data",
+		"ex-info",
+		"extend",
+		"extend-protocol",
+		"extend-type",
+		"extenders",
+		"extends?",
+		"false?",
+		"ffirst",
+		"file-seq",
+		"filter",
+		"filterv",
+		"find",
+		"find-keyword",
+		"find-ns",
+		"find-protocol-impl",
+		"find-protocol-method",
+		"find-var",
+		"first",
+		"flatten",
+		"float",
+		"float-array",
+		"float?",
+		"floats",
+		"flush",
+		"fn",
+		"fn?",
+		"fnext",
+		"fnil",
+		"for",
+		"force",
+		"format",
+		"frequencies",
+		"future",
+		"future-call",
+		"future-cancel",
+		"future-cancelled?",
+		"future-done?",
+		"future?",
+		"gen-class",
+		"gen-interface",
+		"gensym",
+		"get",
+		"get-in",
+		"get-method",
+		"get-proxy-class",
+		"get-thread-bindings",
+		"get-validator",
+		"group-by",
+		"halt-when",
+		"hash",
+		"hash-combine",
+		"hash-map",
+		"hash-ordered-coll",
+		"hash-set",
+		"hash-unordered-coll",
+		"ident?",
+		"identical?",
+		"identity",
+		"if-let",
+		"if-not",
+		"if-some",
+		"ifn?",
+		"import",
+		"in-ns",
+		"inc",
+		"inc'",
+		"indexed?",
+		"init-proxy",
+		"inst-ms",
+		"inst-ms*",
+		"inst?",
+		"instance?",
+		"int",
+		"int-array",
+		"int?",
+		"integer?",
+		"interleave",
+		"intern",
+		"interpose",
+		"into",
+		"into-array",
+		"ints",
+		"io!",
+		"isa?",
+		"iterate",
+		"iterator-seq",
+		"juxt",
+		"keep",
+		"keep-indexed",
+		"key",
+		"keys",
+		"keyword",
+		"keyword?",
+		"last",
+		"lazy-cat",
+		"lazy-seq",
+		"let",
+		"letfn",
+		"line-seq",
+		"list",
+		"list*",
+		"list?",
+		"load",
+		"load-file",
+		"load-reader",
+		"load-string",
+		"loaded-libs",
+		"locking",
+		"long",
+		"long-array",
+		"longs",
+		"loop",
+		"macroexpand",
+		"macroexpand-1",
+		"make-array",
+		"make-hierarchy",
+		"map",
+		"map-entry?",
+		"map-indexed",
+		"map?",
+		"mapcat",
+		"mapv",
+		"max",
+		"max-key",
+		"memfn",
+		"memoize",
+		"merge",
+		"merge-with",
+		"meta",
+		"method-sig",
+		"methods",
+		"min",
+		"min-key",
+		"mix-collection-hash",
+		"mod",
+		"munge",
+		"name",
+		"namespace",
+		"namespace-munge",
+		"nat-int?",
+		"neg-int?",
+		"neg?",
+		"newline",
+		"next",
+		"nfirst",
+		"nil?",
+		"nnext",
+		"not",
+		"not-any?",
+		"not-empty",
+		"not-every?",
+		"not=",
+		"ns",
+		"ns-aliases",
+		"ns-imports",
+		"ns-interns",
+		"ns-map",
+		"ns-name",
+		"ns-publics",
+		"ns-refers",
+		"ns-resolve",
+		"ns-unalias",
+		"ns-unmap",
+		"nth",
+		"nthnext",
+		"nthrest",
+		"num",
+		"number?",
+		"numerator",
+		"object-array",
+		"odd?",
+		"or",
+		"parents",
+		"partial",
+		"partition",
+		"partition-all",
+		"partition-by",
+		"pcalls",
+		"peek",
+		"persistent!",
+		"pmap",
+		"pop",
+		"pop!",
+		"pop-thread-bindings",
+		"pos-int?",
+		"pos?",
+		"pr",
+		"pr-str",
+		"prefer-method",
+		"prefers",
+		"primitives-classnames",
+		"print",
+		"print-ctor",
+		"print-dup",
+		"print-method",
+		"print-simple",
+		"print-str",
+		"printf",
+		"println",
+		"println-str",
+		"prn",
+		"prn-str",
+		"promise",
+		"proxy",
+		"proxy-call-with-super",
+		"proxy-mappings",
+		"proxy-name",
+		"proxy-super",
+		"push-thread-bindings",
+		"pvalues",
+		"qualified-ident?",
+		"qualified-keyword?",
+		"qualified-symbol?",
+		"quot",
+		"rand",
+		"rand-int",
+		"rand-nth",
+		"random-sample",
+		"range",
+		"ratio?",
+		"rational?",
+		"rationalize",
+		"re-find",
+		"re-groups",
+		"re-matcher",
+		"re-matches",
+		"re-pattern",
+		"re-seq",
+		"read",
+		"read-line",
+		"read-string",
+		"reader-conditional",
+		"reader-conditional?",
+		"realized?",
+		"record?",
+		"reduce",
+		"reduce-kv",
+		"reduced",
+		"reduced?",
+		"reductions",
+		"ref",
+		"ref-history-count",
+		"ref-max-history",
+		"ref-min-history",
+		"ref-set",
+		"refer",
+		"refer-clojure",
+		"reify",
+		"release-pending-sends",
+		"rem",
+		"remove",
+		"remove-all-methods",
+		"remove-method",
+		"remove-ns",
+		"remove-watch",
+		"repeat",
+		"repeatedly",
+		"replace",
+		"replicate",
+		"require",
+		"reset!",
+		"reset-meta!",
+		"reset-vals!",
+		"resolve",
+		"rest",
+		"restart-agent",
+		"resultset-seq",
+		"reverse",
+		"reversible?",
+		"rseq",
+		"rsubseq",
+		"run!",
+		"satisfies?",
+		"second",
+		"select-keys",
+		"send",
+		"send-off",
+		"send-via",
+		"seq",
+		"seq?",
+		"seqable?",
+		"seque",
+		"sequence",
+		"sequential?",
+		"set",
+		"set-agent-send-executor!",
+		"set-agent-send-off-executor!",
+		"set-error-handler!",
+		"set-error-mode!",
+		"set-validator!",
+		"set?",
+		"short",
+		"short-array",
+		"shorts",
+		"shuffle",
+		"shutdown-agents",
+		"simple-ident?",
+		"simple-keyword?",
+		"simple-symbol?",
+		"slurp",
+		"some",
+		"some->",
+		"some->>",
+		"some-fn",
+		"some?",
+		"sort",
+		"sort-by",
+		"sorted-map",
+		"sorted-map-by",
+		"sorted-set",
+		"sorted-set-by",
+		"sorted?",
+		"special-symbol?",
+		"spit",
+		"split-at",
+		"split-with",
+		"str",
+		"string?",
+		"struct",
+		"struct-map",
+		"subs",
+		"subseq",
+		"subvec",
+		"supers",
+		"swap!",
+		"swap-vals!",
+		"symbol",
+		"symbol?",
+		"sync",
+		"tagged-literal",
+		"tagged-literal?",
+		"take",
+		"take-last",
+		"take-nth",
+		"take-while",
+		"test",
+		"the-ns",
+		"thread-bound?",
+		"time",
+		"to-array",
+		"to-array-2d",
+		"trampoline",
+		"transduce",
+		"transient",
+		"tree-seq",
+		"true?",
+		"type",
+		"unchecked-add",
+		"unchecked-add-int",
+		"unchecked-byte",
+		"unchecked-char",
+		"unchecked-dec",
+		"unchecked-dec-int",
+		"unchecked-divide-int",
+		"unchecked-double",
+		"unchecked-float",
+		"unchecked-inc",
+		"unchecked-inc-int",
+		"unchecked-int",
+		"unchecked-long",
+		"unchecked-multiply",
+		"unchecked-multiply-int",
+		"unchecked-negate",
+		"unchecked-negate-int",
+		"unchecked-remainder-int",
+		"unchecked-short",
+		"unchecked-subtract",
+		"unchecked-subtract-int",
+		"underive",
+		"unquote",
+		"unquote-splicing",
+		"unreduced",
+		"unsigned-bit-shift-right",
+		"update",
+		"update-in",
+		"update-proxy",
+		"uri?",
+		"use",
+		"uuid?",
+		"val",
+		"vals",
+		"var-get",
+		"var-set",
+		"var?",
+		"vary-meta",
+		"vec",
+		"vector",
+		"vector-of",
+		"vector?",
+		"volatile!",
+		"volatile?",
+		"vreset!",
+		"vswap!",
+		"when",
+		"when-first",
+		"when-let",
+		"when-not",
+		"when-some",
+		"while",
+		"with-bindings",
+		"with-bindings*",
+		"with-in-str",
+		"with-loading-context",
+		"with-local-vars",
+		"with-meta",
+		"with-open",
+		"with-out-str",
+		"with-precision",
+		"with-redefs",
+		"with-redefs-fn",
+		"xml-seq",
+		"zero?",
+		"zipmap"
+	];
+	var haveBodyParameter = [
+		"->",
+		"->>",
+		"as->",
+		"binding",
+		"bound-fn",
+		"case",
+		"catch",
+		"comment",
+		"cond",
+		"cond->",
+		"cond->>",
+		"condp",
+		"def",
+		"definterface",
+		"defmethod",
+		"defn",
+		"defmacro",
+		"defprotocol",
+		"defrecord",
+		"defstruct",
+		"deftype",
+		"do",
+		"doseq",
+		"dotimes",
+		"doto",
+		"extend",
+		"extend-protocol",
+		"extend-type",
+		"fn",
+		"for",
+		"future",
+		"if",
+		"if-let",
+		"if-not",
+		"if-some",
+		"let",
+		"letfn",
+		"locking",
+		"loop",
+		"ns",
+		"proxy",
+		"reify",
+		"struct-map",
+		"some->",
+		"some->>",
+		"try",
+		"when",
+		"when-first",
+		"when-let",
+		"when-not",
+		"when-some",
+		"while",
+		"with-bindings",
+		"with-bindings*",
+		"with-in-str",
+		"with-loading-context",
+		"with-local-vars",
+		"with-meta",
+		"with-open",
+		"with-out-str",
+		"with-precision",
+		"with-redefs",
+		"with-redefs-fn"
+	];
+	var atom = createLookupMap(atoms$2);
+	var specialForm = createLookupMap(specialForms);
+	var coreSymbol = createLookupMap(coreSymbols);
+	var hasBodyParameter = createLookupMap(haveBodyParameter);
+	var delimiter = /^(?:[\\\[\]\s"(),;@^`{}~]|$)/;
+	var numberLiteral = /^(?:[+\-]?\d+(?:(?:N|(?:[eE][+\-]?\d+))|(?:\.?\d*(?:M|(?:[eE][+\-]?\d+))?)|\/\d+|[xX][0-9a-fA-F]+|r[0-9a-zA-Z]+)?(?=[\\\[\]\s"#'(),;@^`{}~]|$))/;
+	var characterLiteral = /^(?:\\(?:backspace|formfeed|newline|return|space|tab|o[0-7]{3}|u[0-9A-Fa-f]{4}|x[0-9A-Fa-f]{4}|.)?(?=[\\\[\]\s"(),;@^`{}~]|$))/;
+	var qualifiedSymbol = /^(?:(?:[^\\\/\[\]\d\s"#'(),;@^`{}~.][^\\\[\]\s"(),;@^`{}~.\/]*(?:\.[^\\\/\[\]\d\s"#'(),;@^`{}~.][^\\\[\]\s"(),;@^`{}~.\/]*)*\/)?(?:\/|[^\\\/\[\]\d\s"#'(),;@^`{}~][^\\\[\]\s"(),;@^`{}~]*)*(?=[\\\[\]\s"(),;@^`{}~]|$))/;
+	function base(stream, state) {
+		if (stream.eatSpace() || stream.eat(",")) return ["space", null];
+		if (stream.match(numberLiteral)) return [null, "number"];
+		if (stream.match(characterLiteral)) return [null, "string.special"];
+		if (stream.eat(/^"/)) return (state.tokenize = inString)(stream, state);
+		if (stream.eat(/^[(\[{]/)) return ["open", "bracket"];
+		if (stream.eat(/^[)\]}]/)) return ["close", "bracket"];
+		if (stream.eat(/^;/)) {
+			stream.skipToEnd();
+			return ["space", "comment"];
+		}
+		if (stream.eat(/^[#'@^`~]/)) return [null, "meta"];
+		var matches = stream.match(qualifiedSymbol);
+		var symbol = matches && matches[0];
+		if (!symbol) {
+			stream.next();
+			stream.eatWhile(function(c) {
+				return !is(c, delimiter);
+			});
+			return [null, "error"];
+		}
+		if (symbol === "comment" && state.lastToken === "(") return (state.tokenize = inComment)(stream, state);
+		if (is(symbol, atom) || symbol.charAt(0) === ":") return ["symbol", "atom"];
+		if (is(symbol, specialForm) || is(symbol, coreSymbol)) return ["symbol", "keyword"];
+		if (state.lastToken === "(") return ["symbol", "builtin"];
+		return ["symbol", "variable"];
+	}
+	function inString(stream, state) {
+		var escaped = false, next;
+		while (next = stream.next()) {
+			if (next === "\"" && !escaped) {
+				state.tokenize = base;
+				break;
+			}
+			escaped = !escaped && next === "\\";
+		}
+		return [null, "string"];
+	}
+	function inComment(stream, state) {
+		var parenthesisCount = 1;
+		var next;
+		while (next = stream.next()) {
+			if (next === ")") parenthesisCount--;
+			if (next === "(") parenthesisCount++;
+			if (parenthesisCount === 0) {
+				stream.backUp(1);
+				state.tokenize = base;
+				break;
+			}
+		}
+		return ["space", "comment"];
+	}
+	function createLookupMap(words) {
+		var obj = {};
+		for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
+		return obj;
+	}
+	function is(value, test) {
+		if (test instanceof RegExp) return test.test(value);
+		if (test instanceof Object) return test.propertyIsEnumerable(value);
+	}
+	const clojure = {
+		name: "clojure",
+		startState: function() {
+			return {
+				ctx: {
+					prev: null,
+					start: 0,
+					indentTo: 0
+				},
+				lastToken: null,
+				tokenize: base
+			};
+		},
+		token: function(stream, state) {
+			if (stream.sol() && typeof state.ctx.indentTo !== "number") state.ctx.indentTo = state.ctx.start + 1;
+			var typeStylePair = state.tokenize(stream, state);
+			var type = typeStylePair[0];
+			var style = typeStylePair[1];
+			var current = stream.current();
+			if (type !== "space") {
+				if (state.lastToken === "(" && state.ctx.indentTo === null) {
+					if (type === "symbol" && is(current, hasBodyParameter)) state.ctx.indentTo = state.ctx.start + stream.indentUnit;
+					else state.ctx.indentTo = "next";
+				} else if (state.ctx.indentTo === "next") state.ctx.indentTo = stream.column();
+				state.lastToken = current;
+			}
+			if (type === "open") state.ctx = {
+				prev: state.ctx,
+				start: stream.column(),
+				indentTo: null
+			};
+			else if (type === "close") state.ctx = state.ctx.prev || state.ctx;
+			return style;
+		},
+		indent: function(state) {
+			var i = state.ctx.indentTo;
+			return typeof i === "number" ? i : state.ctx.start + 1;
+		},
+		languageData: {
+			closeBrackets: { brackets: [
+				"(",
+				"[",
+				"{",
+				"\""
+			] },
+			commentTokens: { line: ";;" },
+			autocomplete: [].concat(atoms$2, specialForms, coreSymbols)
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/erlang.js
+	var typeWords = [
+		"-type",
+		"-spec",
+		"-export_type",
+		"-opaque"
+	];
+	var keywordWords = [
+		"after",
+		"begin",
+		"catch",
+		"case",
+		"cond",
+		"end",
+		"fun",
+		"if",
+		"let",
+		"of",
+		"query",
+		"receive",
+		"try",
+		"when"
+	];
+	var separatorRE = /[\->,;]/;
+	var separatorWords = [
+		"->",
+		";",
+		","
+	];
+	var operatorAtomWords = [
+		"and",
+		"andalso",
+		"band",
+		"bnot",
+		"bor",
+		"bsl",
+		"bsr",
+		"bxor",
+		"div",
+		"not",
+		"or",
+		"orelse",
+		"rem",
+		"xor"
+	];
+	var operatorSymbolRE = /[\+\-\*\/<>=\|:!]/;
+	var operatorSymbolWords = [
+		"=",
+		"+",
+		"-",
+		"*",
+		"/",
+		">",
+		">=",
+		"<",
+		"=<",
+		"=:=",
+		"==",
+		"=/=",
+		"/=",
+		"||",
+		"<-",
+		"!"
+	];
+	var openParenRE = /[<\(\[\{]/;
+	var openParenWords = [
+		"<<",
+		"(",
+		"[",
+		"{"
+	];
+	var closeParenRE = /[>\)\]\}]/;
+	var closeParenWords = [
+		"}",
+		"]",
+		")",
+		">>"
+	];
+	var guardWords = [
+		"is_atom",
+		"is_binary",
+		"is_bitstring",
+		"is_boolean",
+		"is_float",
+		"is_function",
+		"is_integer",
+		"is_list",
+		"is_number",
+		"is_pid",
+		"is_port",
+		"is_record",
+		"is_reference",
+		"is_tuple",
+		"atom",
+		"binary",
+		"bitstring",
+		"boolean",
+		"function",
+		"integer",
+		"list",
+		"number",
+		"pid",
+		"port",
+		"record",
+		"reference",
+		"tuple"
+	];
+	var bifWords = [
+		"abs",
+		"adler32",
+		"adler32_combine",
+		"alive",
+		"apply",
+		"atom_to_binary",
+		"atom_to_list",
+		"binary_to_atom",
+		"binary_to_existing_atom",
+		"binary_to_list",
+		"binary_to_term",
+		"bit_size",
+		"bitstring_to_list",
+		"byte_size",
+		"check_process_code",
+		"contact_binary",
+		"crc32",
+		"crc32_combine",
+		"date",
+		"decode_packet",
+		"delete_module",
+		"disconnect_node",
+		"element",
+		"erase",
+		"exit",
+		"float",
+		"float_to_list",
+		"garbage_collect",
+		"get",
+		"get_keys",
+		"group_leader",
+		"halt",
+		"hd",
+		"integer_to_list",
+		"internal_bif",
+		"iolist_size",
+		"iolist_to_binary",
+		"is_alive",
+		"is_atom",
+		"is_binary",
+		"is_bitstring",
+		"is_boolean",
+		"is_float",
+		"is_function",
+		"is_integer",
+		"is_list",
+		"is_number",
+		"is_pid",
+		"is_port",
+		"is_process_alive",
+		"is_record",
+		"is_reference",
+		"is_tuple",
+		"length",
+		"link",
+		"list_to_atom",
+		"list_to_binary",
+		"list_to_bitstring",
+		"list_to_existing_atom",
+		"list_to_float",
+		"list_to_integer",
+		"list_to_pid",
+		"list_to_tuple",
+		"load_module",
+		"make_ref",
+		"module_loaded",
+		"monitor_node",
+		"node",
+		"node_link",
+		"node_unlink",
+		"nodes",
+		"notalive",
+		"now",
+		"open_port",
+		"pid_to_list",
+		"port_close",
+		"port_command",
+		"port_connect",
+		"port_control",
+		"pre_loaded",
+		"process_flag",
+		"process_info",
+		"processes",
+		"purge_module",
+		"put",
+		"register",
+		"registered",
+		"round",
+		"self",
+		"setelement",
+		"size",
+		"spawn",
+		"spawn_link",
+		"spawn_monitor",
+		"spawn_opt",
+		"split_binary",
+		"statistics",
+		"term_to_binary",
+		"time",
+		"throw",
+		"tl",
+		"trunc",
+		"tuple_size",
+		"tuple_to_list",
+		"unlink",
+		"unregister",
+		"whereis"
+	];
+	var anumRE = /[\w@Ø-ÞÀ-Öß-öø-ÿ]/;
+	var escapesRE = /[0-7]{1,3}|[bdefnrstv\\"']|\^[a-zA-Z]|x[0-9a-zA-Z]{2}|x{[0-9a-zA-Z]+}/;
+	function tokenizer(stream, state) {
+		if (state.in_string) {
+			state.in_string = !doubleQuote(stream);
+			return rval(state, stream, "string");
+		}
+		if (state.in_atom) {
+			state.in_atom = !singleQuote(stream);
+			return rval(state, stream, "atom");
+		}
+		if (stream.eatSpace()) return rval(state, stream, "whitespace");
+		if (!peekToken(state) && stream.match(/-\s*[a-zß-öø-ÿ][\wØ-ÞÀ-Öß-öø-ÿ]*/)) {
+			if (is_member(stream.current(), typeWords)) return rval(state, stream, "type");
+			else return rval(state, stream, "attribute");
+		}
+		var ch = stream.next();
+		if (ch == "%") {
+			stream.skipToEnd();
+			return rval(state, stream, "comment");
+		}
+		if (ch == ":") return rval(state, stream, "colon");
+		if (ch == "?") {
+			stream.eatSpace();
+			stream.eatWhile(anumRE);
+			return rval(state, stream, "macro");
+		}
+		if (ch == "#") {
+			stream.eatSpace();
+			stream.eatWhile(anumRE);
+			return rval(state, stream, "record");
+		}
+		if (ch == "$") {
+			if (stream.next() == "\\" && !stream.match(escapesRE)) return rval(state, stream, "error");
+			return rval(state, stream, "number");
+		}
+		if (ch == ".") return rval(state, stream, "dot");
+		if (ch == "'") {
+			if (!(state.in_atom = !singleQuote(stream))) {
+				if (stream.match(/\s*\/\s*[0-9]/, false)) {
+					stream.match(/\s*\/\s*[0-9]/, true);
+					return rval(state, stream, "fun");
+				}
+				if (stream.match(/\s*\(/, false) || stream.match(/\s*:/, false)) return rval(state, stream, "function");
+			}
+			return rval(state, stream, "atom");
+		}
+		if (ch == "\"") {
+			state.in_string = !doubleQuote(stream);
+			return rval(state, stream, "string");
+		}
+		if (/[A-Z_Ø-ÞÀ-Ö]/.test(ch)) {
+			stream.eatWhile(anumRE);
+			return rval(state, stream, "variable");
+		}
+		if (/[a-z_ß-öø-ÿ]/.test(ch)) {
+			stream.eatWhile(anumRE);
+			if (stream.match(/\s*\/\s*[0-9]/, false)) {
+				stream.match(/\s*\/\s*[0-9]/, true);
+				return rval(state, stream, "fun");
+			}
+			var w = stream.current();
+			if (is_member(w, keywordWords)) return rval(state, stream, "keyword");
+			else if (is_member(w, operatorAtomWords)) return rval(state, stream, "operator");
+			else if (stream.match(/\s*\(/, false)) {
+				if (is_member(w, bifWords) && (peekToken(state).token != ":" || peekToken(state, 2).token == "erlang")) return rval(state, stream, "builtin");
+				else if (is_member(w, guardWords)) return rval(state, stream, "guard");
+				else return rval(state, stream, "function");
+			} else if (lookahead(stream) == ":") {
+				if (w == "erlang") return rval(state, stream, "builtin");
+				else return rval(state, stream, "function");
+			} else if (is_member(w, ["true", "false"])) return rval(state, stream, "boolean");
+			else return rval(state, stream, "atom");
+		}
+		var digitRE = /[0-9]/;
+		var radixRE = /[0-9a-zA-Z]/;
+		if (digitRE.test(ch)) {
+			stream.eatWhile(digitRE);
+			if (stream.eat("#")) {
+				if (!stream.eatWhile(radixRE)) stream.backUp(1);
+			} else if (stream.eat(".")) {
+				if (!stream.eatWhile(digitRE)) stream.backUp(1);
+				else if (stream.eat(/[eE]/)) {
+					if (stream.eat(/[-+]/)) {
+						if (!stream.eatWhile(digitRE)) stream.backUp(2);
+					} else if (!stream.eatWhile(digitRE)) stream.backUp(1);
+				}
+			}
+			return rval(state, stream, "number");
+		}
+		if (nongreedy(stream, openParenRE, openParenWords)) return rval(state, stream, "open_paren");
+		if (nongreedy(stream, closeParenRE, closeParenWords)) return rval(state, stream, "close_paren");
+		if (greedy(stream, separatorRE, separatorWords)) return rval(state, stream, "separator");
+		if (greedy(stream, operatorSymbolRE, operatorSymbolWords)) return rval(state, stream, "operator");
+		return rval(state, stream, null);
+	}
+	function nongreedy(stream, re, words) {
+		if (stream.current().length == 1 && re.test(stream.current())) {
+			stream.backUp(1);
+			while (re.test(stream.peek())) {
+				stream.next();
+				if (is_member(stream.current(), words)) return true;
+			}
+			stream.backUp(stream.current().length - 1);
+		}
+		return false;
+	}
+	function greedy(stream, re, words) {
+		if (stream.current().length == 1 && re.test(stream.current())) {
+			while (re.test(stream.peek())) stream.next();
+			while (0 < stream.current().length) if (is_member(stream.current(), words)) return true;
+			else stream.backUp(1);
+			stream.next();
+		}
+		return false;
+	}
+	function doubleQuote(stream) {
+		return quote(stream, "\"", "\\");
+	}
+	function singleQuote(stream) {
+		return quote(stream, "'", "\\");
+	}
+	function quote(stream, quoteChar, escapeChar) {
+		while (!stream.eol()) {
+			var ch = stream.next();
+			if (ch == quoteChar) return true;
+			else if (ch == escapeChar) stream.next();
+		}
+		return false;
+	}
+	function lookahead(stream) {
+		var m = stream.match(/^\s*([^\s%])/, false);
+		return m ? m[1] : "";
+	}
+	function is_member(element, list) {
+		return -1 < list.indexOf(element);
+	}
+	function rval(state, stream, type) {
+		pushToken(state, realToken(type, stream));
+		switch (type) {
+			case "atom": return "atom";
+			case "attribute": return "attribute";
+			case "boolean": return "atom";
+			case "builtin": return "builtin";
+			case "close_paren": return null;
+			case "colon": return null;
+			case "comment": return "comment";
+			case "dot": return null;
+			case "error": return "error";
+			case "fun": return "meta";
+			case "function": return "tag";
+			case "guard": return "property";
+			case "keyword": return "keyword";
+			case "macro": return "macroName";
+			case "number": return "number";
+			case "open_paren": return null;
+			case "operator": return "operator";
+			case "record": return "bracket";
+			case "separator": return null;
+			case "string": return "string";
+			case "type": return "def";
+			case "variable": return "variable";
+			default: return null;
+		}
+	}
+	function aToken(tok, col, ind, typ) {
+		return {
+			token: tok,
+			column: col,
+			indent: ind,
+			type: typ
+		};
+	}
+	function realToken(type, stream) {
+		return aToken(stream.current(), stream.column(), stream.indentation(), type);
+	}
+	function fakeToken(type) {
+		return aToken(type, 0, 0, type);
+	}
+	function peekToken(state, depth) {
+		var len = state.tokenStack.length;
+		var dep = depth ? depth : 1;
+		if (len < dep) return false;
+		else return state.tokenStack[len - dep];
+	}
+	function pushToken(state, token) {
+		if (!(token.type == "comment" || token.type == "whitespace")) {
+			state.tokenStack = maybe_drop_pre(state.tokenStack, token);
+			state.tokenStack = maybe_drop_post(state.tokenStack);
+		}
+	}
+	function maybe_drop_pre(s, token) {
+		var last = s.length - 1;
+		if (0 < last && s[last].type === "record" && token.type === "dot") s.pop();
+		else if (0 < last && s[last].type === "group") {
+			s.pop();
+			s.push(token);
+		} else s.push(token);
+		return s;
+	}
+	function maybe_drop_post(s) {
+		if (!s.length) return s;
+		var last = s.length - 1;
+		if (s[last].type === "dot") return [];
+		if (last > 1 && s[last].type === "fun" && s[last - 1].token === "fun") return s.slice(0, last - 1);
+		switch (s[last].token) {
+			case "}": return d(s, { g: ["{"] });
+			case "]": return d(s, { i: ["["] });
+			case ")": return d(s, { i: ["("] });
+			case ">>": return d(s, { i: ["<<"] });
+			case "end": return d(s, { i: [
+				"begin",
+				"case",
+				"fun",
+				"if",
+				"receive",
+				"try"
+			] });
+			case ",": return d(s, { e: [
+				"begin",
+				"try",
+				"when",
+				"->",
+				",",
+				"(",
+				"[",
+				"{",
+				"<<"
+			] });
+			case "->": return d(s, {
+				r: ["when"],
+				m: [
+					"try",
+					"if",
+					"case",
+					"receive"
+				]
+			});
+			case ";": return d(s, { E: [
+				"case",
+				"fun",
+				"if",
+				"receive",
+				"try",
+				"when"
+			] });
+			case "catch": return d(s, { e: ["try"] });
+			case "of": return d(s, { e: ["case"] });
+			case "after": return d(s, { e: ["receive", "try"] });
+			default: return s;
+		}
+	}
+	function d(stack, tt) {
+		for (var type in tt) {
+			var len = stack.length - 1;
+			var tokens = tt[type];
+			for (var i = len - 1; -1 < i; i--) if (is_member(stack[i].token, tokens)) {
+				var ss = stack.slice(0, i);
+				switch (type) {
+					case "m": return ss.concat(stack[i]).concat(stack[len]);
+					case "r": return ss.concat(stack[len]);
+					case "i": return ss;
+					case "g": return ss.concat(fakeToken("group"));
+					case "E": return ss.concat(stack[i]);
+					case "e": return ss.concat(stack[i]);
+				}
+			}
+		}
+		return type == "E" ? [] : stack;
+	}
+	function indenter(state, textAfter, cx) {
+		var t;
+		var wordAfter = wordafter(textAfter);
+		var currT = peekToken(state, 1);
+		var prevT = peekToken(state, 2);
+		if (state.in_string || state.in_atom) return null;
+		else if (!prevT) return 0;
+		else if (currT.token == "when") return currT.column + cx.unit;
+		else if (wordAfter === "when" && prevT.type === "function") return prevT.indent + cx.unit;
+		else if (wordAfter === "(" && currT.token === "fun") return currT.column + 3;
+		else if (wordAfter === "catch" && (t = getToken(state, ["try"]))) return t.column;
+		else if (is_member(wordAfter, [
+			"end",
+			"after",
+			"of"
+		])) {
+			t = getToken(state, [
+				"begin",
+				"case",
+				"fun",
+				"if",
+				"receive",
+				"try"
+			]);
+			return t ? t.column : null;
+		} else if (is_member(wordAfter, closeParenWords)) {
+			t = getToken(state, openParenWords);
+			return t ? t.column : null;
+		} else if (is_member(currT.token, [
+			",",
+			"|",
+			"||"
+		]) || is_member(wordAfter, [
+			",",
+			"|",
+			"||"
+		])) {
+			t = postcommaToken(state);
+			return t ? t.column + t.token.length : cx.unit;
+		} else if (currT.token == "->") {
+			if (is_member(prevT.token, [
+				"receive",
+				"case",
+				"if",
+				"try"
+			])) return prevT.column + cx.unit + cx.unit;
+			else return prevT.column + cx.unit;
+		} else if (is_member(currT.token, openParenWords)) return currT.column + currT.token.length;
+		else {
+			t = defaultToken(state);
+			return truthy(t) ? t.column + cx.unit : 0;
+		}
+	}
+	function wordafter(str) {
+		var m = str.match(/,|[a-z]+|\}|\]|\)|>>|\|+|\(/);
+		return truthy(m) && m.index === 0 ? m[0] : "";
+	}
+	function postcommaToken(state) {
+		var objs = state.tokenStack.slice(0, -1);
+		var i = getTokenIndex(objs, "type", ["open_paren"]);
+		return truthy(objs[i]) ? objs[i] : false;
+	}
+	function defaultToken(state) {
+		var objs = state.tokenStack;
+		var stop = getTokenIndex(objs, "type", [
+			"open_paren",
+			"separator",
+			"keyword"
+		]);
+		var oper = getTokenIndex(objs, "type", ["operator"]);
+		if (truthy(stop) && truthy(oper) && stop < oper) return objs[stop + 1];
+		else if (truthy(stop)) return objs[stop];
+		else return false;
+	}
+	function getToken(state, tokens) {
+		var objs = state.tokenStack;
+		var i = getTokenIndex(objs, "token", tokens);
+		return truthy(objs[i]) ? objs[i] : false;
+	}
+	function getTokenIndex(objs, propname, propvals) {
+		for (var i = objs.length - 1; -1 < i; i--) if (is_member(objs[i][propname], propvals)) return i;
+		return false;
+	}
+	function truthy(x) {
+		return x !== false && x != null;
+	}
+	const erlang = {
+		name: "erlang",
+		startState() {
+			return {
+				tokenStack: [],
+				in_string: false,
+				in_atom: false
+			};
+		},
+		token: tokenizer,
+		indent: indenter,
+		languageData: { commentTokens: { line: "%" } }
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/julia.js
+	function wordRegexp$1(words, end, pre) {
+		if (typeof pre === "undefined") pre = "";
+		if (typeof end === "undefined") end = "\\b";
+		return new RegExp("^" + pre + "((" + words.join(")|(") + "))" + end);
+	}
+	var octChar = "\\\\[0-7]{1,3}";
+	var hexChar = "\\\\x[A-Fa-f0-9]{1,2}";
+	var sChar = "\\\\[abefnrtv0%?'\"\\\\]";
+	var uChar = "([^\\u0027\\u005C\\uD800-\\uDFFF]|[\\uD800-\\uDFFF][\\uDC00-\\uDFFF])";
+	var asciiOperatorsList = [
+		"[<>]:",
+		"[<>=]=",
+		"<<=?",
+		">>>?=?",
+		"=>",
+		"--?>",
+		"<--[->]?",
+		"\\/\\/",
+		"\\.{2,3}",
+		"[\\.\\\\%*+\\-<>!\\/^|&]=?",
+		"\\?",
+		"\\$",
+		"~",
+		":"
+	];
+	var operators = wordRegexp$1([
+		"[<>]:",
+		"[<>=]=",
+		"[!=]==",
+		"<<=?",
+		">>>?=?",
+		"=>?",
+		"--?>",
+		"<--[->]?",
+		"\\/\\/",
+		"[\\\\%*+\\-<>!\\/^|&\\u00F7\\u22BB]=?",
+		"\\?",
+		"\\$",
+		"~",
+		":",
+		"\\u00D7",
+		"\\u2208",
+		"\\u2209",
+		"\\u220B",
+		"\\u220C",
+		"\\u2218",
+		"\\u221A",
+		"\\u221B",
+		"\\u2229",
+		"\\u222A",
+		"\\u2260",
+		"\\u2264",
+		"\\u2265",
+		"\\u2286",
+		"\\u2288",
+		"\\u228A",
+		"\\u22C5",
+		"\\b(in|isa)\\b(?!.?\\()"
+	], "");
+	var delimiters = /^[;,()[\]{}]/;
+	var identifiers$1 = /^[_A-Za-z\u00A1-\u2217\u2219-\uFFFF][\w\u00A1-\u2217\u2219-\uFFFF]*!*/;
+	var chars = wordRegexp$1([
+		octChar,
+		hexChar,
+		sChar,
+		uChar
+	], "'");
+	var openersList = [
+		"begin",
+		"function",
+		"type",
+		"struct",
+		"immutable",
+		"let",
+		"macro",
+		"for",
+		"while",
+		"quote",
+		"if",
+		"else",
+		"elseif",
+		"try",
+		"finally",
+		"catch",
+		"do"
+	];
+	var closersList = [
+		"end",
+		"else",
+		"elseif",
+		"catch",
+		"finally"
+	];
+	var keywordsList = [
+		"if",
+		"else",
+		"elseif",
+		"while",
+		"for",
+		"begin",
+		"let",
+		"end",
+		"do",
+		"try",
+		"catch",
+		"finally",
+		"return",
+		"break",
+		"continue",
+		"global",
+		"local",
+		"const",
+		"export",
+		"import",
+		"importall",
+		"using",
+		"function",
+		"where",
+		"macro",
+		"module",
+		"baremodule",
+		"struct",
+		"type",
+		"mutable",
+		"immutable",
+		"quote",
+		"typealias",
+		"abstract",
+		"primitive",
+		"bitstype"
+	];
+	var builtinsList = [
+		"true",
+		"false",
+		"nothing",
+		"NaN",
+		"Inf"
+	];
+	var openers = wordRegexp$1(openersList);
+	var closers = wordRegexp$1(closersList);
+	var keywords$3 = wordRegexp$1(keywordsList);
+	var builtins = wordRegexp$1(builtinsList);
+	var macro = /^@[_A-Za-z\u00A1-\uFFFF][\w\u00A1-\uFFFF]*!*/;
+	var symbol = /^:[_A-Za-z\u00A1-\uFFFF][\w\u00A1-\uFFFF]*!*/;
+	var stringPrefixes$1 = /^(`|([_A-Za-z\u00A1-\uFFFF]*"("")?))/;
+	var macroOperators = wordRegexp$1(asciiOperatorsList, "", "@");
+	var symbolOperators = wordRegexp$1(asciiOperatorsList, "", ":");
+	function inArray(state) {
+		return state.nestedArrays > 0;
+	}
+	function inGenerator(state) {
+		return state.nestedGenerators > 0;
+	}
+	function currentScope(state, n) {
+		if (typeof n === "undefined") n = 0;
+		if (state.scopes.length <= n) return null;
+		return state.scopes[state.scopes.length - (n + 1)];
+	}
+	function tokenBase$3(stream, state) {
+		if (stream.match("#=", false)) {
+			state.tokenize = tokenComment$1;
+			return state.tokenize(stream, state);
+		}
+		var leavingExpr = state.leavingExpr;
+		if (stream.sol()) leavingExpr = false;
+		state.leavingExpr = false;
+		if (leavingExpr) {
+			if (stream.match(/^'+/)) return "operator";
+		}
+		if (stream.match(/\.{4,}/)) return "error";
+		else if (stream.match(/\.{1,3}/)) return "operator";
+		if (stream.eatSpace()) return null;
+		var ch = stream.peek();
+		if (ch === "#") {
+			stream.skipToEnd();
+			return "comment";
+		}
+		if (ch === "[") {
+			state.scopes.push("[");
+			state.nestedArrays++;
+		}
+		if (ch === "(") {
+			state.scopes.push("(");
+			state.nestedGenerators++;
+		}
+		if (inArray(state) && ch === "]") {
+			while (state.scopes.length && currentScope(state) !== "[") state.scopes.pop();
+			state.scopes.pop();
+			state.nestedArrays--;
+			state.leavingExpr = true;
+		}
+		if (inGenerator(state) && ch === ")") {
+			while (state.scopes.length && currentScope(state) !== "(") state.scopes.pop();
+			state.scopes.pop();
+			state.nestedGenerators--;
+			state.leavingExpr = true;
+		}
+		if (inArray(state)) {
+			if (state.lastToken == "end" && stream.match(":")) return "operator";
+			if (stream.match("end")) return "number";
+		}
+		var match;
+		if (match = stream.match(openers, false)) state.scopes.push(match[0]);
+		if (stream.match(closers, false)) state.scopes.pop();
+		if (stream.match(/^::(?![:\$])/)) {
+			state.tokenize = tokenAnnotation;
+			return state.tokenize(stream, state);
+		}
+		if (!leavingExpr && (stream.match(symbol) || stream.match(symbolOperators))) return "builtin";
+		if (stream.match(operators)) return "operator";
+		if (stream.match(/^\.?\d/, false)) {
+			var imMatcher = RegExp(/^im\b/);
+			var numberLiteral = false;
+			if (stream.match(/^0x\.[0-9a-f_]+p[\+\-]?[_\d]+/i)) numberLiteral = true;
+			if (stream.match(/^0x[0-9a-f_]+/i)) numberLiteral = true;
+			if (stream.match(/^0b[01_]+/i)) numberLiteral = true;
+			if (stream.match(/^0o[0-7_]+/i)) numberLiteral = true;
+			if (stream.match(/^(?:(?:\d[_\d]*)?\.(?!\.)(?:\d[_\d]*)?|\d[_\d]*\.(?!\.)(?:\d[_\d]*))?([Eef][\+\-]?[_\d]+)?/i)) numberLiteral = true;
+			if (stream.match(/^\d[_\d]*(e[\+\-]?\d+)?/i)) numberLiteral = true;
+			if (numberLiteral) {
+				stream.match(imMatcher);
+				state.leavingExpr = true;
+				return "number";
+			}
+		}
+		if (stream.match("'")) {
+			state.tokenize = tokenChar;
+			return state.tokenize(stream, state);
+		}
+		if (stream.match(stringPrefixes$1)) {
+			state.tokenize = tokenStringFactory$1(stream.current());
+			return state.tokenize(stream, state);
+		}
+		if (stream.match(macro) || stream.match(macroOperators)) return "meta";
+		if (stream.match(delimiters)) return null;
+		if (stream.match(keywords$3)) return "keyword";
+		if (stream.match(builtins)) return "builtin";
+		var isDefinition = state.isDefinition || state.lastToken == "function" || state.lastToken == "macro" || state.lastToken == "type" || state.lastToken == "struct" || state.lastToken == "immutable";
+		if (stream.match(identifiers$1)) {
+			if (isDefinition) {
+				if (stream.peek() === ".") {
+					state.isDefinition = true;
+					return "variable";
+				}
+				state.isDefinition = false;
+				return "def";
+			}
+			state.leavingExpr = true;
+			return "variable";
+		}
+		stream.next();
+		return "error";
+	}
+	function tokenAnnotation(stream, state) {
+		stream.match(/.*?(?=[,;{}()=\s]|$)/);
+		if (stream.match("{")) state.nestedParameters++;
+		else if (stream.match("}") && state.nestedParameters > 0) state.nestedParameters--;
+		if (state.nestedParameters > 0) stream.match(/.*?(?={|})/) || stream.next();
+		else if (state.nestedParameters == 0) state.tokenize = tokenBase$3;
+		return "builtin";
+	}
+	function tokenComment$1(stream, state) {
+		if (stream.match("#=")) state.nestedComments++;
+		if (!stream.match(/.*?(?=(#=|=#))/)) stream.skipToEnd();
+		if (stream.match("=#")) {
+			state.nestedComments--;
+			if (state.nestedComments == 0) state.tokenize = tokenBase$3;
+		}
+		return "comment";
+	}
+	function tokenChar(stream, state) {
+		var isChar = false, match;
+		if (stream.match(chars)) isChar = true;
+		else if (match = stream.match(/\\u([a-f0-9]{1,4})(?=')/i)) {
+			var value = parseInt(match[1], 16);
+			if (value <= 55295 || value >= 57344) {
+				isChar = true;
+				stream.next();
+			}
+		} else if (match = stream.match(/\\U([A-Fa-f0-9]{5,8})(?=')/)) {
+			var value = parseInt(match[1], 16);
+			if (value <= 1114111) {
+				isChar = true;
+				stream.next();
+			}
+		}
+		if (isChar) {
+			state.leavingExpr = true;
+			state.tokenize = tokenBase$3;
+			return "string";
+		}
+		if (!stream.match(/^[^']+(?=')/)) stream.skipToEnd();
+		if (stream.match("'")) state.tokenize = tokenBase$3;
+		return "error";
+	}
+	function tokenStringFactory$1(delimiter) {
+		if (delimiter.substr(-3) === "\"\"\"") delimiter = "\"\"\"";
+		else if (delimiter.substr(-1) === "\"") delimiter = "\"";
+		function tokenString(stream, state) {
+			if (stream.eat("\\")) stream.next();
+			else if (stream.match(delimiter)) {
+				state.tokenize = tokenBase$3;
+				state.leavingExpr = true;
+				return "string";
+			} else stream.eat(/[`"]/);
+			stream.eatWhile(/[^\\`"]/);
+			return "string";
+		}
+		return tokenString;
+	}
+	const julia = {
+		name: "julia",
+		startState: function() {
+			return {
+				tokenize: tokenBase$3,
+				scopes: [],
+				lastToken: null,
+				leavingExpr: false,
+				isDefinition: false,
+				nestedArrays: 0,
+				nestedComments: 0,
+				nestedGenerators: 0,
+				nestedParameters: 0,
+				firstParenPos: -1
+			};
+		},
+		token: function(stream, state) {
+			var style = state.tokenize(stream, state);
+			var current = stream.current();
+			if (current && style) state.lastToken = current;
+			return style;
+		},
+		indent: function(state, textAfter, cx) {
+			var delta = 0;
+			if (textAfter === "]" || textAfter === ")" || /^end\b/.test(textAfter) || /^else/.test(textAfter) || /^catch\b/.test(textAfter) || /^elseif\b/.test(textAfter) || /^finally/.test(textAfter)) delta = -1;
+			return (state.scopes.length + delta) * cx.unit;
+		},
+		languageData: {
+			indentOnInput: /^\s*(end|else|catch|finally)\b$/,
+			commentTokens: {
+				line: "#",
+				block: {
+					open: "#=",
+					close: "=#"
+				}
+			},
+			closeBrackets: { brackets: [
+				"(",
+				"[",
+				"{",
+				"\""
+			] },
+			autocomplete: keywordsList.concat(builtinsList)
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/pascal.js
+	function words$1(str) {
+		var obj = {}, words = str.split(" ");
+		for (var i = 0; i < words.length; ++i) obj[words[i]] = true;
+		return obj;
+	}
+	var keywords$2 = words$1("absolute and array asm begin case const constructor destructor div do downto else end file for function goto if implementation in inherited inline interface label mod nil not object of operator or packed procedure program record reintroduce repeat self set shl shr string then to type unit until uses var while with xor as class dispinterface except exports finalization finally initialization inline is library on out packed property raise resourcestring threadvar try absolute abstract alias assembler bitpacked break cdecl continue cppdecl cvar default deprecated dynamic enumerator experimental export external far far16 forward generic helper implements index interrupt iocheck local message name near nodefault noreturn nostackframe oldfpccall otherwise overload override pascal platform private protected public published read register reintroduce result safecall saveregisters softfloat specialize static stdcall stored strict unaligned unimplemented varargs virtual write");
+	var atoms$1 = { "null": true };
+	var isOperatorChar$1 = /[+\-*&%=<>!?|\/]/;
+	function tokenBase$2(stream, state) {
+		var ch = stream.next();
+		if (ch == "#" && state.startOfLine) {
+			stream.skipToEnd();
+			return "meta";
+		}
+		if (ch == "\"" || ch == "'") {
+			state.tokenize = tokenString$1(ch);
+			return state.tokenize(stream, state);
+		}
+		if (ch == "(" && stream.eat("*")) {
+			state.tokenize = tokenComment;
+			return tokenComment(stream, state);
+		}
+		if (ch == "{") {
+			state.tokenize = tokenCommentBraces;
+			return tokenCommentBraces(stream, state);
+		}
+		if (/[\[\]\(\),;\:\.]/.test(ch)) return null;
+		if (/\d/.test(ch)) {
+			stream.eatWhile(/[\w\.]/);
+			return "number";
+		}
+		if (ch == "/") {
+			if (stream.eat("/")) {
+				stream.skipToEnd();
+				return "comment";
+			}
+		}
+		if (isOperatorChar$1.test(ch)) {
+			stream.eatWhile(isOperatorChar$1);
+			return "operator";
+		}
+		stream.eatWhile(/[\w\$_]/);
+		var cur = stream.current().toLowerCase();
+		if (keywords$2.propertyIsEnumerable(cur)) return "keyword";
+		if (atoms$1.propertyIsEnumerable(cur)) return "atom";
+		return "variable";
+	}
+	function tokenString$1(quote) {
+		return function(stream, state) {
+			var escaped = false, next, end = false;
+			while ((next = stream.next()) != null) {
+				if (next == quote && !escaped) {
+					end = true;
+					break;
+				}
+				escaped = !escaped && next == "\\";
+			}
+			if (end || !escaped) state.tokenize = null;
+			return "string";
+		};
+	}
+	function tokenComment(stream, state) {
+		var maybeEnd = false, ch;
+		while (ch = stream.next()) {
+			if (ch == ")" && maybeEnd) {
+				state.tokenize = null;
+				break;
+			}
+			maybeEnd = ch == "*";
+		}
+		return "comment";
+	}
+	function tokenCommentBraces(stream, state) {
+		var ch;
+		while (ch = stream.next()) if (ch == "}") {
+			state.tokenize = null;
+			break;
+		}
+		return "comment";
+	}
+	const pascal = {
+		name: "pascal",
+		startState: function() {
+			return { tokenize: null };
+		},
+		token: function(stream, state) {
+			if (stream.eatSpace()) return null;
+			var style = (state.tokenize || tokenBase$2)(stream, state);
+			if (style == "comment" || style == "meta") return style;
+			return style;
+		},
+		languageData: {
+			indentOnInput: /^\s*[{}]$/,
+			commentTokens: { block: {
+				open: "(*",
+				close: "*)"
+			} }
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/vb.js
+	var ERRORCLASS = "error";
+	function wordRegexp(words) {
+		return new RegExp("^((" + words.join(")|(") + "))\\b", "i");
+	}
+	var singleOperators = /* @__PURE__ */ new RegExp("^[\\+\\-\\*/%&\\\\|\\^~<>!]");
+	var singleDelimiters = /* @__PURE__ */ new RegExp("^[\\(\\)\\[\\]\\{\\}@,:`=;\\.]");
+	var doubleOperators = /* @__PURE__ */ new RegExp("^((==)|(<>)|(<=)|(>=)|(<>)|(<<)|(>>)|(//)|(\\*\\*))");
+	var doubleDelimiters = /* @__PURE__ */ new RegExp("^((\\+=)|(\\-=)|(\\*=)|(%=)|(/=)|(&=)|(\\|=)|(\\^=))");
+	var tripleDelimiters = /* @__PURE__ */ new RegExp("^((//=)|(>>=)|(<<=)|(\\*\\*=))");
+	var identifiers = /* @__PURE__ */ new RegExp("^[_A-Za-z][_A-Za-z0-9]*");
+	var openingKeywords = [
+		"class",
+		"module",
+		"sub",
+		"enum",
+		"select",
+		"while",
+		"if",
+		"function",
+		"get",
+		"set",
+		"property",
+		"try",
+		"structure",
+		"synclock",
+		"using",
+		"with"
+	];
+	var middleKeywords = [
+		"else",
+		"elseif",
+		"case",
+		"catch",
+		"finally"
+	];
+	var endKeywords = ["next", "loop"];
+	var operatorKeywords = [
+		"and",
+		"andalso",
+		"or",
+		"orelse",
+		"xor",
+		"in",
+		"not",
+		"is",
+		"isnot",
+		"like"
+	];
+	var wordOperators = wordRegexp(operatorKeywords);
+	var commonKeywords = [
+		"#const",
+		"#else",
+		"#elseif",
+		"#end",
+		"#if",
+		"#region",
+		"addhandler",
+		"addressof",
+		"alias",
+		"as",
+		"byref",
+		"byval",
+		"cbool",
+		"cbyte",
+		"cchar",
+		"cdate",
+		"cdbl",
+		"cdec",
+		"cint",
+		"clng",
+		"cobj",
+		"compare",
+		"const",
+		"continue",
+		"csbyte",
+		"cshort",
+		"csng",
+		"cstr",
+		"cuint",
+		"culng",
+		"cushort",
+		"declare",
+		"default",
+		"delegate",
+		"dim",
+		"directcast",
+		"each",
+		"erase",
+		"error",
+		"event",
+		"exit",
+		"explicit",
+		"false",
+		"for",
+		"friend",
+		"gettype",
+		"goto",
+		"handles",
+		"implements",
+		"imports",
+		"infer",
+		"inherits",
+		"interface",
+		"isfalse",
+		"istrue",
+		"lib",
+		"me",
+		"mod",
+		"mustinherit",
+		"mustoverride",
+		"my",
+		"mybase",
+		"myclass",
+		"namespace",
+		"narrowing",
+		"new",
+		"nothing",
+		"notinheritable",
+		"notoverridable",
+		"of",
+		"off",
+		"on",
+		"operator",
+		"option",
+		"optional",
+		"out",
+		"overloads",
+		"overridable",
+		"overrides",
+		"paramarray",
+		"partial",
+		"private",
+		"protected",
+		"public",
+		"raiseevent",
+		"readonly",
+		"redim",
+		"removehandler",
+		"resume",
+		"return",
+		"shadows",
+		"shared",
+		"static",
+		"step",
+		"stop",
+		"strict",
+		"then",
+		"throw",
+		"to",
+		"true",
+		"trycast",
+		"typeof",
+		"until",
+		"until",
+		"when",
+		"widening",
+		"withevents",
+		"writeonly"
+	];
+	var commontypes = [
+		"object",
+		"boolean",
+		"char",
+		"string",
+		"byte",
+		"sbyte",
+		"short",
+		"ushort",
+		"int16",
+		"uint16",
+		"integer",
+		"uinteger",
+		"int32",
+		"uint32",
+		"long",
+		"ulong",
+		"int64",
+		"uint64",
+		"decimal",
+		"single",
+		"double",
+		"float",
+		"date",
+		"datetime",
+		"intptr",
+		"uintptr"
+	];
+	var keywords$1 = wordRegexp(commonKeywords);
+	var types = wordRegexp(commontypes);
+	var stringPrefixes = "\"";
+	var opening = wordRegexp(openingKeywords);
+	var middle = wordRegexp(middleKeywords);
+	var closing = wordRegexp(endKeywords);
+	var doubleClosing = wordRegexp(["end"]);
+	var doOpening = wordRegexp(["do"]);
+	var indentInfo = null;
+	function indent(_stream, state) {
+		state.currentIndent++;
+	}
+	function dedent(_stream, state) {
+		state.currentIndent--;
+	}
+	function tokenBase$1(stream, state) {
+		if (stream.eatSpace()) return null;
+		if (stream.peek() === "'") {
+			stream.skipToEnd();
+			return "comment";
+		}
+		if (stream.match(/^((&H)|(&O))?[0-9\.a-f]/i, false)) {
+			var floatLiteral = false;
+			if (stream.match(/^\d*\.\d+F?/i)) floatLiteral = true;
+			else if (stream.match(/^\d+\.\d*F?/)) floatLiteral = true;
+			else if (stream.match(/^\.\d+F?/)) floatLiteral = true;
+			if (floatLiteral) {
+				stream.eat(/J/i);
+				return "number";
+			}
+			var intLiteral = false;
+			if (stream.match(/^&H[0-9a-f]+/i)) intLiteral = true;
+			else if (stream.match(/^&O[0-7]+/i)) intLiteral = true;
+			else if (stream.match(/^[1-9]\d*F?/)) {
+				stream.eat(/J/i);
+				intLiteral = true;
+			} else if (stream.match(/^0(?![\dx])/i)) intLiteral = true;
+			if (intLiteral) {
+				stream.eat(/L/i);
+				return "number";
+			}
+		}
+		if (stream.match(stringPrefixes)) {
+			state.tokenize = tokenStringFactory(stream.current());
+			return state.tokenize(stream, state);
+		}
+		if (stream.match(tripleDelimiters) || stream.match(doubleDelimiters)) return null;
+		if (stream.match(doubleOperators) || stream.match(singleOperators) || stream.match(wordOperators)) return "operator";
+		if (stream.match(singleDelimiters)) return null;
+		if (stream.match(doOpening)) {
+			indent(stream, state);
+			state.doInCurrentLine = true;
+			return "keyword";
+		}
+		if (stream.match(opening)) {
+			if (!state.doInCurrentLine) indent(stream, state);
+			else state.doInCurrentLine = false;
+			return "keyword";
+		}
+		if (stream.match(middle)) return "keyword";
+		if (stream.match(doubleClosing)) {
+			dedent(stream, state);
+			dedent(stream, state);
+			return "keyword";
+		}
+		if (stream.match(closing)) {
+			dedent(stream, state);
+			return "keyword";
+		}
+		if (stream.match(types)) return "keyword";
+		if (stream.match(keywords$1)) return "keyword";
+		if (stream.match(identifiers)) return "variable";
+		stream.next();
+		return ERRORCLASS;
+	}
+	function tokenStringFactory(delimiter) {
+		var singleline = delimiter.length == 1;
+		var OUTCLASS = "string";
+		return function(stream, state) {
+			while (!stream.eol()) {
+				stream.eatWhile(/[^'"]/);
+				if (stream.match(delimiter)) {
+					state.tokenize = tokenBase$1;
+					return OUTCLASS;
+				} else stream.eat(/['"]/);
+			}
+			if (singleline) state.tokenize = tokenBase$1;
+			return OUTCLASS;
+		};
+	}
+	function tokenLexer(stream, state) {
+		var style = state.tokenize(stream, state);
+		var current = stream.current();
+		if (current === ".") {
+			style = state.tokenize(stream, state);
+			if (style === "variable") return "variable";
+			else return ERRORCLASS;
+		}
+		var delimiter_index = "[({".indexOf(current);
+		if (delimiter_index !== -1) indent(stream, state);
+		if (indentInfo === "dedent") {
+			if (dedent(stream, state)) return ERRORCLASS;
+		}
+		delimiter_index = "])}".indexOf(current);
+		if (delimiter_index !== -1) {
+			if (dedent(stream, state)) return ERRORCLASS;
+		}
+		return style;
+	}
+	const vb = {
+		name: "vb",
+		startState: function() {
+			return {
+				tokenize: tokenBase$1,
+				lastToken: null,
+				currentIndent: 0,
+				nextLineIndent: 0,
+				doInCurrentLine: false
+			};
+		},
+		token: function(stream, state) {
+			if (stream.sol()) {
+				state.currentIndent += state.nextLineIndent;
+				state.nextLineIndent = 0;
+				state.doInCurrentLine = 0;
+			}
+			var style = tokenLexer(stream, state);
+			state.lastToken = {
+				style,
+				content: stream.current()
+			};
+			return style;
+		},
+		indent: function(state, textAfter, cx) {
+			var trueText = textAfter.replace(/^\s+|\s+$/g, "");
+			if (trueText.match(closing) || trueText.match(doubleClosing) || trueText.match(middle)) return cx.unit * (state.currentIndent - 1);
+			if (state.currentIndent < 0) return 0;
+			return state.currentIndent * cx.unit;
+		},
+		languageData: {
+			closeBrackets: { brackets: [
+				"(",
+				"[",
+				"{",
+				"\""
+			] },
+			commentTokens: { line: "'" },
+			autocomplete: openingKeywords.concat(middleKeywords).concat(endKeywords).concat(operatorKeywords).concat(commonKeywords).concat(commontypes)
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/vhdl.js
+	function words(str) {
+		var obj = {}, words = str.split(",");
+		for (var i = 0; i < words.length; ++i) {
+			var allCaps = words[i].toUpperCase();
+			var firstCap = words[i].charAt(0).toUpperCase() + words[i].slice(1);
+			obj[words[i]] = true;
+			obj[allCaps] = true;
+			obj[firstCap] = true;
+		}
+		return obj;
+	}
+	function metaHook(stream) {
+		stream.eatWhile(/[\w\$_]/);
+		return "meta";
+	}
+	var atoms = words("null");
+	var hooks = {
+		"`": metaHook,
+		"$": metaHook
+	};
+	var multiLineStrings = false;
+	var keywords = words("abs,access,after,alias,all,and,architecture,array,assert,attribute,begin,block,body,buffer,bus,case,component,configuration,constant,disconnect,downto,else,elsif,end,end block,end case,end component,end for,end generate,end if,end loop,end process,end record,end units,entity,exit,file,for,function,generate,generic,generic map,group,guarded,if,impure,in,inertial,inout,is,label,library,linkage,literal,loop,map,mod,nand,new,next,nor,null,of,on,open,or,others,out,package,package body,port,port map,postponed,procedure,process,pure,range,record,register,reject,rem,report,return,rol,ror,select,severity,signal,sla,sll,sra,srl,subtype,then,to,transport,type,unaffected,units,until,use,variable,wait,when,while,with,xnor,xor");
+	var blockKeywords = words("architecture,entity,begin,case,port,else,elsif,end,for,function,if");
+	var isOperatorChar = /[&|~><!\)\(*#%@+\/=?\:;}{,\.\^\-\[\]]/;
+	var curPunc;
+	function tokenBase(stream, state) {
+		var ch = stream.next();
+		if (hooks[ch]) {
+			var result = hooks[ch](stream, state);
+			if (result !== false) return result;
+		}
+		if (ch == "\"") {
+			state.tokenize = tokenString2(ch);
+			return state.tokenize(stream, state);
+		}
+		if (ch == "'") {
+			state.tokenize = tokenString(ch);
+			return state.tokenize(stream, state);
+		}
+		if (/[\[\]{}\(\),;\:\.]/.test(ch)) {
+			curPunc = ch;
+			return null;
+		}
+		if (/[\d']/.test(ch)) {
+			stream.eatWhile(/[\w\.']/);
+			return "number";
+		}
+		if (ch == "-") {
+			if (stream.eat("-")) {
+				stream.skipToEnd();
+				return "comment";
+			}
+		}
+		if (isOperatorChar.test(ch)) {
+			stream.eatWhile(isOperatorChar);
+			return "operator";
+		}
+		stream.eatWhile(/[\w\$_]/);
+		var cur = stream.current();
+		if (keywords.propertyIsEnumerable(cur.toLowerCase())) {
+			if (blockKeywords.propertyIsEnumerable(cur)) curPunc = "newstatement";
+			return "keyword";
+		}
+		if (atoms.propertyIsEnumerable(cur)) return "atom";
+		return "variable";
+	}
+	function tokenString(quote) {
+		return function(stream, state) {
+			var escaped = false, next, end = false;
+			while ((next = stream.next()) != null) {
+				if (next == quote && !escaped) {
+					end = true;
+					break;
+				}
+				escaped = !escaped && next == "--";
+			}
+			if (end || !(escaped || multiLineStrings)) state.tokenize = tokenBase;
+			return "string";
+		};
+	}
+	function tokenString2(quote) {
+		return function(stream, state) {
+			var escaped = false, next, end = false;
+			while ((next = stream.next()) != null) {
+				if (next == quote && !escaped) {
+					end = true;
+					break;
+				}
+				escaped = !escaped && next == "--";
+			}
+			if (end || !(escaped || multiLineStrings)) state.tokenize = tokenBase;
+			return "string.special";
+		};
+	}
+	function Context(indented, column, type, align, prev) {
+		this.indented = indented;
+		this.column = column;
+		this.type = type;
+		this.align = align;
+		this.prev = prev;
+	}
+	function pushContext(state, col, type) {
+		return state.context = new Context(state.indented, col, type, null, state.context);
+	}
+	function popContext(state) {
+		var t = state.context.type;
+		if (t == ")" || t == "]" || t == "}") state.indented = state.context.indented;
+		return state.context = state.context.prev;
+	}
+	const vhdl = {
+		name: "vhdl",
+		startState: function(indentUnit) {
+			return {
+				tokenize: null,
+				context: new Context(-indentUnit, 0, "top", false),
+				indented: 0,
+				startOfLine: true
+			};
+		},
+		token: function(stream, state) {
+			var ctx = state.context;
+			if (stream.sol()) {
+				if (ctx.align == null) ctx.align = false;
+				state.indented = stream.indentation();
+				state.startOfLine = true;
+			}
+			if (stream.eatSpace()) return null;
+			curPunc = null;
+			var style = (state.tokenize || tokenBase)(stream, state);
+			if (style == "comment" || style == "meta") return style;
+			if (ctx.align == null) ctx.align = true;
+			if ((curPunc == ";" || curPunc == ":") && ctx.type == "statement") popContext(state);
+			else if (curPunc == "{") pushContext(state, stream.column(), "}");
+			else if (curPunc == "[") pushContext(state, stream.column(), "]");
+			else if (curPunc == "(") pushContext(state, stream.column(), ")");
+			else if (curPunc == "}") {
+				while (ctx.type == "statement") ctx = popContext(state);
+				if (ctx.type == "}") ctx = popContext(state);
+				while (ctx.type == "statement") ctx = popContext(state);
+			} else if (curPunc == ctx.type) popContext(state);
+			else if (ctx.type == "}" || ctx.type == "top" || ctx.type == "statement" && curPunc == "newstatement") pushContext(state, stream.column(), "statement");
+			state.startOfLine = false;
+			return style;
+		},
+		indent: function(state, textAfter, cx) {
+			if (state.tokenize != tokenBase && state.tokenize != null) return 0;
+			var firstChar = textAfter && textAfter.charAt(0), ctx = state.context, closing = firstChar == ctx.type;
+			if (ctx.type == "statement") return ctx.indented + (firstChar == "{" ? 0 : cx.unit);
+			else if (ctx.align) return ctx.column + (closing ? 0 : 1);
+			else return ctx.indented + (closing ? 0 : cx.unit);
+		},
+		languageData: {
+			indentOnInput: /^\s*[{}]$/,
+			commentTokens: { line: "--" }
+		}
+	};
+	//#endregion
+	//#region node_modules/.pnpm/@codemirror+legacy-modes@6.5.3/node_modules/@codemirror/legacy-modes/mode/stex.js
+	function mkStex(mathMode) {
+		function pushCommand(state, command) {
+			state.cmdState.push(command);
+		}
+		function peekCommand(state) {
+			if (state.cmdState.length > 0) return state.cmdState[state.cmdState.length - 1];
+			else return null;
+		}
+		function popCommand(state) {
+			var plug = state.cmdState.pop();
+			if (plug) plug.closeBracket();
+		}
+		function getMostPowerful(state) {
+			var context = state.cmdState;
+			for (var i = context.length - 1; i >= 0; i--) {
+				var plug = context[i];
+				if (plug.name == "DEFAULT") continue;
+				return plug;
+			}
+			return { styleIdentifier: function() {
+				return null;
+			} };
+		}
+		function addPluginPattern(pluginName, cmdStyle, styles) {
+			return function() {
+				this.name = pluginName;
+				this.bracketNo = 0;
+				this.style = cmdStyle;
+				this.styles = styles;
+				this.argument = null;
+				this.styleIdentifier = function() {
+					return this.styles[this.bracketNo - 1] || null;
+				};
+				this.openBracket = function() {
+					this.bracketNo++;
+					return "bracket";
+				};
+				this.closeBracket = function() {};
+			};
+		}
+		var plugins = {};
+		plugins["importmodule"] = addPluginPattern("importmodule", "tag", ["string", "builtin"]);
+		plugins["documentclass"] = addPluginPattern("documentclass", "tag", ["", "atom"]);
+		plugins["usepackage"] = addPluginPattern("usepackage", "tag", ["atom"]);
+		plugins["begin"] = addPluginPattern("begin", "tag", ["atom"]);
+		plugins["end"] = addPluginPattern("end", "tag", ["atom"]);
+		plugins["label"] = addPluginPattern("label", "tag", ["atom"]);
+		plugins["ref"] = addPluginPattern("ref", "tag", ["atom"]);
+		plugins["eqref"] = addPluginPattern("eqref", "tag", ["atom"]);
+		plugins["cite"] = addPluginPattern("cite", "tag", ["atom"]);
+		plugins["bibitem"] = addPluginPattern("bibitem", "tag", ["atom"]);
+		plugins["Bibitem"] = addPluginPattern("Bibitem", "tag", ["atom"]);
+		plugins["RBibitem"] = addPluginPattern("RBibitem", "tag", ["atom"]);
+		plugins["DEFAULT"] = function() {
+			this.name = "DEFAULT";
+			this.style = "tag";
+			this.styleIdentifier = this.openBracket = this.closeBracket = function() {};
+		};
+		function setState(state, f) {
+			state.f = f;
+		}
+		function normal(source, state) {
+			var plug;
+			if (source.match(/^\\[a-zA-Z@\xc0-\u1fff\u2060-\uffff]+/)) {
+				var cmdName = source.current().slice(1);
+				plug = plugins.hasOwnProperty(cmdName) ? plugins[cmdName] : plugins["DEFAULT"];
+				plug = new plug();
+				pushCommand(state, plug);
+				setState(state, beginParams);
+				return plug.style;
+			}
+			if (source.match(/^\\[$&%#{}_]/)) return "tag";
+			if (source.match(/^\\[,;!\/\\]/)) return "tag";
+			if (source.match("\\[")) {
+				setState(state, function(source, state) {
+					return inMathMode(source, state, "\\]");
+				});
+				return "keyword";
+			}
+			if (source.match("\\(")) {
+				setState(state, function(source, state) {
+					return inMathMode(source, state, "\\)");
+				});
+				return "keyword";
+			}
+			if (source.match("$$")) {
+				setState(state, function(source, state) {
+					return inMathMode(source, state, "$$");
+				});
+				return "keyword";
+			}
+			if (source.match("$")) {
+				setState(state, function(source, state) {
+					return inMathMode(source, state, "$");
+				});
+				return "keyword";
+			}
+			var ch = source.next();
+			if (ch == "%") {
+				source.skipToEnd();
+				return "comment";
+			} else if (ch == "}" || ch == "]") {
+				plug = peekCommand(state);
+				if (plug) {
+					plug.closeBracket(ch);
+					setState(state, beginParams);
+				} else return "error";
+				return "bracket";
+			} else if (ch == "{" || ch == "[") {
+				plug = plugins["DEFAULT"];
+				plug = new plug();
+				pushCommand(state, plug);
+				return "bracket";
+			} else if (/\d/.test(ch)) {
+				source.eatWhile(/[\w.%]/);
+				return "atom";
+			} else {
+				source.eatWhile(/[\w\-_]/);
+				plug = getMostPowerful(state);
+				if (plug.name == "begin") plug.argument = source.current();
+				return plug.styleIdentifier();
+			}
+		}
+		function inMathMode(source, state, endModeSeq) {
+			if (source.eatSpace()) return null;
+			if (endModeSeq && source.match(endModeSeq)) {
+				setState(state, normal);
+				return "keyword";
+			}
+			if (source.match(/^\\[a-zA-Z@]+/)) return "tag";
+			if (source.match(/^[a-zA-Z]+/)) return "variableName.special";
+			if (source.match(/^\\[$&%#{}_]/)) return "tag";
+			if (source.match(/^\\[,;!\/]/)) return "tag";
+			if (source.match(/^[\^_&]/)) return "tag";
+			if (source.match(/^[+\-<>|=,\/@!*:;'"`~#?]/)) return null;
+			if (source.match(/^(\d+\.\d*|\d*\.\d+|\d+)/)) return "number";
+			var ch = source.next();
+			if (ch == "{" || ch == "}" || ch == "[" || ch == "]" || ch == "(" || ch == ")") return "bracket";
+			if (ch == "%") {
+				source.skipToEnd();
+				return "comment";
+			}
+			return "error";
+		}
+		function beginParams(source, state) {
+			var ch = source.peek(), lastPlug;
+			if (ch == "{" || ch == "[") {
+				lastPlug = peekCommand(state);
+				lastPlug.openBracket(ch);
+				source.eat(ch);
+				setState(state, normal);
+				return "bracket";
+			}
+			if (/[ \t\r]/.test(ch)) {
+				source.eat(ch);
+				return null;
+			}
+			setState(state, normal);
+			popCommand(state);
+			return normal(source, state);
+		}
+		return {
+			name: "stex",
+			startState: function() {
+				return {
+					cmdState: [],
+					f: mathMode ? function(source, state) {
+						return inMathMode(source, state);
+					} : normal
+				};
+			},
+			copyState: function(s) {
+				return {
+					cmdState: s.cmdState.slice(),
+					f: s.f
+				};
+			},
+			token: function(stream, state) {
+				return state.f(stream, state);
+			},
+			blankLine: function(state) {
+				state.f = normal;
+				state.cmdState.length = 0;
+			},
+			languageData: { commentTokens: { line: "%" } }
+		};
+	}
+	const stex = mkStex(false);
+	mkStex(true);
 	//#endregion
 	//#region src/client/lang.ts
 	/**
@@ -32389,23 +42919,62 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			case "docker": return "dockerfile";
 			case "properties":
 			case "env": return "properties";
+			case "vue": return "vue";
+			case "scss": return "scss";
+			case "sass": return "sass";
+			case "less": return "less";
+			case "styl": return "stylus";
+			case "rb": return "ruby";
+			case "lua": return "lua";
+			case "pl":
+			case "pm": return "perl";
+			case "r": return "r";
+			case "dart": return "dart";
+			case "scala":
+			case "sc": return "scala";
+			case "groovy": return "groovy";
+			case "ps1":
+			case "psm1": return "powershell";
+			case "diff":
+			case "patch": return "diff";
+			case "proto": return "protobuf";
+			case "cmake": return "cmake";
+			case "pug": return "pug";
+			case "tcl": return "tcl";
+			case "hs": return "haskell";
+			case "clj":
+			case "cljs": return "clojure";
+			case "erl": return "erlang";
+			case "jl": return "julia";
+			case "pas": return "pascal";
+			case "vb": return "vb";
+			case "vhd": return "vhdl";
+			case "tex": return "stex";
+			case "mm": return "objectivecpp";
 			default: return null;
 		}
 	}
+	/** Per-lang `<style>` parsers for the Vue SFC factory (built once, shared). */
+	const VUE_STYLE_PARSERS = {
+		scss: StreamLanguage.define(sCSS).parser,
+		sass: StreamLanguage.define(sass).parser,
+		less: StreamLanguage.define(less).parser,
+		stylus: StreamLanguage.define(stylus).parser
+	};
 	const FACTORIES = {
-		js: () => javascript({ jsx: true }),
-		jsx: () => javascript({ jsx: true }),
-		ts: () => javascript({ typescript: true }),
-		tsx: () => javascript({
+		js: () => javascript$1({ jsx: true }),
+		jsx: () => javascript$1({ jsx: true }),
+		ts: () => javascript$1({ typescript: true }),
+		tsx: () => javascript$1({
 			typescript: true,
 			jsx: true
 		}),
-		json: () => json(),
+		json: () => json$1(),
 		md: () => markdown(),
 		python: () => python(),
-		html: () => html(),
-		css: () => css$1(),
-		xml: () => xml(),
+		html: () => html$2(),
+		css: () => css$2(),
+		xml: () => xml$1(),
 		yaml: () => yaml(),
 		sql: () => sql(),
 		java: () => java$1(),
@@ -32421,12 +42990,86 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		toml: () => StreamLanguage.define(toml),
 		nginx: () => StreamLanguage.define(nginx),
 		dockerfile: () => StreamLanguage.define(dockerFile),
-		properties: () => StreamLanguage.define(properties)
+		properties: () => StreamLanguage.define(properties),
+		vue: () => vue({ base: html$2({ nestedLanguages: [
+			{
+				tag: "script",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "ts",
+				parser: typescriptLanguage.parser
+			},
+			{
+				tag: "script",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "tsx",
+				parser: tsxLanguage.parser
+			},
+			{
+				tag: "script",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "jsx",
+				parser: jsxLanguage.parser
+			},
+			{
+				tag: "style",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "css",
+				parser: cssLanguage.parser
+			},
+			{
+				tag: "style",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "scss",
+				parser: VUE_STYLE_PARSERS.scss
+			},
+			{
+				tag: "style",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "sass",
+				parser: VUE_STYLE_PARSERS.sass
+			},
+			{
+				tag: "style",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "less",
+				parser: VUE_STYLE_PARSERS.less
+			},
+			{
+				tag: "style",
+				attrs: (a) => (a.lang ?? "").toLowerCase() === "stylus",
+				parser: VUE_STYLE_PARSERS.stylus
+			}
+		] }) }),
+		scss: () => StreamLanguage.define(sCSS),
+		sass: () => StreamLanguage.define(sass),
+		less: () => StreamLanguage.define(less),
+		stylus: () => StreamLanguage.define(stylus),
+		ruby: () => StreamLanguage.define(ruby),
+		lua: () => StreamLanguage.define(lua),
+		perl: () => StreamLanguage.define(perl),
+		r: () => StreamLanguage.define(r),
+		dart: () => StreamLanguage.define(dart),
+		scala: () => StreamLanguage.define(scala),
+		groovy: () => StreamLanguage.define(groovy),
+		powershell: () => StreamLanguage.define(powerShell),
+		diff: () => StreamLanguage.define(diff),
+		protobuf: () => StreamLanguage.define(protobuf),
+		cmake: () => StreamLanguage.define(cmake),
+		pug: () => StreamLanguage.define(pug),
+		tcl: () => StreamLanguage.define(tcl),
+		haskell: () => StreamLanguage.define(haskell),
+		clojure: () => StreamLanguage.define(clojure),
+		erlang: () => StreamLanguage.define(erlang),
+		julia: () => StreamLanguage.define(julia),
+		pascal: () => StreamLanguage.define(pascal),
+		vb: () => StreamLanguage.define(vb),
+		vhdl: () => StreamLanguage.define(vhdl),
+		stex: () => StreamLanguage.define(stex),
+		objectivecpp: () => StreamLanguage.define(objectiveCpp)
 	};
 	/** The CodeMirror language support for a path, or null for plain text. */
 	function languageForPath(path) {
 		const key = languageKeyForExt(extOf(path));
-		return key === null ? null : FACTORIES[key]();
+		if (key === null) return null;
+		try {
+			return FACTORIES[key]();
+		} catch (error) {
+			console.warn(`[dsh-better-sidebar] language factory "${key}" failed:`, error);
+			return null;
+		}
 	}
 	//#endregion
 	//#region src/client/cm-themes.ts
@@ -32706,7 +43349,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	//#endregion
 	//#region src/client/locales.ts
 	/**
-	* Minimal zh/en copy for the sidebar. The copy follows the DSH i18n system:
+	* Minimal zh/en/ja copy for the sidebar. The copy follows the DSH i18n system:
 	* the client apply attaches the locale service (`ctx.locale`, provided by
 	* `@deepseek-ai/dsh-client-locale`) through {@link attachLocale}, and
 	* `t()`/`isZh()` resolve the active locale from it — the Host-backed
@@ -32714,6 +43357,18 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	* Without an attached service (standalone/test compositions) the browser
 	* language is used, matching the previous behavior. The dictionaries are
 	* also registered into the DSH locale registry under {@link LOCALE_NS}.
+	*
+	* ja (Japanese) is opt-in through `@huanlin/dsh-plugin-better-locale`: when
+	* that plugin is installed, the client apply also calls
+	* {@link attachBetterLocale} with the override store. `t()` then consults
+	* the store's active override id first; if it is `'ja'` (or any id whose
+	* dict has the requested key) the ja text wins, otherwise the existing
+	* zh/en chain runs unchanged. better-locale itself patches
+	* `LocaleRuntime.prototype.lookup` so DSH's own translate chain also
+	* returns ja where the `betterSidebar` namespace has a ja entry — that
+	* path covers external callers of `ctx.locale.bind('betterSidebar')`,
+	* while the override-aware `t()` here covers better-sidebar's own
+	* components (which bypass `ctx.locale` and call `t()` directly).
 	*/
 	/** The zh dictionary (also registered into the DSH locale registry under {@link LOCALE_NS}). */
 	const zh = {
@@ -32736,6 +43391,26 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		editorEmptyHint: "从右侧文件树或上方路径输入框选择文件开始预览",
 		openFileNewTab: "在新 Tab 中打开",
 		openFileSide: "在侧边打开",
+		openWithMenu: "在应用中打开",
+		openWithSshSuffix: " (SSH)",
+		pinOpenWith: "固定到菜单",
+		unpinOpenWith: "取消固定",
+		openWithExplorer: "资源管理器",
+		openWithVscode: "VS Code",
+		openWithCursor: "Cursor",
+		openWithZed: "Zed",
+		openWithSettingsSshTitle: "SSH 远端主机",
+		openWithSettingsSshDesc: "留空为本地工作区；填入 user@host 或 SSH 别名后，VSCode 系打开方式将改用 vscode-remote/ssh-remote 协议，资源管理器 / Zed / 非 VSCode 系自定义编辑器将从菜单隐藏",
+		openWithSettingsSshPlaceholder: "user@host 或 SSH 别名",
+		openWithSettingsCustomTitle: "自定义编辑器",
+		openWithSettingsCustomDesc: "名称 + URL 模板（{path} 占位符）+ 是否 VSCode 系；SSH 模式下仅 VSCode 系可打开远端",
+		openWithSettingsAdd: "添加",
+		openWithSettingsName: "名称",
+		openWithSettingsTemplate: "如 cursor://file/{path}",
+		openWithSettingsFamily: "VSCode 系",
+		openWithSettingsFamilyDesc: "该编辑器使用 VSCode 的 URL 协议（支持 SSH 远端打开）",
+		openWithSettingsRemove: "删除",
+		openWithSettingsInvalidHint: "名称或模板（需含 {path} 且以 scheme:// 开头）未填写的编辑器不会出现在菜单中",
 		newTab: "新建标签页",
 		openExplorer: "资源管理器",
 		brokenSymlink: "失效的软链接",
@@ -32743,6 +43418,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		newTerminal: "新终端",
 		terminalLimit: "终端数量已达上限 (3)",
 		close: "关闭",
+		closeOtherTabs: "关闭其他页签",
+		closeLeftTabs: "关闭左侧页签",
+		closeRightTabs: "关闭右侧页签",
+		moveToFreeWindow: "移动到自由窗口",
+		floatDropHint: "松开以在自由窗口中打开",
+		dockToSidebar: "回到侧边栏",
 		collapse: "折叠侧边栏",
 		expand: "展开侧边栏",
 		collapseBottomPanel: "折叠底部面板",
@@ -32754,6 +43435,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		terminalDepsHint: "在 DSH 所在环境的终端或 cmd 中执行以下命令修复，然后点重试（node-pty 与 DSH 核心保持同一版本）：",
 		terminalDepsProfile: "（检测到 profile：{profile}）",
 		preview: "预览",
+		toc: "目录",
 		edit: "编辑",
 		mermaidError: "Mermaid 渲染失败",
 		mermaidZoomIn: "放大",
@@ -32761,6 +43443,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		mermaidZoomReset: "重置",
 		mermaidZoomHint: "滚轮缩放 · 拖拽平移 · Esc 关闭",
 		refresh: "刷新",
+		refreshUnsavedConfirm: "文件已在磁盘更新，刷新将丢弃未保存编辑。继续吗？",
 		save: "保存",
 		saved: "已保存",
 		unsaved: "未保存",
@@ -32784,6 +43467,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		commit: "提交",
 		commitError: "提交失败",
 		branch: "分支",
+		worktree: "工作树",
 		checkoutError: "切换分支失败",
 		history: "历史",
 		changes: "变更",
@@ -32819,6 +43503,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		historyLoadError: "加载更多历史失败",
 		produced: "本次产出",
 		producedOpen: "在侧边栏中打开",
+		showInFolder: "在文件夹中显示",
 		disconnected: "终端连接断开，重连中…",
 		exited: "终端进程已退出",
 		noSession: "选择一个会话以使用侧边栏",
@@ -32835,6 +43520,19 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		copyRelative: "复制相对地址",
 		copyAbsolute: "复制绝对地址",
 		download: "下载",
+		uploadFiles: "上传文件",
+		uploadFolder: "上传文件夹",
+		uploadHere: "上传到此处",
+		uploadDropHint: "拖拽文件/文件夹到此处上传",
+		uploadDropChat: "拖放到聊天区：添加图片到对话",
+		uploadTo: "上传到 {dir}",
+		uploadingTo: "正在上传到 {dir}…",
+		uploadProgress: "正在上传 {done}/{total}: {name}",
+		uploadDone: "已上传 {count} 个文件",
+		uploadFailed: "上传失败：{error}",
+		uploadFailedUnknown: "未知错误",
+		uploadTooLarge: "文件过大，超出上传上限",
+		uploadCancelled: "上传已取消",
 		settingsNav: "侧边卡片",
 		settingsIntro: "管理侧边卡片的显示内容与默认行为",
 		settingsPopupDesc: "为「{feature}」配置相关选项",
@@ -32846,10 +43544,22 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		settingsWidthSuffix: "%",
 		settingsOpenPathTitle: "聊天区文件在侧边栏打开",
 		settingsOpenPathDesc: "在聊天里点击文件链接（工具行、产物列表、文件提及）时，在侧边栏编辑器中打开，不再调用系统默认应用",
+		settingsOpenToolsTitle: "为模型注入侧边栏打开工具",
+		settingsOpenToolsDesc: "开启后，模型可通过 sidebar_open 工具在侧边栏主动打开文件、文件夹和 HTTP(S) 网页（默认关闭）",
 		settingsTitleBarTitle: "位置兼容模式",
-		settingsTitleBarDesc: "为 Windows 右上角的原生标题栏预留空间：侧边栏按钮与侧边栏内容整体下移，避免被标题栏遮挡",
+		settingsTitleBarDesc: "选择顶栏兼容方案：自动检测（默认，保守）/ DSH官方Web / 已知桌面壳 / 自定义方案（下移距离 + 自定义 CSS）",
 		settingsTitleBarStripTitle: "下移距离",
-		settingsTitleBarStripDesc: "标题栏条带高度：侧边栏按钮与内容下移的像素数（0–120，默认 40）",
+		settingsTitleBarStripDesc: "标题栏条带高度：侧边栏按钮与内容下移的像素数（0–120，默认 40；自定义方案下生效）",
+		settingsSchemeAutoTitle: "自动检测",
+		settingsSchemeAutoDesc: "保守方案：仅在 Window Controls Overlay 标准 API 可用时按真实标题栏高度让位；网页环境下不做任何修改",
+		settingsSchemeWebTitle: "DSH官方Web",
+		settingsSchemeWebDesc: "显式声明运行在官方网页版：不做任何适配（连标准 WCO 几何也不适用）",
+		settingsSchemeCustomTitle: "自定义方案",
+		settingsSchemeCustomDesc: "完全由你控制：注入自定义 CSS（可覆盖内置样式），并指定标题栏下移距离",
+		settingsSchemeDetectedSuffix: "已检测",
+		settingsCustomCssTitle: "自定义 CSS",
+		settingsCustomCssDesc: "追加到页面末尾的样式（同优先级下后写胜出；覆盖 JS 内联变量需用 !important）",
+		settingsCustomCssPlaceholder: "/* 例：为自绘标题栏的壳预留 36px */\nhtml[data-dsh-title-bar-height=\"36\"] {\n  --dsh-title-bar-strip: 36px !important;\n}",
 		settingsSaveFailed: "保存失败",
 		settingsConflict: "设置已被其他窗口修改，请重试",
 		binaryNoPreview: "此文件类型不支持预览",
@@ -32911,6 +43621,9 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		settingsBrowserHttpDesc: "开启后，点击聊天或界面中的 HTTP 外链时在侧边栏打开（声明了 urlTarget 的插件页面优先）；Ctrl/Cmd 点击可临时放行",
 		settingsBrowserHttpsTitle: "侧边打开HTTPS网页",
 		settingsBrowserHttpsDesc: "开启后，点击聊天或界面中的 HTTPS 外链时在侧边栏打开。默认关闭：多数 HTTPS 站点拒绝被嵌入，走系统浏览器更顺畅",
+		settingsBrowserLoopbackTitle: "允许访问的本机地址",
+		settingsBrowserLoopbackDesc: "逗号分隔的本地回环地址白名单（如 localhost:5174 或 127.0.0.1:8080），侧边栏浏览器可访问这些本地服务；默认留空则本机地址全部拦截。沙箱隔离仍然生效，页面无法读取界面数据",
+		settingsBrowserLoopbackPlaceholder: "例如 localhost:5174, 127.0.0.1:8080",
 		browserOpenExternal: "在浏览器中打开",
 		browserEmbedBlocked: "{host} 拒绝了嵌入请求",
 		browserEmbedBlockedDesc: "该站点通过 X-Frame-Options / frame-ancestors 禁止在其它页面中显示，无法在侧边栏内加载。可在浏览器中直接打开",
@@ -32930,6 +43643,30 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		subagentDiagUnsupported: "不支持的条目",
 		subagentDiagUnavailable: "不可用",
 		subagentThinking: "思考中…",
+		sideChat: "侧边对话(beta)",
+		sideChatNew: "新建对话",
+		sideChatUntitled: "新对话",
+		sideChatEmpty: "暂无侧边对话",
+		sideChatEmptyDesc: "每个侧边对话是标签栏里的独立 Tab，继承当前会话的上下文运行，不会进入主会话",
+		sideChatCreating: "正在创建侧边对话…",
+		sideChatRetry: "重试",
+		sideChatThreads: "切换线程 / 新建",
+		sideChatSave: "保存为新会话",
+		sideChatSaveTitle: "把该线程提升为顶层会话，出现在主会话列表中",
+		sideChatSaved: "已保存为新会话",
+		sideChatNoTurn: "至少完成一轮对话后才能保存",
+		sideChatPendingDrop: "最后一条未完成的追问不会包含在新会话中",
+		sideChatFirstPlaceholder: "输入第一个问题，已继承当前会话上下文…",
+		sideChatComposerPlaceholder: "追问…",
+		sideChatThinking: "正在深入…",
+		sideChatThink: "思考过程",
+		sideChatInjection: "已注入上下文",
+		sideChatSend: "发送",
+		sideChatCancel: "停止",
+		sideChatCancelTitle: "中止当前回合（保留队列）",
+		sideChatClose: "关闭线程",
+		sideChatCloseTitle: "释放线程的 agent（历史保留）",
+		sideChatError: "侧边对话出错：{message}",
 		jobs: "后台任务",
 		jobsCount: "{count} 个后台任务",
 		jobsCountRunning: "{count} 个后台任务 · {running} 运行中",
@@ -32964,10 +43701,16 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		openPlugin: "跳转",
 		copyInstall: "复制安装命令",
 		pluginOfficeDesc: "为 better-sidebar 编辑器提供 Office 三件套预览（.docx / .xlsx / .pptx），把重型 Office 渲染库拆出主包、按需安装",
+		pluginFlowglassDesc: "实时会话流程图：三列泳道展示用户、助手与工具调用，支持并行分组、子代理支线、逐层钻取和实时状态；安装 better-sidebar 后注册原生「流镜」Tab，未安装时保留独立抽屉",
+		pluginGitForgeDesc: "better-sidebar「Git 凭据」Tab：GitHub/Gitea 等 Forge 账号库 + 按项目授权 + push 策略硬拦；token 仅存本地 secrets，不进模型上下文；提供只读 GitForge 工具与 agent HTTPS credential helper",
 		pluginGitRemotesDesc: "better-sidebar Git 远程 Tab：看分支/上游/ahead-behind，fetch（可 prune）、ff-only pull、确认后才 push。不替换内置 Git 的暂存/提交，也不提供 force-push 或模型自动推送",
 		pluginSentinelDesc: "条件驱动的 agent 唤醒系统：文件/进程/端口/HTTP/命令/webhook 传感器，条件达成自动唤醒休眠会话；注册「哨兵」Tab 展示服务器全局监控表",
 		pluginSidebarQaDesc: "基于 better-sidebar 的划选提问tab分页: 对话划选 → 右侧面板提问 → 同工作区独立追问会话（❓追问·主题）：快速无思考模型压缩主对话上下文后与引文一起注入，不打断主对话；追问可嵌套、可继续、可归档",
-		pluginVideoPreviewDesc: "在 better-sidebar 编辑器内联预览视频文件（.mp4/.webm/.mov/.mkv/.avi 等），自带支持 HTTP Range（206）的 /video 宿主路由，可拖动进度条、不受 20MB mediaLimit 限制"
+		pluginSshTunnelDesc: "better-sidebar「SSH 隧道」Tab：多机主机清单 + 按项目授权 + 密钥本地保管；模型工具 SSHManager（exec/SFTP/会话策略）；中央交互终端与双栏 SFTP",
+		pluginTurnReviewDesc: "对「刚刚这一回合」的 diff 做 Approve / Request changes 的人闸门：只审上一回合，不 fork 会话；文件按主会话/子代理/未归因分组，按文件勾选打回 + 可选评语，点文件先看回合开始快照 vs 现在的 diff。不是 /rewind",
+		pluginVideoPreviewDesc: "在 better-sidebar 编辑器内联预览视频文件（.mp4/.webm/.mov/.mkv/.avi 等），自带支持 HTTP Range（206）的 /video 宿主路由，可拖动进度条、不受 20MB mediaLimit 限制",
+		pluginDocsPanelDesc: "DSH 侧边栏里的「全局文档」：全局 Markdown 笔记，任何工作区随时可读——列表点选阅读、悬浮大纲跳转、Chrome / VS Code 外部打开、代码复制，目录可配置（默认 ~/.dsh/docs）",
+		pluginEgoBrowserDesc: "把 CitroLabs/ego-lite 接进 DeepSeek Harness 的 agent 浏览器：32 个 ego_* 工具驱动真实 Chromium，侧边栏原生「ego 浏览器」Tab 实时观察 agent 逛的每个页面，可直接点击/拖拽/输入接管；装 better-sidebar 时自动注册 Tab，没装则退回浮动浮窗"
 	};
 	/** The en dictionary (key-set-equal to zh, enforced by the type annotation). */
 	const en = {
@@ -32990,6 +43733,26 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		editorEmptyHint: "Pick a file from the tree panel or the path input above to start previewing",
 		openFileNewTab: "Open in New Tab",
 		openFileSide: "Open to the Side",
+		openWithMenu: "Open with",
+		openWithSshSuffix: " (SSH)",
+		pinOpenWith: "Pin to menu",
+		unpinOpenWith: "Unpin",
+		openWithExplorer: "File Manager",
+		openWithVscode: "VS Code",
+		openWithCursor: "Cursor",
+		openWithZed: "Zed",
+		openWithSettingsSshTitle: "SSH remote host",
+		openWithSettingsSshDesc: "Empty = local workspace; with a user@host or SSH alias, VSCode-family openers switch to the vscode-remote/ssh-remote protocol and the File Manager / Zed / non-VSCode-family custom editors are hidden from the menu",
+		openWithSettingsSshPlaceholder: "user@host or SSH alias",
+		openWithSettingsCustomTitle: "Custom editors",
+		openWithSettingsCustomDesc: "Name + URL template ({path} placeholder) + VSCode-family flag; in remote mode only VSCode-family editors can open a remote path",
+		openWithSettingsAdd: "Add",
+		openWithSettingsName: "Name",
+		openWithSettingsTemplate: "e.g. cursor://file/{path}",
+		openWithSettingsFamily: "VSCode-family",
+		openWithSettingsFamilyDesc: "This editor speaks the VSCode URL dialect (supports SSH-remote opens)",
+		openWithSettingsRemove: "Remove",
+		openWithSettingsInvalidHint: "Editors with a missing name or a template without {path} / scheme:// are not shown in the menu",
 		newTab: "New tab",
 		openExplorer: "Explorer",
 		brokenSymlink: "Broken symlink",
@@ -32997,6 +43760,12 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		newTerminal: "New terminal",
 		terminalLimit: "Terminal limit reached (3)",
 		close: "Close",
+		closeOtherTabs: "Close Other Tabs",
+		closeLeftTabs: "Close Tabs to the Left",
+		closeRightTabs: "Close Tabs to the Right",
+		moveToFreeWindow: "Move to Free Window",
+		floatDropHint: "Release to open in a free window",
+		dockToSidebar: "Dock Back to Sidebar",
 		collapse: "Collapse sidebar",
 		expand: "Expand sidebar",
 		collapseBottomPanel: "Collapse bottom panel",
@@ -33008,6 +43777,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		terminalDepsHint: "Run the command below in a terminal or cmd on the DSH machine to repair it, then retry (node-pty stays in sync with the DSH core version):",
 		terminalDepsProfile: " (detected profile: {profile})",
 		preview: "Preview",
+		toc: "Table of contents",
 		edit: "Edit",
 		mermaidError: "Mermaid render failed",
 		mermaidZoomIn: "Zoom in",
@@ -33015,6 +43785,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		mermaidZoomReset: "Reset",
 		mermaidZoomHint: "Scroll to zoom · drag to pan · Esc to close",
 		refresh: "Refresh",
+		refreshUnsavedConfirm: "The file changed on disk. Refreshing will discard unsaved edits. Continue?",
 		save: "Save",
 		saved: "Saved",
 		unsaved: "Unsaved",
@@ -33038,6 +43809,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		commit: "Commit",
 		commitError: "Commit failed",
 		branch: "Branch",
+		worktree: "Worktree",
 		checkoutError: "Branch switch failed",
 		history: "History",
 		changes: "Changes",
@@ -33073,6 +43845,7 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		historyLoadError: "Failed to load more history",
 		produced: "Produced",
 		producedOpen: "Open in sidebar",
+		showInFolder: "Show in folder",
 		disconnected: "Terminal disconnected, reconnecting…",
 		exited: "Terminal process exited",
 		noSession: "Select a conversation to use the sidebar",
@@ -33089,6 +43862,19 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		copyRelative: "Copy relative path",
 		copyAbsolute: "Copy absolute path",
 		download: "Download",
+		uploadFiles: "Upload files",
+		uploadFolder: "Upload folder",
+		uploadHere: "Upload here",
+		uploadDropHint: "Drop files/folders here to upload",
+		uploadDropChat: "Drop onto the chat to add images",
+		uploadTo: "Upload into {dir}",
+		uploadingTo: "Uploading into {dir}…",
+		uploadProgress: "Uploading {done}/{total}: {name}",
+		uploadDone: "Uploaded {count} file(s)",
+		uploadFailed: "Upload failed: {error}",
+		uploadFailedUnknown: "Unknown error",
+		uploadTooLarge: "File too large (over the upload limit)",
+		uploadCancelled: "Upload cancelled",
 		settingsNav: "Side card",
 		settingsIntro: "Manage what the side card shows and how it behaves",
 		settingsPopupDesc: "Configure related options for {feature}",
@@ -33100,10 +43886,22 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		settingsWidthSuffix: "%",
 		settingsOpenPathTitle: "Open chat files in the sidebar",
 		settingsOpenPathDesc: "Open file links in the chat (tool rows, produced files, mentions) in the sidebar editor instead of the system default app",
+		settingsOpenToolsTitle: "Inject the sidebar-open tool for the model",
+		settingsOpenToolsDesc: "When enabled, the model can actively open files, folders, and HTTP(S) pages in the sidebar through the sidebar_open tool (off by default)",
 		settingsTitleBarTitle: "Position compatibility mode",
-		settingsTitleBarDesc: "Reserve space for the native Windows title bar at the top-right so the sidebar buttons and content sit below it instead of underneath",
+		settingsTitleBarDesc: "Pick the title-bar compatibility scheme: auto-detect (default, conservative) / DSH official web / known desktop shells / custom (shift distance + custom CSS)",
 		settingsTitleBarStripTitle: "Shift distance",
-		settingsTitleBarStripDesc: "Title-bar strip height: how far the sidebar buttons and content move down in px (0–120, default 40)",
+		settingsTitleBarStripDesc: "Title-bar strip height: how far the sidebar buttons and content move down in px (0–120, default 40; applies under the custom scheme)",
+		settingsSchemeAutoTitle: "Auto-detect",
+		settingsSchemeAutoDesc: "Conservative: only the standard Window Controls Overlay API contributes (real caption-overlay height); plain web environments get no modification",
+		settingsSchemeWebTitle: "DSH official web",
+		settingsSchemeWebDesc: "Explicitly declare the official web UI: no adaptation at all (not even standard WCO geometry)",
+		settingsSchemeCustomTitle: "Custom",
+		settingsSchemeCustomDesc: "Full control: inject custom CSS (can override built-in styles) and set the title-bar shift distance",
+		settingsSchemeDetectedSuffix: "detected",
+		settingsCustomCssTitle: "Custom CSS",
+		settingsCustomCssDesc: "Styles appended at the end of the page (later in the cascade wins ties; use !important to override JS-written inline variables)",
+		settingsCustomCssPlaceholder: "/* e.g. reserve 36px for a shell with a custom-drawn title bar */\nhtml[data-dsh-title-bar-height=\"36\"] {\n  --dsh-title-bar-strip: 36px !important;\n}",
 		settingsSaveFailed: "Failed to save",
 		settingsConflict: "The setting changed in another window — please retry",
 		binaryNoPreview: "This file type cannot be previewed",
@@ -33165,6 +43963,9 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		settingsBrowserHttpDesc: "When on, clicking an HTTP external link in the chat or GUI opens the sidebar (plugin pages declaring urlTarget win); Ctrl/Cmd+click always bypasses",
 		settingsBrowserHttpsTitle: "Open HTTPS pages in the sidebar",
 		settingsBrowserHttpsDesc: "When on, clicking an HTTPS external link in the chat or GUI opens the sidebar. Off by default: most HTTPS sites refuse to be embedded, so the system browser is the smoother default",
+		settingsBrowserLoopbackTitle: "Allowed local addresses",
+		settingsBrowserLoopbackDesc: "Comma-separated allowlist of loopback addresses (e.g. localhost:5174 or 127.0.0.1:8080) the sidebar browser may visit; empty blocks all local addresses by default. The sandbox still applies — pages cannot read GUI data",
+		settingsBrowserLoopbackPlaceholder: "e.g. localhost:5174, 127.0.0.1:8080",
 		browserOpenExternal: "Open in browser",
 		browserEmbedBlocked: "{host} refused to be embedded",
 		browserEmbedBlockedDesc: "The site forbids being displayed inside other pages (X-Frame-Options / frame-ancestors), so it cannot load in the sidebar. Open it directly in your browser instead.",
@@ -33184,6 +43985,30 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		subagentDiagUnsupported: "Unsupported",
 		subagentDiagUnavailable: "Unavailable",
 		subagentThinking: "Thinking…",
+		sideChat: "Side Chat (beta)",
+		sideChatNew: "New thread",
+		sideChatUntitled: "New thread",
+		sideChatEmpty: "No side conversations",
+		sideChatEmptyDesc: "Every side conversation is its own tab in the tab strip — it inherits the current session's context and never enters the main conversation",
+		sideChatCreating: "Creating side conversation…",
+		sideChatRetry: "Retry",
+		sideChatThreads: "Switch thread / new",
+		sideChatSave: "Save as new session",
+		sideChatSaveTitle: "Promote this thread to a top-level session in the main session list",
+		sideChatSaved: "Saved as a new session",
+		sideChatNoTurn: "Save is available after the first completed turn",
+		sideChatPendingDrop: "The last unanswered follow-up will not be included in the saved session",
+		sideChatFirstPlaceholder: "Ask the first question — context inherited…",
+		sideChatComposerPlaceholder: "Ask a follow-up…",
+		sideChatThinking: "Deep diving…",
+		sideChatThink: "Thinking",
+		sideChatInjection: "Context injected",
+		sideChatSend: "Send",
+		sideChatCancel: "Stop",
+		sideChatCancelTitle: "Abort the running turn (queued work is kept)",
+		sideChatClose: "Close thread",
+		sideChatCloseTitle: "Release the thread's agent (history is kept)",
+		sideChatError: "Side Chat error: {message}",
 		jobs: "Background jobs",
 		jobsCount: "{count} background jobs",
 		jobsCountRunning: "{count} background jobs · {running} running",
@@ -33218,10 +44043,16 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		openPlugin: "Open",
 		copyInstall: "Copy install command",
 		pluginOfficeDesc: "Office-suite preview (.docx / .xlsx / .pptx) for the better-sidebar editor, keeping the heavy Office render libraries out of the core bundle",
+		pluginFlowglassDesc: "Live session flowgraph with three lanes for user, assistant, and tool calls, plus parallel groups, sub-agent branches, drill-down, and live status; registers a native Flowglass tab when better-sidebar is installed and keeps its standalone drawer as a fallback",
+		pluginGitForgeDesc: "Git Forge tab: GitHub/Gitea (and other forge) account library + per-project grants + hard push policy; tokens stay in local secrets (never in model context); read-only GitForge tool and agent HTTPS credential helper",
 		pluginGitRemotesDesc: "Git Remotes tab: branch/upstream/ahead-behind, fetch (optional prune), ff-only pull, and push only after an in-tab confirm. Does not replace the built-in Git stage/commit tab, and does not offer force-push or a model auto-push tool",
 		pluginSentinelDesc: "Condition-driven agent wakeup: file/process/port/http/command/webhook sensors wake dormant sessions when conditions fire; registers a \"Sentinel\" tab with the server-wide watch table",
 		pluginSidebarQaDesc: "Select-and-ask: Select conversation text → ask in the right-side panel → a dedicated follow-up session (❓追问) in the same workspace; a fast no-thinking model compresses the main context and injects it with the quote, without interrupting the main conversation. Follow-ups nest, continue, and archive",
-		pluginVideoPreviewDesc: "Inline video preview (.mp4/.webm/.mov/.mkv/.avi etc.) for the better-sidebar editor, backed by a dedicated /video host route with HTTP Range (206) support — scrubbing works and files are not capped by the 20MB mediaLimit"
+		pluginSshTunnelDesc: "SSH Tunnel tab: multi-host inventory + per-project grants + local secrets; SSHManager tool (exec/SFTP/session strategies); center interactive terminal and dual-pane SFTP",
+		pluginTurnReviewDesc: "A human gate on the just-finished turn: Approve / Request changes per path with an optional comment; paths grouped by main session / subagent / unattributed; inline snapshot-vs-now diff before you decide. No fork, no /rewind",
+		pluginVideoPreviewDesc: "Inline video preview (.mp4/.webm/.mov/.mkv/.avi etc.) for the better-sidebar editor, backed by a dedicated /video host route with HTTP Range (206) support — scrubbing works and files are not capped by the 20MB mediaLimit",
+		pluginDocsPanelDesc: "Global docs in the DSH sidebar: read your own Markdown notes from any workspace — a file list, an outline, open in Chrome / VS Code, and copy buttons; the docs directory is configurable (default ~/.dsh/docs)",
+		pluginEgoBrowserDesc: "The agent browser for DeepSeek Harness: 32 ego_* tools drive a real Chromium, with a native sidebar \"ego browser\" tab giving a live view of every page the agent visits — you can click, drag, and type to take over. Registers the tab automatically when better-sidebar is present, otherwise falls back to a floating bubble"
 	};
 	/**
 	* The active locale id ('zh' | 'en'): the DSH locale service's snapshot when
@@ -33232,13 +44063,15 @@ globalThis.__dshChunks__["editor"] = (require) => {
 	}
 	/** Translate a copy key; `{name}` placeholders interpolate from `params`. */
 	function t(key, params) {
-		let text = (activeLocale().toLowerCase().startsWith("zh") ? zh : en)[key];
+		let text = void 0;
+		if (text === void 0) text = (activeLocale().toLowerCase().startsWith("zh") ? zh : en)[key];
+		if (text === void 0) text = key;
 		if (params !== void 0) for (const [name, value] of Object.entries(params)) text = text.replaceAll(`{${name}}`, String(value));
 		return text;
 	}
 	//#endregion
 	//#region \0dsh-css:/home/runner/work/DSH-better-sidebar/DSH-better-sidebar/src/client/sidebar.module.css.mjs
-	const css = "[data-dsh-panel-host]{z-index:40;pointer-events:none;position:fixed;inset:0}[data-dsh-panel-host][data-dsh-panel-host-degraded]{position:absolute;top:0;left:0}.nArs4W_toggleCluster{top:calc(3px + env(safe-area-inset-top));z-index:45;pointer-events:auto;flex-direction:row;gap:4px;display:flex;position:absolute;right:10px}.nArs4W_panel:not(.nArs4W_panelHidden) .nArs4W_tabBar{padding-right:72px}.nArs4W_toggleButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), color var(--ds-transition-duration-slow) var(--ds-ease-in-out);background:0 0;border:none;border-radius:50%;justify-content:center;align-items:center;display:flex}.nArs4W_toggleButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_toggleButton:disabled{opacity:.4;cursor:default}.nArs4W_panel{z-index:40;pointer-events:auto;background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);padding-bottom:env(safe-area-inset-bottom);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:absolute;top:0;bottom:0;right:0}.nArs4W_panelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translate(102%)}.nArs4W_panel[data-dragging]{transition:none}.nArs4W_panelResize{cursor:col-resize;z-index:2;touch-action:none;width:8px;position:absolute;top:0;bottom:0;left:-4px}.nArs4W_panelResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_panelBody{flex:1;min-width:0;min-height:0;display:flex}.nArs4W_bottomPanel{z-index:40;background:var(--dsw-alias-bg-layer-1);border-top:1px solid var(--dsw-alias-border-l2);pointer-events:auto;padding-bottom:env(safe-area-inset-bottom);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:absolute;bottom:0}.nArs4W_bottomPanelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translateY(102%)}.nArs4W_bottomPanel[data-dragging]{transition:none}.nArs4W_panel,.nArs4W_bottomPanel{contain:layout style}body[data-dsh-sidebar-dragging] .nArs4W_panel,body[data-dsh-sidebar-dragging] .nArs4W_bottomPanel{will-change:transform}.nArs4W_bottomResize{cursor:row-resize;z-index:2;touch-action:none;height:8px;position:absolute;top:-4px;left:0;right:0}.nArs4W_bottomResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_bottomClose{z-index:4;width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex;position:absolute;top:3px;right:6px}.nArs4W_bottomClose:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_bottomPanel .nArs4W_tabBar{padding-right:40px}body[data-dsh-title-bar-compat] .nArs4W_toggleCluster{top:calc(var(--dsh-title-bar-strip,40px) + 3px)}body[data-dsh-title-bar-compat] .nArs4W_panel{padding-top:var(--dsh-title-bar-strip,40px)}.nArs4W_cornerHandle{left:-6px;bottom:calc(var(--dsh-sidebar-height,0px) + 6px);z-index:2;cursor:nwse-resize;touch-action:none;width:12px;height:12px;position:absolute}.nArs4W_cornerHandle:hover,.nArs4W_cornerHandle[data-dragging]{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_iconButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.nArs4W_iconButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_iconButton:disabled{opacity:.4;cursor:default}.nArs4W_workbench,.nArs4W_split{flex:1;min-width:0;min-height:0;display:flex}.nArs4W_splitRow{flex-direction:row}.nArs4W_splitCol{flex-direction:column}.nArs4W_splitChild{display:flex;position:relative;overflow:hidden}.nArs4W_divider{z-index:3;touch-action:none;flex:none;position:relative}.nArs4W_dividerRow:after,.nArs4W_dividerCol:after{content:\"\";background:var(--dsw-alias-border-l2);transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out);position:absolute}.nArs4W_dividerRow{cursor:col-resize;width:7px;margin:0 -2px}.nArs4W_dividerRow:after{width:1px;top:0;bottom:0;left:50%;transform:translate(-50%)}.nArs4W_dividerCol{cursor:row-resize;height:7px;margin:-2px 0}.nArs4W_dividerCol:after{height:1px;top:50%;left:0;right:0;transform:translateY(-50%)}.nArs4W_divider:hover:after,.nArs4W_dividerActive:after{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_pane{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;position:relative}.nArs4W_paneDrop{outline:1px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.nArs4W_dropOverlay{z-index:6;pointer-events:none;background:var(--dsw-alias-interactive-bg-hover-accent);opacity:.5;position:absolute}.nArs4W_dropLeft{width:25%;top:0;bottom:0;left:0}.nArs4W_dropRight{width:25%;top:0;bottom:0;right:0}.nArs4W_dropUp{height:25%;top:0;left:0;right:0}.nArs4W_dropDown{height:25%;bottom:0;left:0;right:0}.nArs4W_dropCenter{outline:2px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-2px;background:0 0;inset:25%}.nArs4W_paneContent{flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden}.nArs4W_paneTab{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_paneTabHidden{display:none}.nArs4W_paneEmptyCards{flex:1;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));align-content:start;gap:8px;min-height:0;padding:12px;display:grid;overflow:hidden}.nArs4W_paneCard{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;text-align:center;border-radius:8px;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:12px 8px;display:flex}.nArs4W_paneCard:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2)}.nArs4W_paneCard:disabled{opacity:.45;cursor:default}.nArs4W_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);flex:none;align-items:stretch;height:34px;display:flex}.nArs4W_tabBarDrop{outline:1px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.nArs4W_tabList{scrollbar-width:none;flex:1;min-width:0;display:flex;overflow-x:auto}.nArs4W_tabList::-webkit-scrollbar{display:none}.nArs4W_tab{min-width:64px;max-width:160px;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);border-right:1px solid var(--dsw-alias-border-l1);cursor:pointer;user-select:none;background:0 0;flex:none;align-items:center;gap:4px;padding:0 4px 0 10px;display:flex}.nArs4W_tab:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_tabActive{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}.nArs4W_tabTitle{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.nArs4W_tabBadge{min-width:16px;height:15px;font:var(--dsw-font-xxxs-strong-11);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-brand-primary);border-radius:8px;flex:none;justify-content:center;align-items:center;padding:0 4px;display:inline-flex}.nArs4W_tabClose{width:18px;height:18px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:4px;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.nArs4W_tabClose:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_tabBarPlus{background:var(--dsw-alias-bg-layer-1);width:22px;height:22px;color:var(--dsw-alias-label-tertiary);cursor:pointer;border:none;border-radius:5px;flex:none;justify-content:center;align-self:center;align-items:center;margin:0 6px;padding:0;display:inline-flex;position:sticky;right:0}.nArs4W_tabBarPlus:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_explorer{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_explorerHeader{flex:none;justify-content:space-between;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_explorerRoot{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_explorerBody{flex:1;min-height:0;padding:2px 6px 8px;overflow:hidden auto}.nArs4W_explorerRow{box-sizing:border-box;width:100%;max-width:100%;height:34px;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;white-space:nowrap;animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);background:0 0;border:none;border-radius:8px;align-items:center;gap:6px;padding:0 8px;display:flex}.nArs4W_explorerRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_explorerDir{font:var(--dsw-font-s-strong-14)}.nArs4W_explorerHidden{opacity:.45}.nArs4W_explorerSymlink{color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_explorerBroken .nArs4W_explorerName{color:var(--dsw-alias-state-error-primary)}.nArs4W_explorerName{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.nArs4W_explorerRef{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:20px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;align-items:center;padding:0 8px;display:none}.nArs4W_explorerRef:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_explorerRow:hover .nArs4W_explorerRef,.nArs4W_explorerRow:focus-within .nArs4W_explorerRef{display:inline-flex}.nArs4W_explorerCopied{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_explorerError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);cursor:default}@keyframes nArs4W_dsh-row-in{0%{opacity:0}}.nArs4W_explorerEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.nArs4W_editor{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_editorHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:6px;padding:4px 8px;display:flex}.nArs4W_editorTitle{min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.nArs4W_editorPathInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_editorPathInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_editorTreeToggleActive{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}.nArs4W_editorBody{flex:1;min-height:0;display:flex}.nArs4W_editorMain{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}.nArs4W_editorTreeDock{border-left:1px solid var(--dsw-alias-border-l1);flex:none;min-height:0;display:flex;position:relative}.nArs4W_editorTreeResize{cursor:col-resize;touch-action:none;z-index:3;width:6px;position:absolute;top:0;bottom:0;left:0}.nArs4W_editorTreeResize:hover{background:var(--dsw-alias-border-l2)}.nArs4W_editorTreePanel{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}.nArs4W_editorTreePanelFull{flex:1}.nArs4W_editorTreeSearch{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:4px;padding:6px 8px;display:flex}.nArs4W_editorSearchInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:26px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_editorSearchInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_editorSearchHint{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);padding:8px 12px}.nArs4W_editorSearchResult{width:100%;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:none;border-radius:6px;padding:4px 8px;display:block;overflow:hidden}.nArs4W_editorSearchResult:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorStatus{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_editorStatusError{color:var(--dsw-alias-state-error-primary)}.nArs4W_dirtyDot{background:var(--dsw-alias-state-warn-primary);border-radius:50%;flex:none;width:7px;height:7px}.nArs4W_editorPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;flex:1;justify-content:center;align-items:center;padding:16px;display:flex}.nArs4W_orphanedType{opacity:.7;overflow-wrap:anywhere;margin-top:8px;font-size:12px;display:block}.nArs4W_editorBinary{text-align:center;flex-direction:column;flex:1;justify-content:center;align-items:center;gap:12px;padding:24px 16px;display:flex}.nArs4W_editorBinaryNotice{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_editorDownloadLink{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), border-color var(--ds-transition-duration-slow) var(--ds-ease-in-out);border-radius:6px;align-items:center;gap:6px;padding:6px 14px;text-decoration:none;display:inline-flex}.nArs4W_editorDownloadLink:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-border-l2)}.nArs4W_editorError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);padding:12px 16px}.nArs4W_editorBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 12px}.nArs4W_sandboxStatus{font:var(--dsw-font-xxxs-11);flex:none;align-items:center;gap:8px;padding:4px 10px;display:flex}.nArs4W_sandboxStatusOn{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1);border-bottom:1px solid var(--dsw-alias-border-l1)}.nArs4W_sandboxStatusOff{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);border-bottom:1px solid color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent)}.nArs4W_sandboxDot{background:var(--dsw-alias-state-success-primary);border-radius:50%;flex:none;width:6px;height:6px}.nArs4W_sandboxStatusOff .nArs4W_sandboxDot{background:var(--dsw-alias-state-error-primary)}.nArs4W_sandboxStatusText{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.nArs4W_sandboxAction{border:1px solid var(--dsw-alias-border-l2);font:inherit;color:inherit;cursor:pointer;background:0 0;border-radius:6px;flex:none;padding:2px 8px}.nArs4W_sandboxAction:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorHtml{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_browser{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_browserBar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:4px;padding:6px 8px;display:flex}.nArs4W_browserInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_browserInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_browserMessage{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 12px}.nArs4W_browserFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_browserStart{text-align:center;min-height:0;font:var(--dsw-font-xs-13);color:var(--dsw-alias-label-tertiary);flex:1;justify-content:center;align-items:center;padding:20px;display:flex}.nArs4W_browserBlocked{text-align:center;min-height:0;color:var(--dsw-alias-state-warn-primary);flex-direction:column;flex:1;justify-content:center;align-items:center;gap:6px;padding:24px;display:flex}.nArs4W_browserBlockedTitle{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary)}.nArs4W_browserBlockedDesc{max-width:280px;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-secondary)}.nArs4W_browserBlockedActions{gap:8px;margin-top:6px;display:flex}.nArs4W_browserBlockedButton{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-11);cursor:pointer;border-radius:6px;padding:4px 12px}.nArs4W_browserBlockedButton:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorCm{background:0 0;flex:1;min-height:0;overflow:hidden}.nArs4W_editorCmHidden{display:none}.nArs4W_editorCm .cm-editor{height:100%}.nArs4W_editorCm .cm-editor.cm-focused{outline:none}.nArs4W_editorModeToggle{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:6px;flex:none;align-items:center;gap:2px;padding:2px;display:inline-flex}.nArs4W_editorModeButton{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);cursor:pointer;background:0 0;border:none;border-radius:4px;padding:2px 8px}.nArs4W_editorModeButton:hover{color:var(--dsw-alias-label-primary)}.nArs4W_editorModeActive{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}.nArs4W_editorImageWrap{flex:1;justify-content:center;align-items:center;min-height:0;padding:12px;display:flex;overflow:auto}.nArs4W_editorImage{object-fit:contain;max-width:100%;max-height:100%}.nArs4W_editorMd{min-height:0;font:var(--dsw-font-xs-13);flex:1;padding:10px 14px;overflow-y:auto}.nArs4W_mermaidWrap{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:6px;margin:6px 0;overflow:hidden}.nArs4W_mermaidHeader{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);justify-content:space-between;align-items:center;gap:6px;padding:4px 8px;display:flex}.nArs4W_mermaidInfo{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_mermaidCopy{height:20px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-11);cursor:pointer;background:0 0;border:none;border-radius:4px;align-items:center;gap:4px;padding:0 6px;display:inline-flex}.nArs4W_mermaidCopy:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_mermaidBody{cursor:zoom-in;justify-content:center;padding:10px;display:flex;overflow:auto}.nArs4W_mermaidBody svg{max-width:100%;height:auto}.nArs4W_mermaidError{border-bottom:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-state-error-primary);font:var(--dsw-font-xxxs-11);padding:6px 10px}.nArs4W_mermaidCode{font:var(--dsw-font-xxxs-11);margin:0;padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:auto}.nArs4W_mermaidMarkdown .md-code-block[data-mermaid-processed]{display:contents}.nArs4W_mermaidModal{z-index:1000;background:var(--dsw-alias-bg-mask-1);backdrop-filter:blur(2px);flex-direction:column;justify-content:center;align-items:center;display:flex;position:fixed;inset:0}.nArs4W_mermaidModalToolbar{z-index:10;gap:8px;display:flex;position:absolute;top:16px;right:16px}.nArs4W_mermaidModalButton{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);width:36px;height:36px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;border-radius:8px;justify-content:center;align-items:center;display:inline-flex}.nArs4W_mermaidModalButton:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_mermaidModalStage{justify-content:center;align-items:center;width:90vw;height:80vh;display:flex;position:relative;overflow:hidden}.nArs4W_mermaidModalStage svg{cursor:grab;transform-origin:50%;user-select:none;-webkit-user-drag:none;background:var(--dsw-alias-bg-layer-1);border-radius:12px;max-width:none;max-height:none;padding:16px}.nArs4W_mermaidModalStage svg:active{cursor:grabbing}.nArs4W_mermaidModalHint{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);pointer-events:none;position:absolute;bottom:16px;left:50%;transform:translate(-50%)}.nArs4W_selectionPopup{z-index:60;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-strong-11);white-space:nowrap;cursor:pointer;border-radius:6px;align-items:center;padding:0 10px;display:inline-flex;position:fixed;transform:translate(-50%,calc(-100% - 8px))}.nArs4W_selectionPopup:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorPdf{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_editorPdfToolbar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;justify-content:flex-end;padding:6px 8px;display:flex}.nArs4W_editorPdfStage{flex:1;min-height:0;display:flex;position:relative}.nArs4W_editorPdfFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_editorPdfFrameBlocked{pointer-events:none}.nArs4W_editorPdfDragShield{z-index:4;pointer-events:none;background:0 0;position:absolute;inset:0}.nArs4W_editorPdfDragShieldActive{pointer-events:auto}body[data-dsh-tab-dragging] .nArs4W_editorPdfFrame{pointer-events:none!important}body[data-dsh-tab-dragging] .nArs4W_editorPdfDragShield{pointer-events:auto!important}.nArs4W_terminalWrap{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.nArs4W_terminal{flex:1;min-height:0;padding:6px 4px 6px 8px}.nArs4W_terminal .xterm{height:100%}.nArs4W_terminalBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex-wrap:wrap;flex:none;align-items:center;gap:8px;padding:3px 10px;display:flex}.nArs4W_terminalBannerUrl{word-break:break-all;opacity:.85;flex-basis:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.nArs4W_boundaryError{z-index:50;background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);flex-direction:column;align-items:flex-start;gap:8px;padding:16px;display:flex;position:fixed;top:0;bottom:0;right:0;overflow:auto}.nArs4W_terminalRetry{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;padding:1px 8px}.nArs4W_terminalRetry:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_terminalDepsBanner{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex-direction:column;flex:none;gap:6px;padding:10px;display:flex}.nArs4W_terminalDepsTitle{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-state-warn-primary)}.nArs4W_terminalDepsHint{opacity:.9}.nArs4W_terminalDepsCommandRow{align-items:flex-start;gap:8px;display:flex}.nArs4W_terminalRepairCommand{white-space:pre-wrap;word-break:break-all;user-select:text;min-width:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:4px;flex:1;max-height:160px;margin:0;padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;overflow:auto}.nArs4W_terminalDepsNote{opacity:.85}.nArs4W_terminalDepsActions{align-items:center;gap:8px;display:flex}.nArs4W_tabBoundaryError{min-height:0;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);flex-direction:column;flex:1;align-items:flex-start;gap:8px;padding:12px 16px;display:flex;overflow:auto}.nArs4W_git{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.nArs4W_gitHeader{flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_gitBranchSelect{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);min-width:0;height:26px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 6px}.nArs4W_gitSection{border-top:1px solid var(--dsw-alias-border-l1)}.nArs4W_gitSectionHeader{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary);text-transform:uppercase;justify-content:space-between;align-items:center;padding:6px 12px 4px;display:flex}.nArs4W_gitLink{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-brand-primary);cursor:pointer;background:0 0;border:none;padding:0}.nArs4W_gitLink:hover:not(:disabled){text-decoration:underline}.nArs4W_gitLink:disabled{opacity:.4;cursor:default}.nArs4W_gitRow{min-height:34px;animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);border-radius:8px;align-items:center;gap:6px;margin:0 6px;padding:0 8px;display:flex}.nArs4W_gitRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitRowSelected{background:var(--dsw-alias-interactive-bg-active)}.nArs4W_gitRowMain{cursor:pointer;text-align:left;background:0 0;border:none;flex:1;align-items:center;gap:8px;min-width:0;padding:3px 0;display:flex}.nArs4W_gitBadge{width:20px;height:16px;font:var(--dsw-font-xxxs-strong-11);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);border-radius:4px;flex:none;justify-content:center;align-items:center;display:inline-flex}.nArs4W_gitName{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);padding:4px 12px 8px}.nArs4W_gitPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.nArs4W_gitError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);white-space:pre-wrap;padding:8px 12px}.nArs4W_gitDiff{border-top:1px solid var(--dsw-alias-border-l1);padding:8px}.nArs4W_gitDiffTab{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.nArs4W_gitDiffTabHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_gitDiffTabTitle{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitDiffFile{align-items:baseline;gap:6px;padding:8px 2px 2px;display:flex}.nArs4W_gitDiffFilePath{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_gitDiffFileOld{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:none;max-width:40%;overflow:hidden}.nArs4W_gitDiffFileTag{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);border-radius:999px;flex:none;padding:0 6px}.nArs4W_gitDiffHunk{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);gap:8px;padding:3px 2px;display:flex}.nArs4W_gitDiffHunkHeader{color:var(--dsw-alias-label-secondary);flex:none}.nArs4W_gitDiffHunkSection{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_gitDiffLine{font:var(--dsw-font-markdown-code-block-small);white-space:pre-wrap;overflow-wrap:anywhere;align-items:stretch;min-width:0;line-height:20px;display:flex}.nArs4W_gitDiffNum{text-align:right;width:36px;color:var(--dsw-alias-label-tertiary);user-select:none;flex:none;padding-right:8px}.nArs4W_gitDiffCode{flex:1;min-width:0;overflow:visible}.nArs4W_gitDiffCtx{color:var(--dsw-alias-label-primary)}.nArs4W_gitDiffDel{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent)}.nArs4W_gitDiffAdd{color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent)}.nArs4W_gitDiffMeta{padding-left:2px}.nArs4W_gitDiffMetaText{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);font-style:italic}.nArs4W_gitDiffExpand{width:100%;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-brand-primary);cursor:pointer;text-align:center;background:0 0;border:none;margin:4px 0;display:block}.nArs4W_gitDiffExpand:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitConfirmDesc{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);white-space:pre-wrap;margin:0}.nArs4W_gitCommit{border-top:1px solid var(--dsw-alias-border-l1);align-items:center;gap:6px;padding:8px 12px;display:flex}.nArs4W_gitCommitInput{flex:1;min-width:0}.nArs4W_gitCommitButton{background:var(--dsw-alias-button-primary-fill);height:26px;color:var(--dsw-alias-label-primary-inverted);font:var(--dsw-font-xxs-strong-12);cursor:pointer;border:none;border-radius:6px;flex:none;padding:0 12px}.nArs4W_gitCommitButton:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}.nArs4W_gitCommitButton:disabled{opacity:.45;cursor:default}.nArs4W_gitLogRow{cursor:pointer;border-radius:8px;flex-direction:column;gap:2px;padding:5px 12px;display:flex}.nArs4W_gitLogRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitLogLine1{align-items:baseline;gap:8px;min-width:0;display:flex}.nArs4W_gitLogHash{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_gitLogLine2{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:flex}.nArs4W_gitLogRef{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-brand-primary);white-space:nowrap;border-radius:999px;flex:none;padding:0 5px}.nArs4W_gitLogSubject{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitLogMeta{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_gitLogMore{border:1px solid var(--dsw-alias-border-l2);width:calc(100% - 24px);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border-radius:6px;margin:4px 12px 8px;padding:6px 0;display:block}.nArs4W_gitLogMore:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_gitLogMore:disabled{opacity:.5;cursor:default}.nArs4W_producedRow{flex-wrap:wrap;align-items:center;gap:8px;padding:4px 0;display:flex}.nArs4W_producedLabel{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_producedChip{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);max-width:200px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);cursor:pointer;border-radius:999px;align-items:center;gap:4px;padding:2px 8px;display:inline-flex;overflow:hidden}.nArs4W_producedChip:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_producedChip span{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_producedMore{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_toggleButton:focus-visible,.nArs4W_bottomClose:focus-visible,.nArs4W_iconButton:focus-visible,.nArs4W_tab:focus-visible,.nArs4W_tabClose:focus-visible,.nArs4W_tabBarPlus:focus-visible,.nArs4W_paneCard:focus-visible,.nArs4W_explorerRow:focus-visible,.nArs4W_explorerRef:focus-visible,.nArs4W_gitRowMain:focus-visible,.nArs4W_gitLink:focus-visible,.nArs4W_gitCommitButton:focus-visible,.nArs4W_gitLogRow:focus-visible,.nArs4W_gitLogMore:focus-visible,.nArs4W_gitDiffExpand:focus-visible,.nArs4W_terminalRetry:focus-visible,.nArs4W_editorModeButton:focus-visible,.nArs4W_editorDownloadLink:focus-visible,.nArs4W_editorPptxButton:focus-visible,.nArs4W_editorDocxZoomRange:focus-visible{outline:2px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}@media (prefers-reduced-motion:reduce){.nArs4W_panel,.nArs4W_panelHidden,.nArs4W_bottomPanel,.nArs4W_bottomPanelHidden,.nArs4W_toggleCluster,.nArs4W_toggleButton,.nArs4W_tab,.nArs4W_tabBarPlus,.nArs4W_paneCard,.nArs4W_explorerRow,.nArs4W_gitRow,.nArs4W_divider,.nArs4W_dividerRow:after,.nArs4W_dividerCol:after{transition:none;animation:none}}@media (width<=767px){.nArs4W_panel:not(.nArs4W_panelHidden) .nArs4W_tabBar{padding-right:40px}.nArs4W_tab{min-width:48px;max-width:128px}}";
+	const css = "[data-dsh-panel-host]{z-index:25;pointer-events:none;position:fixed;inset:0;overflow:hidden}[data-dsh-panel-host][data-dsh-panel-host-degraded]{position:absolute;top:0;left:0}.nArs4W_toggleCluster{top:calc(3px + env(safe-area-inset-top));z-index:45;pointer-events:auto;flex-direction:row;gap:4px;display:flex;position:absolute;right:10px}.nArs4W_panel:not(.nArs4W_panelHidden) .nArs4W_tabBar{padding-right:72px}.nArs4W_toggleButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), color var(--ds-transition-duration-slow) var(--ds-ease-in-out);background:0 0;border:none;border-radius:50%;justify-content:center;align-items:center;display:flex}.nArs4W_toggleButton:hover:not(:disabled):not([aria-disabled=true]){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_toggleButton:disabled,.nArs4W_toggleButton[aria-disabled=true]{opacity:.4;cursor:default}.nArs4W_panel{box-sizing:border-box;z-index:40;pointer-events:auto;background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);padding-bottom:env(safe-area-inset-bottom);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:absolute;top:0;bottom:0;right:0}.nArs4W_panelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), width var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translate(102%)}.nArs4W_panel[data-dragging]{transition:none}.nArs4W_panelResize{cursor:col-resize;z-index:2;touch-action:none;width:8px;position:absolute;top:0;bottom:0;left:-4px}.nArs4W_panelResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_panelBody{flex:1;min-width:0;min-height:0;display:flex}.nArs4W_bottomPanel{z-index:40;background:var(--dsw-alias-bg-layer-1);border-top:1px solid var(--dsw-alias-border-l2);pointer-events:auto;padding-bottom:env(safe-area-inset-bottom);transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out);flex-direction:column;display:flex;position:absolute;bottom:0}.nArs4W_bottomPanelHidden{pointer-events:none;visibility:hidden;transition:transform var(--ds-transition-duration-slow) var(--ds-ease-in-out), height var(--ds-transition-duration-slow) var(--ds-ease-in-out), visibility 0s linear var(--ds-transition-duration-slow);transform:translateY(102%)}.nArs4W_bottomPanel[data-dragging]{transition:none}.nArs4W_panel,.nArs4W_bottomPanel{contain:layout style}body[data-dsh-sidebar-dragging] .nArs4W_panel,body[data-dsh-sidebar-dragging] .nArs4W_bottomPanel{will-change:transform}.nArs4W_bottomResize{cursor:row-resize;z-index:2;touch-action:none;height:8px;position:absolute;top:-4px;left:0;right:0}.nArs4W_bottomResizeActive{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_bottomClose{z-index:4;width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex;position:absolute;top:3px;right:6px}.nArs4W_bottomClose:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_bottomPanel .nArs4W_tabBar{padding-right:40px}.nArs4W_floatWindow{z-index:42;pointer-events:auto;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);box-shadow:var(--dsw-shadow-lv3);contain:layout style;border-radius:8px;flex-direction:column;display:flex;position:absolute;overflow:hidden}.nArs4W_floatWindowDragging{will-change:left, top, width, height}.nArs4W_floatHeader{height:34px;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1);border-bottom:1px solid var(--dsw-alias-border-l1);cursor:grab;user-select:none;flex:none;align-items:center;gap:4px;padding:0 4px 0 10px;display:flex}.nArs4W_floatWindowDragging .nArs4W_floatHeader{cursor:grabbing}.nArs4W_floatTitle{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.nArs4W_floatClose{width:18px;height:18px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:4px;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.nArs4W_floatClose:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_floatContent{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden}.nArs4W_floatResize{z-index:2;cursor:nwse-resize;touch-action:none;width:14px;height:14px;position:absolute;bottom:0;right:0}.nArs4W_floatResize:hover{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_pane[data-dsh-float-dock-over]{outline:2px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-2px}.nArs4W_floatDropHint{z-index:46;pointer-events:none;border:2px dashed var(--dsw-alias-interactive-bg-hover-accent);background:color-mix(in srgb, var(--dsw-alias-interactive-bg-hover-accent) 12%, transparent);border-radius:8px;justify-content:center;align-items:center;display:flex;position:absolute}.nArs4W_floatDropHintLabel{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l2);border-radius:999px;padding:4px 12px}.nArs4W_toggleCluster,.nArs4W_toggleButton,.nArs4W_tabBar,.nArs4W_floatHeader{-webkit-app-region:no-drag}body[data-dsh-title-bar-compat] .nArs4W_toggleCluster{top:calc(var(--dsh-title-bar-strip,40px) + 3px)}body[data-dsh-title-bar-compat] .nArs4W_panel{padding-top:var(--dsh-title-bar-strip,40px)}.nArs4W_cornerHandle{left:-6px;bottom:calc(var(--dsh-sidebar-height,0px) + 6px);z-index:2;cursor:nwse-resize;touch-action:none;width:12px;height:12px;position:absolute}.nArs4W_cornerHandle:hover,.nArs4W_cornerHandle[data-dragging]{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_iconButton{width:28px;height:28px;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;border-radius:50%;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.nArs4W_iconButton:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_iconButton:disabled{opacity:.4;cursor:default}.nArs4W_workbench,.nArs4W_split{flex:1;min-width:0;min-height:0;display:flex}.nArs4W_splitRow{flex-direction:row}.nArs4W_splitCol{flex-direction:column}.nArs4W_splitChild{display:flex;position:relative;overflow:hidden}.nArs4W_divider{z-index:3;touch-action:none;flex:none;position:relative}.nArs4W_dividerRow:after,.nArs4W_dividerCol:after{content:\"\";background:var(--dsw-alias-border-l2);transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out);position:absolute}.nArs4W_dividerRow{cursor:col-resize;width:7px;margin:0 -2px}.nArs4W_dividerRow:after{width:1px;top:0;bottom:0;left:50%;transform:translate(-50%)}.nArs4W_dividerCol{cursor:row-resize;height:7px;margin:-2px 0}.nArs4W_dividerCol:after{height:1px;top:50%;left:0;right:0;transform:translateY(-50%)}.nArs4W_divider:hover:after,.nArs4W_dividerActive:after{background:var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_pane{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;position:relative}.nArs4W_paneDrop{outline:1px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.nArs4W_dropOverlay{z-index:6;pointer-events:none;background:var(--dsw-alias-interactive-bg-hover-accent);opacity:.5;position:absolute}.nArs4W_dropLeft{width:25%;top:0;bottom:0;left:0}.nArs4W_dropRight{width:25%;top:0;bottom:0;right:0}.nArs4W_dropUp{height:25%;top:0;left:0;right:0}.nArs4W_dropDown{height:25%;bottom:0;left:0;right:0}.nArs4W_dropCenter{outline:2px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-2px;background:0 0;inset:25%}.nArs4W_paneContent{flex-direction:column;flex:1;min-height:0;display:flex;overflow:hidden}.nArs4W_paneTab{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_paneTabHidden{display:none}.nArs4W_paneEmptyCards{flex:1;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));align-content:start;gap:8px;min-height:0;padding:12px;display:grid;overflow:hidden}.nArs4W_paneCard{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;text-align:center;border-radius:8px;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:12px 8px;display:flex}.nArs4W_paneCard:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2)}.nArs4W_paneCard:disabled{opacity:.45;cursor:default}.nArs4W_tabBar{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);flex:none;align-items:stretch;height:34px;display:flex}.nArs4W_tabBarDrop{outline:1px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.nArs4W_tabList{scrollbar-width:none;flex:1;min-width:0;display:flex;overflow-x:auto}.nArs4W_tabList::-webkit-scrollbar{display:none}.nArs4W_tab{min-width:64px;max-width:160px;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);border-right:1px solid var(--dsw-alias-border-l1);cursor:pointer;user-select:none;background:0 0;flex:none;align-items:center;gap:4px;padding:0 4px 0 10px;display:flex}.nArs4W_tab:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_tabActive{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}.nArs4W_tabTitle{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.nArs4W_tabBadge{min-width:16px;height:15px;font:var(--dsw-font-xxxs-strong-11);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-brand-primary);border-radius:8px;flex:none;justify-content:center;align-items:center;padding:0 4px;display:inline-flex}.nArs4W_tabClose{width:18px;height:18px;color:var(--dsw-alias-label-tertiary);cursor:pointer;background:0 0;border:none;border-radius:4px;flex:none;justify-content:center;align-items:center;padding:0;display:inline-flex}.nArs4W_tabClose:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_tabBarPlus{background:var(--dsw-alias-bg-layer-1);width:22px;height:22px;color:var(--dsw-alias-label-tertiary);cursor:pointer;border:none;border-radius:5px;flex:none;justify-content:center;align-self:center;align-items:center;margin:0 6px;padding:0;display:inline-flex;position:sticky;right:0}.nArs4W_tabBarPlus:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_explorer{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_explorerHeader{flex:none;justify-content:space-between;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_explorerRoot{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_explorerBody{flex:1;min-height:0;padding:4px 8px 8px;overflow:hidden auto}.nArs4W_explorerRow{box-sizing:border-box;width:100%;max-width:100%;height:34px;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);text-align:left;cursor:pointer;white-space:nowrap;animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);background:0 0;border:none;border-radius:8px;align-items:center;gap:6px;padding:0 8px;display:flex}.nArs4W_explorerRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_explorerRowRevealed{background:color-mix(in srgb, var(--dsw-alias-interactive-bg-hover-accent) 18%, transparent);box-shadow:inset 2px 0 0 var(--dsw-alias-interactive-bg-hover-accent)}.nArs4W_explorerDir{font:var(--dsw-font-s-strong-14)}.nArs4W_explorerHidden{opacity:.45}.nArs4W_explorerSymlink{color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_explorerBroken .nArs4W_explorerName{color:var(--dsw-alias-state-error-primary)}.nArs4W_explorerName{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden}.nArs4W_explorerRef{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:20px;color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;align-items:center;padding:0 8px;display:none}.nArs4W_explorerRef:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_explorerRow:hover .nArs4W_explorerRef,.nArs4W_explorerRow:focus-within .nArs4W_explorerRef{display:inline-flex}.nArs4W_explorerCopied{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_explorerError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);cursor:default}@keyframes nArs4W_dsh-row-in{0%{opacity:0}}.nArs4W_explorerEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.nArs4W_explorerRowDropTarget{background:var(--dsw-alias-interactive-bg-hover);outline:1px dashed var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}.nArs4W_uploadDropZone{z-index:1001;pointer-events:none;border:2px dashed var(--dsw-alias-interactive-bg-hover-accent);box-shadow:0 0 0 200vmax var(--dsw-alias-bg-mask-drop);animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);border-radius:10px;justify-content:center;align-items:flex-start;padding:12px;display:flex;position:fixed}.nArs4W_uploadDropHero{flex-direction:column;align-items:center;gap:10px;max-width:100%;padding-top:8px;display:flex}.nArs4W_uploadDropZonePill{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);max-width:100%;box-shadow:var(--dsw-shadow-lv2);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-strong-12);border-radius:999px;align-items:center;gap:6px;padding:6px 12px;display:flex}.nArs4W_uploadDropZoneText{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.nArs4W_uploadDropChatHint{z-index:1002;pointer-events:none;animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);justify-content:center;align-items:center;padding:24px;display:flex;position:fixed;top:0;bottom:0;left:0}.nArs4W_uploadDropChatCard{text-align:center;max-width:100%;color:var(--dsw-alias-label-primary);font:var(--dsw-font-s-strong-14);flex-direction:column;align-items:center;gap:12px;display:flex}.nArs4W_uploadOverlay{z-index:30;background:var(--dsw-alias-bg-mask-1);backdrop-filter:var(--dsw-mask-blur);animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);justify-content:center;align-items:center;display:flex;position:absolute;inset:0}.nArs4W_uploadOverlayCard{border:1px solid var(--dsw-alias-border-inverted);background:var(--dsw-alias-bg-layer-2);min-width:280px;max-width:min(420px,100% - 48px);box-shadow:var(--dsw-shadow-lv3);border-radius:24px;flex-direction:column;gap:12px;padding:20px 24px;display:flex}.nArs4W_uploadOverlayTitle{font:var(--dsw-font-s-strong-14);color:var(--dsw-alias-label-primary);align-items:center;gap:8px;display:flex}.nArs4W_uploadOverlayTitle>svg{flex:none}.nArs4W_uploadOverlayTitle>span{white-space:nowrap;text-overflow:ellipsis;min-width:0;overflow:hidden}.nArs4W_uploadOverlayProgress{background:var(--dsw-alias-border-l2);border-radius:3px;height:6px;overflow:hidden}.nArs4W_uploadOverlayProgressFill{background:var(--dsw-alias-interactive-bg-hover-accent);height:100%;transition:width .15s var(--ds-ease-in-out);border-radius:3px}.nArs4W_uploadOverlayStatus{min-height:1em;font:var(--dsw-font-xxs-12);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-tertiary);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.nArs4W_uploadOverlayCancel{border:1px solid var(--dsw-alias-border-l2);height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;background:0 0;border-radius:8px;align-self:flex-end;padding:0 14px}.nArs4W_uploadOverlayCancel:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-border-l2)}.nArs4W_uploadOverlayCancel:disabled{opacity:.4;cursor:default}.nArs4W_editor{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_editorHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:6px;padding:6px 8px;display:flex}.nArs4W_editorTitle{min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-secondary);text-overflow:ellipsis;white-space:nowrap;flex:1;overflow:hidden}.nArs4W_editorPathInput{box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_editorPathInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_editorTreeToggleActive{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-active)}.nArs4W_editorBody{flex:1;min-height:0;display:flex}.nArs4W_editorMain{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex}.nArs4W_editorTreeDock{border-left:1px solid var(--dsw-alias-border-l1);flex:none;min-height:0;display:flex;position:relative}.nArs4W_editorTreeResize{cursor:col-resize;touch-action:none;z-index:3;width:6px;position:absolute;top:0;bottom:0;left:0}.nArs4W_editorTreeResize:hover{background:var(--dsw-alias-border-l2)}.nArs4W_editorTreePanel{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;position:relative}.nArs4W_editorTreePanelFull{flex:1}.nArs4W_editorTreeSearch{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:6px;padding:6px 8px;display:flex}.nArs4W_editorSearchInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:26px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_editorSearchInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_editorSearchHint{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);padding:8px 12px}.nArs4W_editorSearchResult{width:100%;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);text-align:left;cursor:pointer;text-overflow:ellipsis;white-space:nowrap;background:0 0;border:none;border-radius:6px;padding:4px 8px;display:block;overflow:hidden}.nArs4W_editorSearchResult:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorStatus{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_editorStatusError{color:var(--dsw-alias-state-error-primary)}.nArs4W_dirtyDot{background:var(--dsw-alias-state-warn-primary);border-radius:50%;flex:none;width:7px;height:7px}.nArs4W_editorPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;flex:1;justify-content:center;align-items:center;padding:16px;display:flex}.nArs4W_orphanedType{opacity:.7;overflow-wrap:anywhere;margin-top:8px;font-size:12px;display:block}.nArs4W_editorBinary{text-align:center;flex-direction:column;flex:1;justify-content:center;align-items:center;gap:12px;padding:24px 16px;display:flex}.nArs4W_editorBinaryNotice{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_editorDownloadLink{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-strong-12);cursor:pointer;transition:background var(--ds-transition-duration-slow) var(--ds-ease-in-out), border-color var(--ds-transition-duration-slow) var(--ds-ease-in-out);border-radius:6px;align-items:center;gap:6px;padding:6px 14px;text-decoration:none;display:inline-flex}.nArs4W_editorDownloadLink:hover{background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-border-l2)}.nArs4W_editorError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);padding:12px 16px}.nArs4W_editorBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 8px}.nArs4W_sandboxStatus{font:var(--dsw-font-xxxs-11);flex:none;align-items:center;gap:8px;padding:4px 10px;display:flex}.nArs4W_sandboxStatusOn{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1);border-bottom:1px solid var(--dsw-alias-border-l1)}.nArs4W_sandboxStatusOff{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 10%, transparent);border-bottom:1px solid color-mix(in srgb, var(--dsw-alias-state-error-primary) 45%, transparent)}.nArs4W_sandboxDot{background:var(--dsw-alias-state-success-primary);border-radius:50%;flex:none;width:6px;height:6px}.nArs4W_sandboxStatusOff .nArs4W_sandboxDot{background:var(--dsw-alias-state-error-primary)}.nArs4W_sandboxStatusText{text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;overflow:hidden}.nArs4W_sandboxAction{border:1px solid var(--dsw-alias-border-l2);font:inherit;color:inherit;cursor:pointer;background:0 0;border-radius:6px;flex:none;padding:2px 8px}.nArs4W_sandboxAction:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorHtml{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_browser{flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_browserBar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:4px;padding:6px 8px;display:flex}.nArs4W_browserInput{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);min-width:0;height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 10px}.nArs4W_browserInput:focus{border-color:var(--dsw-alias-border-l2);outline:none}.nArs4W_browserMessage{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex:none;padding:4px 12px}.nArs4W_browserFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_browserStart{text-align:center;min-height:0;font:var(--dsw-font-xs-13);color:var(--dsw-alias-label-tertiary);flex:1;justify-content:center;align-items:center;padding:20px;display:flex}.nArs4W_browserBlocked{text-align:center;min-height:0;color:var(--dsw-alias-state-warn-primary);flex-direction:column;flex:1;justify-content:center;align-items:center;gap:6px;padding:24px;display:flex}.nArs4W_browserBlockedTitle{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary)}.nArs4W_browserBlockedDesc{max-width:280px;font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-secondary)}.nArs4W_browserBlockedActions{gap:8px;margin-top:6px;display:flex}.nArs4W_browserBlockedButton{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-11);cursor:pointer;border-radius:6px;padding:4px 12px}.nArs4W_browserBlockedButton:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorCm{background:0 0;flex:1;min-height:0;overflow:hidden}.nArs4W_editorCmHidden{display:none}.nArs4W_editorCm .cm-editor{height:100%}.nArs4W_editorCm .cm-scroller{padding:12px 16px}.nArs4W_editorCm .cm-editor.cm-focused{outline:none}.nArs4W_editorModeToggle{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:6px;flex:none;align-items:center;gap:2px;padding:2px;display:inline-flex}.nArs4W_editorModeButton{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);cursor:pointer;background:0 0;border:none;border-radius:4px;padding:2px 8px}.nArs4W_editorModeButton:hover{color:var(--dsw-alias-label-primary)}.nArs4W_editorModeActive{background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary)}.nArs4W_editorImageWrap{flex:1;justify-content:center;align-items:center;min-height:0;padding:12px;display:flex;overflow:auto}.nArs4W_editorImage{object-fit:contain;max-width:100%;max-height:100%}.nArs4W_editorMd{min-height:0;font:var(--dsw-font-xs-13);flex:1;padding:12px 16px;overflow-y:auto}.nArs4W_mermaidWrap{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);border-radius:6px;margin:6px 0;overflow:hidden}.nArs4W_mermaidHeader{border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);justify-content:space-between;align-items:center;gap:6px;padding:4px 8px;display:flex}.nArs4W_mermaidInfo{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_mermaidCopy{height:20px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-11);cursor:pointer;background:0 0;border:none;border-radius:4px;align-items:center;gap:4px;padding:0 6px;display:inline-flex}.nArs4W_mermaidCopy:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_mermaidBody{cursor:zoom-in;justify-content:center;padding:10px;display:flex;overflow:auto}.nArs4W_mermaidBody svg{max-width:100%;height:auto}.nArs4W_mermaidError{border-bottom:1px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-state-error-primary);font:var(--dsw-font-xxxs-11);padding:6px 10px}.nArs4W_mermaidCode{font:var(--dsw-font-xxxs-11);margin:0;padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:auto}.nArs4W_mermaidMarkdown .md-code-block[data-mermaid-processed]{display:contents}.nArs4W_mermaidModal{z-index:1000;background:var(--dsw-alias-bg-mask-1);backdrop-filter:blur(2px);flex-direction:column;justify-content:center;align-items:center;display:flex;position:fixed;inset:0}.nArs4W_mermaidModalToolbar{z-index:10;gap:8px;display:flex;position:absolute;top:16px;right:16px}.nArs4W_mermaidModalButton{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);width:36px;height:36px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-strong-13);cursor:pointer;border-radius:8px;justify-content:center;align-items:center;display:inline-flex}.nArs4W_mermaidModalButton:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_mermaidModalStage{justify-content:center;align-items:center;width:90vw;height:80vh;display:flex;position:relative;overflow:hidden}.nArs4W_mermaidModalStage svg{cursor:grab;transform-origin:50%;user-select:none;-webkit-user-drag:none;background:var(--dsw-alias-bg-layer-1);border-radius:12px;max-width:none;max-height:none;padding:16px}.nArs4W_mermaidModalStage svg:active{cursor:grabbing}.nArs4W_mermaidModalHint{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);pointer-events:none;position:absolute;bottom:16px;left:50%;transform:translate(-50%)}.nArs4W_selectionPopup{z-index:60;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);height:28px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxxs-strong-11);white-space:nowrap;cursor:pointer;border-radius:6px;align-items:center;padding:0 10px;display:inline-flex;position:fixed;transform:translate(-50%,calc(-100% - 8px))}.nArs4W_selectionPopup:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_editorPdf{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex}.nArs4W_editorPdfToolbar{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;justify-content:flex-end;padding:6px 8px;display:flex}.nArs4W_editorPdfStage{flex:1;min-height:0;display:flex;position:relative}.nArs4W_editorPdfFrame{background:var(--dsw-alias-bg-base);border:none;flex:1;width:100%;min-height:0}.nArs4W_editorPdfFrameBlocked{pointer-events:none}.nArs4W_editorPdfDragShield{z-index:4;pointer-events:none;background:0 0;position:absolute;inset:0}.nArs4W_editorPdfDragShieldActive{pointer-events:auto}body[data-dsh-tab-dragging] .nArs4W_editorPdfFrame{pointer-events:none!important}body[data-dsh-tab-dragging] .nArs4W_editorPdfDragShield{pointer-events:auto!important}.nArs4W_terminalWrap{background:var(--dsw-alias-bg-base);flex-direction:column;flex:1;min-height:0;display:flex;position:relative}.nArs4W_terminal{flex:1;min-height:0;padding:6px 4px 6px 8px}.nArs4W_terminal .xterm{height:100%}.nArs4W_terminalBanner{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex-wrap:wrap;flex:none;align-items:center;gap:8px;padding:3px 10px;display:flex}.nArs4W_terminalBannerUrl{word-break:break-all;opacity:.85;flex-basis:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.nArs4W_boundaryError{z-index:50;background:var(--dsw-alias-bg-layer-1);border-left:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);flex-direction:column;align-items:flex-start;gap:8px;padding:16px;display:flex;position:fixed;top:0;bottom:0;right:0;overflow:auto}.nArs4W_terminalRetry{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxxs-strong-11);cursor:pointer;border-radius:999px;flex:none;padding:1px 8px}.nArs4W_terminalRetry:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_terminalDepsBanner{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-warn-label);background:var(--dsw-alias-state-warn-tertiary);flex-direction:column;flex:none;gap:6px;padding:10px;display:flex}.nArs4W_terminalDepsTitle{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-state-warn-primary)}.nArs4W_terminalDepsHint{opacity:.9}.nArs4W_terminalDepsCommandRow{align-items:flex-start;gap:8px;display:flex}.nArs4W_terminalRepairCommand{white-space:pre-wrap;word-break:break-all;user-select:text;min-width:0;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:4px;flex:1;max-height:160px;margin:0;padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.5;overflow:auto}.nArs4W_terminalDepsNote{opacity:.85}.nArs4W_terminalDepsActions{align-items:center;gap:8px;display:flex}.nArs4W_tabBoundaryError{min-height:0;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);flex-direction:column;flex:1;align-items:flex-start;gap:8px;padding:12px 16px;display:flex;overflow:auto}.nArs4W_git{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.nArs4W_gitHeader{flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_gitWorktreeRow{flex:none;align-items:center;gap:8px;padding:6px 8px 0 12px;display:flex}.nArs4W_gitWorktreeLabel{color:var(--dsw-alias-label-tertiary);font:var(--dsw-font-xxxs-11);flex:none}.nArs4W_gitBranchSelect{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);min-width:0;height:26px;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xxs-12);border-radius:6px;flex:1;padding:0 6px}.nArs4W_gitSection{border-top:1px solid var(--dsw-alias-border-l1)}.nArs4W_gitSectionHeader{font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-tertiary);text-transform:uppercase;justify-content:space-between;align-items:center;padding:6px 12px 4px;display:flex}.nArs4W_gitLink{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-brand-primary);cursor:pointer;background:0 0;border:none;padding:0}.nArs4W_gitLink:hover:not(:disabled){text-decoration:underline}.nArs4W_gitLink:disabled{opacity:.4;cursor:default}.nArs4W_gitRow{min-height:34px;animation:nArs4W_dsh-row-in .15s var(--ds-ease-in-out);border-radius:8px;align-items:center;gap:6px;margin:0 6px;padding:0 8px;display:flex}.nArs4W_gitRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitRowSelected{background:var(--dsw-alias-interactive-bg-active)}.nArs4W_gitRowMain{cursor:pointer;text-align:left;background:0 0;border:none;flex:1;align-items:center;gap:8px;min-width:0;padding:3px 0;display:flex}.nArs4W_gitBadge{width:20px;height:16px;font:var(--dsw-font-xxxs-strong-11);background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);border-radius:4px;flex:none;justify-content:center;align-items:center;display:inline-flex}.nArs4W_gitName{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitEmpty{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);padding:4px 12px 8px}.nArs4W_gitPlaceholder{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary);text-align:center;padding:16px}.nArs4W_gitError{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-state-error-primary);white-space:pre-wrap;padding:8px 12px}.nArs4W_gitDiff{border-top:1px solid var(--dsw-alias-border-l1);padding:8px}.nArs4W_gitDiffTab{flex-direction:column;flex:1;min-width:0;min-height:0;display:flex;overflow:hidden auto}.nArs4W_gitDiffTabHeader{border-bottom:1px solid var(--dsw-alias-border-l1);flex:none;align-items:center;gap:8px;height:36px;padding:0 8px 0 12px;display:flex}.nArs4W_gitDiffTabTitle{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitDiffFile{width:100%;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;align-items:baseline;gap:6px;padding:8px 2px 2px;display:flex}.nArs4W_gitDiffFile:disabled{cursor:default}.nArs4W_gitDiffFile:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitDiffFileChevron{color:var(--dsw-alias-label-tertiary);flex:none;transform:rotate(0)}.nArs4W_gitDiffFileChevronExpanded{transform:rotate(90deg)}.nArs4W_gitDiffFilePath{font:var(--dsw-font-xxs-strong-12);color:var(--dsw-alias-label-primary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_gitDiffFileOld{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);text-overflow:ellipsis;white-space:nowrap;flex:none;max-width:40%;overflow:hidden}.nArs4W_gitDiffFileTag{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-label-secondary);border-radius:999px;flex:none;padding:0 6px}.nArs4W_gitDiffHunk{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);gap:8px;padding:3px 2px;display:flex}.nArs4W_gitDiffHunkHeader{color:var(--dsw-alias-label-secondary);flex:none}.nArs4W_gitDiffHunkSection{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_gitDiffLine{font:var(--dsw-font-markdown-code-block-small);white-space:pre-wrap;overflow-wrap:anywhere;align-items:stretch;min-width:0;line-height:20px;display:flex}.nArs4W_gitDiffNum{text-align:right;width:36px;color:var(--dsw-alias-label-tertiary);user-select:none;flex:none;padding-right:8px}.nArs4W_gitDiffCode{flex:1;min-width:0;overflow:visible}.nArs4W_gitDiffCtx{color:var(--dsw-alias-label-primary)}.nArs4W_gitDiffDel{color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, transparent)}.nArs4W_gitDiffAdd{color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent)}.nArs4W_gitDiffMeta{padding-left:2px}.nArs4W_gitDiffMetaText{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);font-style:italic}.nArs4W_gitDiffExpand{width:100%;font:var(--dsw-font-xxs-12);color:var(--dsw-alias-brand-primary);cursor:pointer;text-align:center;background:0 0;border:none;margin:4px 0;display:block}.nArs4W_gitDiffExpand:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitConfirmDesc{font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);white-space:pre-wrap;margin:0}.nArs4W_gitCommit{border-top:1px solid var(--dsw-alias-border-l1);align-items:center;gap:6px;padding:8px 12px;display:flex}.nArs4W_gitCommitInput{flex:1;min-width:0}.nArs4W_gitCommitButton{background:var(--dsw-alias-button-primary-fill);height:26px;color:var(--dsw-alias-label-primary-inverted);font:var(--dsw-font-xxs-strong-12);cursor:pointer;border:none;border-radius:6px;flex:none;padding:0 12px}.nArs4W_gitCommitButton:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}.nArs4W_gitCommitButton:disabled{opacity:.45;cursor:default}.nArs4W_gitLogRow{cursor:pointer;border-radius:8px;flex-direction:column;gap:2px;padding:5px 12px;display:flex}.nArs4W_gitLogRow:hover{background:var(--dsw-alias-interactive-bg-hover)}.nArs4W_gitLogLine1{align-items:baseline;gap:8px;min-width:0;display:flex}.nArs4W_gitLogHash{font:var(--dsw-font-markdown-code-block-small);color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_gitLogLine2{flex-wrap:wrap;align-items:center;gap:6px;min-width:0;display:flex}.nArs4W_gitLogRef{border:1px solid var(--dsw-alias-border-l2);font:var(--dsw-font-xxxs-strong-11);color:var(--dsw-alias-brand-primary);white-space:nowrap;border-radius:999px;flex:none;padding:0 5px}.nArs4W_gitLogSubject{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:var(--dsw-font-s-14);color:var(--dsw-alias-label-primary);flex:1;overflow:hidden}.nArs4W_gitLogMeta{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary)}.nArs4W_gitLogMore{border:1px solid var(--dsw-alias-border-l2);width:calc(100% - 24px);font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border-radius:6px;margin:4px 12px 8px;padding:6px 0;display:block}.nArs4W_gitLogMore:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_gitLogMore:disabled{opacity:.5;cursor:default}.nArs4W_producedRow{flex-wrap:wrap;align-items:center;gap:8px;padding:4px 0;display:flex}.nArs4W_producedLabel{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_producedChip{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);max-width:200px;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);cursor:pointer;border-radius:999px;align-items:center;gap:4px;padding:2px 8px;display:inline-flex;overflow:hidden}.nArs4W_producedChip:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_producedChip span{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.nArs4W_producedMore{font:var(--dsw-font-xxs-12);color:var(--dsw-alias-label-tertiary)}.nArs4W_toggleButton:focus-visible,.nArs4W_bottomClose:focus-visible,.nArs4W_iconButton:focus-visible,.nArs4W_tab:focus-visible,.nArs4W_tabClose:focus-visible,.nArs4W_tabBarPlus:focus-visible,.nArs4W_paneCard:focus-visible,.nArs4W_explorerRow:focus-visible,.nArs4W_explorerRef:focus-visible,.nArs4W_gitRowMain:focus-visible,.nArs4W_gitLink:focus-visible,.nArs4W_gitCommitButton:focus-visible,.nArs4W_gitLogRow:focus-visible,.nArs4W_gitLogMore:focus-visible,.nArs4W_gitDiffFile:focus-visible,.nArs4W_gitDiffExpand:focus-visible,.nArs4W_terminalRetry:focus-visible,.nArs4W_editorModeButton:focus-visible,.nArs4W_editorDownloadLink:focus-visible,.nArs4W_editorPptxButton:focus-visible,.nArs4W_editorDocxZoomRange:focus-visible{outline:2px solid var(--dsw-alias-interactive-bg-hover-accent);outline-offset:-1px}@media (prefers-reduced-motion:reduce){.nArs4W_panel,.nArs4W_panelHidden,.nArs4W_bottomPanel,.nArs4W_bottomPanelHidden,.nArs4W_toggleCluster,.nArs4W_toggleButton,.nArs4W_tab,.nArs4W_tabBarPlus,.nArs4W_paneCard,.nArs4W_explorerRow,.nArs4W_gitRow,.nArs4W_divider,.nArs4W_dividerRow:after,.nArs4W_dividerCol:after{transition:none;animation:none}}@media (width<=767px){.nArs4W_panel:not(.nArs4W_panelHidden) .nArs4W_tabBar{padding-right:40px}.nArs4W_tab{min-width:48px;max-width:128px}}.nArs4W_openWithLabel{align-items:center;gap:8px;width:100%;min-width:0;display:flex}.nArs4W_openWithName{text-overflow:ellipsis;white-space:nowrap;flex:auto;min-width:0;overflow:hidden}.nArs4W_openWithChevron{color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_openWithPin{width:20px;height:20px;color:var(--dsw-alias-label-tertiary);cursor:pointer;border-radius:6px;flex:none;justify-content:center;align-items:center;display:inline-flex}.nArs4W_openWithPin:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_openWithPinActive{color:var(--dsw-alias-state-business-primary)}.nArs4W_editorHtmlBlock{margin:8px 0}.nArs4W_editorHtmlBlock img,.nArs4W_editorHtmlBlock video{max-width:100%}.nArs4W_editorHtmlBlock details{margin:4px 0;padding:4px 0}.nArs4W_editorHtmlBlock summary{cursor:pointer}.nArs4W_tocBar{z-index:3;pointer-events:none;justify-content:flex-end;height:0;display:flex;position:sticky;top:0}.nArs4W_tocButton{pointer-events:auto;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);width:26px;height:26px;color:var(--dsw-alias-label-secondary);cursor:pointer;border-radius:6px;justify-content:center;align-items:center;margin:4px 2px 0 0;padding:0;display:inline-flex}.nArs4W_tocButton:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_tocPanel{border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);width:min(300px,82%);max-height:60vh;box-shadow:var(--dsw-shadow-lv2);pointer-events:auto;border-radius:8px;flex-direction:column;padding:4px;display:flex;position:absolute;top:32px;right:2px;overflow-y:auto}.nArs4W_tocItem{min-width:0;color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);text-align:left;cursor:pointer;background:0 0;border:none;border-radius:6px;align-items:baseline;gap:8px;padding:4px 8px;display:flex}.nArs4W_tocItem:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.nArs4W_tocItem[data-level=\"2\"]{padding-left:18px}.nArs4W_tocItem[data-level=\"3\"]{padding-left:28px}.nArs4W_tocItem[data-level=\"4\"]{padding-left:38px}.nArs4W_tocItem[data-level=\"5\"]{padding-left:48px}.nArs4W_tocItem[data-level=\"6\"]{padding-left:58px}.nArs4W_tocItemLevel{font:var(--dsw-font-xxxs-11);color:var(--dsw-alias-label-tertiary);flex:none}.nArs4W_tocItemText{text-overflow:ellipsis;white-space:nowrap;flex:auto;min-width:0;overflow:hidden}@keyframes nArs4W_dsh-toc-flash{0%,60%{background:var(--dsw-alias-interactive-bg-hover)}to{background:0 0}}.nArs4W_tocFlash{border-radius:4px;animation:1.2s ease-out nArs4W_dsh-toc-flash}";
 	const tagId = "dsh-better-sidebar/sidebar.module.css";
 	if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 		const tag = document.createElement("style");
@@ -33248,204 +44081,246 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		document.head.appendChild(tag);
 	}
 	var sidebar_module_css_default = {
-		"editorSearchResult": "nArs4W_editorSearchResult",
-		"explorerRef": "nArs4W_explorerRef",
-		"editorModeButton": "nArs4W_editorModeButton",
-		"tabBar": "nArs4W_tabBar",
-		"editorHeader": "nArs4W_editorHeader",
-		"editorPlaceholder": "nArs4W_editorPlaceholder",
-		"mermaidMarkdown": "nArs4W_mermaidMarkdown",
-		"editorTitle": "nArs4W_editorTitle",
-		"gitDiffCode": "nArs4W_gitDiffCode",
-		"paneTab": "nArs4W_paneTab",
-		"browserBlocked": "nArs4W_browserBlocked",
-		"editorTreeSearch": "nArs4W_editorTreeSearch",
-		"dividerActive": "nArs4W_dividerActive",
-		"terminalDepsBanner": "nArs4W_terminalDepsBanner",
+		"tocButton": "nArs4W_tocButton",
 		"sandboxStatusOn": "nArs4W_sandboxStatusOn",
-		"editorDownloadLink": "nArs4W_editorDownloadLink",
-		"sandboxStatusText": "nArs4W_sandboxStatusText",
-		"editorPathInput": "nArs4W_editorPathInput",
-		"gitError": "nArs4W_gitError",
-		"gitDiffHunkSection": "nArs4W_gitDiffHunkSection",
-		"gitConfirmDesc": "nArs4W_gitConfirmDesc",
-		"explorerRoot": "nArs4W_explorerRoot",
-		"editorHtml": "nArs4W_editorHtml",
-		"mermaidBody": "nArs4W_mermaidBody",
-		"bottomResizeActive": "nArs4W_bottomResizeActive",
-		"browserFrame": "nArs4W_browserFrame",
-		"editorPdfDragShieldActive": "nArs4W_editorPdfDragShieldActive",
-		"dropDown": "nArs4W_dropDown",
-		"splitChild": "nArs4W_splitChild",
-		"gitName": "nArs4W_gitName",
-		"gitLogLine2": "nArs4W_gitLogLine2",
-		"sandboxStatusOff": "nArs4W_sandboxStatusOff",
-		"panelResizeActive": "nArs4W_panelResizeActive",
-		"editorImage": "nArs4W_editorImage",
-		"sandboxAction": "nArs4W_sandboxAction",
-		"iconButton": "nArs4W_iconButton",
-		"dividerCol": "nArs4W_dividerCol",
-		"workbench": "nArs4W_workbench",
-		"explorerEmpty": "nArs4W_explorerEmpty",
-		"terminalBannerUrl": "nArs4W_terminalBannerUrl",
-		"tabList": "nArs4W_tabList",
-		"panelResize": "nArs4W_panelResize",
-		"editorTreeDock": "nArs4W_editorTreeDock",
-		"editorStatusError": "nArs4W_editorStatusError",
-		"editorPptxButton": "nArs4W_editorPptxButton",
-		"gitDiffTab": "nArs4W_gitDiffTab",
-		"editorBody": "nArs4W_editorBody",
-		"editor": "nArs4W_editor",
-		"gitSectionHeader": "nArs4W_gitSectionHeader",
-		"editorPdfFrame": "nArs4W_editorPdfFrame",
-		"terminalRetry": "nArs4W_terminalRetry",
-		"cornerHandle": "nArs4W_cornerHandle",
-		"editorError": "nArs4W_editorError",
-		"editorMain": "nArs4W_editorMain",
-		"selectionPopup": "nArs4W_selectionPopup",
-		"splitCol": "nArs4W_splitCol",
-		"gitDiffLine": "nArs4W_gitDiffLine",
-		"sandboxStatus": "nArs4W_sandboxStatus",
-		"editorStatus": "nArs4W_editorStatus",
-		"browserBlockedTitle": "nArs4W_browserBlockedTitle",
-		"explorerHidden": "nArs4W_explorerHidden",
-		"editorModeActive": "nArs4W_editorModeActive",
-		"mermaidModalButton": "nArs4W_mermaidModalButton",
-		"explorerDir": "nArs4W_explorerDir",
-		"browserBlockedDesc": "nArs4W_browserBlockedDesc",
-		"terminalWrap": "nArs4W_terminalWrap",
-		"gitDiffNum": "nArs4W_gitDiffNum",
-		"editorSearchHint": "nArs4W_editorSearchHint",
-		"orphanedType": "nArs4W_orphanedType",
-		"editorTreeToggleActive": "nArs4W_editorTreeToggleActive",
-		"mermaidModalStage": "nArs4W_mermaidModalStage",
-		"gitDiffHunk": "nArs4W_gitDiffHunk",
-		"explorer": "nArs4W_explorer",
-		"mermaidCopy": "nArs4W_mermaidCopy",
-		"dividerRow": "nArs4W_dividerRow",
-		"editorCmHidden": "nArs4W_editorCmHidden",
-		"mermaidWrap": "nArs4W_mermaidWrap",
-		"mermaidModalToolbar": "nArs4W_mermaidModalToolbar",
-		"dropOverlay": "nArs4W_dropOverlay",
-		"dirtyDot": "nArs4W_dirtyDot",
-		"editorCm": "nArs4W_editorCm",
-		"split": "nArs4W_split",
-		"paneEmptyCards": "nArs4W_paneEmptyCards",
-		"bottomPanelHidden": "nArs4W_bottomPanelHidden",
-		"sandboxDot": "nArs4W_sandboxDot",
-		"toggleCluster": "nArs4W_toggleCluster",
-		"dropCenter": "nArs4W_dropCenter",
-		"tab": "nArs4W_tab",
-		"browser": "nArs4W_browser",
-		"dropRight": "nArs4W_dropRight",
-		"explorerError": "nArs4W_explorerError",
-		"mermaidCode": "nArs4W_mermaidCode",
-		"gitPlaceholder": "nArs4W_gitPlaceholder",
-		"gitDiffTabHeader": "nArs4W_gitDiffTabHeader",
-		"terminal": "nArs4W_terminal",
-		"panelHidden": "nArs4W_panelHidden",
-		"editorPdfStage": "nArs4W_editorPdfStage",
+		"uploadOverlayCard": "nArs4W_uploadOverlayCard",
 		"mermaidHeader": "nArs4W_mermaidHeader",
-		"gitBranchSelect": "nArs4W_gitBranchSelect",
+		"splitCol": "nArs4W_splitCol",
+		"dropUp": "nArs4W_dropUp",
+		"gitCommit": "nArs4W_gitCommit",
+		"gitDiffDel": "nArs4W_gitDiffDel",
+		"panelResize": "nArs4W_panelResize",
+		"uploadDropZonePill": "nArs4W_uploadDropZonePill",
+		"tocItemLevel": "nArs4W_tocItemLevel",
 		"mermaidModal": "nArs4W_mermaidModal",
-		"terminalBanner": "nArs4W_terminalBanner",
+		"openWithLabel": "nArs4W_openWithLabel",
 		"gitCommitButton": "nArs4W_gitCommitButton",
-		"gitLink": "nArs4W_gitLink",
-		"gitLogRef": "nArs4W_gitLogRef",
-		"producedRow": "nArs4W_producedRow",
-		"git": "nArs4W_git",
-		"producedLabel": "nArs4W_producedLabel",
-		"editorTreePanel": "nArs4W_editorTreePanel",
-		"editorPdfFrameBlocked": "nArs4W_editorPdfFrameBlocked",
-		"gitDiffFile": "nArs4W_gitDiffFile",
-		"tabBarPlus": "nArs4W_tabBarPlus",
-		"browserMessage": "nArs4W_browserMessage",
-		"editorTreePanelFull": "nArs4W_editorTreePanelFull",
-		"tabTitle": "nArs4W_tabTitle",
-		"browserInput": "nArs4W_browserInput",
-		"browserBlockedActions": "nArs4W_browserBlockedActions",
-		"editorPdf": "nArs4W_editorPdf",
-		"bottomClose": "nArs4W_bottomClose",
-		"editorBinaryNotice": "nArs4W_editorBinaryNotice",
-		"toggleButton": "nArs4W_toggleButton",
-		"editorSearchInput": "nArs4W_editorSearchInput",
-		"mermaidError": "nArs4W_mermaidError",
-		"explorerBroken": "nArs4W_explorerBroken",
-		"tabBoundaryError": "nArs4W_tabBoundaryError",
-		"gitRowSelected": "nArs4W_gitRowSelected",
-		"gitDiff": "nArs4W_gitDiff",
-		"gitDiffFilePath": "nArs4W_gitDiffFilePath",
-		"browserStart": "nArs4W_browserStart",
-		"terminalDepsHint": "nArs4W_terminalDepsHint",
-		"editorBanner": "nArs4W_editorBanner",
-		"gitDiffExpand": "nArs4W_gitDiffExpand",
-		"gitLogRow": "nArs4W_gitLogRow",
-		"panelBody": "nArs4W_panelBody",
-		"editorTreeResize": "nArs4W_editorTreeResize",
-		"browserBar": "nArs4W_browserBar",
 		"tabBarDrop": "nArs4W_tabBarDrop",
-		"terminalDepsNote": "nArs4W_terminalDepsNote",
-		"producedMore": "nArs4W_producedMore",
-		"gitDiffHunkHeader": "nArs4W_gitDiffHunkHeader",
-		"editorDocxZoomRange": "nArs4W_editorDocxZoomRange",
+		"editorTreeToggleActive": "nArs4W_editorTreeToggleActive",
+		"gitDiffCtx": "nArs4W_gitDiffCtx",
 		"gitHeader": "nArs4W_gitHeader",
+		"mermaidBody": "nArs4W_mermaidBody",
+		"paneEmptyCards": "nArs4W_paneEmptyCards",
+		"browser": "nArs4W_browser",
 		"editorModeToggle": "nArs4W_editorModeToggle",
-		"gitSection": "nArs4W_gitSection",
-		"pane": "nArs4W_pane",
-		"mermaidModalHint": "nArs4W_mermaidModalHint",
-		"gitCommitInput": "nArs4W_gitCommitInput",
-		"dropLeft": "nArs4W_dropLeft",
-		"editorPdfDragShield": "nArs4W_editorPdfDragShield",
-		"editorPdfToolbar": "nArs4W_editorPdfToolbar",
-		"terminalDepsActions": "nArs4W_terminalDepsActions",
-		"gitLogSubject": "nArs4W_gitLogSubject",
-		"paneCard": "nArs4W_paneCard",
-		"terminalDepsTitle": "nArs4W_terminalDepsTitle",
-		"gitBadge": "nArs4W_gitBadge",
+		"dividerCol": "nArs4W_dividerCol",
+		"panelBody": "nArs4W_panelBody",
 		"gitDiffAdd": "nArs4W_gitDiffAdd",
+		"gitBadge": "nArs4W_gitBadge",
+		"producedChip": "nArs4W_producedChip",
+		"uploadOverlayTitle": "nArs4W_uploadOverlayTitle",
+		"browserStart": "nArs4W_browserStart",
+		"floatClose": "nArs4W_floatClose",
+		"editorCm": "nArs4W_editorCm",
+		"editorBody": "nArs4W_editorBody",
+		"floatDropHint": "nArs4W_floatDropHint",
+		"gitDiffFileChevronExpanded": "nArs4W_gitDiffFileChevronExpanded",
+		"paneTab": "nArs4W_paneTab",
+		"uploadDropZone": "nArs4W_uploadDropZone",
+		"boundaryError": "nArs4W_boundaryError",
+		"editorPdfDragShieldActive": "nArs4W_editorPdfDragShieldActive",
+		"browserFrame": "nArs4W_browserFrame",
+		"gitRow": "nArs4W_gitRow",
+		"editorSearchHint": "nArs4W_editorSearchHint",
+		"gitDiffExpand": "nArs4W_gitDiffExpand",
+		"browserBlocked": "nArs4W_browserBlocked",
+		"explorerBroken": "nArs4W_explorerBroken",
+		"editorTreePanelFull": "nArs4W_editorTreePanelFull",
+		"gitRowMain": "nArs4W_gitRowMain",
+		"gitWorktreeRow": "nArs4W_gitWorktreeRow",
+		"editorPdfToolbar": "nArs4W_editorPdfToolbar",
 		"terminalDepsCommandRow": "nArs4W_terminalDepsCommandRow",
-		"gitDiffMetaText": "nArs4W_gitDiffMetaText",
-		"divider": "nArs4W_divider",
-		"paneDrop": "nArs4W_paneDrop",
-		"mermaidInfo": "nArs4W_mermaidInfo",
-		"tabClose": "nArs4W_tabClose",
+		"gitDiffCode": "nArs4W_gitDiffCode",
+		"mermaidModalToolbar": "nArs4W_mermaidModalToolbar",
+		"openWithName": "nArs4W_openWithName",
+		"tabBar": "nArs4W_tabBar",
+		"uploadOverlayProgressFill": "nArs4W_uploadOverlayProgressFill",
+		"gitDiffFile": "nArs4W_gitDiffFile",
+		"gitDiffFilePath": "nArs4W_gitDiffFilePath",
+		"openWithPin": "nArs4W_openWithPin",
+		"explorerRowDropTarget": "nArs4W_explorerRowDropTarget",
 		"paneTabHidden": "nArs4W_paneTabHidden",
-		"editorBinary": "nArs4W_editorBinary",
-		"explorerBody": "nArs4W_explorerBody",
+		"editorModeButton": "nArs4W_editorModeButton",
+		"gitLogSubject": "nArs4W_gitLogSubject",
+		"terminalRetry": "nArs4W_terminalRetry",
+		"explorer": "nArs4W_explorer",
+		"editorPdfFrameBlocked": "nArs4W_editorPdfFrameBlocked",
+		"browserMessage": "nArs4W_browserMessage",
+		"explorerCopied": "nArs4W_explorerCopied",
+		"panel": "nArs4W_panel",
+		"uploadDropZoneText": "nArs4W_uploadDropZoneText",
+		"uploadDropChatCard": "nArs4W_uploadDropChatCard",
+		"mermaidMarkdown": "nArs4W_mermaidMarkdown",
+		"terminalDepsNote": "nArs4W_terminalDepsNote",
+		"terminalDepsActions": "nArs4W_terminalDepsActions",
+		"gitRowSelected": "nArs4W_gitRowSelected",
+		"producedRow": "nArs4W_producedRow",
+		"dropRight": "nArs4W_dropRight",
+		"terminalBannerUrl": "nArs4W_terminalBannerUrl",
+		"gitDiffTab": "nArs4W_gitDiffTab",
 		"gitLogMeta": "nArs4W_gitLogMeta",
-		"splitRow": "nArs4W_splitRow",
-		"gitDiffMeta": "nArs4W_gitDiffMeta",
+		"pane": "nArs4W_pane",
+		"toggleButton": "nArs4W_toggleButton",
+		"paneDrop": "nArs4W_paneDrop",
+		"editorStatusError": "nArs4W_editorStatusError",
+		"mermaidModalHint": "nArs4W_mermaidModalHint",
+		"explorerRowRevealed": "nArs4W_explorerRowRevealed",
+		"uploadOverlayProgress": "nArs4W_uploadOverlayProgress",
+		"editorDownloadLink": "nArs4W_editorDownloadLink",
+		"gitBranchSelect": "nArs4W_gitBranchSelect",
+		"openWithPinActive": "nArs4W_openWithPinActive",
+		"tocBar": "nArs4W_tocBar",
+		"gitSectionHeader": "nArs4W_gitSectionHeader",
+		"editorTreeDock": "nArs4W_editorTreeDock",
+		"editorPdfStage": "nArs4W_editorPdfStage",
+		"gitDiffNum": "nArs4W_gitDiffNum",
+		"editorSearchInput": "nArs4W_editorSearchInput",
+		"gitLogHash": "nArs4W_gitLogHash",
 		"explorerName": "nArs4W_explorerName",
+		"floatResize": "nArs4W_floatResize",
+		"tabActive": "nArs4W_tabActive",
+		"sandboxAction": "nArs4W_sandboxAction",
+		"terminalDepsTitle": "nArs4W_terminalDepsTitle",
+		"gitDiffLine": "nArs4W_gitDiffLine",
+		"floatTitle": "nArs4W_floatTitle",
+		"editorHeader": "nArs4W_editorHeader",
+		"tabTitle": "nArs4W_tabTitle",
+		"sandboxStatus": "nArs4W_sandboxStatus",
+		"editorError": "nArs4W_editorError",
+		"producedMore": "nArs4W_producedMore",
+		"mermaidCopy": "nArs4W_mermaidCopy",
+		"mermaidModalButton": "nArs4W_mermaidModalButton",
+		"floatWindow": "nArs4W_floatWindow",
+		"explorerHeader": "nArs4W_explorerHeader",
+		"editorDocxZoomRange": "nArs4W_editorDocxZoomRange",
+		"explorerDir": "nArs4W_explorerDir",
+		"mermaidError": "nArs4W_mermaidError",
+		"explorerBody": "nArs4W_explorerBody",
+		"bottomPanelHidden": "nArs4W_bottomPanelHidden",
+		"terminalDepsBanner": "nArs4W_terminalDepsBanner",
+		"floatWindowDragging": "nArs4W_floatWindowDragging",
+		"editorPdf": "nArs4W_editorPdf",
+		"tabClose": "nArs4W_tabClose",
+		"editor": "nArs4W_editor",
+		"sandboxStatusText": "nArs4W_sandboxStatusText",
+		"gitLogLine2": "nArs4W_gitLogLine2",
+		"gitWorktreeLabel": "nArs4W_gitWorktreeLabel",
+		"terminalBanner": "nArs4W_terminalBanner",
+		"uploadDropChatHint": "nArs4W_uploadDropChatHint",
+		"editorBanner": "nArs4W_editorBanner",
+		"gitDiffHunkHeader": "nArs4W_gitDiffHunkHeader",
+		"workbench": "nArs4W_workbench",
+		"gitDiffMeta": "nArs4W_gitDiffMeta",
+		"editorSearchResult": "nArs4W_editorSearchResult",
+		"splitChild": "nArs4W_splitChild",
+		"bottomResize": "nArs4W_bottomResize",
+		"tocPanel": "nArs4W_tocPanel",
+		"dividerActive": "nArs4W_dividerActive",
+		"gitDiffFileChevron": "nArs4W_gitDiffFileChevron",
+		"gitDiffFileOld": "nArs4W_gitDiffFileOld",
+		"editorStatus": "nArs4W_editorStatus",
+		"gitDiffFileTag": "nArs4W_gitDiffFileTag",
+		"gitDiffTabTitle": "nArs4W_gitDiffTabTitle",
+		"editorTreeSearch": "nArs4W_editorTreeSearch",
+		"openWithChevron": "nArs4W_openWithChevron",
+		"gitEmpty": "nArs4W_gitEmpty",
+		"browserBlockedTitle": "nArs4W_browserBlockedTitle",
+		"explorerRow": "nArs4W_explorerRow",
+		"editorPdfDragShield": "nArs4W_editorPdfDragShield",
+		"floatDropHintLabel": "nArs4W_floatDropHintLabel",
+		"editorBinary": "nArs4W_editorBinary",
+		"toggleCluster": "nArs4W_toggleCluster",
+		"gitDiffTabHeader": "nArs4W_gitDiffTabHeader",
+		"tabBadge": "nArs4W_tabBadge",
+		"panelHidden": "nArs4W_panelHidden",
+		"dropDown": "nArs4W_dropDown",
+		"uploadOverlay": "nArs4W_uploadOverlay",
+		"gitDiffHunk": "nArs4W_gitDiffHunk",
+		"producedLabel": "nArs4W_producedLabel",
+		"terminalDepsHint": "nArs4W_terminalDepsHint",
+		"floatContent": "nArs4W_floatContent",
+		"terminalWrap": "nArs4W_terminalWrap",
+		"editorPdfFrame": "nArs4W_editorPdfFrame",
+		"tabBoundaryError": "nArs4W_tabBoundaryError",
+		"iconButton": "nArs4W_iconButton",
+		"editorPlaceholder": "nArs4W_editorPlaceholder",
+		"gitDiffHunkSection": "nArs4W_gitDiffHunkSection",
+		"paneContent": "nArs4W_paneContent",
+		"dirtyDot": "nArs4W_dirtyDot",
+		"dropCenter": "nArs4W_dropCenter",
+		"editorPptxButton": "nArs4W_editorPptxButton",
+		"tabList": "nArs4W_tabList",
+		"splitRow": "nArs4W_splitRow",
+		"sandboxDot": "nArs4W_sandboxDot",
+		"divider": "nArs4W_divider",
+		"bottomClose": "nArs4W_bottomClose",
+		"orphanedType": "nArs4W_orphanedType",
+		"editorMd": "nArs4W_editorMd",
+		"terminal": "nArs4W_terminal",
+		"uploadOverlayStatus": "nArs4W_uploadOverlayStatus",
+		"explorerEmpty": "nArs4W_explorerEmpty",
+		"editorHtmlBlock": "nArs4W_editorHtmlBlock",
+		"explorerRoot": "nArs4W_explorerRoot",
+		"explorerError": "nArs4W_explorerError",
+		"browserBlockedDesc": "nArs4W_browserBlockedDesc",
+		"terminalRepairCommand": "nArs4W_terminalRepairCommand",
+		"gitLogLine1": "nArs4W_gitLogLine1",
+		"tab": "nArs4W_tab",
+		"editorPathInput": "nArs4W_editorPathInput",
+		"editorTreeResize": "nArs4W_editorTreeResize",
+		"mermaidModalStage": "nArs4W_mermaidModalStage",
+		"mermaidInfo": "nArs4W_mermaidInfo",
+		"gitLogRow": "nArs4W_gitLogRow",
+		"gitPlaceholder": "nArs4W_gitPlaceholder",
+		"gitSection": "nArs4W_gitSection",
+		"editorImage": "nArs4W_editorImage",
+		"explorerRef": "nArs4W_explorerRef",
+		"gitLogRef": "nArs4W_gitLogRef",
+		"tocFlash": "nArs4W_tocFlash",
+		"dropLeft": "nArs4W_dropLeft",
+		"gitName": "nArs4W_gitName",
+		"gitDiffMetaText": "nArs4W_gitDiffMetaText",
+		"gitCommitInput": "nArs4W_gitCommitInput",
+		"mermaidCode": "nArs4W_mermaidCode",
+		"explorerHidden": "nArs4W_explorerHidden",
+		"uploadOverlayCancel": "nArs4W_uploadOverlayCancel",
+		"sandboxStatusOff": "nArs4W_sandboxStatusOff",
+		"browserBar": "nArs4W_browserBar",
+		"tocItem": "nArs4W_tocItem",
+		"bottomResizeActive": "nArs4W_bottomResizeActive",
+		"gitLink": "nArs4W_gitLink",
+		"floatHeader": "nArs4W_floatHeader",
+		"selectionPopup": "nArs4W_selectionPopup",
+		"cornerHandle": "nArs4W_cornerHandle",
+		"split": "nArs4W_split",
+		"gitLogMore": "nArs4W_gitLogMore",
+		"browserBlockedActions": "nArs4W_browserBlockedActions",
+		"uploadDropHero": "nArs4W_uploadDropHero",
+		"editorTitle": "nArs4W_editorTitle",
+		"tocItemText": "nArs4W_tocItemText",
+		"editorMain": "nArs4W_editorMain",
+		"dividerRow": "nArs4W_dividerRow",
+		"panelResizeActive": "nArs4W_panelResizeActive",
+		"editorModeActive": "nArs4W_editorModeActive",
 		"bottomPanel": "nArs4W_bottomPanel",
 		"browserBlockedButton": "nArs4W_browserBlockedButton",
-		"gitCommit": "nArs4W_gitCommit",
-		"editorImageWrap": "nArs4W_editorImageWrap",
-		"editorMd": "nArs4W_editorMd",
-		"gitDiffFileOld": "nArs4W_gitDiffFileOld",
-		"producedChip": "nArs4W_producedChip",
-		"tabBadge": "nArs4W_tabBadge",
-		"gitLogMore": "nArs4W_gitLogMore",
+		"editorBinaryNotice": "nArs4W_editorBinaryNotice",
+		"gitDiff": "nArs4W_gitDiff",
+		"paneCard": "nArs4W_paneCard",
+		"git": "nArs4W_git",
+		"dsh-toc-flash": "nArs4W_dsh-toc-flash",
+		"mermaidWrap": "nArs4W_mermaidWrap",
+		"browserInput": "nArs4W_browserInput",
+		"editorCmHidden": "nArs4W_editorCmHidden",
+		"tabBarPlus": "nArs4W_tabBarPlus",
+		"gitConfirmDesc": "nArs4W_gitConfirmDesc",
+		"dropOverlay": "nArs4W_dropOverlay",
 		"explorerSymlink": "nArs4W_explorerSymlink",
-		"gitDiffFileTag": "nArs4W_gitDiffFileTag",
-		"gitDiffCtx": "nArs4W_gitDiffCtx",
+		"editorTreePanel": "nArs4W_editorTreePanel",
+		"editorImageWrap": "nArs4W_editorImageWrap",
 		"dsh-row-in": "nArs4W_dsh-row-in",
-		"gitRow": "nArs4W_gitRow",
-		"gitEmpty": "nArs4W_gitEmpty",
-		"gitDiffTabTitle": "nArs4W_gitDiffTabTitle",
-		"gitLogLine1": "nArs4W_gitLogLine1",
-		"panel": "nArs4W_panel",
-		"explorerRow": "nArs4W_explorerRow",
-		"gitDiffDel": "nArs4W_gitDiffDel",
-		"gitRowMain": "nArs4W_gitRowMain",
-		"dropUp": "nArs4W_dropUp",
-		"explorerCopied": "nArs4W_explorerCopied",
-		"gitLogHash": "nArs4W_gitLogHash",
-		"explorerHeader": "nArs4W_explorerHeader",
-		"boundaryError": "nArs4W_boundaryError",
-		"tabActive": "nArs4W_tabActive",
-		"paneContent": "nArs4W_paneContent",
-		"bottomResize": "nArs4W_bottomResize",
-		"terminalRepairCommand": "nArs4W_terminalRepairCommand"
+		"gitError": "nArs4W_gitError",
+		"editorHtml": "nArs4W_editorHtml"
 	};
 	//#endregion
 	//#region src/client/SandboxStatusBar.tsx
@@ -33523,29 +44398,6 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			console.warn("[dsh-better-sidebar] draft insert failed:", error);
 			return false;
 		}
-	}
-	//#endregion
-	//#region src/client/paths.ts
-	/**
-	* The path relative to the session's working directory.
-	* @param cwd - the explorer root (absolute).
-	* @param path - an absolute entry path from the fs-tree.
-	* @returns the relative path with '/' separators ('.' for the cwd itself),
-	* or `path` unchanged when it lies outside the cwd.
-	*
-	* The prefix test is case-insensitive: Windows paths (and macOS's
-	* case-insensitive volumes) may arrive with different casing than the cwd
-	* row, and the containment decision must not depend on it. The returned
-	* relative text keeps the caller's own casing.
-	*/
-	function relativeTo(cwd, path) {
-		const base = cwd.replace(/[\\/]+$/, "");
-		const norm = (value) => value.replace(/\\/g, "/");
-		const nBase = norm(base);
-		const nPath = norm(path);
-		if (nPath === nBase) return ".";
-		if (nPath.toLowerCase().startsWith(`${nBase.toLowerCase()}/`)) return nPath.slice(nBase.length + 1);
-		return path;
 	}
 	/**
 	* The fence info line: `rel[:start[-end]]` — lines are omitted entirely
@@ -33891,28 +44743,3093 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		return blocks;
 	}
 	//#endregion
-	//#region src/client/TextEditor.tsx
+	//#region src/client/markdown-html.ts
 	/**
-	* The code/markdown file viewer: a CodeMirror 6 editor with line wrapping,
-	* syntax highlighting (extension-keyed language), a dirty dot and Ctrl/Cmd+S
-	* save, and a preview/edit toggle for markdown files. Registered as the
-	* `code` (catch-all) and `markdown` built-in viewers; the editor tab host
-	* fetches the content through the fsRead strategy and passes it in props,
-	* so this component never fetches or dispatches — it only edits.
+	* Raw-HTML block detection for the markdown preview. The shared `MarkdownText`
+	* renders raw HTML as literal text (a chat-security stance), so a GitHub-style
+	* README (`<div align="center">` badge walls, `<details>` collapsibles with
+	* markdown inside, table cells full of inline tags) previews as source soup.
+	* This module's pure splitter lifts those HTML runs OUT of the markdown stream
+	* before rendering: markdown runs keep flowing through `MarkdownText` (shiki /
+	* KaTeX / GFM intact, mermaid chunk path unchanged) while HTML runs render as
+	* sanitized DOM (see markdown-html.tsx).
 	*
-	* The toolbar (mode toggle / dirty dot / save / status) renders as its own
-	* row below the host's title bar, VSCode-style — unless the host passes
-	* `toolbar: 'host'` (the merged editor-explorer mode), in which case this
-	* component skips the row and reports state + registers commands through
-	* the FileViewerProps toolbar callbacks so the host's path-input header
-	* renders the controls instead.
+	* Splitting follows CommonMark's shape closely enough for real-world READMEs:
+	* a line outside code fences that starts with a block-level tag (type-6 list
+	* below) or `<!--` opens an HTML run that extends to the next blank line
+	* (comments end at the line containing `-->`). Inline-only tags (`<b>`, `<br>`,
+	* `<a>`…) never open a run — they stay in the markdown stream and are handled
+	* by the inline pass instead. Unclosed block tags (`<details>` … markdown …
+	* `</details>`) are surfaced by {@link analyzeHtmlSegment} as ordered parts so
+	* the renderer can nest the in-between markdown inside the open element, the
+	* way GitHub's linear HTML output nests.
 	*/
 	/**
-	* The chunk-resident markdown preview renderer (mermaid lazy chunk): one
-	* MarkdownText pass over the whole source, with rendered mermaid fences
-	* swapped for diagrams. Module-level `pick` keeps the load effect stable.
+	* CommonMark HTML-block type-6 tag names (block-level elements), lowercased.
+	* A line starting with one of these (open or close) outside a fence begins an
+	* HTML run. `<summary>` is CommonMark-inline but intentionally included: it is
+	* the idiomatic first child of a `<details>` run in GitHub-flavored READMEs.
 	*/
+	const HTML_BLOCK_TAGS = /* @__PURE__ */ new Set([
+		"address",
+		"article",
+		"aside",
+		"base",
+		"basefont",
+		"blockquote",
+		"body",
+		"caption",
+		"center",
+		"col",
+		"colgroup",
+		"dd",
+		"details",
+		"dialog",
+		"dir",
+		"div",
+		"dl",
+		"dt",
+		"fieldset",
+		"figcaption",
+		"figure",
+		"footer",
+		"form",
+		"frame",
+		"frameset",
+		"h1",
+		"h2",
+		"h3",
+		"h4",
+		"h5",
+		"h6",
+		"head",
+		"header",
+		"hr",
+		"html",
+		"legend",
+		"li",
+		"link",
+		"main",
+		"menu",
+		"menuitem",
+		"nav",
+		"noframes",
+		"ol",
+		"optgroup",
+		"option",
+		"p",
+		"param",
+		"picture",
+		"pre",
+		"section",
+		"source",
+		"summary",
+		"table",
+		"tbody",
+		"td",
+		"tfoot",
+		"th",
+		"thead",
+		"title",
+		"tr",
+		"track",
+		"ul",
+		"video"
+	]);
+	/** HTML void elements — never pushed on the balance stack. */
+	const VOID_TAGS = /* @__PURE__ */ new Set([
+		"area",
+		"base",
+		"br",
+		"col",
+		"embed",
+		"hr",
+		"img",
+		"input",
+		"link",
+		"meta",
+		"param",
+		"source",
+		"track",
+		"wbr"
+	]);
+	/** A block-tag line start: indent + `<` or `</` + tag name + space/`/`/`>`. */
+	const HTML_BLOCK_START_RE = /^ {0,3}<\/?([a-zA-Z][a-zA-Z0-9-]*)[\s/>]/;
+	/** A comment-open line start (CommonMark type 2). */
+	const COMMENT_START_RE = /^ {0,3}<!--/;
+	/** Tag-like text anywhere — the cheap gate for the inline pass. */
+	const TAGLIKE_RE = /<\/?[a-zA-Z][a-zA-Z0-9-]*[\s/>]/;
+	/** A full tag match including its `>` (token regex; quotes guard `>` inside attrs). */
+	const TAG_TOKEN_RE = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)>/g;
+	const COMMENT_RE = /<!--[\s\S]*?-->/g;
+	/**
+	* Tokenize a lifted HTML run into tags (comments are located first so tags
+	* inside them are skipped). Text between tokens is not tokenized — it stays
+	* part of the raw `html` spans the part analysis slices out.
+	*/
+	function tokenizeHtml(source) {
+		const comments = [];
+		for (const match of source.matchAll(COMMENT_RE)) comments.push({
+			start: match.index,
+			end: match.index + match[0].length
+		});
+		const inComment = (index) => comments.some((range) => index >= range.start && index < range.end);
+		const tokens = [];
+		for (const match of source.matchAll(TAG_TOKEN_RE)) {
+			if (inComment(match.index)) continue;
+			const closing = match[1] === "/";
+			const tag = match[2].toLowerCase();
+			let attrs = match[3] ?? "";
+			const selfClosing = /\/\s*$/.test(attrs);
+			if (selfClosing) attrs = attrs.replace(/\/\s*$/, "");
+			tokens.push({
+				kind: closing ? "close" : selfClosing || VOID_TAGS.has(tag) ? "void" : "open",
+				tag,
+				attrs,
+				start: match.index,
+				end: match.index + match[0].length
+			});
+		}
+		return tokens;
+	}
+	/**
+	* Reduce a lifted HTML run to ordered parts: balanced spans become `html`
+	* leaves, unclosed open tags become `open` (a wrapper the renderer lowers
+	* following markdown runs into), unmatched closes become `close` (pops one
+	* wrapper level). A mismatched close pops through the matching open — the
+	* HTML parser's implicit-close behavior. Runs with no structural tags reduce
+	* to a single `html` part.
+	*/
+	function analyzeHtmlSegment(source) {
+		const tokens = tokenizeHtml(source);
+		const stack = [];
+		const unmatchedCloses = [];
+		for (let index = 0; index < tokens.length; index += 1) {
+			const token = tokens[index];
+			if (token.kind === "void") continue;
+			if (token.kind === "open") {
+				stack.push({ token });
+				continue;
+			}
+			let matchAt = -1;
+			for (let depth = stack.length - 1; depth >= 0; depth -= 1) if (stack[depth].token.tag === token.tag) {
+				matchAt = depth;
+				break;
+			}
+			if (matchAt === -1) {
+				unmatchedCloses.push(token);
+				continue;
+			}
+			stack.length = matchAt;
+		}
+		const structural = [];
+		for (const token of unmatchedCloses) structural.push({
+			token,
+			kind: "close"
+		});
+		for (const entry of stack) structural.push({
+			token: entry.token,
+			kind: "open"
+		});
+		structural.sort((a, b) => a.token.start - b.token.start);
+		if (structural.length === 0) return { parts: [{
+			kind: "html",
+			html: source
+		}] };
+		const parts = [];
+		let cursor = 0;
+		for (const { token, kind } of structural) {
+			if (token.start > cursor) parts.push({
+				kind: "html",
+				html: source.slice(cursor, token.start)
+			});
+			parts.push(kind === "open" ? {
+				kind: "open",
+				tag: token.tag,
+				attrs: token.attrs
+			} : {
+				kind: "close",
+				tag: token.tag
+			});
+			cursor = token.end;
+		}
+		if (cursor < source.length) parts.push({
+			kind: "html",
+			html: source.slice(cursor)
+		});
+		return { parts };
+	}
+	/**
+	* Split markdown source into markdown / html runs (fence-aware: an HTML-looking
+	* line inside any fenced code block is content, not a run start). Blank lines
+	* terminate HTML runs and are dropped between segments (they carry no markdown
+	* semantics the preview needs); everything else stays byte-identical.
+	*/
+	function splitHtmlBlocks(text) {
+		if (text === "") return [];
+		const lines = text.split("\n");
+		const segments = [];
+		let markdown = [];
+		let html = [];
+		/** Fence state: the char + length of the currently open fence, if any. */
+		let openFence = null;
+		/** Comment state: an HTML comment run ends at the line containing `-->`. */
+		let inComment = false;
+		/** True while accumulating a blank-line-terminated HTML run. */
+		let inHtmlRun = false;
+		const flushMarkdown = () => {
+			while (markdown.length > 0 && isBlank(markdown[markdown.length - 1] ?? "")) markdown.pop();
+			if (markdown.length === 0) return;
+			segments.push({
+				kind: "markdown",
+				text: markdown.join("\n")
+			});
+			markdown = [];
+		};
+		const flushHtml = () => {
+			if (html.length === 0) return;
+			segments.push({
+				kind: "html",
+				text: html.join("\n")
+			});
+			html = [];
+			inHtmlRun = false;
+			inComment = false;
+		};
+		const isBlank = (line) => /^[ \t]*$/.test(line);
+		for (const line of lines) {
+			if (openFence !== null) {
+				const close = CLOSE_FENCE_RE.exec(line);
+				if (close !== null && close[1].charAt(0) === openFence.char && close[1].length >= openFence.length) openFence = null;
+				markdown.push(line);
+				continue;
+			}
+			const fenceMatch = OPEN_FENCE_RE.exec(line);
+			if (fenceMatch !== null) {
+				const fence = fenceMatch[1];
+				if (fenceInfo(line.slice(fenceMatch.index + fenceMatch[0].length), fence) !== null) {
+					openFence = {
+						char: fence.charAt(0),
+						length: fence.length
+					};
+					markdown.push(line);
+					continue;
+				}
+				markdown.push(line);
+				continue;
+			}
+			if (inComment) {
+				html.push(line);
+				if (line.includes("-->")) flushHtml();
+				continue;
+			}
+			if (inHtmlRun) {
+				if (isBlank(line)) {
+					flushHtml();
+					continue;
+				}
+				html.push(line);
+				continue;
+			}
+			if (COMMENT_START_RE.test(line)) {
+				flushMarkdown();
+				html.push(line);
+				inComment = true;
+				if (line.includes("-->")) flushHtml();
+				continue;
+			}
+			const htmlMatch = HTML_BLOCK_START_RE.exec(line);
+			const tag = htmlMatch?.[1]?.toLowerCase();
+			if (htmlMatch !== null && tag !== void 0 && HTML_BLOCK_TAGS.has(tag)) {
+				flushMarkdown();
+				html.push(line);
+				inHtmlRun = true;
+				continue;
+			}
+			if (isBlank(line) && markdown.length === 0) continue;
+			markdown.push(line);
+		}
+		flushMarkdown();
+		flushHtml();
+		return segments;
+	}
+	/** A reference definition line: `[label]: destination` (up to 3 spaces indent). */
+	const REFERENCE_DEF_RE = /^ {0,3}\[((?:[^\][]|\[[^\]]*\])*)\]:\s*(?:<([^<>]*)>|(\S+))/;
+	/**
+	* Collect the reference definitions of every markdown run (HTML runs cannot
+	* define them), in document order, newline-joined for appending.
+	*/
+	function collectReferenceDefinitions(segments) {
+		const defs = [];
+		for (const segment of segments) {
+			if (segment.kind !== "markdown") continue;
+			for (const line of segment.text.split("\n")) if (REFERENCE_DEF_RE.test(line)) defs.push(line);
+		}
+		return defs.join("\n");
+	}
+	/**
+	* The whole-document gate + split the preview consumes. `hasInlineHtml` is a
+	* cheap source-level regex (code-fence content may false-positive; the inline
+	* pass skips rendered code blocks anyway, so a false positive only costs the
+	* enhanced render path, never a behavior change).
+	*/
+	function analyzeMarkdownHtml(text) {
+		const segments = splitHtmlBlocks(text);
+		return {
+			segments,
+			hasBlockHtml: segments.some((segment) => segment.kind === "html"),
+			hasInlineHtml: TAGLIKE_RE.test(text),
+			referenceDefinitions: collectReferenceDefinitions(segments)
+		};
+	}
+	//#endregion
+	//#region node_modules/.pnpm/dompurify@3.4.14/node_modules/dompurify/dist/purify.es.mjs
+	/*! @license DOMPurify 3.4.14 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.4.14/LICENSE */
+	function _arrayLikeToArray(r, a) {
+		(null == a || a > r.length) && (a = r.length);
+		for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+		return n;
+	}
+	function _arrayWithHoles(r) {
+		if (Array.isArray(r)) return r;
+	}
+	function _iterableToArrayLimit(r, l) {
+		var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
+		if (null != t) {
+			var e, n, i, u, a = [], f = true, o = false;
+			try {
+				if (i = (t = t.call(r)).next, 0 === l);
+				else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
+			} catch (r) {
+				o = true, n = r;
+			} finally {
+				try {
+					if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
+				} finally {
+					if (o) throw n;
+				}
+			}
+			return a;
+		}
+	}
+	function _nonIterableRest() {
+		throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+	}
+	function _slicedToArray(r, e) {
+		return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+	}
+	function _unsupportedIterableToArray(r, a) {
+		if (r) {
+			if ("string" == typeof r) return _arrayLikeToArray(r, a);
+			var t = {}.toString.call(r).slice(8, -1);
+			return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;
+		}
+	}
+	const entries = Object.entries;
+	const setPrototypeOf = Object.setPrototypeOf;
+	const isFrozen = Object.isFrozen;
+	const getPrototypeOf = Object.getPrototypeOf;
+	const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+	let freeze = Object.freeze;
+	let seal = Object.seal;
+	let create = Object.create;
+	let _ref = typeof Reflect !== "undefined" && Reflect;
+	let apply = _ref.apply;
+	let construct = _ref.construct;
+	if (!freeze) freeze = function freeze(x) {
+		return x;
+	};
+	if (!seal) seal = function seal(x) {
+		return x;
+	};
+	if (!apply) apply = function apply(func, thisArg) {
+		for (var _len = arguments.length, args = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) args[_key - 2] = arguments[_key];
+		return func.apply(thisArg, args);
+	};
+	if (!construct) construct = function construct(Func) {
+		for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) args[_key2 - 1] = arguments[_key2];
+		return new Func(...args);
+	};
+	const arrayForEach = unapply(Array.prototype.forEach);
+	const arrayLastIndexOf = unapply(Array.prototype.lastIndexOf);
+	const arrayPop = unapply(Array.prototype.pop);
+	const arrayPush = unapply(Array.prototype.push);
+	const arraySplice = unapply(Array.prototype.splice);
+	const arrayIsArray = Array.isArray;
+	const stringToLowerCase = unapply(String.prototype.toLowerCase);
+	const stringToString = unapply(String.prototype.toString);
+	const stringMatch = unapply(String.prototype.match);
+	const stringReplace = unapply(String.prototype.replace);
+	const stringIndexOf = unapply(String.prototype.indexOf);
+	const stringTrim = unapply(String.prototype.trim);
+	const numberToString = unapply(Number.prototype.toString);
+	const booleanToString = unapply(Boolean.prototype.toString);
+	const bigintToString = typeof BigInt === "undefined" ? null : unapply(BigInt.prototype.toString);
+	const symbolToString = typeof Symbol === "undefined" ? null : unapply(Symbol.prototype.toString);
+	const objectHasOwnProperty = unapply(Object.prototype.hasOwnProperty);
+	const objectToString = unapply(Object.prototype.toString);
+	const regExpTest = unapply(RegExp.prototype.test);
+	const typeErrorCreate = unconstruct(TypeError);
+	/**
+	* Creates a new function that calls the given function with a specified thisArg and arguments.
+	*
+	* @param func - The function to be wrapped and called.
+	* @returns A new function that calls the given function with a specified thisArg and arguments.
+	*/
+	function unapply(func) {
+		return function(thisArg) {
+			if (thisArg instanceof RegExp) thisArg.lastIndex = 0;
+			for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) args[_key3 - 1] = arguments[_key3];
+			return apply(func, thisArg, args);
+		};
+	}
+	/**
+	* Creates a new function that constructs an instance of the given constructor function with the provided arguments.
+	*
+	* @param func - The constructor function to be wrapped and called.
+	* @returns A new function that constructs an instance of the given constructor function with the provided arguments.
+	*/
+	function unconstruct(Func) {
+		return function() {
+			for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) args[_key4] = arguments[_key4];
+			return construct(Func, args);
+		};
+	}
+	/**
+	* Add properties to a lookup table
+	*
+	* @param set - The set to which elements will be added.
+	* @param array - The array containing elements to be added to the set.
+	* @param transformCaseFunc - An optional function to transform the case of each element before adding to the set.
+	* @returns The modified set with added elements.
+	*/
+	function addToSet(set, array) {
+		let transformCaseFunc = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : stringToLowerCase;
+		if (setPrototypeOf) setPrototypeOf(set, null);
+		if (!arrayIsArray(array)) return set;
+		let l = array.length;
+		while (l--) {
+			let element = array[l];
+			if (typeof element === "string") {
+				const lcElement = transformCaseFunc(element);
+				if (lcElement !== element) {
+					if (!isFrozen(array)) array[l] = lcElement;
+					element = lcElement;
+				}
+			}
+			set[element] = true;
+		}
+		return set;
+	}
+	/**
+	* Clean up an array to harden against CSPP
+	*
+	* @param array - The array to be cleaned.
+	* @returns The cleaned version of the array
+	*/
+	function cleanArray(array) {
+		for (let index = 0; index < array.length; index++) if (!objectHasOwnProperty(array, index)) array[index] = null;
+		return array;
+	}
+	/**
+	* Shallow clone an object
+	*
+	* @param object - The object to be cloned.
+	* @returns A new object that copies the original.
+	*/
+	function clone(object) {
+		const newObject = create(null);
+		for (const _ref2 of entries(object)) {
+			var _ref3 = _slicedToArray(_ref2, 2);
+			const property = _ref3[0];
+			const value = _ref3[1];
+			if (objectHasOwnProperty(object, property)) {
+				if (arrayIsArray(value)) newObject[property] = cleanArray(value);
+				else if (value && typeof value === "object" && value.constructor === Object) newObject[property] = clone(value);
+				else newObject[property] = value;
+			}
+		}
+		return newObject;
+	}
+	/**
+	* Convert non-node values into strings without depending on direct property access.
+	*
+	* @param value - The value to stringify.
+	* @returns A string representation of the provided value.
+	*/
+	function stringifyValue(value) {
+		switch (typeof value) {
+			case "string": return value;
+			case "number": return numberToString(value);
+			case "boolean": return booleanToString(value);
+			case "bigint": return bigintToString ? bigintToString(value) : "0";
+			case "symbol": return symbolToString ? symbolToString(value) : "Symbol()";
+			case "undefined": return objectToString(value);
+			case "function":
+			case "object": {
+				if (value === null) return objectToString(value);
+				const valueAsRecord = value;
+				const valueToString = lookupGetter(valueAsRecord, "toString");
+				if (typeof valueToString === "function") {
+					const stringified = valueToString(valueAsRecord);
+					return typeof stringified === "string" ? stringified : objectToString(stringified);
+				}
+				return objectToString(value);
+			}
+			default: return objectToString(value);
+		}
+	}
+	/**
+	* This method automatically checks if the prop is function or getter and behaves accordingly.
+	*
+	* @param object - The object to look up the getter function in its prototype chain.
+	* @param prop - The property name for which to find the getter function.
+	* @returns The getter function found in the prototype chain or a fallback function.
+	*/
+	function lookupGetter(object, prop) {
+		while (object !== null) {
+			const desc = getOwnPropertyDescriptor(object, prop);
+			if (desc) {
+				if (desc.get) return unapply(desc.get);
+				if (typeof desc.value === "function") return unapply(desc.value);
+			}
+			object = getPrototypeOf(object);
+		}
+		function fallbackValue() {
+			return null;
+		}
+		return fallbackValue;
+	}
+	function isRegex(value) {
+		try {
+			regExpTest(value, "");
+			return true;
+		} catch (_unused) {
+			return false;
+		}
+	}
+	const html$1 = freeze([
+		"a",
+		"abbr",
+		"acronym",
+		"address",
+		"area",
+		"article",
+		"aside",
+		"audio",
+		"b",
+		"bdi",
+		"bdo",
+		"big",
+		"blink",
+		"blockquote",
+		"body",
+		"br",
+		"button",
+		"canvas",
+		"caption",
+		"center",
+		"cite",
+		"code",
+		"col",
+		"colgroup",
+		"content",
+		"data",
+		"datalist",
+		"dd",
+		"decorator",
+		"del",
+		"details",
+		"dfn",
+		"dialog",
+		"dir",
+		"div",
+		"dl",
+		"dt",
+		"element",
+		"em",
+		"fieldset",
+		"figcaption",
+		"figure",
+		"font",
+		"footer",
+		"form",
+		"h1",
+		"h2",
+		"h3",
+		"h4",
+		"h5",
+		"h6",
+		"head",
+		"header",
+		"hgroup",
+		"hr",
+		"html",
+		"i",
+		"img",
+		"input",
+		"ins",
+		"kbd",
+		"label",
+		"legend",
+		"li",
+		"main",
+		"map",
+		"mark",
+		"marquee",
+		"menu",
+		"menuitem",
+		"meter",
+		"nav",
+		"nobr",
+		"ol",
+		"optgroup",
+		"option",
+		"output",
+		"p",
+		"picture",
+		"pre",
+		"progress",
+		"q",
+		"rp",
+		"rt",
+		"ruby",
+		"s",
+		"samp",
+		"search",
+		"section",
+		"select",
+		"shadow",
+		"slot",
+		"small",
+		"source",
+		"spacer",
+		"span",
+		"strike",
+		"strong",
+		"style",
+		"sub",
+		"summary",
+		"sup",
+		"table",
+		"tbody",
+		"td",
+		"template",
+		"textarea",
+		"tfoot",
+		"th",
+		"thead",
+		"time",
+		"tr",
+		"track",
+		"tt",
+		"u",
+		"ul",
+		"var",
+		"video",
+		"wbr"
+	]);
+	const svg$1 = freeze([
+		"svg",
+		"a",
+		"altglyph",
+		"altglyphdef",
+		"altglyphitem",
+		"animatecolor",
+		"animatemotion",
+		"animatetransform",
+		"circle",
+		"clippath",
+		"defs",
+		"desc",
+		"ellipse",
+		"enterkeyhint",
+		"exportparts",
+		"filter",
+		"font",
+		"g",
+		"glyph",
+		"glyphref",
+		"hkern",
+		"image",
+		"inputmode",
+		"line",
+		"lineargradient",
+		"marker",
+		"mask",
+		"metadata",
+		"mpath",
+		"part",
+		"path",
+		"pattern",
+		"polygon",
+		"polyline",
+		"radialgradient",
+		"rect",
+		"stop",
+		"style",
+		"switch",
+		"symbol",
+		"text",
+		"textpath",
+		"title",
+		"tref",
+		"tspan",
+		"view",
+		"vkern"
+	]);
+	const svgFilters = freeze([
+		"feBlend",
+		"feColorMatrix",
+		"feComponentTransfer",
+		"feComposite",
+		"feConvolveMatrix",
+		"feDiffuseLighting",
+		"feDisplacementMap",
+		"feDistantLight",
+		"feDropShadow",
+		"feFlood",
+		"feFuncA",
+		"feFuncB",
+		"feFuncG",
+		"feFuncR",
+		"feGaussianBlur",
+		"feImage",
+		"feMerge",
+		"feMergeNode",
+		"feMorphology",
+		"feOffset",
+		"fePointLight",
+		"feSpecularLighting",
+		"feSpotLight",
+		"feTile",
+		"feTurbulence"
+	]);
+	const svgDisallowed = freeze([
+		"animate",
+		"color-profile",
+		"cursor",
+		"discard",
+		"font-face",
+		"font-face-format",
+		"font-face-name",
+		"font-face-src",
+		"font-face-uri",
+		"foreignobject",
+		"hatch",
+		"hatchpath",
+		"mesh",
+		"meshgradient",
+		"meshpatch",
+		"meshrow",
+		"missing-glyph",
+		"script",
+		"set",
+		"solidcolor",
+		"unknown",
+		"use"
+	]);
+	const mathMl$1 = freeze([
+		"math",
+		"menclose",
+		"merror",
+		"mfenced",
+		"mfrac",
+		"mglyph",
+		"mi",
+		"mlabeledtr",
+		"mmultiscripts",
+		"mn",
+		"mo",
+		"mover",
+		"mpadded",
+		"mphantom",
+		"mroot",
+		"mrow",
+		"ms",
+		"mspace",
+		"msqrt",
+		"mstyle",
+		"msub",
+		"msup",
+		"msubsup",
+		"mtable",
+		"mtd",
+		"mtext",
+		"mtr",
+		"munder",
+		"munderover",
+		"mprescripts"
+	]);
+	const mathMlDisallowed = freeze([
+		"maction",
+		"maligngroup",
+		"malignmark",
+		"mlongdiv",
+		"mscarries",
+		"mscarry",
+		"msgroup",
+		"mstack",
+		"msline",
+		"msrow",
+		"semantics",
+		"annotation",
+		"annotation-xml",
+		"mprescripts",
+		"none"
+	]);
+	const text = freeze(["#text"]);
+	const html = freeze([
+		"accept",
+		"action",
+		"align",
+		"alt",
+		"autocapitalize",
+		"autocomplete",
+		"autopictureinpicture",
+		"autoplay",
+		"background",
+		"bgcolor",
+		"border",
+		"capture",
+		"cellpadding",
+		"cellspacing",
+		"checked",
+		"cite",
+		"class",
+		"clear",
+		"color",
+		"cols",
+		"colspan",
+		"command",
+		"commandfor",
+		"controls",
+		"controlslist",
+		"coords",
+		"crossorigin",
+		"datetime",
+		"decoding",
+		"default",
+		"dir",
+		"disabled",
+		"disablepictureinpicture",
+		"disableremoteplayback",
+		"download",
+		"draggable",
+		"enctype",
+		"enterkeyhint",
+		"exportparts",
+		"face",
+		"for",
+		"headers",
+		"height",
+		"hidden",
+		"high",
+		"href",
+		"hreflang",
+		"id",
+		"inert",
+		"inputmode",
+		"integrity",
+		"ismap",
+		"kind",
+		"label",
+		"lang",
+		"list",
+		"loading",
+		"loop",
+		"low",
+		"max",
+		"maxlength",
+		"media",
+		"method",
+		"min",
+		"minlength",
+		"multiple",
+		"muted",
+		"name",
+		"nonce",
+		"noshade",
+		"novalidate",
+		"nowrap",
+		"open",
+		"optimum",
+		"part",
+		"pattern",
+		"placeholder",
+		"playsinline",
+		"popover",
+		"popovertarget",
+		"popovertargetaction",
+		"poster",
+		"preload",
+		"pubdate",
+		"radiogroup",
+		"readonly",
+		"rel",
+		"required",
+		"rev",
+		"reversed",
+		"role",
+		"rows",
+		"rowspan",
+		"spellcheck",
+		"scope",
+		"selected",
+		"shape",
+		"size",
+		"sizes",
+		"slot",
+		"span",
+		"srclang",
+		"start",
+		"src",
+		"srcset",
+		"step",
+		"style",
+		"summary",
+		"tabindex",
+		"title",
+		"translate",
+		"type",
+		"usemap",
+		"valign",
+		"value",
+		"width",
+		"wrap",
+		"xmlns"
+	]);
+	const svg = freeze([
+		"accent-height",
+		"accumulate",
+		"additive",
+		"alignment-baseline",
+		"amplitude",
+		"ascent",
+		"attributename",
+		"attributetype",
+		"azimuth",
+		"basefrequency",
+		"baseline-shift",
+		"begin",
+		"bias",
+		"by",
+		"class",
+		"clip",
+		"clippathunits",
+		"clip-path",
+		"clip-rule",
+		"color",
+		"color-interpolation",
+		"color-interpolation-filters",
+		"color-profile",
+		"color-rendering",
+		"cx",
+		"cy",
+		"d",
+		"dx",
+		"dy",
+		"diffuseconstant",
+		"direction",
+		"display",
+		"divisor",
+		"dominant-baseline",
+		"dur",
+		"edgemode",
+		"elevation",
+		"end",
+		"exponent",
+		"fill",
+		"fill-opacity",
+		"fill-rule",
+		"filter",
+		"filterunits",
+		"flood-color",
+		"flood-opacity",
+		"font-family",
+		"font-size",
+		"font-size-adjust",
+		"font-stretch",
+		"font-style",
+		"font-variant",
+		"font-weight",
+		"fx",
+		"fy",
+		"g1",
+		"g2",
+		"glyph-name",
+		"glyphref",
+		"gradientunits",
+		"gradienttransform",
+		"height",
+		"href",
+		"id",
+		"image-rendering",
+		"in",
+		"in2",
+		"intercept",
+		"k",
+		"k1",
+		"k2",
+		"k3",
+		"k4",
+		"kerning",
+		"keypoints",
+		"keysplines",
+		"keytimes",
+		"lang",
+		"lengthadjust",
+		"letter-spacing",
+		"kernelmatrix",
+		"kernelunitlength",
+		"lighting-color",
+		"local",
+		"marker-end",
+		"marker-mid",
+		"marker-start",
+		"markerheight",
+		"markerunits",
+		"markerwidth",
+		"maskcontentunits",
+		"maskunits",
+		"max",
+		"mask",
+		"mask-type",
+		"media",
+		"method",
+		"mode",
+		"min",
+		"name",
+		"numoctaves",
+		"offset",
+		"operator",
+		"opacity",
+		"order",
+		"orient",
+		"orientation",
+		"origin",
+		"overflow",
+		"paint-order",
+		"path",
+		"pathlength",
+		"patterncontentunits",
+		"patterntransform",
+		"patternunits",
+		"pointer-events",
+		"points",
+		"preservealpha",
+		"preserveaspectratio",
+		"primitiveunits",
+		"r",
+		"rx",
+		"ry",
+		"radius",
+		"refx",
+		"refy",
+		"repeatcount",
+		"repeatdur",
+		"restart",
+		"result",
+		"rotate",
+		"scale",
+		"seed",
+		"shape-rendering",
+		"slope",
+		"specularconstant",
+		"specularexponent",
+		"spreadmethod",
+		"startoffset",
+		"stddeviation",
+		"stitchtiles",
+		"stop-color",
+		"stop-opacity",
+		"stroke-dasharray",
+		"stroke-dashoffset",
+		"stroke-linecap",
+		"stroke-linejoin",
+		"stroke-miterlimit",
+		"stroke-opacity",
+		"stroke",
+		"stroke-width",
+		"style",
+		"surfacescale",
+		"systemlanguage",
+		"tabindex",
+		"tablevalues",
+		"targetx",
+		"targety",
+		"transform",
+		"transform-origin",
+		"text-anchor",
+		"text-decoration",
+		"text-orientation",
+		"text-rendering",
+		"textlength",
+		"type",
+		"u1",
+		"u2",
+		"unicode",
+		"values",
+		"vector-effect",
+		"viewbox",
+		"visibility",
+		"version",
+		"vert-adv-y",
+		"vert-origin-x",
+		"vert-origin-y",
+		"width",
+		"word-spacing",
+		"wrap",
+		"writing-mode",
+		"xchannelselector",
+		"ychannelselector",
+		"x",
+		"x1",
+		"x2",
+		"xmlns",
+		"y",
+		"y1",
+		"y2",
+		"z",
+		"zoomandpan"
+	]);
+	const mathMl = freeze([
+		"accent",
+		"accentunder",
+		"align",
+		"bevelled",
+		"close",
+		"columnalign",
+		"columnlines",
+		"columnspacing",
+		"columnspan",
+		"denomalign",
+		"depth",
+		"dir",
+		"display",
+		"displaystyle",
+		"encoding",
+		"fence",
+		"frame",
+		"height",
+		"href",
+		"id",
+		"largeop",
+		"length",
+		"linethickness",
+		"lquote",
+		"lspace",
+		"mathbackground",
+		"mathcolor",
+		"mathsize",
+		"mathvariant",
+		"maxsize",
+		"minsize",
+		"movablelimits",
+		"notation",
+		"numalign",
+		"open",
+		"rowalign",
+		"rowlines",
+		"rowspacing",
+		"rowspan",
+		"rspace",
+		"rquote",
+		"scriptlevel",
+		"scriptminsize",
+		"scriptsizemultiplier",
+		"selection",
+		"separator",
+		"separators",
+		"stretchy",
+		"subscriptshift",
+		"supscriptshift",
+		"symmetric",
+		"voffset",
+		"width",
+		"xmlns"
+	]);
+	const xml = freeze([
+		"xlink:href",
+		"xml:id",
+		"xlink:title",
+		"xml:space",
+		"xmlns:xlink"
+	]);
+	const MUSTACHE_EXPR = seal(/{{[\w\W]*|^[\w\W]*}}/g);
+	const ERB_EXPR = seal(/<%[\w\W]*|^[\w\W]*%>/g);
+	const TMPLIT_EXPR = seal(/\${[\w\W]*/g);
+	const DATA_ATTR = seal(/^data-[\-\w.\u00B7-\uFFFF]+$/);
+	const ARIA_ATTR = seal(/^aria-[\-\w]+$/);
+	const IS_ALLOWED_URI = seal(/^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i);
+	const IS_SCRIPT_OR_DATA = seal(/^(?:\w+script|data):/i);
+	const ATTR_WHITESPACE = seal(/[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g);
+	const DOCTYPE_NAME = seal(/^html$/i);
+	const CUSTOM_ELEMENT = seal(/^[a-z][.\w]*(-[.\w]+)+$/i);
+	const ELEMENT_MARKUP_PROBE = seal(/<[/\w!]/g);
+	const COMMENT_MARKUP_PROBE = seal(/<[/\w]/g);
+	const FALLBACK_TAG_CLOSE = seal(/<\/no(script|embed|frames)/i);
+	const SELF_CLOSING_TAG = seal(/\/>/i);
+	const NODE_TYPE = {
+		element: 1,
+		attribute: 2,
+		text: 3,
+		cdataSection: 4,
+		entityReference: 5,
+		entityNode: 6,
+		processingInstruction: 7,
+		comment: 8,
+		document: 9,
+		documentType: 10,
+		documentFragment: 11,
+		notation: 12
+	};
+	const LITERAL_TEXT_ELEMENT_NAMES = [
+		"style",
+		"script",
+		"xmp",
+		"iframe",
+		"noembed",
+		"noframes",
+		"plaintext",
+		"noscript"
+	];
+	const LITERAL_TEXT_ELEMENTS = freeze(addToSet({}, LITERAL_TEXT_ELEMENT_NAMES));
+	const LITERAL_TEXT_CLOSE = function() {
+		const map = {};
+		arrayForEach(LITERAL_TEXT_ELEMENT_NAMES, (name) => {
+			map[name] = seal(new RegExp("</" + name + "(?=[\\t\\n\\f\\r />])", "i"));
+		});
+		return freeze(map);
+	}();
+	const getGlobal = function getGlobal() {
+		return typeof window === "undefined" ? null : window;
+	};
+	/**
+	* Creates a no-op policy for internal use only.
+	* Don't export this function outside this module!
+	* @param trustedTypes The policy factory.
+	* @param purifyHostElement The Script element used to load DOMPurify (to determine policy name suffix).
+	* @return The policy created (or null, if Trusted Types
+	* are not supported or creating the policy failed).
+	*/
+	const _createTrustedTypesPolicy = function _createTrustedTypesPolicy(trustedTypes, purifyHostElement) {
+		if (typeof trustedTypes !== "object" || typeof trustedTypes.createPolicy !== "function") return null;
+		let suffix = null;
+		const ATTR_NAME = "data-tt-policy-suffix";
+		if (purifyHostElement && purifyHostElement.hasAttribute(ATTR_NAME)) suffix = purifyHostElement.getAttribute(ATTR_NAME);
+		const policyName = "dompurify" + (suffix ? "#" + suffix : "");
+		try {
+			return trustedTypes.createPolicy(policyName, {
+				createHTML(html) {
+					return html;
+				},
+				createScriptURL(scriptUrl) {
+					return scriptUrl;
+				}
+			});
+		} catch (_) {
+			console.warn("TrustedTypes policy " + policyName + " could not be created.");
+			return null;
+		}
+	};
+	const _createHooksMap = function _createHooksMap() {
+		return {
+			afterSanitizeAttributes: [],
+			afterSanitizeElements: [],
+			afterSanitizeShadowDOM: [],
+			beforeSanitizeAttributes: [],
+			beforeSanitizeElements: [],
+			beforeSanitizeShadowDOM: [],
+			uponSanitizeAttribute: [],
+			uponSanitizeElement: [],
+			uponSanitizeShadowNode: []
+		};
+	};
+	/**
+	* Resolve a set-valued configuration option: a fresh set built from
+	* cfg[key] when it is an own array property (seeded with a clone of
+	* options.base when given, case-normalized via options.transform),
+	* the fallback set otherwise.
+	*
+	* @param cfg the cloned, prototype-free configuration object
+	* @param key the configuration property to read
+	* @param fallback the set to use when the option is absent or not an array
+	* @param options transform and optional base set to merge into
+	* @returns the resolved set
+	*/
+	const _resolveSetOption = function _resolveSetOption(cfg, key, fallback, options) {
+		return objectHasOwnProperty(cfg, key) && arrayIsArray(cfg[key]) ? addToSet(options.base ? clone(options.base) : {}, cfg[key], options.transform) : fallback;
+	};
+	/**
+	* Resolve an object-valued configuration option: a prototype-free clone
+	* of cfg[key] when it is an own, truthy object property, else a fresh
+	* fallback built by makeFallback (fresh on every parse, so a previous
+	* parse can never leak state into the next one).
+	*
+	* @param cfg the cloned, prototype-free configuration object
+	* @param key the configuration property to read
+	* @param makeFallback builds the fallback value when the option is absent
+	* @returns the resolved object
+	*/
+	const _resolveObjectOption = function _resolveObjectOption(cfg, key, makeFallback) {
+		const value = objectHasOwnProperty(cfg, key) ? cfg[key] : void 0;
+		return value && typeof value === "object" ? clone(value) : makeFallback();
+	};
+	function createDOMPurify() {
+		let window = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
+		const DOMPurify = (root) => createDOMPurify(root);
+		DOMPurify.version = "3.4.14";
+		DOMPurify.removed = [];
+		if (!window || !window.document || window.document.nodeType !== NODE_TYPE.document || !window.Element) {
+			DOMPurify.isSupported = false;
+			return DOMPurify;
+		}
+		let document = window.document;
+		const originalDocument = document;
+		const currentScript = originalDocument.currentScript;
+		window.DocumentFragment;
+		const HTMLTemplateElement = window.HTMLTemplateElement, Node = window.Node, Element = window.Element, NodeFilter = window.NodeFilter;
+		window.NamedNodeMap === void 0 && (window.NamedNodeMap || window.MozNamedAttrMap);
+		window.HTMLFormElement;
+		const DOMParser = window.DOMParser, trustedTypes = window.trustedTypes;
+		const ElementPrototype = Element.prototype;
+		const cloneNode = lookupGetter(ElementPrototype, "cloneNode");
+		const remove = lookupGetter(ElementPrototype, "remove");
+		const getNextSibling = lookupGetter(ElementPrototype, "nextSibling");
+		const getChildNodes = lookupGetter(ElementPrototype, "childNodes");
+		const getParentNode = lookupGetter(ElementPrototype, "parentNode");
+		const getShadowRoot = lookupGetter(ElementPrototype, "shadowRoot");
+		const getAttributes = lookupGetter(ElementPrototype, "attributes");
+		const getNodeType = Node && Node.prototype ? lookupGetter(Node.prototype, "nodeType") : null;
+		const getNodeName = Node && Node.prototype ? lookupGetter(Node.prototype, "nodeName") : null;
+		const getOwnerDocument = Node && Node.prototype ? lookupGetter(Node.prototype, "ownerDocument") : null;
+		const _readNodeType = function _readNodeType(node) {
+			return getNodeType ? getNodeType(node) : node.nodeType;
+		};
+		const _readNodeName = function _readNodeName(node) {
+			return getNodeName ? getNodeName(node) : node.nodeName;
+		};
+		if (typeof HTMLTemplateElement === "function") {
+			const template = document.createElement("template");
+			if (template.content && template.content.ownerDocument) document = template.content.ownerDocument;
+		}
+		let trustedTypesPolicy;
+		let emptyHTML = "";
+		let defaultTrustedTypesPolicy;
+		let defaultTrustedTypesPolicyResolved = false;
+		let IN_TRUSTED_TYPES_POLICY = 0;
+		const _assertNotInTrustedTypesPolicy = function _assertNotInTrustedTypesPolicy() {
+			if (IN_TRUSTED_TYPES_POLICY > 0) throw typeErrorCreate("A configured TRUSTED_TYPES_POLICY callback (createHTML or createScriptURL) must not call DOMPurify.sanitize, as that causes infinite recursion. Do not pass a policy whose callbacks wrap DOMPurify as TRUSTED_TYPES_POLICY; see the \"DOMPurify and Trusted Types\" section of the README.");
+		};
+		const _createTrustedHTML = function _createTrustedHTML(html) {
+			_assertNotInTrustedTypesPolicy();
+			IN_TRUSTED_TYPES_POLICY++;
+			try {
+				return trustedTypesPolicy.createHTML(html);
+			} finally {
+				IN_TRUSTED_TYPES_POLICY--;
+			}
+		};
+		const _createTrustedScriptURL = function _createTrustedScriptURL(scriptUrl) {
+			_assertNotInTrustedTypesPolicy();
+			IN_TRUSTED_TYPES_POLICY++;
+			try {
+				return trustedTypesPolicy.createScriptURL(scriptUrl);
+			} finally {
+				IN_TRUSTED_TYPES_POLICY--;
+			}
+		};
+		const _getDefaultTrustedTypesPolicy = function _getDefaultTrustedTypesPolicy() {
+			if (!defaultTrustedTypesPolicyResolved) {
+				defaultTrustedTypesPolicy = _createTrustedTypesPolicy(trustedTypes, currentScript);
+				defaultTrustedTypesPolicyResolved = true;
+			}
+			return defaultTrustedTypesPolicy;
+		};
+		const _document = document, implementation = _document.implementation, createNodeIterator = _document.createNodeIterator, createDocumentFragment = _document.createDocumentFragment, getElementsByTagName = _document.getElementsByTagName;
+		const importNode = originalDocument.importNode;
+		let hooks = _createHooksMap();
+		/**
+		* Expose whether this browser supports running the full DOMPurify.
+		*/
+		DOMPurify.isSupported = typeof entries === "function" && typeof getParentNode === "function" && implementation && implementation.createHTMLDocument !== void 0;
+		const MUSTACHE_EXPR$1 = MUSTACHE_EXPR, ERB_EXPR$1 = ERB_EXPR, TMPLIT_EXPR$1 = TMPLIT_EXPR, DATA_ATTR$1 = DATA_ATTR, ARIA_ATTR$1 = ARIA_ATTR, IS_SCRIPT_OR_DATA$1 = IS_SCRIPT_OR_DATA, ATTR_WHITESPACE$1 = ATTR_WHITESPACE, CUSTOM_ELEMENT$1 = CUSTOM_ELEMENT;
+		let IS_ALLOWED_URI$1 = IS_ALLOWED_URI;
+		/**
+		* We consider the elements and attributes below to be safe. Ideally
+		* don't add any new ones but feel free to remove unwanted ones.
+		*/
+		let ALLOWED_TAGS = null;
+		const DEFAULT_ALLOWED_TAGS = addToSet({}, [
+			...html$1,
+			...svg$1,
+			...svgFilters,
+			...mathMl$1,
+			...text
+		]);
+		let ALLOWED_ATTR = null;
+		const DEFAULT_ALLOWED_ATTR = addToSet({}, [
+			...html,
+			...svg,
+			...mathMl,
+			...xml
+		]);
+		let CUSTOM_ELEMENT_HANDLING = Object.seal(create(null, {
+			tagNameCheck: {
+				writable: true,
+				configurable: false,
+				enumerable: true,
+				value: null
+			},
+			attributeNameCheck: {
+				writable: true,
+				configurable: false,
+				enumerable: true,
+				value: null
+			},
+			allowCustomizedBuiltInElements: {
+				writable: true,
+				configurable: false,
+				enumerable: true,
+				value: false
+			}
+		}));
+		let FORBID_TAGS = null;
+		let FORBID_ATTR = null;
+		const EXTRA_ELEMENT_HANDLING = Object.seal(create(null, {
+			tagCheck: {
+				writable: true,
+				configurable: false,
+				enumerable: true,
+				value: null
+			},
+			attributeCheck: {
+				writable: true,
+				configurable: false,
+				enumerable: true,
+				value: null
+			}
+		}));
+		let ALLOW_ARIA_ATTR = true;
+		let ALLOW_DATA_ATTR = true;
+		let ALLOW_UNKNOWN_PROTOCOLS = false;
+		let ALLOW_SELF_CLOSE_IN_ATTR = true;
+		let SAFE_FOR_TEMPLATES = false;
+		let SAFE_FOR_XML = true;
+		let WHOLE_DOCUMENT = false;
+		let SET_CONFIG = false;
+		let SET_CONFIG_ALLOWED_TAGS = null;
+		let SET_CONFIG_ALLOWED_ATTR = null;
+		let FORCE_BODY = false;
+		let RETURN_DOM = false;
+		let RETURN_DOM_FRAGMENT = false;
+		let RETURN_TRUSTED_TYPE = false;
+		let SANITIZE_DOM = true;
+		let SANITIZE_NAMED_PROPS = false;
+		const SANITIZE_NAMED_PROPS_PREFIX = "user-content-";
+		let KEEP_CONTENT = true;
+		let IN_PLACE = false;
+		let USE_PROFILES = {};
+		let FORBID_CONTENTS = null;
+		const DEFAULT_FORBID_CONTENTS = addToSet({}, [
+			"annotation-xml",
+			"audio",
+			"colgroup",
+			"desc",
+			"foreignobject",
+			"head",
+			"iframe",
+			"math",
+			"mi",
+			"mn",
+			"mo",
+			"ms",
+			"mtext",
+			"noembed",
+			"noframes",
+			"noscript",
+			"plaintext",
+			"script",
+			"selectedcontent",
+			"style",
+			"svg",
+			"template",
+			"thead",
+			"title",
+			"video",
+			"xmp"
+		]);
+		let DATA_URI_TAGS = null;
+		const DEFAULT_DATA_URI_TAGS = addToSet({}, [
+			"audio",
+			"video",
+			"img",
+			"source",
+			"image",
+			"track"
+		]);
+		let URI_SAFE_ATTRIBUTES = null;
+		const DEFAULT_URI_SAFE_ATTRIBUTES = addToSet({}, [
+			"alt",
+			"class",
+			"for",
+			"id",
+			"label",
+			"name",
+			"pattern",
+			"placeholder",
+			"role",
+			"summary",
+			"title",
+			"value",
+			"style",
+			"xmlns"
+		]);
+		const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
+		const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+		const HTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
+		let NAMESPACE = HTML_NAMESPACE;
+		let IS_EMPTY_INPUT = false;
+		let ALLOWED_NAMESPACES = null;
+		const DEFAULT_ALLOWED_NAMESPACES = addToSet({}, [
+			MATHML_NAMESPACE,
+			SVG_NAMESPACE,
+			HTML_NAMESPACE
+		], stringToString);
+		const DEFAULT_MATHML_TEXT_INTEGRATION_POINTS = freeze([
+			"mi",
+			"mo",
+			"mn",
+			"ms",
+			"mtext"
+		]);
+		let MATHML_TEXT_INTEGRATION_POINTS = addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS);
+		const DEFAULT_HTML_INTEGRATION_POINTS = freeze(["annotation-xml"]);
+		let HTML_INTEGRATION_POINTS = addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS);
+		const COMMON_SVG_AND_HTML_ELEMENTS = addToSet({}, [
+			"title",
+			"style",
+			"font",
+			"a",
+			"script"
+		]);
+		let PARSER_MEDIA_TYPE = null;
+		const SUPPORTED_PARSER_MEDIA_TYPES = ["application/xhtml+xml", "text/html"];
+		const DEFAULT_PARSER_MEDIA_TYPE = "text/html";
+		let transformCaseFunc = null;
+		let CONFIG = null;
+		const formElement = document.createElement("form");
+		const isRegexOrFunction = function isRegexOrFunction(testValue) {
+			return testValue instanceof RegExp || testValue instanceof Function;
+		};
+		/**
+		* _parseConfig
+		*
+		* @param cfg optional config literal
+		*/
+		const _parseConfig = function _parseConfig() {
+			let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+			if (CONFIG && CONFIG === cfg) return;
+			if (!cfg || typeof cfg !== "object") cfg = {};
+			cfg = clone(cfg);
+			PARSER_MEDIA_TYPE = SUPPORTED_PARSER_MEDIA_TYPES.indexOf(cfg.PARSER_MEDIA_TYPE) === -1 ? DEFAULT_PARSER_MEDIA_TYPE : cfg.PARSER_MEDIA_TYPE;
+			transformCaseFunc = PARSER_MEDIA_TYPE === "application/xhtml+xml" ? stringToString : stringToLowerCase;
+			ALLOWED_TAGS = _resolveSetOption(cfg, "ALLOWED_TAGS", DEFAULT_ALLOWED_TAGS, { transform: transformCaseFunc });
+			ALLOWED_ATTR = _resolveSetOption(cfg, "ALLOWED_ATTR", DEFAULT_ALLOWED_ATTR, { transform: transformCaseFunc });
+			ALLOWED_NAMESPACES = _resolveSetOption(cfg, "ALLOWED_NAMESPACES", DEFAULT_ALLOWED_NAMESPACES, { transform: stringToString });
+			URI_SAFE_ATTRIBUTES = _resolveSetOption(cfg, "ADD_URI_SAFE_ATTR", DEFAULT_URI_SAFE_ATTRIBUTES, {
+				transform: transformCaseFunc,
+				base: DEFAULT_URI_SAFE_ATTRIBUTES
+			});
+			DATA_URI_TAGS = _resolveSetOption(cfg, "ADD_DATA_URI_TAGS", DEFAULT_DATA_URI_TAGS, {
+				transform: transformCaseFunc,
+				base: DEFAULT_DATA_URI_TAGS
+			});
+			FORBID_CONTENTS = _resolveSetOption(cfg, "FORBID_CONTENTS", DEFAULT_FORBID_CONTENTS, { transform: transformCaseFunc });
+			FORBID_TAGS = _resolveSetOption(cfg, "FORBID_TAGS", clone({}), { transform: transformCaseFunc });
+			FORBID_ATTR = _resolveSetOption(cfg, "FORBID_ATTR", clone({}), { transform: transformCaseFunc });
+			USE_PROFILES = objectHasOwnProperty(cfg, "USE_PROFILES") ? cfg.USE_PROFILES && typeof cfg.USE_PROFILES === "object" ? clone(cfg.USE_PROFILES) : cfg.USE_PROFILES : false;
+			ALLOW_ARIA_ATTR = cfg.ALLOW_ARIA_ATTR !== false;
+			ALLOW_DATA_ATTR = cfg.ALLOW_DATA_ATTR !== false;
+			ALLOW_UNKNOWN_PROTOCOLS = cfg.ALLOW_UNKNOWN_PROTOCOLS || false;
+			ALLOW_SELF_CLOSE_IN_ATTR = cfg.ALLOW_SELF_CLOSE_IN_ATTR !== false;
+			SAFE_FOR_TEMPLATES = cfg.SAFE_FOR_TEMPLATES || false;
+			SAFE_FOR_XML = cfg.SAFE_FOR_XML !== false;
+			WHOLE_DOCUMENT = cfg.WHOLE_DOCUMENT || false;
+			RETURN_DOM = cfg.RETURN_DOM || false;
+			RETURN_DOM_FRAGMENT = cfg.RETURN_DOM_FRAGMENT || false;
+			RETURN_TRUSTED_TYPE = cfg.RETURN_TRUSTED_TYPE || false;
+			FORCE_BODY = cfg.FORCE_BODY || false;
+			SANITIZE_DOM = cfg.SANITIZE_DOM !== false;
+			SANITIZE_NAMED_PROPS = cfg.SANITIZE_NAMED_PROPS || false;
+			KEEP_CONTENT = cfg.KEEP_CONTENT !== false;
+			IN_PLACE = cfg.IN_PLACE || false;
+			IS_ALLOWED_URI$1 = isRegex(cfg.ALLOWED_URI_REGEXP) ? cfg.ALLOWED_URI_REGEXP : IS_ALLOWED_URI;
+			NAMESPACE = typeof cfg.NAMESPACE === "string" ? cfg.NAMESPACE : HTML_NAMESPACE;
+			MATHML_TEXT_INTEGRATION_POINTS = _resolveObjectOption(cfg, "MATHML_TEXT_INTEGRATION_POINTS", () => addToSet({}, DEFAULT_MATHML_TEXT_INTEGRATION_POINTS));
+			HTML_INTEGRATION_POINTS = _resolveObjectOption(cfg, "HTML_INTEGRATION_POINTS", () => addToSet({}, DEFAULT_HTML_INTEGRATION_POINTS));
+			const customElementHandling = _resolveObjectOption(cfg, "CUSTOM_ELEMENT_HANDLING", () => create(null));
+			CUSTOM_ELEMENT_HANDLING = create(null);
+			if (objectHasOwnProperty(customElementHandling, "tagNameCheck") && isRegexOrFunction(customElementHandling.tagNameCheck)) CUSTOM_ELEMENT_HANDLING.tagNameCheck = customElementHandling.tagNameCheck;
+			if (objectHasOwnProperty(customElementHandling, "attributeNameCheck") && isRegexOrFunction(customElementHandling.attributeNameCheck)) CUSTOM_ELEMENT_HANDLING.attributeNameCheck = customElementHandling.attributeNameCheck;
+			if (objectHasOwnProperty(customElementHandling, "allowCustomizedBuiltInElements") && typeof customElementHandling.allowCustomizedBuiltInElements === "boolean") CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements = customElementHandling.allowCustomizedBuiltInElements;
+			seal(CUSTOM_ELEMENT_HANDLING);
+			if (SAFE_FOR_TEMPLATES) ALLOW_DATA_ATTR = false;
+			if (RETURN_DOM_FRAGMENT) RETURN_DOM = true;
+			if (USE_PROFILES) {
+				ALLOWED_TAGS = addToSet({}, text);
+				ALLOWED_ATTR = create(null);
+				if (USE_PROFILES.html === true) {
+					addToSet(ALLOWED_TAGS, html$1);
+					addToSet(ALLOWED_ATTR, html);
+				}
+				if (USE_PROFILES.svg === true) {
+					addToSet(ALLOWED_TAGS, svg$1);
+					addToSet(ALLOWED_ATTR, svg);
+					addToSet(ALLOWED_ATTR, xml);
+				}
+				if (USE_PROFILES.svgFilters === true) {
+					addToSet(ALLOWED_TAGS, svgFilters);
+					addToSet(ALLOWED_ATTR, svg);
+					addToSet(ALLOWED_ATTR, xml);
+				}
+				if (USE_PROFILES.mathMl === true) {
+					addToSet(ALLOWED_TAGS, mathMl$1);
+					addToSet(ALLOWED_ATTR, mathMl);
+					addToSet(ALLOWED_ATTR, xml);
+				}
+			}
+			EXTRA_ELEMENT_HANDLING.tagCheck = null;
+			EXTRA_ELEMENT_HANDLING.attributeCheck = null;
+			if (objectHasOwnProperty(cfg, "ADD_TAGS")) {
+				if (typeof cfg.ADD_TAGS === "function") EXTRA_ELEMENT_HANDLING.tagCheck = cfg.ADD_TAGS;
+				else if (arrayIsArray(cfg.ADD_TAGS)) {
+					if (ALLOWED_TAGS === DEFAULT_ALLOWED_TAGS) ALLOWED_TAGS = clone(ALLOWED_TAGS);
+					addToSet(ALLOWED_TAGS, cfg.ADD_TAGS, transformCaseFunc);
+				}
+			}
+			if (objectHasOwnProperty(cfg, "ADD_ATTR")) {
+				if (typeof cfg.ADD_ATTR === "function") EXTRA_ELEMENT_HANDLING.attributeCheck = cfg.ADD_ATTR;
+				else if (arrayIsArray(cfg.ADD_ATTR)) {
+					if (ALLOWED_ATTR === DEFAULT_ALLOWED_ATTR) ALLOWED_ATTR = clone(ALLOWED_ATTR);
+					addToSet(ALLOWED_ATTR, cfg.ADD_ATTR, transformCaseFunc);
+				}
+			}
+			if (objectHasOwnProperty(cfg, "ADD_FORBID_CONTENTS") && arrayIsArray(cfg.ADD_FORBID_CONTENTS)) {
+				if (FORBID_CONTENTS === DEFAULT_FORBID_CONTENTS) FORBID_CONTENTS = clone(FORBID_CONTENTS);
+				addToSet(FORBID_CONTENTS, cfg.ADD_FORBID_CONTENTS, transformCaseFunc);
+			}
+			if (KEEP_CONTENT) ALLOWED_TAGS["#text"] = true;
+			if (WHOLE_DOCUMENT) addToSet(ALLOWED_TAGS, [
+				"html",
+				"head",
+				"body"
+			]);
+			if (ALLOWED_TAGS.table) {
+				addToSet(ALLOWED_TAGS, ["tbody"]);
+				delete FORBID_TAGS.tbody;
+			}
+			if (cfg.TRUSTED_TYPES_POLICY) {
+				if (typeof cfg.TRUSTED_TYPES_POLICY.createHTML !== "function") throw typeErrorCreate("TRUSTED_TYPES_POLICY configuration option must provide a \"createHTML\" hook.");
+				if (typeof cfg.TRUSTED_TYPES_POLICY.createScriptURL !== "function") throw typeErrorCreate("TRUSTED_TYPES_POLICY configuration option must provide a \"createScriptURL\" hook.");
+				const previousTrustedTypesPolicy = trustedTypesPolicy;
+				trustedTypesPolicy = cfg.TRUSTED_TYPES_POLICY;
+				try {
+					emptyHTML = _createTrustedHTML("");
+				} catch (error) {
+					trustedTypesPolicy = previousTrustedTypesPolicy;
+					throw error;
+				}
+			} else if (cfg.TRUSTED_TYPES_POLICY === null) {
+				trustedTypesPolicy = void 0;
+				emptyHTML = "";
+			} else {
+				if (trustedTypesPolicy === void 0) trustedTypesPolicy = _getDefaultTrustedTypesPolicy();
+				if (trustedTypesPolicy && typeof emptyHTML === "string") emptyHTML = _createTrustedHTML("");
+			}
+			if (freeze) freeze(cfg);
+			CONFIG = cfg;
+		};
+		const ALL_SVG_TAGS = addToSet({}, [
+			...svg$1,
+			...svgFilters,
+			...svgDisallowed
+		]);
+		const ALL_MATHML_TAGS = addToSet({}, [...mathMl$1, ...mathMlDisallowed]);
+		/**
+		* Namespace rules for an element in the SVG namespace.
+		*
+		* @param tagName the element's lowercase tag name
+		* @param parent the (possibly simulated) parent node
+		* @param parentTagName the parent's lowercase tag name
+		* @returns true if a spec-compliant parser could produce this element
+		*/
+		const _checkSvgNamespace = function _checkSvgNamespace(tagName, parent, parentTagName) {
+			if (parent.namespaceURI === HTML_NAMESPACE) return tagName === "svg";
+			if (parent.namespaceURI === MATHML_NAMESPACE) return tagName === "svg" && (parentTagName === "annotation-xml" || MATHML_TEXT_INTEGRATION_POINTS[parentTagName]);
+			return Boolean(ALL_SVG_TAGS[tagName]);
+		};
+		/**
+		* Namespace rules for an element in the MathML namespace.
+		*
+		* @param tagName the element's lowercase tag name
+		* @param parent the (possibly simulated) parent node
+		* @param parentTagName the parent's lowercase tag name
+		* @returns true if a spec-compliant parser could produce this element
+		*/
+		const _checkMathMlNamespace = function _checkMathMlNamespace(tagName, parent, parentTagName) {
+			if (parent.namespaceURI === HTML_NAMESPACE) return tagName === "math";
+			if (parent.namespaceURI === SVG_NAMESPACE) return tagName === "math" && HTML_INTEGRATION_POINTS[parentTagName];
+			return Boolean(ALL_MATHML_TAGS[tagName]);
+		};
+		/**
+		* Namespace rules for an element in the HTML namespace.
+		*
+		* @param tagName the element's lowercase tag name
+		* @param parent the (possibly simulated) parent node
+		* @param parentTagName the parent's lowercase tag name
+		* @returns true if a spec-compliant parser could produce this element
+		*/
+		const _checkHtmlNamespace = function _checkHtmlNamespace(tagName, parent, parentTagName) {
+			if (parent.namespaceURI === SVG_NAMESPACE && !HTML_INTEGRATION_POINTS[parentTagName]) return false;
+			if (parent.namespaceURI === MATHML_NAMESPACE && !MATHML_TEXT_INTEGRATION_POINTS[parentTagName]) return false;
+			return !ALL_MATHML_TAGS[tagName] && (COMMON_SVG_AND_HTML_ELEMENTS[tagName] || !ALL_SVG_TAGS[tagName]);
+		};
+		/**
+		* @param element a DOM element whose namespace is being checked
+		* @returns Return false if the element has a
+		*  namespace that a spec-compliant parser would never
+		*  return. Return true otherwise.
+		*/
+		const _checkValidNamespace = function _checkValidNamespace(element) {
+			let parent = getParentNode(element);
+			if (!parent || !parent.tagName) parent = {
+				namespaceURI: NAMESPACE,
+				tagName: "template"
+			};
+			const tagName = stringToLowerCase(element.tagName);
+			const parentTagName = stringToLowerCase(parent.tagName);
+			if (!ALLOWED_NAMESPACES[element.namespaceURI]) return false;
+			if (element.namespaceURI === SVG_NAMESPACE) return _checkSvgNamespace(tagName, parent, parentTagName);
+			if (element.namespaceURI === MATHML_NAMESPACE) return _checkMathMlNamespace(tagName, parent, parentTagName);
+			if (element.namespaceURI === HTML_NAMESPACE) return _checkHtmlNamespace(tagName, parent, parentTagName);
+			if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && ALLOWED_NAMESPACES[element.namespaceURI]) return true;
+			return false;
+		};
+		/**
+		* _forceRemove
+		*
+		* @param node a DOM node
+		*/
+		const _forceRemove = function _forceRemove(node) {
+			arrayPush(DOMPurify.removed, { element: node });
+			try {
+				getParentNode(node).removeChild(node);
+			} catch (_) {
+				remove(node);
+				if (!getParentNode(node)) throw typeErrorCreate("a node selected for removal could not be detached from its tree and cannot be safely returned; refusing to sanitize in place");
+			}
+		};
+		/**
+		* _stripAttributeNode
+		*
+		* Remove a single Attr node case/namespace-exactly on an attribute-teardown
+		* path. Name-based removeAttribute() ASCII-lowercases its lookup key for an
+		* HTML element in an HTML document and so silently misses a case-preserved
+		* handler (e.g. `ONERROR` off an XML/XHTML import) - the same defect
+		* _removeAttribute() was fixed for, which a name-based call would reintroduce
+		* on these IN_PLACE teardown paths. Unlike _removeAttribute this does not
+		* record into DOMPurify.removed: the neutralize passes intentionally do not
+		* book-keep. A clobbered/detached node falls back to best-effort name-based
+		* removal.
+		*
+		* @param element the element to strip the attribute from
+		* @param attribute the Attr node to remove
+		* @param name the attribute's name, for the fallback path
+		*/
+		const _stripAttributeNode = function _stripAttributeNode(element, attribute, name) {
+			try {
+				element.removeAttributeNode(attribute);
+			} catch (_) {
+				try {
+					element.removeAttribute(name);
+				} catch (_) {}
+			}
+		};
+		/**
+		* _neutralizeRoot
+		*
+		* Fail-closed teardown of an in-place root after the sanitize walk aborts
+		* (campaign-3 F2). An internal throw mid-walk — e.g. a page-registered
+		* custom element's reaction detaches a node so `_forceRemove`'s deliberate
+		* parentless guard throws, or any other re-entrant engine mutation — would
+		* otherwise leave the caller's *live* tree half-sanitized, with everything
+		* after the abort point still carrying its handlers. There is no safe way
+		* to resume the walk (the tree mutated under us), so we strip the root bare:
+		* remove every child and every attribute, then let the caller's catch see
+		* the original error. Clobber-safe (cached `remove`/`childNodes`/`attributes`
+		* getters; the root was already clobber-pre-flighted at the IN_PLACE entry).
+		*
+		* @param root the in-place root to empty
+		*/
+		const _neutralizeRoot = function _neutralizeRoot(root) {
+			_neutralizeSubtree(root);
+			const childNodes = getChildNodes(root);
+			if (childNodes) {
+				const snapshot = [];
+				arrayForEach(childNodes, (child) => {
+					arrayPush(snapshot, child);
+				});
+				arrayForEach(snapshot, (child) => {
+					try {
+						remove(child);
+					} catch (_) {}
+				});
+			}
+			const attributes = getAttributes(root);
+			if (attributes) for (let i = attributes.length - 1; i >= 0; --i) {
+				const attribute = attributes[i];
+				const name = attribute && attribute.name;
+				if (typeof name === "string") _stripAttributeNode(root, attribute, name);
+			}
+		};
+		/**
+		* _removeAttribute
+		*
+		* Name-based getAttributeNode()/removeAttribute() ASCII-lowercase their
+		* lookup key for HTML elements in an HTML document, so they silently miss an
+		* attribute whose stored qualified name still contains uppercase ASCII
+		* letters. That happens when the node came from a case-preserving source
+		* (an XML/XHTML document imported via importNode(), or createAttributeNS()),
+		* where e.g. `ONERROR` survives the walk: the policy check lowercases to
+		* `onerror` and rejects it, but `removeAttribute('ONERROR')` looks up
+		* `onerror` and finds nothing. Remove the exact Attr node instead, which is
+		* case- and namespace-exact, and fall back to name-based removal only when
+		* the caller could not supply the node.
+		*
+		* @param name an Attribute name
+		* @param element a DOM node
+		* @param attr the exact Attr node to remove, when the caller has it
+		*/
+		const _removeAttribute = function _removeAttribute(name, element, attr) {
+			if (!attr) try {
+				attr = element.getAttributeNode(name);
+			} catch (_) {
+				attr = null;
+			}
+			arrayPush(DOMPurify.removed, {
+				attribute: attr || null,
+				from: element
+			});
+			try {
+				if (attr) element.removeAttributeNode(attr);
+				else element.removeAttribute(name);
+			} catch (_) {
+				try {
+					element.removeAttribute(name);
+				} catch (_) {}
+			}
+			if (name === "is") {
+				if (RETURN_DOM || RETURN_DOM_FRAGMENT) try {
+					_forceRemove(element);
+				} catch (_) {}
+				else try {
+					element.setAttribute(name, "");
+				} catch (_) {}
+			}
+		};
+		/**
+		* _stripDisallowedAttributes
+		*
+		* Removes every attribute the active configuration does not allow from a
+		* single element, using the same allowlist as the main attribute pass (so
+		* `on*` handlers go, but no `/^on/` blocklist is introduced). Used only to
+		* neutralise nodes that are being discarded from an in-place tree.
+		*
+		* @param element the element to strip
+		*/
+		const _stripDisallowedAttributes = function _stripDisallowedAttributes(element) {
+			const attributes = getAttributes(element);
+			if (!attributes) return;
+			for (let i = attributes.length - 1; i >= 0; --i) {
+				const attribute = attributes[i];
+				const name = attribute && attribute.name;
+				if (typeof name !== "string" || ALLOWED_ATTR[transformCaseFunc(name)]) continue;
+				_stripAttributeNode(element, attribute, name);
+			}
+		};
+		/**
+		* _neutralizeSubtree
+		*
+		* Completes the audit-5 F1 fix across every removal path. The KEEP_CONTENT
+		* move-hoist neutralises only disallowed-tag removals; clobber, mXSS-canary,
+		* namespace, comment, processing-instruction and KEEP_CONTENT:false removals
+		* all drop their subtree wholesale via `_forceRemove`. On the IN_PLACE path
+		* those dropped nodes are detached from the caller's LIVE tree but a
+		* handler-bearing original among them (an `<img onerror>`/`<video>` that was
+		* loading) keeps its queued resource event, which fires in page scope after
+		* sanitize returns. This walks a removed subtree and strips every attribute
+		* the active configuration does not allow — so `on*` handlers are cancelled
+		* through the SAME allowlist that governs kept nodes, not a separate `/^on/`
+		* blocklist. Run synchronously before sanitize returns, i.e. before any
+		* queued event can fire. Hook-free by design: these nodes leave the output,
+		* so firing attribute hooks for them would be surprising. Clobber-safe reads;
+		* a doomed clobbered node may shadow `removeAttribute` (its own attributes are
+		* irrelevant — it is discarded — while its non-clobbered descendants, e.g.
+		* the `<img>`, are reached and scrubbed).
+		*
+		* @param root the root of a removed subtree to neutralise
+		*/
+		const _neutralizeSubtree = function _neutralizeSubtree(root) {
+			const stack = [root];
+			while (stack.length > 0) {
+				const node = stack.pop();
+				if (_readNodeType(node) === NODE_TYPE.element) _stripDisallowedAttributes(node);
+				const childNodes = getChildNodes(node);
+				if (childNodes) for (let i = childNodes.length - 1; i >= 0; --i) stack.push(childNodes[i]);
+			}
+		};
+		/**
+		* _neutralizePatchLinkage
+		*
+		* IN_PLACE entry pre-pass (declarative-partial-updates / streaming
+		* hardening, https://github.com/WICG/declarative-partial-updates).
+		*
+		* The main walk strips patch linkage (`for`/`patchsrc`) and removes range
+		* markers (PIs / markup comments) node-by-node, in document order, AS it
+		* reaches each node. On a live in-place root that leaves a window: from the
+		* moment the root is connected until the walk arrives at a given node, that
+		* node's linkage is live. A patch applied on connection/stream can fire as
+		* a microtask during the walk and inject or teleport an unsanitized DOM
+		* range into a region the iterator has already passed and will not revisit,
+		* so the post-return "tree is sanitized" contract is violated. Sweep the
+		* whole tree once up front and sever every linkage before the walk begins,
+		* closing that window.
+		*
+		* This CANNOT undo a patch that already fired before sanitize ran — that is
+		* the irreducible "do not IN_PLACE a live-connected attacker tree" caveat —
+		* but it closes everything from sanitize-start onward. Gated on SAFE_FOR_XML
+		* to group with the rest of the declarative-partial-updates handling and
+		* stay overridable, consistent with the codebase.
+		*
+		* Clobber-safe traversal (cached childNodes getter); per-node try/catch so a
+		* clobbered root cannot defeat the sweep of its non-clobbered descendants.
+		*
+		* NOTE (pending real-Chrome confirmation, see test/declarative-patch-probe
+		* .html Q1): this mirrors the existing policy of keeping `for` on
+		* <label>/<output>. If the shipping feature can drive a patch through a
+		* surviving `for`-on-label/output + `id` pair, this pre-pass and the
+		* attribute check at _isBasicCustomElement's caller must additionally drop
+		* that pair on the IN_PLACE path. Left as-is until the taxonomy is verified.
+		*
+		* @param root the in-place root to sweep
+		*/
+		/**
+		* Central policy for declarative-partial-updates patch-linkage attributes,
+		* shared by the _neutralizePatchLinkage pre-pass and _isValidAttribute so
+		* the two sites cannot drift: `patchsrc` always links, `for` links
+		* everywhere except on <label>/<output>, and the whole policy is gated on
+		* SAFE_FOR_XML (see the rationale block in _isValidAttribute).
+		*
+		* @param lcName the transformCaseFunc'd attribute name
+		* @param lcTag the transformCaseFunc'd tag name of the carrying element
+		* @return true if the attribute is patch linkage and must be dropped
+		*/
+		const _isPatchLinkageAttribute = function _isPatchLinkageAttribute(lcName, lcTag) {
+			if (!SAFE_FOR_XML) return false;
+			if (lcName === "patchsrc") return true;
+			return lcName === "for" && lcTag !== "label" && lcTag !== "output";
+		};
+		const _neutralizePatchLinkage = function _neutralizePatchLinkage(root) {
+			if (!SAFE_FOR_XML) return;
+			const stack = [root];
+			while (stack.length > 0) {
+				const node = stack.pop();
+				const nodeType = _readNodeType(node);
+				if (nodeType === NODE_TYPE.processingInstruction || nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, node.data)) {
+					try {
+						remove(node);
+					} catch (_) {}
+					continue;
+				}
+				if (nodeType === NODE_TYPE.element) {
+					const element = node;
+					const lcTag = transformCaseFunc(_readNodeName(node));
+					try {
+						if (element.hasAttribute && element.hasAttribute("patchsrc")) element.removeAttribute("patchsrc");
+						if (element.hasAttribute && element.hasAttribute("for") && _isPatchLinkageAttribute("for", lcTag)) element.removeAttribute("for");
+					} catch (_) {}
+				}
+				const childNodes = getChildNodes(node);
+				if (childNodes) for (let i = childNodes.length - 1; i >= 0; --i) stack.push(childNodes[i]);
+			}
+		};
+		/**
+		* _initDocument
+		*
+		* @param dirty - a string of dirty markup
+		* @return a DOM, filled with the dirty markup
+		*/
+		const _initDocument = function _initDocument(dirty) {
+			let doc = null;
+			let leadingWhitespace = null;
+			if (FORCE_BODY) dirty = "<remove></remove>" + dirty;
+			else {
+				const matches = stringMatch(dirty, /^[\r\n\t ]+/);
+				leadingWhitespace = matches && matches[0];
+			}
+			if (PARSER_MEDIA_TYPE === "application/xhtml+xml" && NAMESPACE === HTML_NAMESPACE) dirty = "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head></head><body>" + dirty + "</body></html>";
+			const dirtyPayload = trustedTypesPolicy ? _createTrustedHTML(dirty) : dirty;
+			if (NAMESPACE === HTML_NAMESPACE) try {
+				doc = new DOMParser().parseFromString(dirtyPayload, PARSER_MEDIA_TYPE);
+			} catch (_) {}
+			if (!doc || !doc.documentElement) {
+				doc = implementation.createDocument(NAMESPACE, "template", null);
+				try {
+					doc.documentElement.innerHTML = IS_EMPTY_INPUT ? emptyHTML : dirtyPayload;
+				} catch (_) {}
+			}
+			const body = doc.body || doc.documentElement;
+			if (dirty && leadingWhitespace) body.insertBefore(document.createTextNode(leadingWhitespace), body.childNodes[0] || null);
+			if (NAMESPACE === HTML_NAMESPACE) return getElementsByTagName.call(doc, WHOLE_DOCUMENT ? "html" : "body")[0];
+			return WHOLE_DOCUMENT ? doc.documentElement : body;
+		};
+		/**
+		* Creates a NodeIterator object that you can use to traverse filtered lists of nodes or elements in a document.
+		*
+		* @param root The root element or node to start traversing on.
+		* @return The created NodeIterator
+		*/
+		const _createNodeIterator = function _createNodeIterator(root) {
+			const doc = getOwnerDocument ? getOwnerDocument(root) : root.ownerDocument;
+			return createNodeIterator.call(doc || root, root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_PROCESSING_INSTRUCTION | NodeFilter.SHOW_CDATA_SECTION, null);
+		};
+		/**
+		* Replace template expression syntax (mustache, ERB, template
+		* literal) with a space; shared by all SAFE_FOR_TEMPLATES scrub
+		* sites. Order matters: mustache, then ERB, then template literal.
+		*
+		* @param value the string to scrub
+		* @returns the scrubbed string
+		*/
+		const _stripTemplateExpressions = function _stripTemplateExpressions(value) {
+			value = stringReplace(value, MUSTACHE_EXPR$1, " ");
+			value = stringReplace(value, ERB_EXPR$1, " ");
+			value = stringReplace(value, TMPLIT_EXPR$1, " ");
+			return value;
+		};
+		/**
+		* Strip template-engine expressions ({{...}}, ${...}, <%...%>) from the
+		* character data of an element subtree. Used as the final safety net for
+		* SAFE_FOR_TEMPLATES on every DOM-returning code path so that expressions
+		* which only form after text-node normalization (e.g. fragments split across
+		* stripped elements) cannot survive into a template-evaluating framework.
+		*
+		* Walks text/comment/CDATA/processing-instruction nodes and mutates `.data`
+		* in place rather than round-tripping through innerHTML. This preserves
+		* descendant node references (important for IN_PLACE callers), avoids a
+		* serialize/reparse cycle, and reads literal character data — which means
+		* `<%...%>` in text content matches the ERB regex against its real bytes
+		* instead of the HTML-entity-escaped form innerHTML would produce.
+		*
+		* Attribute values are not visited here; SAFE_FOR_TEMPLATES handling for
+		* attributes is performed during the per-node `_sanitizeAttributes` pass.
+		*
+		* @param node The root element whose character data should be scrubbed.
+		*/
+		const _scrubTemplateExpressions2 = function _scrubTemplateExpressions(node) {
+			var _node$querySelectorAl;
+			node.normalize();
+			const doc = getOwnerDocument ? getOwnerDocument(node) : node.ownerDocument;
+			const walker = createNodeIterator.call(doc || node, node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_CDATA_SECTION | NodeFilter.SHOW_PROCESSING_INSTRUCTION, null);
+			let currentNode = walker.nextNode();
+			while (currentNode) {
+				currentNode.data = _stripTemplateExpressions(currentNode.data);
+				currentNode = walker.nextNode();
+			}
+			const templates = (_node$querySelectorAl = node.querySelectorAll) === null || _node$querySelectorAl === void 0 ? void 0 : _node$querySelectorAl.call(node, "template");
+			if (templates) arrayForEach(templates, (tmpl) => {
+				if (_isDocumentFragment(tmpl.content)) _scrubTemplateExpressions2(tmpl.content);
+			});
+		};
+		/**
+		* _isClobbered
+		*
+		* Detect DOM-clobbering on HTMLFormElement nodes. Form is the only HTML
+		* interface with [LegacyOverrideBuiltIns]; a descendant element with a
+		* `name` attribute matching a prototype property shadows that property
+		* on direct reads. We use this check at the IN_PLACE entry-point and
+		* during attribute sanitization to refuse clobbered forms.
+		*
+		* @param element element to check for clobbering attacks
+		* @return true if clobbered, false if safe
+		*/
+		const _isClobbered = function _isClobbered(element) {
+			const realTagName = getNodeName ? getNodeName(element) : null;
+			if (typeof realTagName !== "string") return false;
+			if (transformCaseFunc(realTagName) !== "form") return false;
+			return typeof element.nodeName !== "string" || typeof element.textContent !== "string" || typeof element.removeChild !== "function" || element.attributes !== getAttributes(element) || typeof element.removeAttribute !== "function" || typeof element.setAttribute !== "function" || typeof element.namespaceURI !== "string" || typeof element.insertBefore !== "function" || typeof element.hasChildNodes !== "function" || element.nodeType !== getNodeType(element) || element.childNodes !== getChildNodes(element);
+		};
+		/**
+		* Checks whether the given value is a DocumentFragment from any realm.
+		*
+		* The realm-independent replacement reads `nodeType` through the cached
+		* Node.prototype getter and compares to the DOCUMENT_FRAGMENT_NODE
+		* constant (11). nodeType is a numeric value resolved from the node's
+		* internal slot, identical across realms for the same kind of node.
+		*
+		* @param value object to check
+		* @return true if value is a DocumentFragment-shaped node from any realm
+		*/
+		const _isDocumentFragment = function _isDocumentFragment(value) {
+			if (!getNodeType || typeof value !== "object" || value === null) return false;
+			try {
+				return getNodeType(value) === NODE_TYPE.documentFragment;
+			} catch (_) {
+				return false;
+			}
+		};
+		/**
+		* Checks whether the given object is a DOM node, including nodes that
+		* originate from a different window/realm (e.g. an iframe's
+		* contentDocument). The previous `value instanceof Node` check was
+		* realm-bound: nodes from a different window failed it, causing
+		* sanitize() to silently stringify them and reset IN_PLACE to false,
+		* returning the original node unsanitized. See GHSA-4w3q-35jp-p934.
+		*
+		* @param value object to check whether it's a DOM node
+		* @return true if value is a DOM node from any realm
+		*/
+		const _isNode = function _isNode(value) {
+			if (!getNodeType || typeof value !== "object" || value === null) return false;
+			try {
+				return typeof getNodeType(value) === "number";
+			} catch (_) {
+				return false;
+			}
+		};
+		function _executeHooks(hooks, currentNode, data) {
+			if (hooks.length === 0) return;
+			arrayForEach(hooks, (hook) => {
+				hook.call(DOMPurify, currentNode, data, CONFIG);
+			});
+		}
+		/**
+		* Structural-threat checks that condemn a node regardless of the
+		* allowlists: mXSS via namespace confusion, risky CSS construction,
+		* processing instructions, markup-bearing comments. Pure predicate;
+		* the caller removes. Check order is load-bearing.
+		*
+		* @param currentNode the node to inspect
+		* @param tagName the node's transformCaseFunc'd tag name
+		* @return true if the node must be removed
+		*/
+		const _isUnsafeNode = function _isUnsafeNode(currentNode, tagName) {
+			if (SAFE_FOR_XML && currentNode.hasChildNodes() && !_isNode(currentNode.firstElementChild) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.textContent) && regExpTest(ELEMENT_MARKUP_PROBE, currentNode.innerHTML)) return true;
+			if (SAFE_FOR_XML && currentNode.namespaceURI === HTML_NAMESPACE && LITERAL_TEXT_ELEMENTS[tagName] && (_isNode(currentNode.firstElementChild) || typeof currentNode.textContent === "string" && regExpTest(LITERAL_TEXT_CLOSE[tagName], currentNode.textContent))) return true;
+			if (currentNode.nodeType === NODE_TYPE.processingInstruction) return true;
+			if (SAFE_FOR_XML && currentNode.nodeType === NODE_TYPE.comment && regExpTest(COMMENT_MARKUP_PROBE, currentNode.data)) return true;
+			return false;
+		};
+		/**
+		* Evaluate a CUSTOM_ELEMENT_HANDLING check (a RegExp or a predicate
+		* function, per the validation in _parseConfig) against a name.
+		* Additional arguments are forwarded to predicate functions - the
+		* attributeNameCheck predicate receives the tag name as its second
+		* argument. A null/absent check never matches.
+		*
+		* @param check the configured tagNameCheck / attributeNameCheck value
+		* @param name the name to test
+		* @param args extra arguments forwarded to a predicate function
+		* @return true if the check matches the name
+		*/
+		const _matchesNameCheck = function _matchesNameCheck(check, name) {
+			if (check instanceof RegExp) return regExpTest(check, name);
+			if (check instanceof Function) {
+				for (var _len = arguments.length, args = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) args[_key - 2] = arguments[_key];
+				return Boolean(check(name, ...args));
+			}
+			return false;
+		};
+		/**
+		* Handle a node whose tag is forbidden or not allowlisted: keep
+		* allowed custom elements (false return exits _sanitizeElements
+		* early - the namespace and fallback-tag removal checks are
+		* intentionally skipped for kept custom elements), else hoist
+		* content per KEEP_CONTENT and remove.
+		*
+		* A kept custom element is the ONLY case in which this function
+		* returns false, so the caller uses that return value to run the
+		* afterSanitizeElements hook on the kept element and keep the
+		* element-hook lifecycle consistent with normal allowlisted
+		* elements (GHSA-c2j3-45gr-mqc4).
+		*
+		* @param currentNode the disallowed node
+		* @param tagName the node's transformCaseFunc'd tag name
+		* @return true if the node was removed, false if kept
+		*/
+		const _sanitizeDisallowedNode = function _sanitizeDisallowedNode(currentNode, tagName, root) {
+			if (!FORBID_TAGS[tagName] && _isBasicCustomElement(tagName) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, tagName)) return false;
+			if (KEEP_CONTENT && !FORBID_CONTENTS[tagName]) {
+				const parentNode = getParentNode(currentNode);
+				const childNodes = getChildNodes(currentNode);
+				if (childNodes && parentNode) {
+					const childCount = childNodes.length;
+					for (let i = childCount - 1; i >= 0; --i) {
+						const hoisted = currentNode === root ? cloneNode(childNodes[i], true) : childNodes[i];
+						parentNode.insertBefore(hoisted, getNextSibling(currentNode));
+					}
+				}
+			}
+			_forceRemove(currentNode);
+			return true;
+		};
+		/**
+		* Fork a hook-mutable allowlist off its shared binding the first time a
+		* (possibly lazily-installed) uponSanitize* hook is about to see it, so the
+		* hook cannot widen the per-instance default or the setConfig binding by
+		* reference and leak past the call. Returns the set unchanged once it is
+		* already call-local, so repeated calls across elements are idempotent.
+		*
+		* @param hookList the uponSanitize* hook array for this event
+		* @param set the current ALLOWED_TAGS / ALLOWED_ATTR binding
+		* @param defaultSet the per-instance DEFAULT_ALLOWED_* constant
+		* @param setConfigSet the captured setConfig() binding, or null
+		* @return a call-local clone if a hook is present and set is still shared,
+		*   else set unchanged
+		*/
+		const _forkSharedAllowlist = function _forkSharedAllowlist(hookList, set, defaultSet, setConfigSet) {
+			if (hookList.length === 0) return set;
+			return set === defaultSet || set === setConfigSet ? clone(set) : set;
+		};
+		/**
+		* Shared guard for a node that a hook has detached from the walk tree,
+		* used after each element-hook site in _sanitizeElements. Detaching is a
+		* long-standing user pattern (issue #469; draw.io-style foreignObject
+		* filtering). Per the cached, unclobberable parentNode getter the node is
+		* genuinely out of the tree, so it can reach neither the serialized
+		* output nor an IN_PLACE live tree; treat it as removed and stop
+		* processing it. Without this guard, the unsafe-node / namespace checks
+		* would call _forceRemove on a parentless node and hit the REPORT-3
+		* fail-closed throw — which exists for nodes DOMPurify wants gone but
+		* *cannot* detach (clobbered / parentless roots), the opposite of a node
+		* that is already safely gone. The walk root is exempt: a detached
+		* IN_PLACE root is legitimate input and must still be fully sanitized,
+		* and a kill-decision on it must keep hitting the REPORT-3 throw.
+		*
+		* Nodes detached by hooks stay the hook's responsibility for placement:
+		* they are not recorded in DOMPurify.removed, so the post-walk IN_PLACE
+		* pass (which iterates DOMPurify.removed) does not reach them. But a
+		* hook-detached subtree can still hold a queued resource-event handler -
+		* e.g. an <img onload> that began loading when the caller built the live
+		* tree - which fires in page scope after sanitize returns even though the
+		* handler never reached the returned tree. That is the audit-5 F1 hazard,
+		* and the documented node.remove() hook pattern walks straight into it.
+		* So on the IN_PLACE path we neutralize the detached subtree inline,
+		* stripping its non-allow-listed attributes before returning, exactly as
+		* the post-walk pass does for _forceRemove'd subtrees.
+		*
+		* @param currentNode the node a hook may have detached
+		* @param root the current walk root
+		* @return true if the node is detached and now handled, false otherwise
+		*/
+		const _handleHookDetachedNode = function _handleHookDetachedNode(currentNode, root) {
+			if (currentNode === root || getParentNode(currentNode) !== null) return false;
+			if (IN_PLACE) _neutralizeSubtree(currentNode);
+			return true;
+		};
+		/**
+		* _sanitizeElements
+		*
+		* @protect nodeName
+		* @protect textContent
+		* @protect removeChild
+		* @param currentNode to check for permission to exist
+		* @return true if node was killed, false if left alive
+		*/
+		const _sanitizeElements = function _sanitizeElements(currentNode, root) {
+			_executeHooks(hooks.beforeSanitizeElements, currentNode, null);
+			if (_handleHookDetachedNode(currentNode, root)) return true;
+			if (_isClobbered(currentNode)) {
+				_forceRemove(currentNode);
+				return true;
+			}
+			const tagName = transformCaseFunc(_readNodeName(currentNode));
+			ALLOWED_TAGS = _forkSharedAllowlist(hooks.uponSanitizeElement, ALLOWED_TAGS, DEFAULT_ALLOWED_TAGS, SET_CONFIG_ALLOWED_TAGS);
+			_executeHooks(hooks.uponSanitizeElement, currentNode, {
+				tagName,
+				allowedTags: ALLOWED_TAGS
+			});
+			if (_handleHookDetachedNode(currentNode, root)) return true;
+			if (_isUnsafeNode(currentNode, tagName)) {
+				_forceRemove(currentNode);
+				return true;
+			}
+			if (FORBID_TAGS[tagName] || !(EXTRA_ELEMENT_HANDLING.tagCheck instanceof Function && EXTRA_ELEMENT_HANDLING.tagCheck(tagName)) && !ALLOWED_TAGS[tagName]) {
+				const removed = _sanitizeDisallowedNode(currentNode, tagName, root);
+				if (removed === false) _executeHooks(hooks.afterSanitizeElements, currentNode, null);
+				return removed;
+			}
+			if (_readNodeType(currentNode) === NODE_TYPE.element && !_checkValidNamespace(currentNode)) {
+				_forceRemove(currentNode);
+				return true;
+			}
+			if ((tagName === "noscript" || tagName === "noembed" || tagName === "noframes") && regExpTest(FALLBACK_TAG_CLOSE, currentNode.innerHTML)) {
+				_forceRemove(currentNode);
+				return true;
+			}
+			if (SAFE_FOR_TEMPLATES && currentNode.nodeType === NODE_TYPE.text) {
+				const content = _stripTemplateExpressions(currentNode.textContent);
+				if (currentNode.textContent !== content) {
+					arrayPush(DOMPurify.removed, { element: currentNode.cloneNode() });
+					currentNode.textContent = content;
+				}
+			}
+			_executeHooks(hooks.afterSanitizeElements, currentNode, null);
+			return false;
+		};
+		/**
+		* _isValidAttribute
+		*
+		* @param lcTag Lowercase tag name of containing element.
+		* @param lcName Lowercase attribute name.
+		* @param value Attribute value.
+		* @return Returns true if `value` is valid, otherwise false.
+		*/
+		const _isValidAttribute = function _isValidAttribute(lcTag, lcName, value) {
+			if (FORBID_ATTR[lcName]) return false;
+			if (_isPatchLinkageAttribute(lcName, lcTag)) return false;
+			if (SANITIZE_DOM && (lcName === "id" || lcName === "name") && (value in document || value in formElement)) return false;
+			const nameIsPermitted = ALLOWED_ATTR[lcName] || EXTRA_ELEMENT_HANDLING.attributeCheck instanceof Function && EXTRA_ELEMENT_HANDLING.attributeCheck(lcName, lcTag);
+			if (ALLOW_DATA_ATTR && regExpTest(DATA_ATTR$1, lcName)) return true;
+			if (ALLOW_ARIA_ATTR && regExpTest(ARIA_ATTR$1, lcName)) return true;
+			if (!nameIsPermitted) return _isBasicCustomElement(lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, lcTag) && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.attributeNameCheck, lcName, lcTag) || lcName === "is" && CUSTOM_ELEMENT_HANDLING.allowCustomizedBuiltInElements && _matchesNameCheck(CUSTOM_ELEMENT_HANDLING.tagNameCheck, value);
+			if (URI_SAFE_ATTRIBUTES[lcName]) return true;
+			if (regExpTest(IS_ALLOWED_URI$1, stringReplace(value, ATTR_WHITESPACE$1, ""))) return true;
+			if ((lcName === "src" || lcName === "xlink:href" || lcName === "href") && lcTag !== "script" && stringIndexOf(value, "data:") === 0 && DATA_URI_TAGS[lcTag]) return true;
+			if (ALLOW_UNKNOWN_PROTOCOLS && !regExpTest(IS_SCRIPT_OR_DATA$1, stringReplace(value, ATTR_WHITESPACE$1, ""))) return true;
+			return !value;
+		};
+		const RESERVED_CUSTOM_ELEMENT_NAMES = addToSet({}, [
+			"annotation-xml",
+			"color-profile",
+			"font-face",
+			"font-face-format",
+			"font-face-name",
+			"font-face-src",
+			"font-face-uri",
+			"missing-glyph"
+		]);
+		/**
+		* _isBasicCustomElement
+		* checks if at least one dash is included in tagName, and it's not the first char
+		* for more sophisticated checking see https://github.com/sindresorhus/validate-element-name
+		*
+		* @param tagName name of the tag of the node to sanitize
+		* @returns Returns true if the tag name meets the basic criteria for a custom element, otherwise false.
+		*/
+		const _isBasicCustomElement = function _isBasicCustomElement(tagName) {
+			return !RESERVED_CUSTOM_ELEMENT_NAMES[stringToLowerCase(tagName)] && regExpTest(CUSTOM_ELEMENT$1, tagName);
+		};
+		/**
+		* Wrap an attribute value in the matching Trusted Types object when
+		* the active policy requires it. Namespaced attributes pass through
+		* unchanged (no TT support yet, see
+		* https://bugs.chromium.org/p/chromium/issues/detail?id=1305293).
+		*
+		* @param lcTag lowercase tag name of the containing element
+		* @param lcName lowercase attribute name
+		* @param namespaceURI the attribute's namespace, if any
+		* @param value the attribute value to wrap
+		* @return the value, wrapped when Trusted Types demand it
+		*/
+		const _applyTrustedTypesToAttribute = function _applyTrustedTypesToAttribute(lcTag, lcName, namespaceURI, value) {
+			if (trustedTypesPolicy && typeof trustedTypes === "object" && typeof trustedTypes.getAttributeType === "function" && !namespaceURI) switch (trustedTypes.getAttributeType(lcTag, lcName)) {
+				case "TrustedHTML": return _createTrustedHTML(value);
+				case "TrustedScriptURL": return _createTrustedScriptURL(value);
+			}
+			return value;
+		};
+		/**
+		* Write a modified attribute value back onto the element. On
+		* success, re-probe for clobbering introduced by the new value and
+		* remove the element when found; otherwise pop the removal entry
+		* recorded by the earlier _removeAttribute (long-standing pairing
+		* with the SANITIZE_NAMED_PROPS path - do not "fix" casually). On
+		* failure, remove the attribute instead.
+		*
+		* @param currentNode the element carrying the attribute
+		* @param name the attribute name as present on the element
+		* @param namespaceURI the attribute's namespace, if any
+		* @param value the new attribute value
+		*/
+		const _setAttributeValue = function _setAttributeValue(currentNode, name, namespaceURI, value) {
+			try {
+				if (namespaceURI) currentNode.setAttributeNS(namespaceURI, name, value);
+				else currentNode.setAttribute(name, value);
+				if (_isClobbered(currentNode)) _forceRemove(currentNode);
+				else arrayPop(DOMPurify.removed);
+			} catch (_) {
+				_removeAttribute(name, currentNode);
+			}
+		};
+		/**
+		* _sanitizeAttributes
+		*
+		* @protect attributes
+		* @protect nodeName
+		* @protect removeAttribute
+		* @protect setAttribute
+		*
+		* @param currentNode to sanitize
+		*/
+		const _sanitizeAttributes = function _sanitizeAttributes(currentNode) {
+			_executeHooks(hooks.beforeSanitizeAttributes, currentNode, null);
+			const attributes = currentNode.attributes;
+			if (!attributes || _isClobbered(currentNode)) return;
+			ALLOWED_ATTR = _forkSharedAllowlist(hooks.uponSanitizeAttribute, ALLOWED_ATTR, DEFAULT_ALLOWED_ATTR, SET_CONFIG_ALLOWED_ATTR);
+			const hookEvent = {
+				attrName: "",
+				attrValue: "",
+				keepAttr: true,
+				allowedAttributes: ALLOWED_ATTR,
+				forceKeepAttr: void 0
+			};
+			let l = attributes.length;
+			const lcTag = transformCaseFunc(currentNode.nodeName);
+			while (l--) {
+				const attr = attributes[l];
+				const name = attr.name, namespaceURI = attr.namespaceURI, attrValue = attr.value;
+				const lcName = transformCaseFunc(name);
+				const initValue = attrValue;
+				let value = name === "value" ? initValue : stringTrim(initValue);
+				hookEvent.attrName = lcName;
+				hookEvent.attrValue = value;
+				hookEvent.keepAttr = true;
+				hookEvent.forceKeepAttr = void 0;
+				_executeHooks(hooks.uponSanitizeAttribute, currentNode, hookEvent);
+				value = hookEvent.attrValue;
+				if (SANITIZE_NAMED_PROPS && (lcName === "id" || lcName === "name") && stringIndexOf(value, SANITIZE_NAMED_PROPS_PREFIX) !== 0) {
+					_removeAttribute(name, currentNode, attr);
+					value = SANITIZE_NAMED_PROPS_PREFIX + value;
+				}
+				if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value)) {
+					_removeAttribute(name, currentNode, attr);
+					continue;
+				}
+				if (lcName === "attributename" && stringMatch(value, "href")) {
+					_removeAttribute(name, currentNode, attr);
+					continue;
+				}
+				if (hookEvent.forceKeepAttr) continue;
+				if (!hookEvent.keepAttr) {
+					_removeAttribute(name, currentNode, attr);
+					continue;
+				}
+				if (!ALLOW_SELF_CLOSE_IN_ATTR && regExpTest(SELF_CLOSING_TAG, value)) {
+					_removeAttribute(name, currentNode, attr);
+					continue;
+				}
+				if (SAFE_FOR_TEMPLATES) value = _stripTemplateExpressions(value);
+				if (!_isValidAttribute(lcTag, lcName, value)) {
+					_removeAttribute(name, currentNode, attr);
+					continue;
+				}
+				value = _applyTrustedTypesToAttribute(lcTag, lcName, namespaceURI, value);
+				if (value !== initValue) _setAttributeValue(currentNode, name, namespaceURI, value);
+			}
+			_executeHooks(hooks.afterSanitizeAttributes, currentNode, null);
+		};
+		/**
+		* _sanitizeShadowDOM
+		*
+		* @param fragment to iterate over recursively
+		*/
+		const _sanitizeShadowDOM2 = function _sanitizeShadowDOM(fragment) {
+			let shadowNode = null;
+			const shadowIterator = _createNodeIterator(fragment);
+			_executeHooks(hooks.beforeSanitizeShadowDOM, fragment, null);
+			while (shadowNode = shadowIterator.nextNode()) {
+				_executeHooks(hooks.uponSanitizeShadowNode, shadowNode, null);
+				_sanitizeElements(shadowNode, fragment);
+				_sanitizeAttributes(shadowNode);
+				if (_isDocumentFragment(shadowNode.content)) _sanitizeShadowDOM2(shadowNode.content);
+				if (_readNodeType(shadowNode) === NODE_TYPE.element) {
+					const innerSr = getShadowRoot(shadowNode);
+					if (_isDocumentFragment(innerSr)) {
+						_sanitizeAttachedShadowRoots(innerSr);
+						_sanitizeShadowDOM2(innerSr);
+					}
+				}
+			}
+			_executeHooks(hooks.afterSanitizeShadowDOM, fragment, null);
+		};
+		/**
+		* _sanitizeAttachedShadowRoots
+		*
+		* Walks `root` and feeds every attached shadow root we encounter into
+		* the existing _sanitizeShadowDOM pipeline. The default node iterator
+		* does not descend into shadow trees, so nodes inside an attached
+		* shadow root would otherwise be skipped entirely.
+		*
+		* Two real input paths put attached shadow roots in front of us:
+		*   1. IN_PLACE on a DOM node that already has shadow roots attached.
+		*   2. DOM-node input where importNode(dirty, true) deep-clones the
+		*      shadow root because it was created with `clonable: true`.
+		*
+		* This pass runs once, up front, so the main iteration loop (and the
+		* existing _sanitizeShadowDOM template-content recursion) stay
+		* untouched — string-input paths are not affected.
+		*
+		* @param root the subtree root to walk for attached shadow roots
+		*/
+		const _sanitizeAttachedShadowRoots = function _sanitizeAttachedShadowRoots(root) {
+			const stack = [{
+				node: root,
+				shadow: null
+			}];
+			while (stack.length > 0) {
+				const item = stack.pop();
+				if (item.shadow) {
+					_sanitizeShadowDOM2(item.shadow);
+					continue;
+				}
+				const node = item.node;
+				const isElement = _readNodeType(node) === NODE_TYPE.element;
+				const childNodes = getChildNodes(node);
+				if (childNodes) for (let i = childNodes.length - 1; i >= 0; --i) stack.push({
+					node: childNodes[i],
+					shadow: null
+				});
+				if (isElement) {
+					const rootName = getNodeName ? getNodeName(node) : null;
+					if (typeof rootName === "string" && transformCaseFunc(rootName) === "template") {
+						const content = node.content;
+						if (_isDocumentFragment(content)) stack.push({
+							node: content,
+							shadow: null
+						});
+					}
+				}
+				if (isElement) {
+					const sr = getShadowRoot(node);
+					if (_isDocumentFragment(sr)) stack.push({
+						node: null,
+						shadow: sr
+					}, {
+						node: sr,
+						shadow: null
+					});
+				}
+			}
+		};
+		DOMPurify.sanitize = function(dirty) {
+			let cfg = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+			let body = null;
+			let importedNode = null;
+			let currentNode = null;
+			let returnNode = null;
+			IS_EMPTY_INPUT = !dirty;
+			if (IS_EMPTY_INPUT) dirty = "<!-->";
+			if (typeof dirty !== "string" && !_isNode(dirty)) {
+				dirty = stringifyValue(dirty);
+				if (typeof dirty !== "string") throw typeErrorCreate("dirty is not a string, aborting");
+			}
+			if (!DOMPurify.isSupported) return dirty;
+			if (SET_CONFIG) {
+				ALLOWED_TAGS = SET_CONFIG_ALLOWED_TAGS;
+				ALLOWED_ATTR = SET_CONFIG_ALLOWED_ATTR;
+			} else _parseConfig(cfg);
+			if (hooks.uponSanitizeElement.length > 0 || hooks.uponSanitizeAttribute.length > 0) ALLOWED_TAGS = clone(ALLOWED_TAGS);
+			if (hooks.uponSanitizeAttribute.length > 0) ALLOWED_ATTR = clone(ALLOWED_ATTR);
+			DOMPurify.removed = [];
+			const inPlace = IN_PLACE && typeof dirty !== "string" && _isNode(dirty);
+			if (inPlace) {
+				_neutralizePatchLinkage(dirty);
+				const nn = _readNodeName(dirty);
+				if (typeof nn === "string") {
+					const tagName = transformCaseFunc(nn);
+					if (!ALLOWED_TAGS[tagName] || FORBID_TAGS[tagName]) {
+						_neutralizeRoot(dirty);
+						throw typeErrorCreate("root node is forbidden and cannot be sanitized in-place");
+					}
+				}
+				if (_isClobbered(dirty)) {
+					_neutralizeRoot(dirty);
+					throw typeErrorCreate("root node is clobbered and cannot be sanitized in-place");
+				}
+				try {
+					_sanitizeAttachedShadowRoots(dirty);
+				} catch (error) {
+					_neutralizeRoot(dirty);
+					throw error;
+				}
+			} else if (_isNode(dirty)) {
+				body = _initDocument("<!---->");
+				importedNode = body.ownerDocument.importNode(dirty, true);
+				if (importedNode.nodeType === NODE_TYPE.element && importedNode.nodeName === "BODY") body = importedNode;
+				else if (importedNode.nodeName === "HTML") body = importedNode;
+				else body.appendChild(importedNode);
+				_sanitizeAttachedShadowRoots(importedNode);
+			} else {
+				if (!RETURN_DOM && !SAFE_FOR_TEMPLATES && !WHOLE_DOCUMENT && dirty.indexOf("<") === -1) return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(dirty) : dirty;
+				body = _initDocument(dirty);
+				if (!body) return RETURN_DOM ? null : RETURN_TRUSTED_TYPE ? emptyHTML : "";
+			}
+			if (body && FORCE_BODY) _forceRemove(body.firstChild);
+			const walkRoot = inPlace ? dirty : body;
+			try {
+				const nodeIterator = _createNodeIterator(walkRoot);
+				while (currentNode = nodeIterator.nextNode()) {
+					_sanitizeElements(currentNode, walkRoot);
+					_sanitizeAttributes(currentNode);
+					if (_isDocumentFragment(currentNode.content)) _sanitizeShadowDOM2(currentNode.content);
+				}
+			} catch (error) {
+				if (inPlace) {
+					_neutralizeRoot(dirty);
+					arrayForEach(DOMPurify.removed, (entry) => {
+						if (entry.element) _neutralizeSubtree(entry.element);
+					});
+				}
+				throw error;
+			}
+			if (inPlace) {
+				arrayForEach(DOMPurify.removed, (entry) => {
+					if (entry.element) _neutralizeSubtree(entry.element);
+				});
+				if (SAFE_FOR_TEMPLATES) _scrubTemplateExpressions2(dirty);
+				return dirty;
+			}
+			if (RETURN_DOM) {
+				if (SAFE_FOR_TEMPLATES) _scrubTemplateExpressions2(body);
+				if (RETURN_DOM_FRAGMENT) {
+					returnNode = createDocumentFragment.call(body.ownerDocument);
+					while (body.firstChild) returnNode.appendChild(body.firstChild);
+				} else returnNode = body;
+				if (ALLOWED_ATTR.shadowroot || ALLOWED_ATTR.shadowrootmode) returnNode = importNode.call(originalDocument, returnNode, true);
+				return returnNode;
+			}
+			let serializedHTML = WHOLE_DOCUMENT ? body.outerHTML : body.innerHTML;
+			if (WHOLE_DOCUMENT && ALLOWED_TAGS["!doctype"] && body.ownerDocument && body.ownerDocument.doctype && body.ownerDocument.doctype.name && regExpTest(DOCTYPE_NAME, body.ownerDocument.doctype.name)) serializedHTML = "<!DOCTYPE " + body.ownerDocument.doctype.name + ">\n" + serializedHTML;
+			if (SAFE_FOR_TEMPLATES) serializedHTML = _stripTemplateExpressions(serializedHTML);
+			return trustedTypesPolicy && RETURN_TRUSTED_TYPE ? _createTrustedHTML(serializedHTML) : serializedHTML;
+		};
+		DOMPurify.setConfig = function() {
+			let cfg = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+			_parseConfig(cfg);
+			SET_CONFIG = true;
+			SET_CONFIG_ALLOWED_TAGS = ALLOWED_TAGS;
+			SET_CONFIG_ALLOWED_ATTR = ALLOWED_ATTR;
+		};
+		DOMPurify.clearConfig = function() {
+			CONFIG = null;
+			SET_CONFIG = false;
+			SET_CONFIG_ALLOWED_TAGS = null;
+			SET_CONFIG_ALLOWED_ATTR = null;
+			trustedTypesPolicy = defaultTrustedTypesPolicy;
+			emptyHTML = "";
+		};
+		DOMPurify.isValidAttribute = function(tag, attr, value) {
+			if (!CONFIG) _parseConfig({});
+			const lcTag = transformCaseFunc(tag);
+			const lcName = transformCaseFunc(attr);
+			return _isValidAttribute(lcTag, lcName, value);
+		};
+		DOMPurify.addHook = function(entryPoint, hookFunction) {
+			if (typeof hookFunction !== "function") return;
+			if (!objectHasOwnProperty(hooks, entryPoint)) return;
+			arrayPush(hooks[entryPoint], hookFunction);
+		};
+		DOMPurify.removeHook = function(entryPoint, hookFunction) {
+			if (!objectHasOwnProperty(hooks, entryPoint)) return;
+			if (hookFunction !== void 0) {
+				const index = arrayLastIndexOf(hooks[entryPoint], hookFunction);
+				return index === -1 ? void 0 : arraySplice(hooks[entryPoint], index, 1)[0];
+			}
+			return arrayPop(hooks[entryPoint]);
+		};
+		DOMPurify.removeHooks = function(entryPoint) {
+			if (!objectHasOwnProperty(hooks, entryPoint)) return;
+			hooks[entryPoint] = [];
+		};
+		DOMPurify.removeAllHooks = function() {
+			hooks = _createHooksMap();
+		};
+		return DOMPurify;
+	}
+	var purify = createDOMPurify();
+	//#endregion
+	//#region src/client/MarkdownHtml.tsx
+	/**
+	* The markdown preview's raw-HTML renderer. `markdown-html.ts` lifts HTML
+	* runs out of the markdown stream; this module renders them as sanitized DOM
+	* alongside the markdown runs (which keep flowing through the shared
+	* `MarkdownText`), nests markdown into unclosed block elements the way
+	* GitHub's linear HTML output does (`<details>` … fence … `</details>`), and
+	* runs an inline pass that turns literal tag text inside rendered markdown
+	* (table cells with `<br/>`, `<sub>`, `<img>`) back into elements.
+	*
+	* Security posture: every HTML string (block leaves, inline text, wrapper
+	* open-tag attributes) goes through DOMPurify with an explicit denylist on
+	* top of its defaults (no script/style/iframe/forms), anchors are forced to
+	* open in a new tab with noopener, and local media `src` attributes are
+	* rewritten through the session-scoped `/sidebar/file` media route — the same
+	* trust fence the markdown image rewriter (`markdown-images.ts`) uses.
+	*/
+	/** The chunk-resident markdown renderer (mermaid lazy chunk), shared with the
+	*  legacy no-HTML preview path in TextEditor. */
 	const LazyMermaidMarkdown = lazyChunkComponent("mermaid", (mod) => mod.MermaidMarkdown);
+	/** Tag-like text in a rendered text node — the inline pass gate. */
+	const TAGLIKE_TEXT_RE = /<\/?[a-zA-Z][a-zA-Z0-9-]*[\s/>]/;
+	/** Explicit denylist on top of DOMPurify's defaults: no active content, no
+	*  form chrome, no document-level elements inside a preview. */
+	const PURIFY_FORBID_TAGS = [
+		"script",
+		"style",
+		"iframe",
+		"object",
+		"embed",
+		"form",
+		"input",
+		"button",
+		"select",
+		"textarea",
+		"meta",
+		"link",
+		"base",
+		"frame",
+		"frameset",
+		"applet"
+	];
+	const PURIFY_FORBID_ATTR = ["srcdoc", "formaction"];
+	/**
+	* Post-sanitize hardening on a detached element tree: anchors open in a new
+	* tab (never navigate the GUI), and local media sources go through the media
+	* route so they render instead of being dropped by protocol allowlists.
+	*/
+	function postProcessSanitized(root, media) {
+		for (const anchor of root.querySelectorAll("a[href]")) {
+			anchor.setAttribute("target", "_blank");
+			anchor.setAttribute("rel", "noopener noreferrer");
+		}
+		for (const element of root.querySelectorAll("img, video, audio, source")) {
+			const src = element.getAttribute("src");
+			if (src === null) continue;
+			element.setAttribute("src", resolveLocalMediaDest(src, media.scope, media.path, media.origin));
+		}
+	}
+	/** Sanitize one balanced HTML span into markup for dangerouslySetInnerHTML. */
+	function sanitizeHtmlBlock(source, media) {
+		const holder = document.createElement("div");
+		holder.innerHTML = purify.sanitize(source, {
+			FORBID_TAGS: PURIFY_FORBID_TAGS,
+			FORBID_ATTR: PURIFY_FORBID_ATTR
+		});
+		postProcessSanitized(holder, media);
+		return holder.innerHTML;
+	}
+	/**
+	* Sanitize literal tag text from a rendered markdown text node. Returns null
+	* when nothing real survived (pure prose like `a < b` — the DOMPurify output
+	* has no element children), so the caller leaves the text node untouched.
+	*/
+	function sanitizeInlineHtml(text, media) {
+		const holder = document.createElement("span");
+		holder.innerHTML = purify.sanitize(text, {
+			FORBID_TAGS: PURIFY_FORBID_TAGS,
+			FORBID_ATTR: PURIFY_FORBID_ATTR
+		});
+		if (holder.firstElementChild === null) return null;
+		postProcessSanitized(holder, media);
+		return holder.innerHTML;
+	}
+	/**
+	* Sanitize a wrapper open tag (`<details open>`) into React props. Returns
+	* null when DOMPurify dropped the whole tag (denied element) — the renderer
+	* then treats the wrapper as transparent. `class`/`for` map to their React
+	* names; `style` is dropped (React needs an object; wrappers with inline
+	* styles are vanishingly rare and not worth a CSS parser).
+	*/
+	function sanitizeTagProps(tag, attrs) {
+		const probe = purify.sanitize(`<${tag}${attrs}></${tag}>`, {
+			FORBID_TAGS: PURIFY_FORBID_TAGS,
+			FORBID_ATTR: PURIFY_FORBID_ATTR
+		});
+		const holder = document.createElement("div");
+		holder.innerHTML = probe;
+		const element = holder.firstElementChild;
+		if (element === null || element.tagName.toLowerCase() !== tag) return null;
+		const props = {};
+		for (const attr of element.attributes) {
+			if (/^on/i.test(attr.name) || !/^[a-zA-Z][a-zA-Z0-9:._-]*$/.test(attr.name)) continue;
+			if (attr.name === "style") continue;
+			props[attr.name === "class" ? "className" : attr.name === "for" ? "htmlFor" : attr.name] = attr.value;
+		}
+		return props;
+	}
+	/**
+	* The inline pass: walk the rendered markdown's text nodes and swap any that
+	* contain tag-like text for a sanitized `<span data-html-inline>`. Rendered
+	* code (inline `code`, `pre`, the host `.md-code-block`, mermaid mounts, and
+	* spans this pass already produced) is skipped. The same commit-then-operate
+	* pattern the mermaid swap uses: React keeps owning the host tree, only leaf
+	* text nodes are replaced, and a text change re-renders the subtree fresh.
+	*/
+	function runInlineHtmlPass(container, media) {
+		const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, { acceptNode: (node) => {
+			const parent = node.parentElement;
+			if (parent === null) return NodeFilter.FILTER_REJECT;
+			if (parent.closest("code, pre, .md-code-block, [data-mermaid-processed], [data-html-inline]")) return NodeFilter.FILTER_REJECT;
+			return TAGLIKE_TEXT_RE.test(node.data) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+		} });
+		const targets = [];
+		for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) targets.push(node);
+		for (const node of targets) {
+			const html = sanitizeInlineHtml(node.data, media);
+			if (html === null) continue;
+			const span = document.createElement("span");
+			span.setAttribute("data-html-inline", "");
+			span.innerHTML = html;
+			node.replaceWith(span);
+		}
+	}
+	/**
+	* One markdown run of a split document: the shared MarkdownText pass (or the
+	* mermaid chunk renderer when the run contains a mermaid fence), plus the
+	* inline HTML pass. The pass runs after every text change and is re-armed by
+	* a MutationObserver so it also catches content that appears late (the lazy
+	* mermaid chunk mounting, shiki highlighting settling) — it is idempotent and
+	* skips its own output, so mutation feedback settles after one extra pass.
+	*/
+	function MarkdownSegment({ text, hasMermaid, media, codeLabels }) {
+		const containerRef = (0, react.useRef)(null);
+		(0, react.useLayoutEffect)(() => {
+			const container = containerRef.current;
+			if (container === null) return;
+			runInlineHtmlPass(container, media);
+			let scheduled = false;
+			const observer = new MutationObserver(() => {
+				if (scheduled) return;
+				scheduled = true;
+				queueMicrotask(() => {
+					scheduled = false;
+					runInlineHtmlPass(container, media);
+				});
+			});
+			observer.observe(container, {
+				childList: true,
+				subtree: true
+			});
+			return () => {
+				observer.disconnect();
+			};
+		}, [text, media]);
+		return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			ref: containerRef,
+			children: hasMermaid ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LazyMermaidMarkdown, {
+				text,
+				codeLabels
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text,
+				codeLabels
+			})
+		});
+	}
+	/** A sanitized, balanced HTML span rendered as its own block. */
+	function HtmlLeaf({ html }) {
+		return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			className: sidebar_module_css_default.editorHtmlBlock,
+			"data-dsh-html-segment": true,
+			dangerouslySetInnerHTML: { __html: html }
+		});
+	}
+	/**
+	* The split-document renderer: markdown runs render through MarkdownSegment,
+	* HTML runs render as sanitized leaves, and unclosed block elements lower the
+	* following runs into themselves until their close part pops the frame (the
+	* renderer's frame stack persists across segments). Stray closes at the top
+	* level render nothing (the sanitizer/parser would drop them anyway), and
+	* frames still open at the end of the document are closed like a browser
+	* parser would. Sanitization runs once per prepared change, in a memo.
+	*/
+	function MarkdownDocument({ info, media, codeLabels }) {
+		const prepared = (0, react.useMemo)(() => info.segments.map((segment) => {
+			if (segment.kind === "markdown") {
+				const defs = info.referenceDefinitions;
+				const text = defs === "" ? segment.text : `${segment.text}\n\n${defs}`;
+				return {
+					kind: "markdown",
+					text,
+					hasMermaid: splitMermaidBlocks(text).some((block) => block.kind === "mermaid")
+				};
+			}
+			return {
+				kind: "html",
+				parts: analyzeHtmlSegment(segment.text).parts.map((part) => {
+					if (part.kind === "html") return {
+						kind: "html",
+						html: sanitizeHtmlBlock(part.html, media)
+					};
+					if (part.kind === "open") return {
+						kind: "open",
+						tag: part.tag,
+						props: sanitizeTagProps(part.tag, part.attrs)
+					};
+					return { kind: "close" };
+				})
+			};
+		}), [info, media]);
+		const nodes = [];
+		const frames = [];
+		const emit = (node) => {
+			const frame = frames[frames.length - 1];
+			if (frame !== void 0) frame.children.push(node);
+			else nodes.push(node);
+		};
+		let key = 0;
+		for (const segment of prepared) {
+			if (segment.kind === "markdown") {
+				emit(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MarkdownSegment, {
+					text: segment.text,
+					hasMermaid: segment.hasMermaid,
+					media,
+					codeLabels
+				}, `md-${key += 1}`));
+				continue;
+			}
+			for (const part of segment.parts) if (part.kind === "html") {
+				if (part.html.trim() === "") continue;
+				emit(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(HtmlLeaf, { html: part.html }, `html-${key += 1}`));
+			} else if (part.kind === "open") frames.push({
+				tag: part.tag,
+				props: part.props,
+				children: []
+			});
+			else {
+				const frame = frames.pop();
+				if (frame === void 0) continue;
+				if (frame.props === null) for (const child of frame.children) emit(child);
+				else emit((0, react.createElement)(frame.tag, {
+					...frame.props,
+					key: `wrap-${key += 1}`
+				}, ...frame.children));
+			}
+		}
+		while (frames.length > 0) {
+			const frame = frames.pop();
+			if (frame.props === null) for (const child of frame.children) emit(child);
+			else emit((0, react.createElement)(frame.tag, {
+				...frame.props,
+				key: `wrap-${key += 1}`
+			}, ...frame.children));
+		}
+		return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: nodes });
+	}
+	/** The signature used to skip no-op rescans (identity-safe setState guard). */
+	function signatureOf(entries) {
+		return entries.map((entry) => `${entry.level}:${entry.text}`).join("\n");
+	}
+	function MdToc() {
+		const barRef = (0, react.useRef)(null);
+		const [entries, setEntries] = (0, react.useState)([]);
+		const [open, setOpen] = (0, react.useState)(false);
+		const signatureRef = (0, react.useRef)("");
+		(0, react.useLayoutEffect)(() => {
+			const container = barRef.current?.parentElement ?? null;
+			if (container === null) return;
+			const scan = () => {
+				const found = [];
+				for (const el of container.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+					const text = (el.textContent ?? "").trim();
+					if (text === "") continue;
+					found.push({
+						level: Number(el.tagName.charAt(1)),
+						text,
+						el
+					});
+				}
+				const signature = signatureOf(found);
+				if (signature === signatureRef.current) return;
+				signatureRef.current = signature;
+				setEntries(found);
+			};
+			scan();
+			const observer = new MutationObserver(() => {
+				scan();
+			});
+			observer.observe(container, {
+				childList: true,
+				subtree: true
+			});
+			return () => {
+				observer.disconnect();
+			};
+		}, []);
+		(0, react.useLayoutEffect)(() => {
+			if (!open) return;
+			const onKey = (event) => {
+				if (event.key === "Escape") setOpen(false);
+			};
+			document.addEventListener("keydown", onKey);
+			return () => {
+				document.removeEventListener("keydown", onKey);
+			};
+		}, [open]);
+		const jump = (entry) => {
+			entry.el.closest("details:not([open])")?.setAttribute("open", "");
+			entry.el.scrollIntoView({
+				behavior: "smooth",
+				block: "start"
+			});
+			const el = entry.el;
+			const flash = sidebar_module_css_default.tocFlash;
+			if (flash !== void 0) {
+				el.classList.add(flash);
+				window.setTimeout(() => {
+					el.classList.remove(flash);
+				}, 1200);
+			}
+			setOpen(false);
+		};
+		const showOutline = entries.length >= 3;
+		return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			className: sidebar_module_css_default.tocBar,
+			ref: barRef,
+			children: [open && showOutline && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: sidebar_module_css_default.tocPanel,
+				"data-dsh-md-toc-panel": true,
+				children: entries.map((entry, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					className: sidebar_module_css_default.tocItem,
+					"data-level": entry.level,
+					title: entry.text,
+					onClick: () => {
+						jump(entry);
+					},
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: sidebar_module_css_default.tocItemLevel,
+						children: entry.level
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: sidebar_module_css_default.tocItemText,
+						children: entry.text
+					})]
+				}, index))
+			}), showOutline && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: sidebar_module_css_default.tocButton,
+				"data-dsh-md-toc": "",
+				"aria-label": t("toc"),
+				title: t("toc"),
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen(!open);
+				},
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconListPenOutline16, {})
+			})]
+		});
+	}
 	function TextEditor(props) {
 		const { ctx, scope, path, viewerId, content, truncated } = props;
 		const [mode, setMode] = (0, react.useState)("preview");
@@ -34072,6 +47989,11 @@ globalThis.__dshChunks__["editor"] = (require) => {
 		const html = viewerId === "html";
 		/** The markdown source the preview renders (draft wins over saved content). */
 		const mdText = draft ?? content ?? "";
+		/** The preview source: `mdText` with local image destinations rewritten to
+		*  absolute media URLs (see {@link rewriteLocalImageUrls}); the raw
+		*  `mdText` stays untouched for selection/line lookup and for mermaid-block
+		*  detection, which are unaffected by image syntax. */
+		const previewText = markdown ? rewriteLocalImageUrls(mdText, scope, path, window.location.origin) : mdText;
 		/** md/mermaid block split for the preview (mermaid fences lift out). Split
 		*  only in preview mode: edit-mode keystrokes must not re-scan the source. */
 		const mdBlocks = (0, react.useMemo)(() => markdown && mode === "preview" ? splitMermaidBlocks(mdText) : [], [
@@ -34079,7 +48001,28 @@ globalThis.__dshChunks__["editor"] = (require) => {
 			mode,
 			mdText
 		]);
-		const hasMermaid = (0, react.useMemo)(() => mdBlocks.some((block) => block.kind === "mermaid"), [mdBlocks]);
+		/** Raw-HTML analysis (block runs lifted out + inline gate). Non-null only
+		*  for documents that actually contain HTML — plain markdown keeps the
+		*  legacy single-pass render path below, byte-for-byte. */
+		const htmlInfo = (0, react.useMemo)(() => markdown && mode === "preview" ? analyzeMarkdownHtml(mdText) : null, [
+			markdown,
+			mode,
+			mdText
+		]);
+		const hasMermaid = (0, react.useMemo)(() => htmlInfo !== null ? htmlInfo.segments.some((segment) => segment.kind === "markdown" && splitMermaidBlocks(segment.text).some((block) => block.kind === "mermaid")) : mdBlocks.some((block) => block.kind === "mermaid"), [htmlInfo, mdBlocks]);
+		/** The media context for the split renderer (local-src rewriting inside
+		*  sanitized HTML). Memoized on primitives: MarkdownDocument sanitizes per
+		*  `media` identity, so a fresh object per render would re-sanitize every
+		*  keystroke. */
+		const htmlMedia = (0, react.useMemo)(() => ({
+			scope,
+			path,
+			origin: window.location.origin
+		}), [
+			scope.sessionId,
+			scope.cwd,
+			path
+		]);
 		const codeLabels = {
 			copyLabel: t("copy"),
 			copiedLabel: t("copied")
@@ -34189,18 +48132,22 @@ globalThis.__dshChunks__["editor"] = (require) => {
 				className: clsx(sidebar_module_css_default.editorCm, (markdown || html) && mode === "preview" && sidebar_module_css_default.editorCmHidden),
 				ref: hostRef
 			})] }),
-			markdown && mode === "preview" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			markdown && mode === "preview" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: sidebar_module_css_default.editorMd,
 				ref: mdRef,
 				onMouseUp: handlePreviewMouseUp,
 				onScroll: hidePopup,
-				children: hasMermaid ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LazyMermaidMarkdown, {
-					text: mdText,
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MdToc, {}), htmlInfo !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MarkdownDocument, {
+					info: htmlInfo,
+					media: htmlMedia,
+					codeLabels
+				}) : hasMermaid ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LazyMermaidMarkdown, {
+					text: previewText,
 					codeLabels
 				}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-					text: mdText,
+					text: previewText,
 					codeLabels
-				})
+				})]
 			}),
 			html && mode === "preview" && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SandboxStatusBar, {
 				sandboxed: !htmlNoSandbox,

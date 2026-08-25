@@ -52,6 +52,10 @@ $env:npm_config_fetch_retry_mintimeout = '2000'
 $env:npm_config_network_concurrency = '8'
 
 $results = [ordered]@{}
+# harness 发行版增量（品牌兜底 + anchored-standard）以 overlay 形式在构建期
+# 应用、构建后还原，保证 harness 工作树与上游 pristine（submodule 语义）。
+$overlayApplied = $false
+$overlayScript = Join-Path $Repo 'scripts\apply-harness-overlays.mjs'
 
 function Write-Step([string]$msg) {
   Write-Host ''
@@ -65,13 +69,13 @@ function Assert-LastExit0([string]$what) {
 # packuments, e.g. "No matching version found for @aws-sdk/token-providers@3.1108.0"
 # although that version exists). Retry the whole install up to 3 times before
 # giving up (fetch retries/concurrency are tuned via npm_config_* env vars above).
-function Invoke-InstallWithRetry([string]$label, [int]$maxAttempts = 3) {
+function Invoke-InstallWithRetry([string]$label, [int]$maxAttempts = 3, [string[]]$extraArgs = @()) {
   for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     if ($attempt -gt 1) {
       Write-Host "WARN: $label failed on attempt $($attempt - 1); retrying (attempt $attempt of $maxAttempts)..." -ForegroundColor Yellow
       Start-Sleep -Seconds 10
     }
-    & pnpm install --no-frozen-lockfile
+    & pnpm install --no-frozen-lockfile @extraArgs
     if ($LASTEXITCODE -eq 0) { return }
   }
   throw "FAILED: $label (exit code $LASTEXITCODE after $maxAttempts attempts)"
@@ -124,12 +128,27 @@ try {
   if (-not (Test-Tool 'python3')) { throw 'python3 is not on PATH (required)' }
   Write-Host 'python3 OK'
 
+  # harness 是 git submodule：fresh clone / CI 必须先 checkout（actions/checkout
+  # 带 submodules: recursive 时已就绪，此处兜底幂等）。
+  if (Test-Path (Join-Path $Repo '.gitmodules')) {
+    Write-Host 'ensuring harness submodule is checked out ...'
+    & git submodule update --init harness
+    if ($LASTEXITCODE -ne 0) { throw 'harness submodule update failed (network?)' }
+    if (-not (Test-Path (Join-Path $Repo 'harness\package.json'))) {
+      throw 'harness submodule is not materialized; run: git submodule update --init'
+    }
+  }
+
   # ═══════════════ 2/8 root workspace install ═══════════════
   if (-not $SkipRootInstall) {
-    Write-Step '2/8 root workspace install (pnpm install --no-frozen-lockfile)'
+    Write-Step '2/8 root workspace install (pnpm install --no-frozen-lockfile --ignore-scripts)'
+    # --ignore-scripts：fresh checkout 下 harness 的 lib/ 尚未构建，带 prepare 的
+    # workspace 成员（dsh-mygo-api 等）tsc 解析不到 workspace 包类型会挂；链接
+    # 阶段不依赖脚本，先装链接，step 3 构建 harness lib 后再补跑 lifecycle。
     Push-Location $Repo
     try {
-      Invoke-InstallWithRetry 'root pnpm install'
+      Invoke-InstallWithRetry 'root pnpm install (links only)' @('--ignore-scripts')
+      Write-Host 'WARN: lifecycle scripts skipped by --ignore-scripts; will be completed after harness build' -ForegroundColor Yellow
     } finally { Pop-Location }
   } else {
     Write-Step '2/8 root workspace install (SKIPPED by -SkipRootInstall)'
@@ -137,20 +156,36 @@ try {
 
   # ═══════════════ 3/8 harness build ═══════════════
   if (-not $SkipHarnessBuild) {
-    Write-Step '3/8 harness build (pnpm run build)'
+    Write-Step '3/8 harness build (pnpm --filter @deepseek-ai/dsh-root run build)'
+    & node $overlayScript apply
+    if ($LASTEXITCODE -ne 0) { throw 'harness overlay apply failed (brand + anchored-standard)' }
+    $overlayApplied = $true
     $env:PATH = "$RootBin;$env:PATH"
-    Push-Location (Join-Path $Repo 'harness')
-    try {
-      & pnpm run build
-      if ($LASTEXITCODE -ne 0) {
-        Write-Host 'WARN: full harness build failed; falling back to web-target build (build:web)' -ForegroundColor Yellow
-        & pnpm run build:web
-        Assert-LastExit0 'harness build:web (fallback)'
-      }
-      $results['harness-build'] = 'OK'
-    } finally { Pop-Location }
+    # 必须从根 workspace 发起（--filter）：harness 是 git submodule，目录内嵌套
+    # 上游自带的 pnpm-workspace.yaml / pnpm-lock.yaml；在 harness 目录直接跑
+    # pnpm run 会触发 deps-status 自动 install（与根安装的 hoisted 结构不一致）。
+    & pnpm --filter @deepseek-ai/dsh-root run build
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host 'WARN: full harness build failed; falling back to web-target build (build:web)' -ForegroundColor Yellow
+      & pnpm --filter @deepseek-ai/dsh-root run build:web
+      Assert-LastExit0 'harness build:web (fallback)'
+    }
+    $results['harness-build'] = 'OK'
   } else {
     Write-Step '3/8 harness build (SKIPPED by -SkipHarnessBuild)'
+  }
+
+  # ═══════════════ 3.5/8 lifecycle completion ═══════════════
+  # step 2 用 --ignore-scripts 跳过 prepare；harness lib 构建后，fresh checkout
+  # 下带 prepare 的成员（dsh-mygo-api 等）才可解析 workspace 包类型。增量环境
+  # 下 mygo-api lib 已存在（prepare 产物），无需补跑。
+  $mygoApiLib = Join-Path $Repo 'dsh-mygo\packages\core\mygo-api\lib'
+  if (-not $SkipRootInstall -and -not (Test-Path $mygoApiLib)) {
+    Write-Step '3.5/8 complete lifecycle scripts (prepare consumers now have harness libs)'
+    Push-Location $Repo
+    try {
+      Invoke-InstallWithRetry 'root pnpm install (lifecycle completion)'
+    } finally { Pop-Location }
   }
 
   # ═══════════════ 4/8 plugin builds ═══════════════
@@ -289,4 +324,14 @@ try {
   exit 1
 } finally {
   Stop-WebBackend
+  if ($overlayApplied) {
+    try {
+      & node $overlayScript revert | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        Write-Warning 'harness overlay revert failed — harness tree left patched; run scripts/apply-harness-overlays.mjs revert'
+      }
+    } catch {
+      Write-Warning "harness overlay revert failed: $($_.Exception.Message)"
+    }
+  }
 }

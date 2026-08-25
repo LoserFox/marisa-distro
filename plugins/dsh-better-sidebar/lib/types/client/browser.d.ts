@@ -47,4 +47,14 @@ export type Embeddability = 'embeddable' | 'blocked' | 'unknown';
 export declare function embeddabilityOf(probe: BrowserProbeResult): Embeddability;
 /** A loopback hostname (localhost, IPv6 ::1, 127.0.0.0/8, 0.0.0.0). */
 export declare function isLoopbackHostname(hostname: string): boolean;
-export declare function normalizeBrowserUrl(input: string, selfOrigin: string): BrowserNavigateResult;
+/** Parse the loopback allowlist into a matcher predicate over host:port. */
+export declare function parseLoopbackAllowlist(allowlist: string): (host: string, port: string) => boolean;
+/**
+ * Whether a loopback URL is explicitly allowlisted by the side card prefs
+ * (`browserAllowedLoopback`). Only allowlisted local addresses may run with
+ * `allow-same-origin` in the sidebar iframe — needed for local dev servers
+ * (Vite etc.) whose module/HMR/fetch pipeline requires a real origin, while
+ * the page stays cross-origin to the GUI and to every other site.
+ */
+export declare function isAllowedLoopbackUrl(url: string, allowlist: string): boolean;
+export declare function normalizeBrowserUrl(input: string, selfOrigin: string, allowedLoopback?: string): BrowserNavigateResult;

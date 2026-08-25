@@ -10,9 +10,9 @@
 // Loaded via the cordis.patch.yml row `@liustack/modlens/dsh` (see the
 // package.json `dsh.bundle` manifest). Providers, reuse grants, and guard
 // rules keep living in ~/.modlens/config.json, shared with every harness.
-import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnHidden } from './spawnHidden.js'
 
@@ -22,6 +22,90 @@ const CLI_PATH = fileURLToPath(new URL('../dist/main.js', import.meta.url))
 const OUTPUT_SCHEMA = JSON.parse(readFileSync(new URL('./vision-schema.json', import.meta.url), 'utf8'))
 
 const CLI_TIMEOUT_MS = 180_000
+const TOOL_READ_CACHE_LIMIT = 256
+const TOOL_READ_FAILURE_COOLDOWN_MS = 60_000
+const TOOL_READ_REMOTE_TTL_MS = 60_000
+// Shared by both evidence caches. Monotonic time keeps an NTP adjustment from
+// extending or collapsing a retry window.
+const monotonicNow = () => performance.now()
+
+function toolReadSourceKey(rawSource) {
+  const source = rawSource.trim()
+  if (/^https?:\/\//i.test(source)) {
+    return `remote:${source}`
+  }
+  try {
+    const file = /^file:\/\//i.test(source) ? fileURLToPath(source) : resolve(source)
+    const stat = statSync(file, { bigint: true })
+    // A path is not an image identity. The inode and nanosecond timestamps
+    // make an overwrite or replacement a fresh read while unchanged bytes at
+    // the same path stay reusable during a thinking loop.
+    return `local:${file}:${stat.dev}:${stat.ino}:${stat.mode}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`
+  } catch {
+    // Let the CLI produce the canonical missing-file or invalid-path error.
+    // If the file appears later, the successful stat above changes the key.
+    return `local-unreadable:${source}`
+  }
+}
+
+function trimToolReadCache(cache) {
+  while (cache.size > TOOL_READ_CACHE_LIMIT) {
+    let victim
+    for (const [key, entry] of cache) {
+      if (entry.state !== 'pending') {
+        victim = key
+        break
+      }
+    }
+    // In-flight work stays joinable. The cap goes soft only while every
+    // candidate is pending, then settlement runs this trim again.
+    if (victim === undefined) return
+    cache.delete(victim)
+  }
+}
+
+function cachedToolRead(cache, key, remote, load) {
+  const now = monotonicNow()
+  let entry = cache.get(key)
+  if (entry && entry.expiresAt <= now) {
+    cache.delete(key)
+    entry = undefined
+  }
+  if (entry) {
+    // Map insertion order is the LRU order.
+    cache.delete(key)
+    cache.set(key, entry)
+    return entry.promise
+  }
+
+  entry = { state: 'pending', expiresAt: Number.POSITIVE_INFINITY, promise: undefined }
+  const promise = Promise.resolve()
+    .then(load)
+    .then(
+      (value) => {
+        if (cache.get(key) === entry) {
+          entry.state = 'success'
+          entry.expiresAt = remote ? monotonicNow() + TOOL_READ_REMOTE_TTL_MS : Number.POSITIVE_INFINITY
+          trimToolReadCache(cache)
+        }
+        return value
+      },
+      (error) => {
+        if (cache.get(key) === entry) {
+          // The same failure is free and stable during the cooldown. A later
+          // call probes again, so a recovered engine needs no restart.
+          entry.state = 'failure'
+          entry.expiresAt = monotonicNow() + TOOL_READ_FAILURE_COOLDOWN_MS
+          trimToolReadCache(cache)
+        }
+        throw error
+      },
+    )
+  entry.promise = promise
+  cache.set(key, entry)
+  trimToolReadCache(cache)
+  return promise
+}
 
 export const name = 'modlens'
 export const inject = ['tools', 'agents', 'attachments', 'llm']
@@ -83,6 +167,10 @@ export function apply(ctx, config = {}) {
   // whichever surface asks first (issue #68; auto-read used to bypass
   // caching entirely and re-read every image on every step).
   const evidenceCache = new Map()
+  // Explicit path-tool calls can repeat inside a small model's thinking loop.
+  // Keep their completed evidence beside the attachment cache so the model's
+  // repeated decision does not become repeated vision-provider work (#81).
+  const toolReadCache = new Map()
   // Off by default since the vision provider converts at request time and
   // keeps the durable log (and the UI thumbnail) intact; turn it on only for
   // setups where images enter through a provider this plugin does not wrap.
@@ -97,7 +185,20 @@ export function apply(ctx, config = {}) {
   // wrappers land, including the later sweeps, and read by the verdict.
   const ownProviders = new Set()
   if (config.visionProvider !== false) {
-    registerVisionProvider(ctx, config, ownProviders, evidenceCache)
+    // Bundle loaders can call apply while this outer context is still waiting
+    // for its required services. Reading ctx.llm here then throws "inactive
+    // context" before the first discovery sweep can register any lifecycle
+    // work (#79). Put the whole provider registry inside an injected child
+    // scope: Cordis starts it only while llm is active, and tears its listeners
+    // and registrations down with that service. Preview hosts without inject
+    // keep the dependency-free plugin's former feature-detected path.
+    if (typeof ctx.inject === 'function') {
+      ctx.inject(['llm'], (scope) => {
+        return registerVisionProvider(scope, config, ownProviders, evidenceCache)
+      })
+    } else {
+      registerVisionProvider(ctx, config, ownProviders, evidenceCache)
+    }
   }
   // Paste-to-path: the browser half (dsh/client.js) intercepts image pastes
   // and POSTs the bytes here; the file lands in a private temp dir and the
@@ -172,7 +273,7 @@ export function apply(ctx, config = {}) {
   const readImageTool = (toolName) => ({
     name: toolName,
     description:
-      'Read an image through the modlens vision bridge. Use whenever a message references an image the current model cannot see: a local file path or an http(s) URL to a screenshot, photo, chart, diagram, or document scan. Returns structured evidence with every word transcribed (ocr.full_text), layout regions in reading order, semantics, and an uncertainty list; quote the evidence instead of guessing. Requires a configured modlens engine (run `npx @liustack/modlens doctor` in a terminal to check).',
+      'Read an image through the modlens vision bridge. Use whenever a message references an image the current model cannot see: a local file path or an http(s) URL to a screenshot, photo, chart, diagram, or document scan. Returns structured evidence with every word transcribed (ocr.full_text), layout regions in reading order, semantics, and an uncertainty list. Quote the evidence instead of guessing. For the same image and focus, call this tool once and reuse its returned evidence instead of calling again. Requires a configured modlens engine (run `npx @liustack/modlens doctor` in a terminal to check).',
     parameters: {
       type: 'object',
       properties: {
@@ -207,23 +308,31 @@ export function apply(ctx, config = {}) {
       if (typeof args?.path !== 'string' || args.path.trim() === '') {
         throw new Error(`${toolName} needs a non-empty string "path".`)
       }
-      const cliArgs = [CLI_PATH, '-i', args.path, '--timeout', String(CLI_TIMEOUT_MS)]
-      if (args.prompt) {
-        cliArgs.push('--prompt', args.prompt)
-      }
-      const { stdout, stderr, code } = await run(process.execPath, cliArgs, exec.signal)
-      if (code !== 0) {
-        throw new Error(`modlens failed (exit ${code}): ${(stderr || stdout).trim().slice(0, 500)}`)
-      }
-      let parsed
-      try {
-        parsed = JSON.parse(stdout)
-      } catch {
-        throw new Error(`modlens produced no JSON: ${stdout.trim().slice(0, 300)}`)
-      }
-      // The canonical value is the vision result itself; routing details
-      // (meta.attempts, whose quota a reused engine spent) stay operational.
-      return parsed.result
+      const sourceKey = toolReadSourceKey(args.path)
+      const cacheKey = JSON.stringify([sourceKey, typeof args.prompt === 'string' ? args.prompt : ''])
+      const pending = cachedToolRead(toolReadCache, cacheKey, sourceKey.startsWith('remote:'), async () => {
+        const cliArgs = [CLI_PATH, '-i', args.path, '--timeout', String(CLI_TIMEOUT_MS)]
+        if (args.prompt) {
+          cliArgs.push('--prompt', args.prompt)
+        }
+        // The shared read has the CLI's own deadline but not one caller's
+        // signal. A caller may stop waiting without cancelling every other
+        // concurrent caller that joined the same image read.
+        const { stdout, stderr, code } = await run(process.execPath, cliArgs, undefined)
+        if (code !== 0) {
+          throw new Error(`modlens failed (exit ${code}): ${(stderr || stdout).trim().slice(0, 500)}`)
+        }
+        let parsed
+        try {
+          parsed = JSON.parse(stdout)
+        } catch {
+          throw new Error(`modlens produced no JSON: ${stdout.trim().slice(0, 300)}`)
+        }
+        // The canonical value is the vision result itself; routing details
+        // (meta.attempts, whose quota a reused engine spent) stay operational.
+        return parsed.result
+      })
+      return structuredClone(await abortableWait(pending, exec.signal))
     },
   })
   // A name of our own rather than the host's. dsh's registry is layered and
@@ -590,19 +699,69 @@ function restoreUpstreamSource(messages, wrapperId, upstream) {
 
 function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
   // Wrap only the text-only members of these families. Their own vision
-  // models (present or future: deepseek-vl/ocr/janus, glm-4.5v, glm-5v-...)
-  // need no bridge and are excluded by name and by declared modality.
+  // models (present or future: deepseek-vl/ocr/janus, glm-4.5v, glm-5v-...,
+  // deepseek-v4-flash-vision-exp) need no bridge and are excluded by name and
+  // by declared modality. The name gate matters on its own: third-party
+  // catalogs copy an id without its modalities, and a vision model handed a
+  // wrapper twin loses its native sight. Family matching also strips a vendor
+  // namespace (OpenRouter's z-ai/glm-5.2:free, ~-prefixed aliases), because
+  // the text-only member is the same model wherever the id carries a prefix.
   const families = config.families || ['deepseek', 'glm']
-  const VISION_ID = /(deepseek-(vl|ocr)|janus|glm-[\d.]*v(\b|-))/i
+  const VISION_ID = /(deepseek-(vl|ocr)|janus|glm-[\d.]*v(\b|-)|\bvision\b)/i
   const shouldWrap = (info) => {
     const id = String(info?.id ?? '').toLowerCase()
-    if (!families.some((family) => id.startsWith(family))) return false
-    if (VISION_ID.test(id)) return false
+    // The model's own name: alias marker and vendor namespace stripped. The
+    // vision-name gate reads only this, so a gateway namespace that happens
+    // to contain the word cannot veto the text model behind it.
+    const unaliased = id.replace(/^~/, '')
+    const bare = unaliased.slice(unaliased.lastIndexOf('/') + 1)
+    if (!families.some((family) => id.startsWith(family) || bare.startsWith(family))) return false
+    if (VISION_ID.test(bare)) return false
     if (Array.isArray(info?.inputModalities) && info.inputModalities.includes('image')) return false
     return true
   }
-  if (typeof ctx.llm?.registerAdapter !== 'function' || typeof ctx.llm?.stream !== 'function') {
+  // Keep this activation bound to the exact service implementation that made
+  // it runnable. Cordis reuses the child context when llm is replaced, so
+  // looking the service up again after an await could otherwise move an old
+  // topology result into the new registry.
+  const llm = ctx.llm
+  if (typeof llm?.registerAdapter !== 'function' || typeof llm?.stream !== 'function') {
     return
+  }
+
+  // Discovery promises are ordinary JavaScript work, not Cordis effects.
+  // The disposer invalidates this activation before the injected child is
+  // re-run, and clears the ownership facts whose actual adapter effects the
+  // framework tears down independently.
+  let active = true
+  const claimedProviders = new Set()
+  const deactivate = () => {
+    active = false
+    for (const providerId of claimedProviders) ownProviders?.delete(providerId)
+    claimedProviders.clear()
+  }
+  // Cordis marks a fiber UNLOADING before it runs activation disposers. A
+  // promise continuation already in the microtask queue can therefore see
+  // `active` before the disposer flips it. Creating and immediately releasing
+  // a zero-work effect is the framework's atomic liveness boundary: once it
+  // succeeds, the following synchronous registry mutation cannot race an
+  // unload. A lifecycle refusal cancels this activation without turning an
+  // expected teardown into a terminal diagnostic.
+  const activationCanCommit = () => {
+    if (!active) return false
+    if (typeof ctx.effect !== 'function') return true
+    try {
+      const release = ctx.effect(() => {})
+      if (typeof release === 'function') release()
+      return active
+    } catch (error) {
+      const inactive =
+        error?.code === 'INACTIVE_EFFECT' ||
+        /cannot create effect on inactive context/i.test(String(error?.message ?? error))
+      if (!inactive) throw error
+      deactivate()
+      return false
+    }
   }
 
   // dsh snapshots providerInfo and providerRetryPolicy at registration time.
@@ -614,6 +773,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
   const policyKey = (policy) => (policy === undefined ? undefined : JSON.stringify(policy))
 
   const registerWrapper = (upstream, providerId, displayName) => {
+    if (!activationCanCommit()) return false
     const state = { displayName, retryPolicyKey: undefined }
     const withVision = (info) => {
       const inputModalities = Array.isArray(info?.inputModalities) ? [...info.inputModalities] : []
@@ -622,7 +782,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
       return { ...info, provider: providerId, inputModalities }
     }
     try {
-      const registration = ctx.llm.registerAdapter([providerId], {
+      const registration = llm.registerAdapter([providerId], {
         // Duck-typing LlmAdapter: providerInfo/providerRetryPolicy are
         // base-class defaults a plain object must supply itself (their
         // absence is exactly the silent registration failure this catch
@@ -640,20 +800,20 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
           // and the registration boundary below fails closed instead; the
           // ordinary not-mounted-yet case never reaches this method, because
           // reconcile waits for the upstream before registering (#66).
-          if (typeof ctx.llm.providerRetryPolicy !== 'function') return undefined
-          const policy = ctx.llm.providerRetryPolicy(upstream)
+          if (typeof llm.providerRetryPolicy !== 'function') return undefined
+          const policy = llm.providerRetryPolicy(upstream)
           state.retryPolicyKey = policyKey(policy)
           return policy
         },
         async listModels(_provider, signal) {
-          const models = await ctx.llm.listModels(upstream, signal)
+          const models = await llm.listModels(upstream, signal)
           return models.filter(shouldWrap).map((model) => ({
             ...withVision(model),
             name: `${model.name ?? model.id} (modlens vision)`,
           }))
         },
         async resolveModel(_provider, model, signal) {
-          const info = await ctx.llm.resolveModelInfo(upstream, model, signal)
+          const info = await llm.resolveModelInfo(upstream, model, signal)
           if (!shouldWrap(info)) {
             // Refusing is right: wrapping a model that reads images itself
             // would claim a bridge it does not need, hand it text evidence
@@ -675,6 +835,16 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
           }
           return { ...withVision(info), id: model }
         },
+        async prepareCall(provider, model, signal) {
+          // dsh 0.1.1 dispatches every call (and its replay path) through
+          // prepareCall (#73). Real adapters inherit exactly this pair from
+          // the LlmAdapter base class; a plain object supplies it itself,
+          // like providerInfo above. Hosts that never call it ignore it.
+          return {
+            model: await this.resolveModel(provider, model, signal),
+            stream: (options) => this.stream(options),
+          }
+        },
         stream(options) {
           // Convert at request time, not at log time: the durable session
           // log keeps the real image blocks (so the UI shows the paste
@@ -684,7 +854,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
           return (async function* () {
             const converted = await convertImagesToEvidence(ctx, options.messages, options.signal, self)
             const messages = restoreUpstreamSource(converted, providerId, upstream)
-            yield* ctx.llm.stream({ ...options, provider: upstream, messages })
+            yield* llm.stream({ ...options, provider: upstream, messages })
           })()
         },
         evidenceCache,
@@ -694,6 +864,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
       // duplicate below means someone else holds that id, and skipping a
       // provider we do not own would let a real vision model's paste be
       // taken over, which is the bug the verdict exists to prevent.
+      claimedProviders.add(providerId)
       ownProviders?.add(providerId)
       return true
     } catch (error) {
@@ -717,6 +888,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
   const dropWrapper = (upstream, current) => {
     registrations.delete(upstream)
     wrapped.delete(upstream)
+    claimedProviders.delete(current.providerId)
     ownProviders?.delete(current.providerId)
     if (typeof current.registration === 'function') current.registration()
   }
@@ -726,9 +898,9 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
   // failed and what to do next depends on whether it failed before or after
   // the host committed.
   const routed = (providerId) => {
-    if (typeof ctx.llm.listProviders !== 'function') return false
+    if (typeof llm.listProviders !== 'function') return false
     try {
-      return ctx.llm.listProviders().some((info) => (typeof info === 'string' ? info : info?.id) === providerId)
+      return llm.listProviders().some((info) => (typeof info === 'string' ? info : info?.id) === providerId)
     } catch {
       return false
     }
@@ -746,7 +918,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
     let nextPolicyKey
     try {
       nextPolicyKey =
-        typeof ctx.llm.providerRetryPolicy === 'function' ? policyKey(ctx.llm.providerRetryPolicy(upstream)) : undefined
+        typeof llm.providerRetryPolicy === 'function' ? policyKey(llm.providerRetryPolicy(upstream)) : undefined
     } catch (error) {
       dropWrapper(upstream, current)
       console.error(`[modlens] vision provider refresh removed (${current.providerId}): ${error}`)
@@ -794,9 +966,9 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
     // plumbing below could never correct it, because the name it compared
     // against was a constant.
     const upstreamName = () => {
-      if (typeof ctx.llm.listProviders !== 'function') return upstream
+      if (typeof llm.listProviders !== 'function') return upstream
       try {
-        const found = ctx.llm.listProviders().find((entry) => entry.id === upstream)
+        const found = llm.listProviders().find((entry) => entry.id === upstream)
         return found?.name ?? upstream
       } catch {
         return upstream
@@ -811,6 +983,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
     // re-examined when the holder's route disappears.
     let claimedElsewhere = false
     const reconcile = () => {
+      if (!activationCanCommit()) return
       if (reconciling) {
         // dropWrapper's disposer makes the host emit adapters-updated while
         // this very run is on the stack, and whatever that event announced
@@ -822,8 +995,8 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
       try {
         const current = registrations.get(upstream)
         const available =
-          typeof ctx.llm.listProviders !== 'function' ||
-          ctx.llm.listProviders().some((info) => (typeof info === 'string' ? info : info?.id) === upstream)
+          typeof llm.listProviders !== 'function' ||
+          llm.listProviders().some((info) => (typeof info === 'string' ? info : info?.id) === upstream)
         if (!current) {
           if (claimedElsewhere) {
             if (routed(providerId)) return
@@ -870,7 +1043,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
     }
     reconcile()
     if (typeof ctx.on === 'function') ctx.on('llm/adapters-updated', reconcile)
-    return
+    return deactivate
   }
 
   // Auto-discovery. `wrapped` guards duplicates across sweeps and the
@@ -882,16 +1055,19 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
   // one promise chain so two can never interleave their probes at all.
   const discover = Array.isArray(config.discover) ? new Set(config.discover) : null
   const sweepOnce = async () => {
+    if (!activationCanCommit()) return
     try {
       await sweepBody()
     } catch (error) {
+      if (!active) return
       // A sweep failure must never become an unhandled rejection inside the
       // host process; the next topology notification simply tries again.
       console.error(`[modlens] vision provider discovery sweep failed: ${error}`)
     }
   }
   const sweepBody = async () => {
-    if (typeof ctx.llm.listProviders !== 'function') {
+    if (!active) return
+    if (typeof llm.listProviders !== 'function') {
       // Older registry surface: fall back to the single legacy wrap once.
       if (!wrapped.has('__legacy_fallback__')) {
         wrapped.add('__legacy_fallback__')
@@ -899,15 +1075,18 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
       }
       return
     }
-    const providers = ctx.llm.listProviders()
+    const providers = llm.listProviders()
+    if (!active) return
     // Same tolerance as the pinned path: an entry may be a bare id string.
     const idOf = (info) => (typeof info === 'string' ? info : info?.id)
     const available = new Set(providers.map(idOf).filter(Boolean))
     for (const [upstream, current] of registrations) {
+      if (!active) return
       if (available.has(upstream)) continue
       dropWrapper(upstream, current)
     }
     for (const info of providers) {
+      if (!active) return
       const id = idOf(info)
       if (!id || String(id).startsWith('modlens-')) continue
       if (discover && !discover.has(id)) continue
@@ -922,13 +1101,19 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
       wrapped.add(id)
       let models = []
       try {
-        models = await ctx.llm.listModels(id)
+        models = await llm.listModels(id)
       } catch {
+        if (!activationCanCommit()) return
         // Unreachable route today; release the claim so a later topology
         // change retries it.
         wrapped.delete(id)
         continue
       }
+      // The promise can settle just before Cordis marks this fiber UNLOADING,
+      // while the activation disposer is still one microtask away. Re-enter
+      // the atomic lifecycle boundary before either continuing to refresh a
+      // later registration or committing this provider's wrapper.
+      if (!activationCanCommit()) return
       if (!models.some(shouldWrap)) {
         // No eligible models yet: release, the route may gain some later.
         wrapped.delete(id)
@@ -953,6 +1138,7 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
       void sweep()
     })
   }
+  return deactivate
 }
 
 // The same pasted attachment rides every later step of its session, and the
@@ -969,10 +1155,6 @@ function registerVisionProvider(ctx, config, ownProviders, evidenceCache) {
 // text forever.
 const EVIDENCE_CACHE_LIMIT = 256
 const EVIDENCE_FAILURE_COOLDOWN_MS = 60_000
-// Monotonic, so an NTP step backwards cannot freeze a cooling failure for
-// the size of the jump: a recovered engine is re-probed one cooldown after
-// the failure, whatever the wall clock did in between.
-const monotonicNow = () => performance.now()
 
 /**
  * A cache key that survives replay: the same attachment serialized with a
@@ -1419,16 +1601,27 @@ const REUSE_HARNESSES = ['claude', 'codex', 'opencode', 'pi', 'grok']
 // one source whole, so the card has to read the same two places a read does or
 // it shows an empty form for an engine that works.
 const ENGINE_ENV_BINDINGS = {
-  'gemini-api': { apiKey: 'GEMINI_API_KEY' },
+  'gemini-api': { apiKey: 'GEMINI_API_KEY', baseUrl: 'GEMINI_BASE_URL' },
   openai: { apiKey: 'OPENAI_API_KEY', baseUrl: 'OPENAI_BASE_URL' },
   anthropic: { apiKey: 'ANTHROPIC_API_KEY', baseUrl: 'ANTHROPIC_BASE_URL' },
+}
+
+/** Whether a comma-separated API-key value contains at least one real key. */
+function hasApiKeys(value) {
+  return (
+    typeof value === 'string' &&
+    value
+      .split(',')
+      .map((key) => key.trim())
+      .some((key) => key !== '')
+  )
 }
 
 function engineEnvSettings(engine, env = process.env) {
   const settings = {}
   for (const [field, variable] of Object.entries(ENGINE_ENV_BINDINGS[engine] ?? {})) {
     const value = typeof env[variable] === 'string' ? env[variable].trim() : ''
-    if (value !== '') settings[field] = value
+    if (value !== '' && (field !== 'apiKey' || hasApiKeys(value))) settings[field] = value
   }
   return settings
 }
@@ -1494,7 +1687,7 @@ function engineSummary(config = readModlensConfig()) {
     engines[name] = {
       baseUrl: typeof settings.baseUrl === 'string' ? settings.baseUrl : '',
       model: typeof settings.model === 'string' ? settings.model : '',
-      hasKey: typeof settings.apiKey === 'string' && settings.apiKey !== '',
+      hasKey: hasApiKeys(settings.apiKey),
       // '' means neither source holds anything, which is not the same as the
       // file holding an empty entry: that one is already off its variables.
       source: inFile ? 'file' : Object.keys(settings).length > 0 ? 'env' : '',
