@@ -1,6 +1,6 @@
 {
   "name": "@huanlin/dsh-plugin-yet-another-subagent",
-  "version": "0.1.2",
+  "version": "0.1.6",
   "publishConfig": {
     "access": "public"
   },
@@ -53,12 +53,6 @@
       "platform": "web"
     }
   },
-  "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
-    "build": "tsc -p tsconfig.json && tsdown -c tsdown.config.ts",
-    "bundle:client": "tsdown -c tsdown.config.ts"
-  },
   "peerDependencies": {
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-client-connection": "workspace:^",
@@ -77,7 +71,7 @@
     "@deepseek-ai/dsh-subagent": "workspace:^",
     "@deepseek-ai/dsh-jobs": "workspace:^",
     "@deepseek-ai/dsh-tools": "workspace:^",
-    "@deepseek-ai/cordis": "^4.0.0-rc.7",
+    "cordis": "^4.0.0-rc.7",
     "react": "^18.2.0",
     "schemastery": "^3.18.0"
   },
@@ -133,7 +127,7 @@
     "@deepseek-ai/dsh-tools": {
       "optional": true
     },
-    "@deepseek-ai/cordis": {
+    "cordis": {
       "optional": true
     },
     "react": {
@@ -154,5 +148,12 @@
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "scripts": {
+    "prebuild": "node scripts/relink-deps.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "build": "tsdown -c tsdown.config.ts && tsc -p tsconfig.typecheck.json",
+    "bundle:client": "tsdown -c tsdown.config.ts"
   }
 }

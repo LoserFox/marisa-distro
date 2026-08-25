@@ -55,7 +55,7 @@ OpenCode 接 DeepSeek：执行 `opencode auth login`，选择 DeepSeek 并粘贴
 dsh 与其他 harness 不同：modlens 以原生工具的形式接入，而不是靠提示词触发的 skill。本包自身就是一个 dsh bundle，一条命令即可装进某个 profile：
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.22.1
+npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.24.2
 ```
 
 这会注册一个 `modlens_read_image` 工具，它的 schema 随每次请求抵达模型（不靠触发启发式），运行同一个包里自带的 modlens CLI，并把结构化证据作为工具的标准 JSON 输出返回。引擎、复用授权和 guard 规则仍在 `~/.modlens/config.json` 里，与其他所有 harness 共享。dsh 还在开发者预览阶段，插件接口可能变化。这个插件刻意保持很小的接触面（原生工具注册、视觉变体所用的 llm 适配层、附件读取器，以及一个 agent 执行前钩子），其中任何一处变动，它都会大声报错而不是无声退化。
@@ -73,7 +73,7 @@ dsh 的网页用户面前没有终端，所以引擎设置有一张卡片，在*
 modlens 发布很频繁，而两种安装形态都会冻结在装进来的那个版本上。dsh 上重跑一遍安装即可，版本号要点名：
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile <name> add @liustack/modlens@3.22.1
+npx -y @deepseek-ai/dsh plugin --profile <name> add @liustack/modlens@3.24.2
 ```
 
 `npm view @liustack/modlens version` 可以查到当前版本号，本页的版本号则由发布流程自动写入。
@@ -95,6 +95,12 @@ skill 类 harness 上，skill 是一个拷贝出来的文件夹，拷贝会保�
 会话里存在图片附件时,dsh 会拒绝切换到声明模态不含图片的模型,普通的 DeepSeek 纯文本条目都在此列。这条规则是 dsh 的,而且站得住:纯文本模型确实收不了带图片块的历史,而 `(modlens vision)` 变体之所以能切过去,靠的不是声明了图片输入,而是它在发请求时把那些块转成证据文本,普通条目没有这层转换（[#40](https://github.com/liustack/modlens/issues/40)）。
 
 走上面第一条粘贴路线就不会遇到:图片变成文件路径,会话里从不存在附件,模型选择器也就不会被锁住。只有在变体或视觉模型上粘贴时才会产生附件,而那种场景下附件本来就是目的。
+
+### 给其他插件作者：向 `(modlens vision)` 路由注入图片
+
+包装路由声明的 `inputModalities: ['text', 'image']` 是承诺，不是装饰（[#74](https://github.com/liustack/modlens/issues/74)）。请求里的每一个 `image` 块，无论来自用户粘贴还是其他插件注入（包括嵌在 tool result 里的），都会在请求时转成结构化证据文本，再发往 text-only 上游。没有任何内容被静默丢弃，所以「声明 image 就注入原生图片块，否则注入文件路径」这条分支不用区分对面是真视觉模型还是 modlens 包装。
+
+唯一前提：块必须带宿主附件引用，即 `ctx.attachments.saveImage` 返回、Web UI 粘贴产生的那种形状，插件靠 `ctx.attachments.readImage(block.attachment)` 取字节。手搓的只含路径或 base64 的块会落进固定的读取失败占位。另外不要在声明 image 的路由上给图片块旁边再附路径文本：块在这里已经变成完整证据，多出的路径会诱导模型用工具把同一张图再读一遍，双倍配额，还产生同一内容的第二种措辞，正是 [#68](https://github.com/liustack/modlens/issues/68) 清除过的前缀缓存抖动。
 
 ### 粘贴转路径（paste-to-path，web profile）
 

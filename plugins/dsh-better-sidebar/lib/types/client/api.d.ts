@@ -1,3 +1,5 @@
+import type { LastActivity } from '../subagent-activity.ts';
+import type { SidechatThreadInfo } from '../sidechat-core.ts';
 import type { BrowserProbeResult } from './browser.ts';
 /** One wire failure. */
 export declare class SidebarApiError extends Error {
@@ -25,6 +27,15 @@ export interface GitStatusResult {
     isRepo: boolean;
     branch?: string;
     entries: GitStatusEntry[];
+    root?: string;
+    repositories?: string[];
+}
+/** One linked Git checkout. */
+export interface GitWorktree {
+    path: string;
+    branch: string;
+    current: boolean;
+    changes: number;
 }
 /** One git log row. */
 export interface GitLogEntry {
@@ -67,6 +78,10 @@ export interface JobOutputResult {
     /** Whether the model has read the job at least once. */
     read: boolean;
 }
+/** The `subagents.live` response: running child id → latest activity. */
+export type SubagentLiveResult = {
+    live: Record<string, LastActivity>;
+};
 /** Terminal dependency status (mirror of the host's depsStatus; issue #140). */
 export type TerminalDepsStatus = {
     ok: true;
@@ -86,6 +101,8 @@ export interface SessionScope {
     sessionId: string;
     /** The session's working directory from the client list summary (optional). */
     cwd?: string;
+    /** Selected Git repository when cwd is a workspace container. */
+    repoRoot?: string;
 }
 /** The sidebar API surface (session scope threaded through every call). */
 export declare const api: {
@@ -110,42 +127,49 @@ export declare const api: {
     fsWrite: (scope: SessionScope, path: string, content: string) => Promise<{
         ok: true;
     }>;
-    gitStatus: (scope: SessionScope, signal?: AbortSignal) => Promise<GitStatusResult>;
-    gitDiff: (scope: SessionScope, path: string | undefined, staged: boolean, signal?: AbortSignal) => Promise<{
+    /** Upload one file's raw bytes into `dir` (keeps the folder tree via
+     *  `relativePath`); the host streams it under the session workspace. */
+    uploadFile: (scope: SessionScope, dir: string, relativePath: string, body: Blob, signal?: AbortSignal) => Promise<{
+        path: string;
+        size: number;
+    }>;
+    gitWorktrees: (scope: SessionScope, signal?: AbortSignal) => Promise<GitWorktree[]>;
+    gitStatus: (scope: SessionScope, worktree?: string, signal?: AbortSignal) => Promise<GitStatusResult>;
+    gitDiff: (scope: SessionScope, path: string | undefined, staged: boolean, worktree?: string, signal?: AbortSignal) => Promise<{
         diff: string;
     }>;
-    gitStage: (scope: SessionScope, path?: string) => Promise<{
+    gitStage: (scope: SessionScope, path?: string, worktree?: string) => Promise<{
         ok: true;
     }>;
-    gitUnstage: (scope: SessionScope, path?: string) => Promise<{
+    gitUnstage: (scope: SessionScope, path?: string, worktree?: string) => Promise<{
         ok: true;
     }>;
-    gitCommit: (scope: SessionScope, message: string) => Promise<{
+    gitCommit: (scope: SessionScope, message: string, worktree?: string) => Promise<{
         ok: true;
     }>;
-    gitBranch: (scope: SessionScope, signal?: AbortSignal) => Promise<{
+    gitBranch: (scope: SessionScope, worktree?: string, signal?: AbortSignal) => Promise<{
         current: string;
         names: string[];
     }>;
-    gitCheckout: (scope: SessionScope, branch: string) => Promise<{
+    gitCheckout: (scope: SessionScope, branch: string, worktree?: string) => Promise<{
         ok: true;
     }>;
     /** Recent commit history, lazily pageable (skip/count; defaults 0/30). */
-    gitLog: (scope: SessionScope, count?: number, skip?: number, signal?: AbortSignal) => Promise<GitLogEntry[]>;
+    gitLog: (scope: SessionScope, count?: number, skip?: number, worktree?: string, signal?: AbortSignal) => Promise<GitLogEntry[]>;
     /** Full patch text of one commit (diff display for the history rows). */
-    gitCommitDiff: (scope: SessionScope, hash: string, signal?: AbortSignal) => Promise<{
+    gitCommitDiff: (scope: SessionScope, hash: string, worktree?: string, signal?: AbortSignal) => Promise<{
         diff: string;
     }>;
     /** Discard the worktree changes of one file (the index is untouched). */
-    gitDiscard: (scope: SessionScope, path: string) => Promise<{
+    gitDiscard: (scope: SessionScope, path: string, worktree?: string) => Promise<{
         ok: true;
     }>;
     /** Revert one commit onto the current branch. */
-    gitRevert: (scope: SessionScope, hash: string) => Promise<{
+    gitRevert: (scope: SessionScope, hash: string, worktree?: string) => Promise<{
         ok: true;
     }>;
     /** Cherry-pick one commit onto the current branch. */
-    gitCherryPick: (scope: SessionScope, hash: string) => Promise<{
+    gitCherryPick: (scope: SessionScope, hash: string, worktree?: string) => Promise<{
         ok: true;
     }>;
     /** Release a terminal's process immediately (tab closed; the WS close frame
@@ -173,6 +197,32 @@ export declare const api: {
         ok: true;
         outcome: "requested" | "already-finished";
     }>;
+    /**
+     * One batch live-preview fetch for the whole Subagent tree. The payload is
+     * the already-resolved topology ROOT (not a session scope); the host
+     * enumerates descendants once and folds running children's activity.
+     */
+    subagentsLive: (rootSessionId: string, signal?: AbortSignal) => Promise<SubagentLiveResult>;
+    /** Create a Side Chat thread: a child session seeded with the parent's
+     *  full log up to now. Empty question = immediate create (Codex-style):
+     *  the thread opens empty, the first prompt carries the boundary. */
+    sidechatStart: (sessionId: string, question?: string) => Promise<{
+        childId: string;
+    }>;
+    /** Deliver one follow-up message to a Side Chat thread. */
+    sidechatPrompt: (childId: string, text: string) => Promise<{
+        accepted: true;
+    }>;
+    /** Abort a Side Chat thread's running turn (queued work is preserved). */
+    sidechatCancel: (childId: string) => Promise<{
+        accepted: true;
+    }>;
+    /** Release a Side Chat thread's live agent (history stays persisted). */
+    sidechatDispose: (childId: string) => Promise<{
+        accepted: true;
+    }>;
+    /** Live state + agent identity (provider/model/preset) of a thread. */
+    sidechatInfo: (childId: string) => Promise<SidechatThreadInfo>;
     /** The effective terminal shell and its display name (plugin-global). */
     shellGet: () => Promise<{
         shell: string;
@@ -192,6 +242,19 @@ export declare const api: {
     /** Probe a URL's response headers (the sidebar browser's embeddability
      *  check; see the host's browser.probe route). */
     browserProbe: (url: string, signal?: AbortSignal) => Promise<BrowserProbeResult>;
+    /** External open for the file tree's "open with" menu: reveal a path in
+     *  the OS file manager, or hand a custom-scheme URL (vscode://, cursor://,
+     *  zed://, custom editors) to its registered handler. The host launches
+     *  the platform opener (argv, no shell). */
+    openExternal: (payload: {
+        action: "reveal";
+        path: string;
+    } | {
+        action: "url";
+        url: string;
+    }) => Promise<{
+        started: boolean;
+    }>;
 };
 /** Absolute URL of the media route for one path (images only). */
 export declare function mediaUrl(scope: SessionScope, path: string): string;

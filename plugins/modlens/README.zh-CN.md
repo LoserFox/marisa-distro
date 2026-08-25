@@ -33,7 +33,7 @@ DeepSeek 和 GLM 的主力对话模型是纯文本的，无法进行图片识别
 
 ## 亮点
 
-**🥇 全网最强的 DeepSeek Harness（dsh）外挂视觉识别插件：**一条命令即刻安装 `npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.22.1`。更多安装与更新细节参考 [配置手册](docs/harness-setup.zh-CN.md) 。如果用不惯命令行，也想想玩玩 DSH，推荐食用全网最轻量级的 DeepSeek Harness 桌面版封装 <a href="https://github.com/liustack/aimanager"><b> AIManager</b></a>，零代码零配置起手，一键帮你安装所有依赖环境。
+**🥇 全网最强的 DeepSeek Harness（dsh）外挂视觉识别插件：**一条命令即刻安装 `npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.24.2`。更多安装与更新细节参考 [配置手册](docs/harness-setup.zh-CN.md) 。如果用不惯命令行，也想想玩玩 DSH，推荐食用全网最轻量级的 DeepSeek Harness 桌面版封装 <a href="https://github.com/liustack/aimanager"><b> AIManager</b></a>，零代码零配置起手，一键帮你安装所有依赖环境。
 
 DeepSeek Harness 粘贴识图有两种玩法。
 
@@ -43,8 +43,11 @@ DeepSeek Harness 粘贴识图有两种玩法。
 
 **所有 Harness 直接粘贴图片识别** 无需先保存成文件再提供路径。
 
+需要快捷键把屏幕截进 DeepSeek Harness 时，用独立插件 [dsh-screenshot](https://github.com/paicat1/dsh-screenshot)。
+
 - **全网最轻量。** 不用 hook，不套壳，不跑本地代理进程，不改任何 harness 配置的一行字：在 skill 类 harness 里它就是一个 skill 文件夹，在 dsh 里就是一个插件。卸载等于删个文件夹，你的 agent 立刻回到原样。
 - **零配置起手。** 复用 Claude Code、Codex、OpenCode、Pi 已有配置，直接复用你本机的其他多模态模型。如果你本机什么都没安装？Antigravity CLI 是免 key 的免费通道，配一个免费 Gemini key 可将识别耗时降至 5 到 10 秒。也支持所有主流的 OpenAI 兼容格式 API key。
+- **多个密钥用英文逗号分隔，鉴权、限流或配额失败时自动轮换。** 其他失败会跳过剩余密钥，并继续走现有的 provider 故障转移。
 - **基于证据，而非想象。** 全文转录、按阅读顺序划分的版面区块、实体与关系列表，模型引用的是具体内容。
 - **一次安装，多端可用。** Claude Code、Codex、Pi、OpenCode 均经真机验证。
 
@@ -68,14 +71,18 @@ agy                                                           # 浏览器完成�
 **DeepSeek Harness（dsh）用户不走 skill 流程**，本包就是原生 dsh 插件：
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.22.1
+npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.24.2
 ```
 
 装完即有 `modlens_read_image` 工具，选「(modlens vision)」模型变体即可直接粘贴识图。引擎配置同样在 `~/.modlens`，详见[宿主接入](docs/harness-setup.zh-CN.md)。
 
+命令行不是唯一入口。dsh 设置页的「插件 → 插件配置」里有一张 ModLens 卡片：切换引擎，勾选 auto 模式可以复用本机哪些 CLI，在网页上点几下保存就生效。
+
+![dsh 设置页里的「视觉引擎（ModLens）」配置卡片：切换引擎，勾选 auto 模式复用的本机 CLI](https://raw.githubusercontent.com/liustack/modlens/main/assets/demo-dsh-settings-card.jpg)
+
 ## 用法
 
-装好之后不需要记任何命令。正常聊天，粘贴图片或给出图片路径，提问即可，skill 自动触发：图片交给视觉引擎，答案基于读到的内容返回。
+装好之后不需要记任何命令。正常聊天，粘贴图片或给出图片路径，提问即可，skill 自动触发：图片交给视觉引擎，答案基于读到的内容返回。贴一次，后面追问同一张图不用再贴。
 
 ## 视觉引擎：六个内置 provider，四家可复用 CLI，一条故障转移链
 
@@ -101,6 +108,8 @@ modlens config set openai.baseUrl https://dashscope.aliyuncs.com/compatible-mode
 modlens config set openai.apiKey  <key>
 modlens config set openai.model   qwen3-vl-plus
 ```
+
+`apiKey`（以及对应的环境变量）也接受英文逗号分隔的列表。鉴权、限流或配额失败时会轮换到下一个密钥。网络、5xx 和解析失败会跳过剩余密钥，并继续走现有的 provider 故障转移。
 
 同样三个键，换成 GLM 开放平台、SiliconFlow、OpenRouter、自建 vLLM/Ollama 或你自己的网关都一样。你常用的视觉模型只要有 OpenAI 兼容 API，ModLens 就能驱动它。
 
@@ -168,13 +177,19 @@ Codex 桌面 App 中识别一张推文截图。作者、配文、照片内容（
 
 ## 插入一条硬广
 
+**[ModSearch](https://github.com/liustack/modsearch)** 是 ModLens 的同门项目，同一套手艺补另一种感官：给不能联网的模型补上网页搜索、X 搜索和单页抓取。免费，免注册，免 API key。模型既然需要 ModLens 当眼睛，多半也需要 ModSearch 联网：
+
+```bash
+npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modsearch@latest
+```
+
 关注微信公众号「liustack」：AI 创业机会、独立开发见解、AI 实战与工具，第一时间推送。微信扫码，或搜一搜「liustack」：
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/liustack/modlens/main/assets/wechat-qrcode.png" width="420" alt="微信公众号 liustack" />
 </p>
 
-⭐ 如果它对你有用，请给 [ModLens](https://github.com/liustack/modlens) 一个 star，这是其他开发者找到它的方式。
+⭐ 如果它对你有用，请给 [ModLens](https://github.com/liustack/modlens) 和 [ModSearch](https://github.com/liustack/modsearch) 一个 star，这是其他开发者找到它们的方式。
 
 ## 重要生态伙伴
 

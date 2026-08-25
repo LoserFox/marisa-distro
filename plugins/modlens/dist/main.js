@@ -731,6 +731,62 @@ function schemaViolations(schema, value, path2) {
   }
   return [];
 }
+function splitApiKeys(value) {
+  if (typeof value !== "string") {
+    return [];
+  }
+  return value.split(",").map((key) => key.trim()).filter((key) => key.length > 0);
+}
+class ApiKeyFailureError extends Error {
+  quotaCooldown;
+  resetAfterMs;
+  constructor(message, opts) {
+    super(message);
+    this.name = "ApiKeyFailureError";
+    this.quotaCooldown = opts?.quotaCooldown ?? "none";
+    this.resetAfterMs = opts?.resetAfterMs ?? null;
+  }
+}
+function isApiKeyFailure(error) {
+  return error instanceof ApiKeyFailureError;
+}
+const QUOTA_FAILURE_PATTERNS = [
+  /\bquota\b/i,
+  /\bpayment required\b/i,
+  /\b(?:out of|insufficient|not enough)\s+(?:account\s+)?(?:balance|credits?)\b/i,
+  /\b(?:balance|credits?)\s+(?:is\s+)?(?:insufficient|exhausted|depleted|empty|too low|used up)\b/i,
+  /\b(?:credit|usage)\s+(?:limit|cap)\s+(?:reached|exceeded)\b/i
+];
+function isQuotaFailureMessage(message) {
+  return QUOTA_FAILURE_PATTERNS.some((pattern) => pattern.test(message));
+}
+function parseResetDuration(message) {
+  const match = /Resets? in\s+(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/i.exec(message);
+  if (!match || !match[1] && !match[2] && !match[3]) {
+    return null;
+  }
+  const hours = Number.parseInt(match[1] ?? "0", 10);
+  const minutes = Number.parseInt(match[2] ?? "0", 10);
+  const seconds = Number.parseInt(match[3] ?? "0", 10);
+  return (hours * 3600 + minutes * 60 + seconds) * 1e3;
+}
+function errorFromApiStatus(status, message, detail = "") {
+  const resetAfterMs = parseResetDuration(detail);
+  if (status >= 500) {
+    return new Error(message);
+  }
+  if (status === 432 || status === 433) {
+    return new ApiKeyFailureError(message, { quotaCooldown: "monthly", resetAfterMs });
+  }
+  if (status === 401 || status === 403 || status === 429 || isQuotaFailureMessage(detail)) {
+    const quotaClass = isQuotaFailureMessage(detail) || resetAfterMs !== null;
+    return new ApiKeyFailureError(message, {
+      quotaCooldown: quotaClass ? "default" : "none",
+      resetAfterMs
+    });
+  }
+  return new Error(message);
+}
 function tryParseJson(text) {
   try {
     return JSON.parse(text);
@@ -939,7 +995,9 @@ const DEFAULT_BASE_URL$1 = "https://api.anthropic.com";
 const TOOL_NAME = "report_vision_evidence";
 async function executeAnthropicApi(options) {
   assertNoRetiredEndpointBinding("anthropic", options.settings ?? {});
-  const apiKey = options.settings?.apiKey;
+  const apiKeys = splitApiKeys(options.settings?.apiKey);
+  const apiKey = apiKeys[0];
+  const apiKeySecrets = [.../* @__PURE__ */ new Set([...apiKeys, ...options.apiKeySecrets ?? []])];
   if (!apiKey) {
     throw new Error(
       "anthropic provider needs an API key. Run: modlens config set anthropic.apiKey and paste it at the hidden prompt"
@@ -1005,10 +1063,10 @@ Report your findings by calling the ${TOOL_NAME} tool.`;
     options.settings?.proxy
   );
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `Anthropic API error ${response.status}: ${truncate(redactSecrets(body, [apiKey]))}`
-    );
+    const body = (await response.text().catch(() => "")).trim();
+    const detail = redactSecrets(body, apiKeySecrets);
+    const message = `Anthropic API error ${response.status}: ${truncate(detail)}`;
+    throw errorFromApiStatus(response.status, message, detail);
   }
   const payload = await response.json();
   const toolUse = payload.content?.find((block) => block.type === "tool_use");
@@ -1105,11 +1163,18 @@ function describeAntigravityFailure(context) {
 ${context.stderr}
 ${readRecentAgyLog(since)}`.toLowerCase();
   if (evidence.includes("quota")) {
-    return [
+    const text = [
       agyError || "Antigravity CLI reported a quota error.",
       "agy's free tier is one weekly bucket shared by the desktop app, the CLI, and the SDK, and subagents drain it in parallel. Wait for the reset shown above, or use a different provider.",
       SWITCH_HINT
     ].join("\n\n");
+    const resetSource = `${agyError}
+${context.stderr}
+${readRecentAgyLog(since)}`;
+    return new ApiKeyFailureError(text, {
+      quotaCooldown: "default",
+      resetAfterMs: parseResetDuration(resetSource) ?? parseResetDuration(text)
+    });
   }
   if (evidence.includes("not logged into antigravity") || evidence.includes("getting token source") || evidence.includes("keyring") || evidence.includes("failed to read token store")) {
     return [
@@ -1247,7 +1312,9 @@ const claudeCliProvider = {
 const GEMINI_API_DEFAULT_MODEL = "gemini-3.6-flash";
 const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com";
 async function executeGeminiApi(options) {
-  const apiKey = options.settings?.apiKey;
+  const apiKeys = splitApiKeys(options.settings?.apiKey);
+  const apiKey = apiKeys[0];
+  const apiKeySecrets = [.../* @__PURE__ */ new Set([...apiKeys, ...options.apiKeySecrets ?? []])];
   if (!apiKey) {
     throw new Error(
       "gemini-api provider needs an API key. Run: modlens config set gemini-api.apiKey and paste it at the hidden prompt (free key: https://aistudio.google.com)"
@@ -1305,10 +1372,10 @@ async function executeGeminiApi(options) {
     options.settings?.proxy
   );
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `Gemini API error ${response.status}: ${truncate(redactSecrets(body, [apiKey]))}`
-    );
+    const body = (await response.text().catch(() => "")).trim();
+    const detail = redactSecrets(body, apiKeySecrets);
+    const message = `Gemini API error ${response.status}: ${truncate(detail)}`;
+    throw errorFromApiStatus(response.status, message, detail);
   }
   const payload = await response.json();
   const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("");
@@ -1446,7 +1513,9 @@ function unusableOutputAdvice(finishReason, settings, quoteReason, whenFinished)
 }
 async function executeOpenaiCompat(options) {
   assertNoRetiredEndpointBinding("openai", options.settings ?? {});
-  const apiKey = options.settings?.apiKey;
+  const apiKeys = splitApiKeys(options.settings?.apiKey);
+  const apiKey = apiKeys[0];
+  const apiKeySecrets = [.../* @__PURE__ */ new Set([...apiKeys, ...options.apiKeySecrets ?? []])];
   const baseUrl = options.settings?.baseUrl?.replace(/\/$/, "");
   const model = options.model || options.settings?.model;
   if (!apiKey || !baseUrl || !model) {
@@ -1501,10 +1570,12 @@ ${JSON_TEMPLATE_INSTRUCTION}`;
     },
     options.settings?.proxy
   );
-  const quote = (shown, clip = truncate) => clip(redactSecrets(shown, [apiKey, baseUrl]));
+  const quote = (shown, clip = truncate) => clip(redactSecrets(shown, [...apiKeySecrets, baseUrl]));
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`OpenAI-compatible API error ${response.status}: ${quote(body)}`);
+    const body = (await response.text().catch(() => "")).trim();
+    const detail = redactSecrets(body, [...apiKeySecrets, baseUrl]);
+    const message = `OpenAI-compatible API error ${response.status}: ${truncate(detail)}`;
+    throw errorFromApiStatus(response.status, message, detail);
   }
   const payload = await response.json();
   const text = payload.choices?.[0]?.message?.content;
@@ -1592,7 +1663,7 @@ const REUSE_HARNESSES = ["claude", "codex", "opencode", "pi", "grok"];
 const CONFIG_DIR = path.join(os.homedir(), ".modlens");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 const ENV_BINDINGS = {
-  "gemini-api": { apiKey: "GEMINI_API_KEY" },
+  "gemini-api": { apiKey: "GEMINI_API_KEY", baseUrl: "GEMINI_BASE_URL" },
   openai: { apiKey: "OPENAI_API_KEY", baseUrl: "OPENAI_BASE_URL" },
   anthropic: { apiKey: "ANTHROPIC_API_KEY", baseUrl: "ANTHROPIC_BASE_URL" }
 };
@@ -1619,7 +1690,8 @@ function envSettingsFor(providerName, env) {
   const settings = {};
   for (const [field, variable] of Object.entries(ENV_BINDINGS[providerName] ?? {})) {
     const value = env[variable]?.trim();
-    if (value) {
+    const present = field === "apiKey" ? splitApiKeys(value).length > 0 : Boolean(value);
+    if (value && present) {
       settings[field] = value;
     }
   }
@@ -1673,6 +1745,13 @@ function loadConfigFile(configPath = CONFIG_PATH) {
     );
   }
 }
+function cooldownEnabled(config2) {
+  return config2.cooldown?.trim().toLowerCase() !== "off";
+}
+function canonicalProviderName(name) {
+  const trimmed = name.trim().toLowerCase();
+  return foldProviderName(trimmed);
+}
 function providerConfiguredInFile(providerName, config2) {
   return fileKeysFor(providerName, config2).length > 0;
 }
@@ -1688,6 +1767,12 @@ function setConfigValue(dottedKey, value, configPath = CONFIG_PATH) {
   const config2 = loadConfigFile(configPath);
   if (dottedKey === "provider") {
     config2.provider = value;
+  } else if (dottedKey === "cooldown") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized !== "on" && normalized !== "off") {
+      throw new Error(`Invalid cooldown value: ${value}. Use on or off.`);
+    }
+    config2.cooldown = normalized;
   } else if (dottedKey === "proxy") {
     if (value.trim() === "") {
       delete config2.proxy;
@@ -1720,7 +1805,7 @@ function setConfigValue(dottedKey, value, configPath = CONFIG_PATH) {
     const dot = dottedKey.indexOf(".");
     if (dot <= 0 || dot === dottedKey.length - 1) {
       throw new Error(
-        `Invalid config key: ${dottedKey}. Use "provider", "proxy", "reuse.<claude|codex|opencode|pi|grok>", "guards.<denyModels|allowModels|denyWhenUnknown>", or "<provider>.<apiKey|baseUrl|model|proxy|extraBody|structuredOutput>".`
+        `Invalid config key: ${dottedKey}. Use "provider", "proxy", "cooldown", "reuse.<claude|codex|opencode|pi|grok>", "guards.<denyModels|allowModels|denyWhenUnknown>", or "<provider>.<apiKey|baseUrl|model|proxy|extraBody|structuredOutput>".`
       );
     }
     const typedName = dottedKey.slice(0, dot);
@@ -1807,6 +1892,9 @@ function assertReadableConfig(config2, configPath = CONFIG_PATH) {
   if (config2.proxy !== void 0 && typeof config2.proxy !== "string") {
     throw sentence('"proxy"', "is not a string");
   }
+  if (config2.cooldown !== void 0 && typeof config2.cooldown !== "string") {
+    throw sentence('"cooldown"', "is not a string");
+  }
   if (config2.reuse !== void 0 && !isPlainObject(config2.reuse)) {
     throw sentence('"reuse"', "is not an object");
   }
@@ -1887,14 +1975,15 @@ function knownApiKeys(config2, env = process.env) {
   const providersRoot = isPlainObject(config2.providers) ? config2.providers : {};
   for (const entry of Object.values(providersRoot)) {
     if (isPlainObject(entry) && typeof entry.apiKey === "string") {
-      keys.add(entry.apiKey);
+      for (const apiKey of splitApiKeys(entry.apiKey)) {
+        keys.add(apiKey);
+      }
     }
   }
   for (const bindings of Object.values(ENV_BINDINGS)) {
     const variable = bindings.apiKey;
-    const value = variable ? env[variable]?.trim() : void 0;
-    if (value) {
-      keys.add(value);
+    for (const apiKey of splitApiKeys(variable ? env[variable] : void 0)) {
+      keys.add(apiKey);
     }
   }
   const savedRoot = isPlainObject(config2.saved) ? config2.saved : {};
@@ -1902,7 +1991,9 @@ function knownApiKeys(config2, env = process.env) {
     if (!isPlainObject(bundles)) continue;
     for (const bundle of Object.values(bundles)) {
       if (isPlainObject(bundle) && typeof bundle.apiKey === "string") {
-        keys.add(bundle.apiKey);
+        for (const apiKey of splitApiKeys(bundle.apiKey)) {
+          keys.add(apiKey);
+        }
       }
     }
   }
@@ -2101,7 +2192,12 @@ function renderEffectiveConfig(config2, env = process.env) {
     Object.keys(providersRoot ?? {}).map((key) => foldProviderName(key)).filter((name) => canonicalNames.has(name))
   );
   for (const [providerName, bindings] of Object.entries(ENV_BINDINGS)) {
-    if (Object.values(bindings).some((variable) => env[variable]?.trim())) {
+    if (Object.entries(bindings).some(
+      ([field, variable]) => {
+        const value = env[variable]?.trim();
+        return field === "apiKey" ? splitApiKeys(value).length > 0 : Boolean(value);
+      }
+    )) {
       providerNames.add(providerName);
     }
   }
@@ -2127,8 +2223,10 @@ function renderEffectiveConfig(config2, env = process.env) {
     const effective2 = mentioned ? fileSettings : envSettingsFor(name, env);
     const source = mentioned ? "file" : "env";
     const fields = {};
-    const entryKey = typeof effective2.apiKey === "string" ? effective2.apiKey : void 0;
-    const guard = (shown) => redactSecrets(shown, [entryKey]);
+    const entryKeys = splitApiKeys(
+      typeof effective2.apiKey === "string" ? effective2.apiKey : void 0
+    );
+    const guard = (shown) => redactSecrets(shown, entryKeys);
     for (const field of STRING_FIELDS) {
       const value = effective2[field];
       if (value === void 0) {
@@ -2138,7 +2236,7 @@ function renderEffectiveConfig(config2, env = process.env) {
         fields[field] = `(malformed: not a string) (${source})`;
         continue;
       }
-      const shown = field === "apiKey" ? maskKey(value) : field === "proxy" ? maskUrlCredentials(guard(value)) : guard(value);
+      const shown = field === "apiKey" ? maskKeys(value) : field === "proxy" ? maskUrlCredentials(guard(value)) : guard(value);
       fields[field] = `${shown} (${source})`;
     }
     if (fileSettings.structuredOutput !== void 0) {
@@ -2152,7 +2250,8 @@ function renderEffectiveConfig(config2, env = process.env) {
     }
   }
   const effective = {
-    providers
+    providers,
+    cooldown: config2.cooldown ? `${config2.cooldown} (file)` : "on (default)"
   };
   const savedRows = [];
   const savedRoot = config2.saved;
@@ -2173,7 +2272,7 @@ function renderEffectiveConfig(config2, env = process.env) {
       const parts = [
         typeof bundle.model === "string" ? bundle.model : void 0,
         typeof bundle.baseUrl === "string" ? bundle.baseUrl : void 0,
-        bundle.apiKey === void 0 ? "no key" : typeof bundle.apiKey === "string" ? `key ${maskKey(bundle.apiKey)}` : "key (malformed: not a string)"
+        bundle.apiKey === void 0 ? "no key" : typeof bundle.apiKey === "string" ? `key ${maskKeys(bundle.apiKey)}` : "key (malformed: not a string)"
       ].filter(Boolean);
       savedRows.push(`${slot}/${label}: ${parts.join(" @ ")}`);
     }
@@ -2244,6 +2343,10 @@ function maskKey(key) {
     return "****";
   }
   return `${key.slice(0, 6)}...${key.slice(-2)}`;
+}
+function maskKeys(value) {
+  const keys = splitApiKeys(value);
+  return keys.length > 0 ? keys.map(maskKey).join(", ") : "****";
 }
 function envValue(env, name, platform = process.platform) {
   if (platform !== "win32") {
@@ -2362,7 +2465,9 @@ function providerAvailable(name, config2, env = process.env) {
     return findOnPath(descriptor.bin, env) !== null;
   }
   const settings = resolveProviderSettings(name, config2, env);
-  return (descriptor.required ?? []).every((req) => Boolean(settings[req.field]?.trim()));
+  return (descriptor.required ?? []).every(
+    (req) => req.field === "apiKey" ? splitApiKeys(settings.apiKey).length > 0 : Boolean(settings[req.field]?.trim())
+  );
 }
 const LOCAL_FAILOVER_ORDER = [
   "gemini-api",
@@ -2750,6 +2855,9 @@ const VISION_MODEL_PATTERNS = [
   "mimo-v2-omni*",
   "deepseek-vl*",
   "deepseek-ocr*",
+  // DeepSeek's V4 vision endpoint (2026-08-21); the docs name vision models
+  // by the word, so the wildcard covers the exp tier and its successors.
+  "deepseek-*vision*",
   "janus*",
   "pixtral*",
   "llama-4*",
@@ -2759,7 +2867,8 @@ const VISION_MODEL_PATTERNS = [
   "internvl*"
 ];
 function isVisionModel(modelId) {
-  const bare = modelId.includes("/") ? modelId.slice(modelId.lastIndexOf("/") + 1) : modelId;
+  const unaliased = modelId.replace(/^~/, "");
+  const bare = unaliased.includes("/") ? unaliased.slice(unaliased.lastIndexOf("/") + 1) : unaliased;
   return VISION_MODEL_PATTERNS.some((pattern) => globMatch(pattern, bare));
 }
 const DEFAULT_TTL_MS = 6 * 60 * 60 * 1e3;
@@ -3408,6 +3517,215 @@ function reuseProviders(kind, config2, options = {}) {
   }
   return { inline, agents };
 }
+const KEY_COOLDOWN_SUFFIX = /^(.*)::key:(\d+)$/;
+function cooldownStateKey(engine, keyIndex) {
+  const canonical = canonicalProviderName(engine);
+  return keyIndex === void 0 ? canonical : `${canonical}::key:${keyIndex}`;
+}
+function parseCooldownStateKey(stateKey) {
+  const match = KEY_COOLDOWN_SUFFIX.exec(stateKey);
+  if (!match) {
+    return { engine: canonicalProviderName(stateKey) };
+  }
+  return {
+    engine: canonicalProviderName(match[1]),
+    keyIndex: Number.parseInt(match[2], 10)
+  };
+}
+function currentStatePath() {
+  return path.join(os.homedir(), ".modlens", "state.json");
+}
+const DEFAULT_COOLDOWN_MS = 45 * 60 * 1e3;
+const MONTHLY_COOLDOWN_MS = 24 * 60 * 60 * 1e3;
+function emptyCooldownState() {
+  return { engineCooldowns: {} };
+}
+function loadCooldownState(statePath = currentStatePath()) {
+  let raw;
+  try {
+    raw = fs.readFileSync(statePath, "utf-8");
+  } catch {
+    return emptyCooldownState();
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || typeof parsed.engineCooldowns !== "object") {
+      return emptyCooldownState();
+    }
+    const cooldowns = parsed.engineCooldowns;
+    const clean = {};
+    for (const [stateKey, entry] of Object.entries(cooldowns)) {
+      if (entry && typeof entry === "object" && typeof entry.until === "string") {
+        const e = entry;
+        const target = parseCooldownStateKey(stateKey);
+        const key = cooldownStateKey(target.engine, target.keyIndex);
+        const normalized = {
+          until: e.until,
+          reason: typeof e.reason === "string" ? e.reason : "",
+          observedAt: typeof e.observedAt === "string" ? e.observedAt : ""
+        };
+        clean[key] = clean[key] ? laterEntry(clean[key], normalized) : normalized;
+      }
+    }
+    return { engineCooldowns: clean };
+  } catch {
+    return emptyCooldownState();
+  }
+}
+function laterEntry(existing, incoming) {
+  if (!existing) {
+    return incoming;
+  }
+  const existingUntil = Date.parse(existing.until);
+  const incomingUntil = Date.parse(incoming.until);
+  return Number.isFinite(existingUntil) && existingUntil > incomingUntil ? existing : incoming;
+}
+function updateStateOnDisk(statePath, mutate) {
+  const merged = loadCooldownState(statePath);
+  const before = JSON.stringify(merged);
+  mutate(merged);
+  if (JSON.stringify(merged) === before) {
+    return merged;
+  }
+  const dir = path.dirname(statePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 448 });
+    try {
+      fs.chmodSync(dir, 448);
+    } catch {
+    }
+  }
+  const unique = `${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+  const tmp = path.join(dir, `.state.${unique}.tmp`);
+  fs.writeFileSync(tmp, `${JSON.stringify(merged, null, 2)}
+`, { mode: 384 });
+  fs.renameSync(tmp, statePath);
+  try {
+    fs.chmodSync(statePath, 384);
+  } catch {
+  }
+  return merged;
+}
+function coolingEntry(state2, engine, now, keyIndex) {
+  const active = (stateKey) => {
+    const entry2 = state2.engineCooldowns[stateKey];
+    if (!entry2) {
+      return void 0;
+    }
+    const until = Date.parse(entry2.until);
+    return Number.isFinite(until) && until > now.getTime() ? entry2 : void 0;
+  };
+  const entry = active(cooldownStateKey(engine, keyIndex));
+  if (entry || keyIndex === void 0) {
+    return entry;
+  }
+  return active(cooldownStateKey(engine));
+}
+function coolingEngineEntry(state2, engine, keyCount, now) {
+  if (keyCount <= 0) {
+    return coolingEntry(state2, engine, now);
+  }
+  let representative;
+  for (let keyIndex = 0; keyIndex < keyCount; keyIndex += 1) {
+    const entry = coolingEntry(state2, engine, now, keyIndex);
+    if (!entry) {
+      return void 0;
+    }
+    representative = laterEntry(representative, entry);
+  }
+  return representative;
+}
+function classifyQuota(error, now) {
+  if (!(error instanceof ApiKeyFailureError) || error.quotaCooldown === "none") {
+    return null;
+  }
+  const fallbackMs = error.quotaCooldown === "monthly" ? MONTHLY_COOLDOWN_MS : DEFAULT_COOLDOWN_MS;
+  return new Date(now.getTime() + (error.resetAfterMs ?? fallbackMs));
+}
+function recordQuotaCooldown(state2, engine, error, now, statePath, onPersistError, keyIndex, knownSecrets = []) {
+  const until = classifyQuota(error, now);
+  if (!until) {
+    return null;
+  }
+  const reason = redactSecrets(
+    error instanceof Error ? error.message : String(error),
+    knownSecrets
+  ).slice(0, 300);
+  const entry = {
+    until: until.toISOString(),
+    reason,
+    observedAt: now.toISOString()
+  };
+  const stateKey = cooldownStateKey(engine, keyIndex);
+  try {
+    const merged = updateStateOnDisk(statePath, (disk) => {
+      disk.engineCooldowns[stateKey] = laterEntry(disk.engineCooldowns[stateKey], entry);
+    });
+    const persisted = merged.engineCooldowns[stateKey];
+    state2.engineCooldowns[stateKey] = persisted;
+    return persisted;
+  } catch (persistError) {
+    state2.engineCooldowns[stateKey] = entry;
+    onPersistError?.(persistError);
+    return entry;
+  }
+}
+function clearEngineCooldown(state2, engine, statePath, onPersistError, keyIndex) {
+  const stateKey = cooldownStateKey(engine, keyIndex);
+  const legacyKey = cooldownStateKey(engine);
+  const keysToDelete = keyIndex === void 0 ? [stateKey] : [stateKey, legacyKey];
+  const hadInMemory = keysToDelete.some((key) => key in state2.engineCooldowns);
+  for (const key of keysToDelete) {
+    delete state2.engineCooldowns[key];
+  }
+  try {
+    updateStateOnDisk(statePath, (disk) => {
+      for (const key of keysToDelete) {
+        delete disk.engineCooldowns[key];
+      }
+    });
+    return hadInMemory;
+  } catch (persistError) {
+    onPersistError?.(persistError);
+    return hadInMemory;
+  }
+}
+function clearAllCooldowns(statePath = currentStatePath()) {
+  fs.rmSync(statePath, { force: true });
+}
+function buildCooldownController(config2, opts = {}) {
+  if (!cooldownEnabled(config2)) {
+    return void 0;
+  }
+  const statePath = opts.statePath ?? currentStatePath();
+  const now = opts.now ?? /* @__PURE__ */ new Date();
+  const state2 = loadCooldownState(statePath);
+  const warnings = [];
+  const persistNote = (persistError) => {
+    const message = persistError instanceof Error ? persistError.message : String(persistError);
+    warnings.push(
+      `Cooldown state could not be saved (${message}); failover still works, but the next run will rediscover this quota wall.`
+    );
+  };
+  return {
+    state: state2,
+    now,
+    warnings,
+    record: (engine, error, keyIndex, knownSecrets) => recordQuotaCooldown(
+      state2,
+      engine,
+      error,
+      now,
+      statePath,
+      persistNote,
+      keyIndex,
+      knownSecrets
+    ),
+    clear: (engine, keyIndex) => {
+      clearEngineCooldown(state2, engine, statePath, persistNote, keyIndex);
+    }
+  };
+}
 const DEFAULT_TIMEOUT_MS = 18e4;
 const KILL_GRACE_MS = 3e4;
 const DRAIN_GRACE_MS = 500;
@@ -3419,7 +3737,8 @@ async function analyzeImage(options) {
   }
   const config2 = options.config ?? loadConfigFile();
   assertReadableConfig(config2);
-  const chain = options.provider ? [resolveProvider(options.provider)] : options.providerBin ? [resolveProvider("antigravity-cli")] : composeChain(resolvedInput.kind, config2, options.autoOptions);
+  const controller = options.cooldown;
+  const chain = options.provider ? [resolveProvider(options.provider)] : options.providerBin ? [resolveProvider("antigravity-cli")] : composeChain(resolvedInput.kind, config2, options.autoOptions, controller);
   const named = options.provider ?? config2.provider?.trim();
   if (named) {
     try {
@@ -3439,30 +3758,131 @@ async function analyzeImage(options) {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const attempts = [];
   const warnings = [];
+  if (controller && !options.provider && !options.providerBin) {
+    for (const provider of chain) {
+      const keyCount = splitApiKeys(
+        resolveProviderSettings(provider.name, config2).apiKey
+      ).length;
+      const entry = coolingEngineEntry(
+        controller.state,
+        provider.name,
+        keyCount,
+        controller.now
+      );
+      if (entry) {
+        warnings.push(
+          `The ${provider.name} provider is cooling until ${entry.until}, so it moves to the back of the fallback chain.`
+        );
+      }
+    }
+  }
   let lastError;
   for (const provider of chain) {
-    const startedAt = Date.now();
-    const model = (attempts.length === 0 ? options.model : void 0) || resolveProviderSettings(provider.name, config2).model || provider.defaultModel;
-    try {
-      const parsed = await runProvider(
-        provider,
-        model,
-        options,
-        resolvedInput,
-        timeoutMs,
-        config2,
-        warnings
-      );
-      attempts.push({
-        provider: provider.name,
-        ok: true,
-        durationSeconds: (Date.now() - startedAt) / 1e3
-      });
-      if (provider.reuseNote) {
-        warnings.push(provider.reuseNote);
+    const configured = resolveProviderSettings(provider.name, config2);
+    const settingsBase = options.extraBody ? { ...configured, extraBody: options.extraBody } : configured;
+    const firstProvider = attempts.every((attempt) => attempt.provider === provider.name);
+    const model = (firstProvider ? options.model : void 0) || settingsBase.model || provider.defaultModel;
+    const apiKeys = splitApiKeys(settingsBase.apiKey);
+    const configuredKeyRuns = apiKeys.length > 0 ? apiKeys.map((apiKey, keyIndex) => ({ apiKey, keyIndex })) : [
+      {
+        apiKey: void 0,
+        keyIndex: void 0
       }
-      if (attempts.length > 1) {
-        const failed = attempts.slice(0, -1);
+    ];
+    const keyRuns = controller ? [
+      ...configuredKeyRuns.filter(
+        (run) => run.keyIndex === void 0 || !coolingEntry(
+          controller.state,
+          provider.name,
+          controller.now,
+          run.keyIndex
+        )
+      ),
+      ...configuredKeyRuns.filter(
+        (run) => run.keyIndex !== void 0 && coolingEntry(
+          controller.state,
+          provider.name,
+          controller.now,
+          run.keyIndex
+        )
+      )
+    ] : configuredKeyRuns;
+    let parsed;
+    let successfulStartedAt = 0;
+    let successfulKeyIndex;
+    for (let runIndex = 0; runIndex < keyRuns.length; runIndex += 1) {
+      const keyRun = keyRuns[runIndex];
+      const startedAt = Date.now();
+      try {
+        parsed = await runProvider(
+          provider,
+          model,
+          options,
+          resolvedInput,
+          timeoutMs,
+          { ...settingsBase, apiKey: keyRun.apiKey },
+          warnings,
+          apiKeys
+        );
+        successfulStartedAt = startedAt;
+        successfulKeyIndex = keyRun.keyIndex;
+        break;
+      } catch (error) {
+        const message = redactSecrets(
+          error instanceof Error ? error.message : String(error),
+          apiKeys
+        );
+        if (error instanceof Error) {
+          error.message = message;
+        }
+        lastError = error;
+        attempts.push({
+          provider: provider.name,
+          ...apiKeys.length > 1 ? { keyIndex: keyRun.keyIndex } : {},
+          ok: false,
+          durationSeconds: (Date.now() - startedAt) / 1e3,
+          error: message.slice(0, 300)
+        });
+        if (controller) {
+          const entry = controller.record(provider.name, error, keyRun.keyIndex, apiKeys);
+          if (entry) {
+            const keyNote = keyRun.keyIndex === void 0 ? "" : ` API key ${keyRun.keyIndex + 1}`;
+            warnings.push(
+              `The ${provider.name} provider${keyNote} hit its quota and is now cooling until ${entry.until}.`
+            );
+          }
+        }
+        const hasNextKey = runIndex + 1 < keyRuns.length;
+        if (hasNextKey && isApiKeyFailure(error)) {
+          continue;
+        }
+        break;
+      }
+    }
+    if (!parsed) {
+      continue;
+    }
+    attempts.push({
+      provider: provider.name,
+      ...apiKeys.length > 1 ? { keyIndex: successfulKeyIndex } : {},
+      ok: true,
+      durationSeconds: (Date.now() - successfulStartedAt) / 1e3
+    });
+    controller?.clear(provider.name, successfulKeyIndex);
+    if (provider.reuseNote) {
+      warnings.push(provider.reuseNote);
+    }
+    warnings.push(...controller?.warnings ?? []);
+    const failed = attempts.filter((attempt) => !attempt.ok);
+    if (failed.length > 0) {
+      const rotatedWithinProvider = failed.every((attempt) => attempt.provider === provider.name) && successfulKeyIndex !== void 0;
+      if (rotatedWithinProvider && successfulKeyIndex !== void 0) {
+        warnings.push(
+          `Rotated to ${provider.name} API key ${successfulKeyIndex + 1} after: ${failed.map(
+            (attempt) => `${attempt.provider}${attempt.keyIndex === void 0 ? "" : ` (API key ${attempt.keyIndex + 1})`}: ${attempt.error}`
+          ).join(" | ")}`
+        );
+      } else {
         warnings.push(
           `Failed over to ${provider.name} after: ${failed.map((attempt) => `${attempt.provider} (${attempt.error})`).join("; ")}.`
         );
@@ -3472,35 +3892,24 @@ async function analyzeImage(options) {
           );
         }
       }
-      return {
-        image: resolvedInput.source,
-        provider: provider.name,
-        result: parsed.result,
-        meta: {
-          generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          // Empty means the provider ran whatever it was already
-          // configured with and never told us which (kimi-cli), so
-          // the field says unknown rather than naming nothing.
-          model: model === "" ? null : model,
-          conversationId: parsed.meta.conversationId,
-          durationSeconds: parsed.meta.durationSeconds,
-          usage: parsed.meta.usage,
-          attempts,
-          warnings
-        }
-      };
-    } catch (error) {
-      lastError = error;
-      const message = error instanceof Error ? error.message : String(error);
-      attempts.push({
-        provider: provider.name,
-        ok: false,
-        durationSeconds: (Date.now() - startedAt) / 1e3,
-        // Providers redact their own errors, but attempts travel into
-        // output and model contexts, so the record gets the belt too.
-        error: redactSecrets(message).slice(0, 300)
-      });
     }
+    return {
+      image: resolvedInput.source,
+      provider: provider.name,
+      result: parsed.result,
+      meta: {
+        generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        // Empty means the provider ran whatever it was already
+        // configured with and never told us which (kimi-cli), so
+        // the field says unknown rather than naming nothing.
+        model: model === "" ? null : model,
+        conversationId: parsed.meta.conversationId,
+        durationSeconds: parsed.meta.durationSeconds,
+        usage: parsed.meta.usage,
+        attempts,
+        warnings
+      }
+    };
   }
   if (chain.length === 1) {
     if (!options.provider && !options.providerBin && lastError instanceof Error) {
@@ -3516,7 +3925,7 @@ async function analyzeImage(options) {
   );
 }
 const INLINE_REGION = /* @__PURE__ */ new Set(["gemini-api", "openai", "anthropic"]);
-function composeChain(kind, config2, autoOptions) {
+function composeChain(kind, config2, autoOptions, cooldown) {
   const chain = [...providerChain(kind, config2, autoOptions?.env ?? process.env)];
   const borrowed = reuseProviders(kind, config2, autoOptions);
   let preferredName = null;
@@ -3537,7 +3946,40 @@ function composeChain(kind, config2, autoOptions) {
     const beforeClaude = last?.name === "claude-cli" && preferredName !== "claude-cli";
     chain.splice(beforeClaude ? chain.length - 1 : chain.length, 0, ...borrowed.agents);
   }
-  return chain;
+  if (!cooldown) {
+    return chain;
+  }
+  return reorderByCooldown(chain, cooldown, config2, autoOptions?.env ?? process.env);
+}
+function reorderByCooldown(chain, cooldown, config2, env) {
+  const tagged = chain.map((provider) => {
+    const keyCount = splitApiKeys(
+      resolveProviderSettings(provider.name, config2, env).apiKey
+    ).length;
+    return {
+      provider,
+      inline: !provider.isolateWorkdir,
+      cooling: Boolean(
+        coolingEngineEntry(cooldown.state, provider.name, keyCount, cooldown.now)
+      )
+    };
+  });
+  const healthyThenCooling = (items) => [
+    ...items.filter((item) => !item.cooling),
+    ...items.filter((item) => item.cooling)
+  ];
+  const inline = healthyThenCooling(tagged.filter((item) => item.inline));
+  const agents = healthyThenCooling(tagged.filter((item) => !item.inline));
+  const lead = tagged[0];
+  if (lead && !lead.inline && !lead.cooling) {
+    const restAgents = agents.filter((item) => item.provider.name !== lead.provider.name);
+    return [
+      lead.provider,
+      ...inline.map((item) => item.provider),
+      ...restAgents.map((item) => item.provider)
+    ];
+  }
+  return [...inline.map((item) => item.provider), ...agents.map((item) => item.provider)];
 }
 const REUSE_KEY_BY_HARNESS = {
   codex: "codex",
@@ -3579,9 +4021,7 @@ function reuseHint(config2, autoOptions) {
     return "";
   }
 }
-async function runProvider(provider, model, options, resolvedInput, timeoutMs, config2, warnings) {
-  const configured = resolveProviderSettings(provider.name, config2);
-  const settings = options.extraBody ? { ...configured, extraBody: options.extraBody } : configured;
+async function runProvider(provider, model, options, resolvedInput, timeoutMs, settings, warnings, apiKeySecrets = []) {
   if (settings.extraBody && !provider.execute) {
     warnings.push(
       `${provider.name} is a CLI provider and takes no request body, so extraBody was ignored for this run.`
@@ -3595,7 +4035,8 @@ async function runProvider(provider, model, options, resolvedInput, timeoutMs, c
     providerBin: options.providerBin,
     workdir: options.workdir,
     timeoutMs,
-    settings
+    settings,
+    apiKeySecrets
   };
   let parsed;
   if (provider.execute) {
@@ -3748,6 +4189,11 @@ function runCommand(providerName, invocation, timeoutMs, describeFailure) {
       }
       if (code !== 0) {
         const explained = describeFailure?.({ stdout, stderr, code, startedAt: runStartedAt }) ?? null;
+        if (explained instanceof Error) {
+          explained.message = redactSecrets(explained.message);
+          reject(explained);
+          return;
+        }
         reject(
           new Error(
             redactSecrets(
@@ -4554,6 +5000,15 @@ function inspectProvider(descriptor, config2, env) {
   const settings = resolveProviderSettings(descriptor.name, config2, env);
   const settingsSource = providerConfiguredInFile(descriptor.name, config2) ? "file" : "env";
   const statuses = (descriptor.required ?? []).map((req) => {
+    if (req.field === "apiKey") {
+      const keys = splitApiKeys(settings.apiKey);
+      return {
+        field: req.field,
+        present: keys.length > 0,
+        source: keys.length > 0 ? settingsSource : "missing",
+        ...keys.length > 0 ? { keyCount: keys.length } : {}
+      };
+    }
     const value = settings[req.field]?.trim();
     return {
       field: req.field,
@@ -4563,7 +5018,12 @@ function inspectProvider(descriptor, config2, env) {
   });
   const missing = statuses.filter((s) => !s.present).map((s) => s.field);
   const ready = missing.length === 0;
-  const detail = ready ? statuses.map((s) => `${s.field}: ${s.source}`).join(", ") : `missing: ${missing.join(", ")}`;
+  const detail = ready ? statuses.map((s) => {
+    if (s.field === "apiKey" && s.present && s.keyCount) {
+      return `${s.field}: ${s.source} (${s.keyCount} ${s.keyCount === 1 ? "key" : "keys"})`;
+    }
+    return `${s.field}: ${s.source}`;
+  }).join(", ") : `missing: ${missing.join(", ")}`;
   return {
     name: descriptor.name,
     kind: "api",
@@ -4618,9 +5078,45 @@ function inspectConfigFile(configPath) {
     };
   }
 }
+function diagnoseCooldown(config2, statePath, now, env) {
+  if (!cooldownEnabled(config2)) {
+    return { enabled: false, statePath, providers: [] };
+  }
+  const state2 = loadCooldownState(statePath);
+  const secrets = knownApiKeys(config2, env);
+  const providers = [];
+  for (const stateKey of Object.keys(state2.engineCooldowns)) {
+    const target = parseCooldownStateKey(stateKey);
+    const entry = coolingEntry(state2, target.engine, now, target.keyIndex);
+    if (entry) {
+      providers.push({
+        provider: target.engine,
+        ...target.keyIndex === void 0 ? {} : { keyIndex: target.keyIndex },
+        until: entry.until,
+        remaining: formatRemaining(Date.parse(entry.until) - now.getTime()),
+        reason: redactSecrets(entry.reason, secrets).split("\n")[0].slice(0, 120)
+      });
+    }
+  }
+  providers.sort(
+    (a, b) => a.provider.localeCompare(b.provider) || (a.keyIndex ?? -1) - (b.keyIndex ?? -1)
+  );
+  return { enabled: true, statePath, providers };
+}
+function formatRemaining(ms) {
+  if (ms <= 0) {
+    return "0m";
+  }
+  const totalMinutes = Math.round(ms / 6e4);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
 function buildDoctorReport(input) {
   const env = input.env ?? process.env;
   const configPath = input.configPath ?? CONFIG_PATH;
+  const statePath = input.statePath ?? currentStatePath();
+  const now = input.now ?? /* @__PURE__ */ new Date();
   assertReadableConfig(input.config, configPath);
   const harnessDetection = detectHarnessDetailed();
   const guardDetection = detectActiveModel({
@@ -4631,6 +5127,7 @@ function buildDoctorReport(input) {
   const guardVerdict = evaluateGuard(input.config.guards, guardDetection);
   const reuseDiscovery = discoverAuto({ env, fresh: true, ...input.auto });
   const reuseOptions = { env, ...input.auto, discovery: reuseDiscovery };
+  const cooldown = cooldownEnabled(input.config) ? { state: loadCooldownState(statePath), now } : void 0;
   return {
     node: {
       version: process.version,
@@ -4644,8 +5141,10 @@ function buildDoctorReport(input) {
     // labeled, so a machine living entirely on granted logins does not
     // read as "no engine" right next to a granted Reuse section.
     chains: {
-      local: composeChain("local", input.config, reuseOptions).map(chainEntryName),
-      remote: composeChain("remote", input.config, reuseOptions).map(chainEntryName)
+      local: composeChain("local", input.config, reuseOptions, cooldown).map(chainEntryName),
+      remote: composeChain("remote", input.config, reuseOptions, cooldown).map(
+        chainEntryName
+      )
     },
     harness: { detected: harnessDetection.harness, source: harnessDetection.source },
     skillInstalls: input.version ? findSkillInstalls(input.version, input.home) : [],
@@ -4660,6 +5159,7 @@ function buildDoctorReport(input) {
       reason: guardVerdict.reason
     },
     config: inspectConfigFile(configPath),
+    cooldown: diagnoseCooldown(input.config, statePath, now, env),
     reuse: {
       decisions: Object.fromEntries(
         REUSE_HARNESSES.map((harness) => {
@@ -4708,6 +5208,23 @@ function renderDoctorReport(report) {
   lines.push(`  local:  ${chainLine(report.chains.local)}`);
   lines.push(`  remote: ${chainLine(report.chains.remote)}`);
   lines.push("");
+  lines.push("Cooldown");
+  if (!report.cooldown.enabled) {
+    lines.push("  switch: off (state not consulted)");
+  } else if (report.cooldown.providers.length === 0) {
+    lines.push("  switch: on");
+    lines.push("  no providers are cooling right now");
+  } else {
+    lines.push("  switch: on");
+    for (const c of report.cooldown.providers) {
+      const label = c.keyIndex === void 0 ? c.provider : `${c.provider} key ${c.keyIndex + 1}`;
+      lines.push(`  - ${label.padEnd(16)} cooling, ${c.remaining} left (until ${c.until})`);
+      if (c.reason) {
+        lines.push(`      reason: ${c.reason}`);
+      }
+    }
+  }
+  lines.push("");
   lines.push("Harness");
   lines.push(
     report.harness.detected ? `  ${report.harness.detected} (via ${report.harness.source})` : `  none detected (${report.harness.source})`
@@ -4716,8 +5233,8 @@ function renderDoctorReport(report) {
   if (report.skillInstalls.length > 0) {
     lines.push("Installed skill copies (a copy keeps its install-time version)");
     for (const install of report.skillInstalls) {
-      const state = install.pinned === null ? "no pin found" : `pins ${install.pinned}`;
-      lines.push(`  ${install.harness}: ${state}${install.outdated ? "  [outdated]" : ""}`);
+      const state2 = install.pinned === null ? "no pin found" : `pins ${install.pinned}`;
+      lines.push(`  ${install.harness}: ${state2}${install.outdated ? "  [outdated]" : ""}`);
     }
     if (report.skillInstalls.some((install) => install.outdated)) {
       lines.push("  Refresh an outdated copy by re-running the install: it overwrites in");
@@ -5003,7 +5520,7 @@ function parsePositiveInt(raw, flag) {
   }
   return Number.parseInt(raw, 10);
 }
-program.name("modlens").description("Plug-in vision for text-only LLMs: image in, structured JSON evidence out").version("3.22.1");
+program.name("modlens").description("Plug-in vision for text-only LLMs: image in, structured JSON evidence out").version("3.24.2");
 program.command("analyze", { isDefault: true }).description("Analyze an image into structured JSON evidence (default command)").requiredOption("-i, --input <path|url>", "Input image path or https URL").option("-o, --output <path>", "Write result JSON to a file").option("-m, --model <name>", "Provider model name").option("-p, --provider <name>", `Vision provider (${listProviders().join(", ")})`).option("--prompt <text>", "Extra focus for this image").option("--timeout <ms>", "Provider timeout in milliseconds", "180000").option("--provider-bin <path>", "Provider binary path (default: agy)").option("--workdir <path>", "Working directory for the provider").option(
   "--extra-body <json>",
   `JSON merged into the API request body, e.g. '{"thinking":{"type":"disabled"}}'`
@@ -5032,7 +5549,8 @@ program.command("analyze", { isDefault: true }).description("Analyze an image in
       providerBin: options.providerBin,
       workdir: options.workdir,
       extraBody: options.extraBody ? parseExtraBody(options.extraBody, "--extra-body") : void 0,
-      config: config2
+      config: config2,
+      cooldown: buildCooldownController(config2)
     });
     const output = JSON.stringify(result, null, 2);
     if (options.output) {
@@ -5113,7 +5631,7 @@ program.command("doctor").description(
       configPath: CONFIG_PATH,
       // Lets doctor name an installed skill copy that is older than
       // the CLI reporting on it (issue #33).
-      version: "3.22.1"
+      version: "3.24.2"
     });
     const output = options.json ? JSON.stringify(report, null, 2) : renderDoctorReport(report);
     process.stdout.write(`${output}
@@ -5135,6 +5653,7 @@ config.command("init").description(`Create a starter config at ${CONFIG_PATH}`).
         `Created ${CONFIG_PATH}`,
         "Everything is optional. The usual ones:",
         "  modlens config set provider <name>                      which provider analyzes images",
+        "  modlens config set cooldown on|off                       quota cooldown (on by default)",
         "  modlens config set <provider>.<apiKey|baseUrl|model> <value>   provider settings",
         `  modlens config set <provider>.extraBody '{"thinking":{"type":"disabled"}}'   vendor request fields`,
         ""
@@ -5206,6 +5725,23 @@ config.command("set <key> [value]").description(
 config.command("show").description("Print the effective config (file merged with env vars), API keys masked").action(() => {
   try {
     process.stdout.write(`${renderEffectiveConfig(loadConfigFile())}
+`);
+  } catch (error) {
+    process.stderr.write(
+      `Error: ${error instanceof Error ? error.message : String(error)}
+`
+    );
+    process.exitCode = 1;
+  }
+});
+const state = program.command("state").description("Manage the quota cooldown state at ~/.modlens/state.json");
+state.command("clear").description(
+  "Forget every provider cooldown, so all providers are tried at full priority again"
+).action(() => {
+  try {
+    const statePath = currentStatePath();
+    clearAllCooldowns(statePath);
+    process.stdout.write(`Cleared cooldown state (${statePath}).
 `);
   } catch (error) {
     process.stderr.write(

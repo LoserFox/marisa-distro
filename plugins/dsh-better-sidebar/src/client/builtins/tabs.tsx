@@ -1,22 +1,25 @@
 /**
- * The 6 built-in tab descriptors: the plugin registers its own pages
- * (editor / git / terminal / browser / subagent / diff) through
+ * The 7 built-in tab descriptors: the plugin registers its own pages
+ * (editor / git / subagent / sidechat / terminal / browser / diff) through
  * the same {@link BetterSidebarService} external plugins use — eating its
  * own dogfood. The terminal descriptor owns its quota (`TERMINAL_LIMIT`)
  * and mints `terminal:<uuid>` ids through `createTab`; the browser mints
  * `browser:<n>` the same way (no quota). The editor IS the files window
  * (the old standalone explorer merged into it).
  */
-import { IconBranchOutline16, IconCodeOutline16, IconFolderOpen16, IconPanelLeftOutline16, IconThinkOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconBranchOutline16, IconCodeOutline16, IconFolderOpen16, IconNewChatOutline16, IconPanelLeftOutline16, IconThinkOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Context } from '../../context-types.ts'
 import { allLeaves, isAgentTabId, type SidebarState } from '../state.ts'
 import { t } from '../locales.ts'
 import { openSidebarFile } from '../intercept.tsx'
 import { EditorHost } from '../EditorHost.tsx'
+import { OpenWithSettings } from '../open-with-settings.tsx'
 import { lazyChunkComponent } from '../lazy-chunk.tsx'
 import { GitView } from '../GitView.tsx'
 import { DiffTab } from '../DiffTab.tsx'
 import { SubagentView } from '../SubagentView.tsx'
+import { consumeSidechatSeed, SideChatView, sidechatThreadIdOf } from '../SideChatView.tsx'
+import { api } from '../api.ts'
 import { BrowserView } from '../BrowserView.tsx'
 import { IconTerminalOutline16, IconDiffOutline16, IconGlobeOutline16 } from '../icons.tsx'
 import { TERMINAL_FONT_SIZE_MAX, TERMINAL_FONT_SIZE_MIN } from '../../prefs-shared.ts'
@@ -88,7 +91,9 @@ export function builtinTabs(ctx: Context, options: BuiltinTabOptions = {}): read
       dedupeKey: (tab) => tab.path,
       // Declarative settings: the file-open behavior picker (in-place switch
       // vs per-path windows) renders as an iconed select row under the
-      // editor card's gear in the Side card settings page.
+      // editor card's gear in the Side card settings page; the "open with"
+      // configuration (SSH host + custom editors) is the custom panel BELOW
+      // those rows — the settings seam renders rows first, custom panel after.
       settings: {
         toggles: [{
           key: 'editorExplorer',
@@ -110,14 +115,18 @@ export function builtinTabs(ctx: Context, options: BuiltinTabOptions = {}): read
             },
           ],
         }],
+        render: ({ pluginSettings, updatePluginSetting }) => (
+          <OpenWithSettings pluginSettings={pluginSettings} updatePluginSetting={updatePluginSetting} />
+        ),
       },
-      component: ({ ctx, store, scope, tab, expanded, onToggleDir, onReferenceFile }) => (
+      component: ({ ctx, store, scope, tab, expanded, revealed, onToggleDir, onReferenceFile }) => (
         <EditorHost
           ctx={ctx}
           store={store}
           scope={scope}
           tab={tab}
           expanded={expanded ?? []}
+          revealed={revealed ?? []}
           onToggleDir={onToggleDir ?? (() => { /* no-op */ })}
           onReferenceFile={onReferenceFile ?? (() => { /* no-op */ })}
         />
@@ -129,9 +138,10 @@ export function builtinTabs(ctx: Context, options: BuiltinTabOptions = {}): read
       icon: (size: number) => <IconBranchOutline16 size={size} />,
       order: 20,
       single: true,
-      component: ({ ctx, store, scope, onOpenDiff }) => (
+      component: ({ ctx, store, scope, visible, onOpenDiff }) => (
         <GitView
           scope={scope}
+          visible={visible}
           onOpenFile={(path) => { openSidebarFile(ctx, store, scope.sessionId, path) }}
           onOpenDiff={onOpenDiff ?? (() => { /* no-op */ })}
         />
@@ -163,6 +173,51 @@ export function builtinTabs(ctx: Context, options: BuiltinTabOptions = {}): read
           active={visible}
           onOpenChild={(address) => { onSubagentJump?.(address.childSessionId) }}
         />
+      ),
+    },
+    {
+      id: 'sidechat',
+      title: () => t('sideChat'),
+      icon: (size: number) => <IconNewChatOutline16 size={size} />,
+      order: 35,
+      // Codex-style: EVERY side conversation is its own tab. A plain open
+      // mints a fresh tab flagged `autoCreate` (the view creates the EMPTY
+      // thread on mount); a thread switch from the header menu parks the
+      // target id for a deterministic `sidechat:<threadId>` reattach tab.
+      createTab: () => {
+        const threadId = consumeSidechatSeed()
+        if (threadId !== undefined) {
+          return {
+            tab: {
+              id: `sidechat:${threadId}`,
+              type: 'sidechat',
+              title: t('sideChat'),
+              meta: { threadId },
+            },
+          }
+        }
+        return {
+          tab: {
+            id: `sidechat:new-${crypto.randomUUID()}`,
+            type: 'sidechat',
+            title: t('sideChatUntitled'),
+            meta: { autoCreate: true },
+          },
+        }
+      },
+      // One tab per thread: an already-open thread focuses instead of
+      // duplicating; unbound fresh tabs never dedupe (each mints its own).
+      dedupeKey: (tab) => sidechatThreadIdOf(tab),
+      // Closing the tab releases the thread's live agent; the session and
+      // its history stay persisted (reopen from any thread's header menu).
+      onClose: (tab) => {
+        const threadId = sidechatThreadIdOf(tab)
+        if (threadId !== undefined) {
+          void api.sidechatDispose(threadId).catch(() => {})
+        }
+      },
+      component: ({ ctx, scope, tab, visible }) => (
+        <SideChatView ctx={ctx} scope={scope} tab={tab} visible={visible} />
       ),
     },
     {
@@ -255,6 +310,12 @@ export function builtinTabs(ctx: Context, options: BuiltinTabOptions = {}): read
           key: 'browserInterceptHttps',
           title: () => t('settingsBrowserHttpsTitle'),
           desc: () => t('settingsBrowserHttpsDesc'),
+        }, {
+          key: 'browserAllowedLoopback',
+          type: 'text',
+          title: () => t('settingsBrowserLoopbackTitle'),
+          desc: () => t('settingsBrowserLoopbackDesc'),
+          placeholder: t('settingsBrowserLoopbackPlaceholder'),
         }],
       },
       createTab: (state) => ({

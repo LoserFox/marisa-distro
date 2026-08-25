@@ -1,6 +1,6 @@
 {
   "name": "@huanlin/dsh-plugin-ya-workspace-sidebar",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "publishConfig": {
     "access": "public"
   },
@@ -49,13 +49,13 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-client-locale": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-client-runtime": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-client-ui-conversation": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-client-ui-primitives": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-client-ui-sidebar": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-client-ui-slots": "^0.0.1-rc.1",
-    "@deepseek-ai/dsh-invariants": "^0.0.1-rc.1",
+    "@deepseek-ai/dsh-client-locale": "workspace:^",
+    "@deepseek-ai/dsh-client-runtime": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-conversation": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-primitives": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-sidebar": "workspace:^",
+    "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
     "cordis": "^4.0.0-rc.7",
     "react": "^18.2.0"
   },

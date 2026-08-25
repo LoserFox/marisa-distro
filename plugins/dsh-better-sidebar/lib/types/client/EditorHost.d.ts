@@ -7,6 +7,7 @@ export declare function EditorHost(props: {
     scope: SessionScope;
     tab: SidebarTab;
     expanded: string[];
+    revealed: string[];
     onToggleDir: (path: string) => void;
     onReferenceFile: (path: string) => void;
 }): import("react").JSX.Element;

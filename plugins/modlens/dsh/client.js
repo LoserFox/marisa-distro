@@ -192,6 +192,8 @@ window.__ModuleLoader__.load({
         pickToConfigure: 'Pick an engine above to configure its key and endpoint.',
         engine: 'Engine',
         apiKey: 'API key',
+        apiKeyHint:
+          'Separate multiple keys with commas. ModLens rotates to the next key after authentication, rate-limit, or quota failures.',
         baseUrl: 'Base URL',
         model: 'Model',
         stored: 'stored, leave empty to keep it',
@@ -219,6 +221,7 @@ window.__ModuleLoader__.load({
         pickToConfigure: '在上面选一个引擎，才能配置它的密钥和地址。',
         engine: '引擎',
         apiKey: 'API 密钥',
+        apiKeyHint: '多个密钥用英文逗号分隔。鉴权、限流或配额失败时会自动轮换到下一个密钥。',
         baseUrl: '接口地址',
         model: '模型',
         stored: '已保存，留空即不改动',
@@ -644,6 +647,22 @@ window.__ModuleLoader__.load({
                       'clinote',
                     )
                   : secretField(t.apiKey, 'apiKey', current.hasKey ? t.stored : t.unset),
+              draft.provider === '' || keyless
+                ? null
+                : fieldRow(
+                    '',
+                    h(
+                      'div',
+                      {
+                        style: {
+                          fontSize: '13px',
+                          color: 'var(--dsw-alias-label-tertiary, rgba(127,127,127,0.8))',
+                        },
+                      },
+                      t.apiKeyHint,
+                    ),
+                    'api-key-rotation',
+                  ),
               draft.provider === '' || keyless ? null : textField(t.baseUrl, 'baseUrl', 'text', t.fallback),
               draft.provider === '' ? null : textField(t.model, 'model', 'text', t.fallback),
               // Where these values are coming from, said once, because the

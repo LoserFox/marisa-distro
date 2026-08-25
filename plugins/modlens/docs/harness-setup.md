@@ -55,7 +55,7 @@ OpenCode with DeepSeek: `opencode auth login`, pick DeepSeek and paste the key (
 dsh is different from the other harnesses: modlens plugs in as a native tool, not a prompt-triggered skill. The package itself is a dsh bundle, so one command installs it into a profile:
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.22.1
+npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.24.2
 ```
 
 This registers a `modlens_read_image` tool whose schema reaches the model on every request (no trigger heuristics), runs the modlens CLI shipped inside the same package, and returns the structured evidence as the tool's canonical JSON output. Engines, reuse grants, and guard rules stay in `~/.modlens/config.json`, shared with every other harness. dsh is in developer preview and its plugin surface may change; the plugin keeps its touch small (raw tool registration, the llm adapter surface for the vision variants, the attachment reader, and one agent pre-step hook) and degrades loudly if any of them moves.
@@ -87,7 +87,7 @@ modlens ships often, and both install shapes freeze at whatever version they
 got. On dsh, re-run the install with the version named:
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile <name> add @liustack/modlens@3.22.1
+npx -y @deepseek-ai/dsh plugin --profile <name> add @liustack/modlens@3.24.2
 ```
 
 `npm view @liustack/modlens version` prints the current one, and this page is
@@ -136,6 +136,28 @@ Pasting through the first route above avoids the situation entirely: the image
 becomes a file path and the session never holds an attachment, so nothing locks
 the model selector. It only comes up after a paste on a variant or on a vision
 model, where an attachment is the point.
+
+### For other plugin authors: injecting images on a `(modlens vision)` route
+
+A wrapper route's declared `inputModalities: ['text', 'image']` is a promise,
+not decoration ([#74](https://github.com/liustack/modlens/issues/74)). Every
+`image` block in the request — pasted by the user or injected by another
+plugin, including blocks nested in tool results — is converted to structured
+evidence text at request time, before the wire reaches the text-only upstream.
+Nothing is silently dropped, so the branch "declared image → inject a native
+image block, otherwise inject a file path" works unchanged whether the
+declaring route is a real vision model or a modlens wrapper.
+
+One requirement: the block must carry a host attachment reference, the shape
+`ctx.attachments.saveImage` returns and a Web UI paste produces — the plugin
+reads bytes through `ctx.attachments.readImage(block.attachment)`. A
+hand-built block holding only a path or base64 payload degrades to a constant
+read-failure placeholder. And do not add a file-path text next to an image
+block on an image-declaring route: the block already becomes complete
+evidence there, and the extra path invites a second read of the same image
+through the tool — double quota, and a second wording of the same content,
+which is exactly the prefix-cache churn
+[#68](https://github.com/liustack/modlens/issues/68) removed.
 
 ### Paste-to-path (web profile)
 

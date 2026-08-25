@@ -10,7 +10,14 @@
  *   totals (mirror of the official `indexSubagentDescendants` over the
  *   plugin's own summary rows).
  */
-import type { SidebarSessionList, SidebarSubagentCatalog } from '../context-types.ts';
+import type { SidebarSessionList, SidebarSessionSummary, SidebarSubagentCatalog } from '../context-types.ts';
+/**
+ * Side Chat threads ride the subagent origin (main-list hiding + the RPC
+ * ownership fence) but they are NOT subagent topology: they carry the
+ * durable 'Side: ' label and live as sidebar tabs. Excluding them here
+ * keeps the auto-open trigger and the Subagent page counts clean.
+ */
+export declare function isSideThreadSummary(summary: SidebarSessionSummary): boolean;
 /** Count the direct subagent children of one session (durable `origin` rows). */
 export declare function directSubagentCount(byId: SidebarSessionList['byId'], sessionId: string): number;
 /**

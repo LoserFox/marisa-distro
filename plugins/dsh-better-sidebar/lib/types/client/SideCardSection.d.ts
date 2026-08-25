@@ -44,12 +44,13 @@ export declare function FeatureSettingsRows(props: {
 }): import("react").JSX.Element;
 /**
  * The secondary settings popup body of one feature (tab or viewer):
- * - `settings.render` (custom panel) when declared — rendered with the
- *   shared store/service, the live prefs, the descriptor's own plugin
- *   settings blob, a persistence helper, and a close callback;
- * - otherwise the host-prefs `toggles` rows, then the plugin-owned
- *   `pluginToggles` rows (their values live in `pluginSettings[feature.id]`,
- *   projected onto the prefs face so the shared row renderer reads them).
+ * - the host-prefs `toggles` rows, then the plugin-owned `pluginToggles`
+ *   rows (their values live in `pluginSettings[feature.id]`, projected onto
+ *   the prefs face so the shared row renderer reads them);
+ * - `settings.render` (custom panel) AFTER those rows when declared — the
+ *   custom panel is an extension of the row list, not a replacement, so a
+ *   feature can keep its declarative rows (e.g. the editor's
+ *   open-behavior picker) and still ship a custom configuration area.
  */
 export declare function SettingsBody(props: {
     feature: TabDescriptor | FileViewerDescriptor;

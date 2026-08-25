@@ -19,6 +19,7 @@ import { bindSnapshotSelector } from "./bindSnapshotSelector.js";
 import { InterpretersCard } from "./InterpretersCard.js";
 import { InterpretersCardController, refreshIfLoaded } from "./store.js";
 import { en, NS, zh } from "./locales.js";
+import { dicts } from "./dictionaries.js";
 /** Required services (cordis fiber inject). The target slot is declared by
  *  ui-plugin-config's apply, whose activation order relative to this one is
  *  NOT constrained; registration depends on the slot through `slots.inject()`. */
@@ -31,6 +32,28 @@ export const inject = ['slots', 'locale', 'connection'];
  */
 export function apply(ctx) {
     ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-interpreters: dictionaries');
+    // Opt-in third-language overrides through @huanlin/dsh-plugin-better-locale.
+    // Activation-order-safe: ctx.get('betterLocale') is a non-reactive read, so
+    // if better-locale activates after us, the initial read returns undefined.
+    // We subscribe to ctx.locale — better-locale bumps its revision on activation
+    // (persisted override) and on every override switch — and re-check on each bump.
+    ctx.effect(() => {
+        let dispose;
+        const sync = () => {
+            dispose?.();
+            dispose = undefined;
+            const store = ctx.get('betterLocale');
+            if (store !== undefined) {
+                dispose = store.register(NS, dicts);
+            }
+        };
+        sync();
+        const unsubscribe = ctx.locale.subscribe(sync);
+        return () => {
+            unsubscribe();
+            dispose?.();
+        };
+    }, 'interpreters: better-locale override dicts');
     // The store reads/writes the interpreters config over the plugin's
     // self-hosted HTTP route (`/interpreters/api/get` + `/interpreters/api/set`).
     const controller = new InterpretersCardController();

@@ -10,7 +10,7 @@ read_when:
 
 [English](troubleshooting.md) | 中文
 
-先跑 `modlens doctor`：它会检查你的 Node 版本、哪些 provider 已就绪、将选中哪一个及其原因，以及检测到的 harness，全程不消耗额度，也不发网络请求。大多数配置问题在你继续往下读之前就能被它查出来。
+先跑 `modlens doctor`：它会检查你的 Node 版本、哪些 provider 已就绪（含各家有几把密钥）、将选中哪一个及其原因、冷却开关和正在冷却的密钥，以及检测到的 harness，全程不消耗额度，也不发网络请求。大多数配置问题在你继续往下读之前就能被它查出来。一把密钥用尽会先轮换到下一把，再进入冷却，下次运行会优先试还健康的密钥。
 
 下面每条消息都是 modlens 实际会打印的。拿你看到的字眼在本文里搜索即可。
 
@@ -144,7 +144,7 @@ dsh profile 装到的是旧版 modlens。`dsh.bundle` 声明从 3.9.0 起才存�
 `@latest` 绕不开这一层，本页早先的说法是错的。冷静期先把候选版本过滤掉，dist-tag 才在剩下的里面解析，于是它直接落到了更旧的那个上。改成写死精确版本号，pnpm 会把它当作一次明确的指定，而不是一次解析：
 
 ```sh
-npx -y @deepseek-ai/dsh plugin --profile <name> add @liustack/modlens@3.22.1
+npx -y @deepseek-ai/dsh plugin --profile <name> add @liustack/modlens@3.24.2
 ```
 
 `npm view @liustack/modlens version` 可以查到当前版本号。pnpm 11 会装上被点名的版本，11.1.3 起还会把它作为一条已批准的例外写进该 profile 的 `pnpm-workspace.yaml`，其余所有包和 modlens 以后的版本仍然留在窗口后面。
@@ -153,7 +153,7 @@ npx -y @deepseek-ai/dsh plugin --profile <name> add @liustack/modlens@3.22.1
 
 ```yaml
 minimumReleaseAgeExclude:
-  - '@liustack/modlens@3.22.1'
+  - '@liustack/modlens@3.24.2'
 ```
 
 或者只为这一条命令解除冷静期，注意它解除的是这条命令解析到的所有包，不只 modlens：

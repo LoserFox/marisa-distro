@@ -99,8 +99,8 @@ export interface SidebarSettingsDeclaration {
      * Extra settings rows rendered under the feature's own row in the
      * settings page (only while the feature is enabled). Keys must be fields
      * of the host's PrefsSchema (built-ins: 'autoOpenSubagent',
-     * 'agentTerminalTools', 'terminalFontFamily'); unknown keys are dropped
-     * by the settings seam.
+     * 'agentTerminalTools', 'agentOpenTools', 'terminalFontFamily'); unknown
+     * keys are dropped by the settings seam.
      */
     toggles?: readonly SidebarSettingToggle[];
     /**
@@ -129,6 +129,8 @@ export interface TabComponentProps {
     visible: boolean;
     /** The explorer's expanded directory set (ExplorerView). */
     expanded?: string[];
+    /** The explorer's reveal-highlight set (ExplorerView; "Show in folder" targets). */
+    revealed?: string[];
     onToggleDir?: (path: string) => void;
     onReferenceFile?: (path: string) => void;
     onOpenFile?: (path: string) => void;
@@ -416,7 +418,7 @@ export declare function matchUrlTarget(tabs: readonly TabDescriptor[], url: URL)
  * The plugin version this service instance reports. Keep in lockstep with
  * `package.json`'s version — `tests/service.spec.ts` asserts the pair.
  */
-export declare const SIDEBAR_SERVICE_VERSION = "0.14.0";
+export declare const SIDEBAR_SERVICE_VERSION = "0.16.0";
 /**
  * Monotonic capability list consumers use to gate new API usage (features
  * are never removed). Each string names a v0.12.0+ capability:
@@ -430,8 +432,11 @@ export declare const SIDEBAR_SERVICE_VERSION = "0.14.0";
  * - 'pluginSettings': SidebarSettingsDeclaration.pluginToggles/render
  * - 'urlTarget' (v0.13.0): TabDescriptor.urlTarget (external-link claims)
  * - 'settingSelect': SidebarSettingToggle type 'select' (options/multi)
+ * - 'floatWindows' (v0.16.0): tabs float as free windows — openTab's dedupe/
+ *   id focus targets RAISE the floating window (never duplicate the tab or
+ *   expand panels), closeTab on a floating tab closes it with its window.
  */
-export declare const SIDEBAR_FEATURES: readonly ["badge", "tabLifecycle", "updateTab", "openFile", "targetedOpen", "stateSubscription", "tabMeta", "pluginSettings", "urlTarget", "settingSelect"];
+export declare const SIDEBAR_FEATURES: readonly ["badge", "tabLifecycle", "updateTab", "openFile", "targetedOpen", "stateSubscription", "tabMeta", "pluginSettings", "urlTarget", "settingSelect", "floatWindows"];
 /**
  * Create one BetterSidebar service bound to a store. The service owns the
  * tab/viewer registries (Map + listener set) and proxies openTab/closeTab

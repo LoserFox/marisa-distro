@@ -1,4 +1,10 @@
+<p align="center">
+  <a href="https://dshfind.com/zh/plugins/huanlinoto/dsh-plugin-yet-another-subagent"><img src="https://dshfind.com/api/card/huanlinoto/dsh-plugin-yet-another-subagent?lang=zh" alt="dsh-plugin-yet-another-subagent card"></a>
+</p>
+
 # yet-another-subagent
+
+[![npm version](https://img.shields.io/npm/v/@huanlin/dsh-plugin-yet-another-subagent)](https://www.npmjs.com/package/@huanlin/dsh-plugin-yet-another-subagent)
 
 可配置的子代理（subagent）profile 系统，提供单一 `subagent` 工具 + `profile` 参数选择，支持 Web UI 设置、实时进度展示（工具调用/token/活动）、子代理树标签页、点击跳转子会话。
 
@@ -75,11 +81,11 @@ pnpm run build        # tsc + tsdown → lib/index.js, lib/invariant.js, lib/cli
 ## 运行
 
 ```sh
+# 从 npm 安装（推荐）：
+dsh plugin --profile web add @huanlin/dsh-plugin-yet-another-subagent
+
 # 本地引用（开发热更新）
 dsh plugin --profile web add "link:D:/Projects/deepseek-harness/yet-another-subagent"
-
-# 远端引用（分发/部署）
-dsh plugin --profile web add "github:huanlinoto/dsh-plugin-yet-another-subagent"
 ```
 
 安装后重启 `dsh web` 进程，浏览器硬刷新（`Ctrl+Shift+R`）。

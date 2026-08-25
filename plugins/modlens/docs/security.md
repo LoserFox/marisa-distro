@@ -38,6 +38,10 @@ So the private-address guards, the magic-byte check, and the size cap protect ex
 
 Text inside an image is untrusted, the same as a web page. A screenshot can contain instructions aimed at whatever reads it. The prompt says so explicitly, but that is mitigation, not a guarantee: analyze images you are willing to open, and prefer a sandboxed working directory when they came from elsewhere.
 
+## Credentials in errors
+
+Gateway bodies, subprocess stderr, per-attempt records, warnings, and persisted cooldown reasons all go through redaction before they travel. When a provider has several API keys, every sibling key is registered as a secret, not the joined `'k1,k2'` string as one. Truncation happens after that pass, so a cut cannot hide a key from the exact-match scrub.
+
 ## Evidence, not invention
 
 What the engine cannot read goes into `uncertainty` rather than being filled in. v2 dropped pixel coordinates and confidence scores entirely, because those are the two fields models fabricate most convincingly.

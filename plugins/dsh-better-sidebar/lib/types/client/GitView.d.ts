@@ -5,4 +5,6 @@ export declare function GitView(props: {
     onOpenFile: (path: string) => void;
     /** Open a diff tab (the shell places it below the git pane on first use). */
     onOpenDiff: (tab: SidebarTab) => void;
+    /** Poll only while the tab is actually visible. */
+    visible: boolean;
 }): import("react").JSX.Element;

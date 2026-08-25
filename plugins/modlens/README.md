@@ -33,14 +33,17 @@ Issues are welcome any time: [open one](https://github.com/liustack/modlens/issu
 
 ## Highlights
 
-**🥇 The most capable vision plugin for DeepSeek Harness (dsh):** install it instantly with one command: `npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.22.1`. See the [setup guide](docs/harness-setup.md) for installation and update details. If the command line is not your thing but you still want to try DSH, check out <a href="https://github.com/liustack/aimanager"><b>AIManager</b></a>, the lightest desktop wrapper for DeepSeek Harness. It gets you started with zero code or configuration and installs every dependency for you with one click.
+**🥇 The most capable vision plugin for DeepSeek Harness (dsh):** install it instantly with one command: `npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modlens@3.24.2`. See the [setup guide](docs/harness-setup.md) for installation and update details. If the command line is not your thing but you still want to try DSH, check out <a href="https://github.com/liustack/aimanager"><b>AIManager</b></a>, the lightest desktop wrapper for DeepSeek Harness. It gets you started with zero code or configuration and installs every dependency for you with one click.
 
 Pasting an image works two ways. **① Just paste.** On a text-only model the pasted image lands as a private temp file and its path enters the composer — the same interaction OpenCode and Pi ship — and the `modlens_read_image` tool takes it from there. **② Pick a `(modlens vision)` entry** in the model selector (it remembers your choice, so once is enough), then paste: the thumbnail stays visible in your message, closer to the Codex app feel, and the image is converted to structured evidence at request time, answered by the same underlying route. The plugin auto-discovers every provider route carrying text-only DeepSeek or GLM models and adds a wrapped entry per route (a stock install gets **`DeepSeek-V4-Flash (modlens vision)`** and **`DeepSeek-V4-Pro (modlens vision)`**; extra routes like opencode-go or zai get their own); the two families' own vision models are excluded automatically. Which paste route applies is the host's per-model call: only a model its metadata positively confirms text-only is taken over, anything unconfirmed is left alone, so vision models keep their native paste ([details](docs/harness-setup.md)).
 
 **Paste images directly in every harness.** No saving to a file and passing a path first.
 
+A hotkey that captures the screen into DeepSeek Harness is a separate plugin: [dsh-screenshot](https://github.com/paicat1/dsh-screenshot).
+
 - **The lightest touch on the market.** No hooks, no wrappers, no local proxy daemon, not a single line changed in any harness config: on the skill harnesses it is exactly one skill folder, on dsh exactly one plugin. Uninstalling is deleting a folder, and your agents are back to stock.
 - **Zero-config start.** Reuses existing setup in Claude Code, Codex, OpenCode, and Pi, plus other multimodal models already on your machine. Nothing installed locally? Antigravity CLI is a free no-key channel, and a free Gemini key brings a read down to 5-10 seconds. API keys from every major OpenAI-compatible provider work too.
+- **Comma-separated keys rotate on auth, rate-limit, or quota failures.** Other failures skip remaining keys and keep the existing provider failover.
 - **Evidence, not imagination.** Full transcription, reading-order layout regions, entity and relation lists. The model quotes specifics.
 - **Install once, use everywhere.** Verified on real machines in Claude Code, Codex, Pi, and OpenCode.
 
@@ -61,9 +64,13 @@ agy                                                           # sign in, then ex
 
 The install also inventories vision reachable through your other local harness CLIs (Codex, OpenCode, Pi) and asks, per harness, whether modlens may reuse it. Granted logins join the engine pool as equals, and every reused read is labeled with whose quota it spent.
 
+On DeepSeek Harness the command line is not the only way in. Settings → Plugins → Plugin config carries a ModLens card: switch the engine, tick which local CLIs `auto` mode may reuse, hit save and it takes effect.
+
+![The ModLens vision-engine card in the dsh settings page, shown in Chinese: switch the engine, tick which local CLIs auto mode reuses](https://raw.githubusercontent.com/liustack/modlens/main/assets/demo-dsh-settings-card.jpg)
+
 ## Usage
 
-Once installed, just chat. Paste an image or drop a path, ask anything, and the skill triggers on its own: the image goes to a vision engine and the answer comes back grounded in what it read.
+Once installed, just chat. Paste an image or drop a path, ask anything, and the skill triggers on its own: the image goes to a vision engine and the answer comes back grounded in what it read. Paste once, and later questions about the same image do not need another paste.
 
 ## Vision engines: six built-in providers, four reusable CLIs, one failover chain
 
@@ -89,6 +96,8 @@ modlens config set openai.baseUrl https://dashscope.aliyuncs.com/compatible-mode
 modlens config set openai.apiKey  <key>
 modlens config set openai.model   qwen3-vl-plus
 ```
+
+`apiKey` (and the matching env var) also accepts a comma-separated list. ModLens rotates to the next key after authentication, rate-limit, or quota failures. Network, 5xx, and parse failures skip remaining keys and keep provider failover.
 
 The same three keys work for GLM's open platform, SiliconFlow, OpenRouter, a self-hosted vLLM/Ollama, or any gateway of your own. If your favorite vision model has an OpenAI-compatible API, ModLens can drive it.
 
@@ -156,13 +165,19 @@ ModLens does not accept pull requests. The project is maintained by a single aut
 
 ## Shameless plug
 
-This project runs on LIUSTACK Skills: `shaping` before you build, `coding` while you build, `dig` when it breaks, `snapshot` when you hand off. Lighter than Superpowers, and stronger.
+**[ModSearch](https://github.com/liustack/modsearch)** is ModLens's sibling project, the same craft applied to another missing sense: it gives models with no web access web search, X search, and single-page fetch. Free, no signup, no API key. A model that needs ModLens for its eyes usually needs ModSearch for the web:
 
 ```bash
-npx -y skills add liustack/vibemaster -g
+npx -y @deepseek-ai/dsh plugin --profile web add @liustack/modsearch@latest
 ```
 
-⭐ If it helps, star [ModLens](https://github.com/liustack/modlens) and [VibeMaster](https://github.com/liustack/vibemaster). Stars are how the next developer finds them.
+Follow the **liustack** WeChat official account: AI startup opportunities, indie-dev insights, and hands-on AI tooling, delivered as they happen. Scan the QR code in WeChat, or search for "liustack":
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/liustack/modlens/main/assets/wechat-qrcode.png" width="420" alt="liustack WeChat official account" />
+</p>
+
+⭐ If it helps, star [ModLens](https://github.com/liustack/modlens) and [ModSearch](https://github.com/liustack/modsearch). Stars are how the next developer finds them.
 
 ## Key ecosystem partners
 

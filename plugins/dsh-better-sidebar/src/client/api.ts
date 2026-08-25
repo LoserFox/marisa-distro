@@ -7,6 +7,8 @@
  * request). Failures surface as {@link SidebarApiError} with the wire code.
  */
 import { encodeHtmlUrl } from '../html-route.ts'
+import type { LastActivity } from '../subagent-activity.ts'
+import type { SidechatThreadInfo } from '../sidechat-core.ts'
 import type { BrowserProbeResult } from './browser.ts'
 
 /** One wire failure. */
@@ -42,6 +44,16 @@ export interface GitStatusResult {
   isRepo: boolean
   branch?: string
   entries: GitStatusEntry[]
+  root?: string
+  repositories?: string[]
+}
+
+/** One linked Git checkout. */
+export interface GitWorktree {
+  path: string
+  branch: string
+  current: boolean
+  changes: number
 }
 
 /** One git log row. */
@@ -78,6 +90,9 @@ export interface JobOutputResult {
   /** Whether the model has read the job at least once. */
   read: boolean
 }
+
+/** The `subagents.live` response: running child id → latest activity. */
+export type SubagentLiveResult = { live: Record<string, LastActivity> }
 
 /** Terminal dependency status (mirror of the host's depsStatus; issue #140). */
 export type TerminalDepsStatus =
@@ -117,16 +132,68 @@ async function call<T>(method: string, payload: Record<string, unknown>, signal?
   return parsed.value as T
 }
 
+/**
+ * Upload one file to the sidebar's raw upload route: the File goes straight
+ * into the POST body (no JSON/base64 re-encoding — the host streams it into
+ * the workspace). Failure surfaces as {@link SidebarApiError} with the wire
+ * code, exactly like every `/sidebar/api` call. An aborted `signal` rejects
+ * with the DOMException as-is (the caller decides whether that is an error).
+ */
+async function fetchUpload<T>(
+  scope: SessionScope,
+  dir: string,
+  relativePath: string,
+  body: Blob,
+  signal?: AbortSignal,
+): Promise<T> {
+  const params = new URLSearchParams({ sessionId: scope.sessionId, dir, relativePath })
+  if (scope.cwd !== undefined && scope.cwd !== '') params.set('cwd', scope.cwd)
+  let response: Response
+  try {
+    response = await fetch(`/sidebar/upload?${params.toString()}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/octet-stream' },
+      body,
+      signal,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new SidebarApiError('network', error instanceof Error ? error.message : String(error))
+  }
+  const parsed: { ok?: boolean; value?: unknown; error?: { code?: string; message?: string } } | null
+    = await response.json().catch(() => null)
+  if (!response.ok || parsed === null || parsed.ok !== true || parsed.value === undefined) {
+    throw new SidebarApiError(
+      parsed?.error?.code ?? 'http',
+      parsed?.error?.message ?? `HTTP ${response.status}`,
+    )
+  }
+  return parsed.value as T
+}
+
 /** One request's session scope: the conversation id plus its cwd when known. */
 export interface SessionScope {
   sessionId: string
   /** The session's working directory from the client list summary (optional). */
   cwd?: string
+  /** Selected Git repository when cwd is a workspace container. */
+  repoRoot?: string
 }
 
 /** Fold a scope into a JSON payload ({cwd} only when present). */
 function scopePayload(scope: SessionScope, extra: Record<string, unknown>): Record<string, unknown> {
-  return { sessionId: scope.sessionId, ...(scope.cwd !== undefined && scope.cwd !== '' ? { cwd: scope.cwd } : {}), ...extra }
+  return {
+    sessionId: scope.sessionId,
+    ...(scope.cwd !== undefined && scope.cwd !== '' ? { cwd: scope.cwd } : {}),
+    ...(scope.repoRoot !== undefined && scope.repoRoot !== '' ? { repoRoot: scope.repoRoot } : {}),
+    ...extra,
+  }
+}
+
+/** Add a linked-worktree selection to a scoped Git request. The host validates
+ * membership before using it as a command cwd. */
+function gitPayload(scope: SessionScope, worktree: string | undefined, extra: Record<string, unknown>): Record<string, unknown> {
+  return scopePayload(scope, { ...(worktree !== undefined && worktree !== '' ? { worktree } : {}), ...extra })
 }
 
 /** The sidebar API surface (session scope threaded through every call). */
@@ -143,38 +210,44 @@ export const api = {
     call<FsTextResult | FsBinaryResult>('fs.read', scopePayload(scope, { path }), signal),
   fsWrite: (scope: SessionScope, path: string, content: string) =>
     call<{ ok: true }>('fs.write', scopePayload(scope, { path, content })),
-  gitStatus: (scope: SessionScope, signal?: AbortSignal) =>
-    call<GitStatusResult>('git.status', scopePayload(scope, {}), signal),
-  gitDiff: (scope: SessionScope, path: string | undefined, staged: boolean, signal?: AbortSignal) =>
-    call<{ diff: string }>('git.diff', scopePayload(scope, { ...(path !== undefined ? { path } : {}), staged }), signal),
-  gitStage: (scope: SessionScope, path?: string) =>
-    call<{ ok: true }>('git.stage', scopePayload(scope, { ...(path !== undefined ? { path } : {}) })),
-  gitUnstage: (scope: SessionScope, path?: string) =>
-    call<{ ok: true }>('git.unstage', scopePayload(scope, { ...(path !== undefined ? { path } : {}) })),
-  gitCommit: (scope: SessionScope, message: string) =>
-    call<{ ok: true }>('git.commit', scopePayload(scope, { message })),
-  gitBranch: (scope: SessionScope, signal?: AbortSignal) =>
-    call<{ current: string; names: string[] }>('git.branch', scopePayload(scope, {}), signal),
-  gitCheckout: (scope: SessionScope, branch: string) =>
-    call<{ ok: true }>('git.checkout', scopePayload(scope, { branch })),
+  /** Upload one file's raw bytes into `dir` (keeps the folder tree via
+   *  `relativePath`); the host streams it under the session workspace. */
+  uploadFile: (scope: SessionScope, dir: string, relativePath: string, body: Blob, signal?: AbortSignal) =>
+    fetchUpload<{ path: string; size: number }>(scope, dir, relativePath, body, signal),
+  gitWorktrees: (scope: SessionScope, signal?: AbortSignal) =>
+    call<GitWorktree[]>('git.worktrees', scopePayload(scope, {}), signal),
+  gitStatus: (scope: SessionScope, worktree?: string, signal?: AbortSignal) =>
+    call<GitStatusResult>('git.status', gitPayload(scope, worktree, {}), signal),
+  gitDiff: (scope: SessionScope, path: string | undefined, staged: boolean, worktree?: string, signal?: AbortSignal) =>
+    call<{ diff: string }>('git.diff', gitPayload(scope, worktree, { ...(path !== undefined ? { path } : {}), staged }), signal),
+  gitStage: (scope: SessionScope, path?: string, worktree?: string) =>
+    call<{ ok: true }>('git.stage', gitPayload(scope, worktree, { ...(path !== undefined ? { path } : {}) })),
+  gitUnstage: (scope: SessionScope, path?: string, worktree?: string) =>
+    call<{ ok: true }>('git.unstage', gitPayload(scope, worktree, { ...(path !== undefined ? { path } : {}) })),
+  gitCommit: (scope: SessionScope, message: string, worktree?: string) =>
+    call<{ ok: true }>('git.commit', gitPayload(scope, worktree, { message })),
+  gitBranch: (scope: SessionScope, worktree?: string, signal?: AbortSignal) =>
+    call<{ current: string; names: string[] }>('git.branch', gitPayload(scope, worktree, {}), signal),
+  gitCheckout: (scope: SessionScope, branch: string, worktree?: string) =>
+    call<{ ok: true }>('git.checkout', gitPayload(scope, worktree, { branch })),
   /** Recent commit history, lazily pageable (skip/count; defaults 0/30). */
-  gitLog: (scope: SessionScope, count?: number, skip?: number, signal?: AbortSignal) =>
-    call<GitLogEntry[]>('git.log', scopePayload(scope, {
+  gitLog: (scope: SessionScope, count?: number, skip?: number, worktree?: string, signal?: AbortSignal) =>
+    call<GitLogEntry[]>('git.log', gitPayload(scope, worktree, {
       ...(count !== undefined ? { count } : {}),
       ...(skip !== undefined ? { skip } : {}),
     }), signal),
   /** Full patch text of one commit (diff display for the history rows). */
-  gitCommitDiff: (scope: SessionScope, hash: string, signal?: AbortSignal) =>
-    call<{ diff: string }>('git.commit-diff', scopePayload(scope, { hash }), signal),
+  gitCommitDiff: (scope: SessionScope, hash: string, worktree?: string, signal?: AbortSignal) =>
+    call<{ diff: string }>('git.commit-diff', gitPayload(scope, worktree, { hash }), signal),
   /** Discard the worktree changes of one file (the index is untouched). */
-  gitDiscard: (scope: SessionScope, path: string) =>
-    call<{ ok: true }>('git.discard', scopePayload(scope, { path })),
+  gitDiscard: (scope: SessionScope, path: string, worktree?: string) =>
+    call<{ ok: true }>('git.discard', gitPayload(scope, worktree, { path })),
   /** Revert one commit onto the current branch. */
-  gitRevert: (scope: SessionScope, hash: string) =>
-    call<{ ok: true }>('git.revert', scopePayload(scope, { hash })),
+  gitRevert: (scope: SessionScope, hash: string, worktree?: string) =>
+    call<{ ok: true }>('git.revert', gitPayload(scope, worktree, { hash })),
   /** Cherry-pick one commit onto the current branch. */
-  gitCherryPick: (scope: SessionScope, hash: string) =>
-    call<{ ok: true }>('git.cherry-pick', scopePayload(scope, { hash })),
+  gitCherryPick: (scope: SessionScope, hash: string, worktree?: string) =>
+    call<{ ok: true }>('git.cherry-pick', gitPayload(scope, worktree, { hash })),
   /** Release a terminal's process immediately (tab closed; the WS close frame
    *  may be unreachable while the socket is down, so the host also accepts
    *  this explicit route). */
@@ -201,6 +274,30 @@ export const api = {
       id,
       ...(reason !== undefined ? { reason } : {}),
     })),
+  /**
+   * One batch live-preview fetch for the whole Subagent tree. The payload is
+   * the already-resolved topology ROOT (not a session scope); the host
+   * enumerates descendants once and folds running children's activity.
+   */
+  subagentsLive: (rootSessionId: string, signal?: AbortSignal) =>
+    call<SubagentLiveResult>('subagents.live', { rootSessionId }, signal),
+  /** Create a Side Chat thread: a child session seeded with the parent's
+   *  full log up to now. Empty question = immediate create (Codex-style):
+   *  the thread opens empty, the first prompt carries the boundary. */
+  sidechatStart: (sessionId: string, question?: string) =>
+    call<{ childId: string }>('sidechat.start', { sessionId, question: question ?? '' }),
+  /** Deliver one follow-up message to a Side Chat thread. */
+  sidechatPrompt: (childId: string, text: string) =>
+    call<{ accepted: true }>('sidechat.prompt', { childId, text }),
+  /** Abort a Side Chat thread's running turn (queued work is preserved). */
+  sidechatCancel: (childId: string) =>
+    call<{ accepted: true }>('sidechat.cancel', { childId }),
+  /** Release a Side Chat thread's live agent (history stays persisted). */
+  sidechatDispose: (childId: string) =>
+    call<{ accepted: true }>('sidechat.dispose', { childId }),
+  /** Live state + agent identity (provider/model/preset) of a thread. */
+  sidechatInfo: (childId: string) =>
+    call<SidechatThreadInfo>('sidechat.info', { childId }),
   /** The effective terminal shell and its display name (plugin-global). */
   shellGet: () =>
     call<{ shell: string; name: string }>('shell.get', {}),
@@ -217,6 +314,12 @@ export const api = {
    *  check; see the host's browser.probe route). */
   browserProbe: (url: string, signal?: AbortSignal) =>
     call<BrowserProbeResult>('browser.probe', { url }, signal),
+  /** External open for the file tree's "open with" menu: reveal a path in
+   *  the OS file manager, or hand a custom-scheme URL (vscode://, cursor://,
+   *  zed://, custom editors) to its registered handler. The host launches
+   *  the platform opener (argv, no shell). */
+  openExternal: (payload: { action: 'reveal'; path: string } | { action: 'url'; url: string }) =>
+    call<{ started: boolean }>('open.external', payload),
 }
 
 /** Absolute URL of the media route for one path (images only). */
