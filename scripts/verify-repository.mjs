@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
@@ -12,10 +12,19 @@ for (const required of ['harness', 'plugins', 'desktop', 'docs']) {
   assert.ok(existsSync(join(root, required)), `missing repository boundary: ${required}/`)
 }
 
-assert.ok(!existsSync(join(root, 'harness', '.git')), 'harness must be owned by the root repository, not a nested Git repository')
-assert.ok(existsSync(join(root, 'harness', 'package.json')), 'harness/package.json is missing')
+// harness 以 git submodule 形式跟踪上游（harness/.git 是 gitlink 元数据文件，
+// 不是嵌套仓库目录）；未 checkout 的 fresh clone 无法通过本检查（CI 的
+// actions/checkout 带 submodules: recursive；本地先 git submodule update --init）。
+const harnessGit = join(root, 'harness', '.git')
+assert.ok(
+  !existsSync(harnessGit) || !statSync(harnessGit).isDirectory(),
+  'harness must be a git submodule (gitlink), never a nested Git repository',
+)
+assert.ok(existsSync(join(root, '.gitmodules')), 'harness submodule requires a committed .gitmodules')
+assert.ok(existsSync(join(root, 'harness', 'package.json')), 'harness/package.json is missing (run git submodule update --init)')
 assert.match(manifest.harness.baseline, /^[0-9a-f]{7,40}$/, 'harness baseline must be a commit id')
 assert.equal(manifest.harness.mode, 'mirror', 'harness must track the pinned upstream rc baseline')
+assert.equal(manifest.harness.mechanism, 'submodule', 'harness must be registered as a submodule')
 
 // harness 工作树必须保持上游 pristine：发行版增量（品牌兜底字符串、
 // anchored-standard 预设）只允许以 overlays/harness 形式存在，由构建期

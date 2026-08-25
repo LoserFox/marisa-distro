@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
       - uses: pnpm/action-setup@v4
         with:
           version: '11'
@@ -29,12 +30,25 @@ jobs:
         with:
           go-version-file: desktop/go.mod
           cache-dependency-path: desktop/go.sum
-      - name: Install locked workspace
+      - name: Install locked workspace (links only; lifecycle deferred)
+        # fresh checkout 下 harness lib/ 尚未构建（submodule 不含构建产物），带
+        # prepare 的成员（dsh-mygo-api 等）tsc 解析不到 workspace 包类型；先装
+        # 链接，构建 harness lib 后再补跑 lifecycle（见下两步）。
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build harness libs (prepare-time consumers need them)
+        # 必须从根 workspace 发起（--filter）：harness 是 submodule，目录内嵌套
+        # 自己的 pnpm-workspace.yaml/pnpm-lock.yaml，--dir harness 会触发
+        # deps-status 自动 install。
+        run: pnpm --filter @deepseek-ai/dsh-root run build
+      - name: Complete lifecycle scripts
         run: pnpm install --frozen-lockfile
       - name: Verify repository and profile contracts
         run: pnpm test
       - name: Verify harness CLI contract
-        run: pnpm --dir harness exec vitest run apps/cli/tests/args.spec.ts
+        # node 直跑 vitest（harness 目录内 pnpm 命令会触发 deps-status 自动
+        # install）。
+        working-directory: harness
+        run: node node_modules/vitest/vitest.mjs run apps/cli/tests/args.spec.ts
       - name: Verify desktop build modes
         shell: pwsh
         run: |

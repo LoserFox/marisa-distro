@@ -29,8 +29,9 @@ const reportArg = argv.indexOf('--report')
 const reportPath = reportArg >= 0 ? resolve(argv[reportArg + 1]) : null
 
 // 构建产物/与上游无关的目录与文件，不参与内容对比。
+// '.git' 同时匹配目录（嵌套仓库）与文件（submodule gitlink 元数据）。
 const IGNORED_DIRS = new Set(['node_modules', 'lib', 'dist', '.dsh-build', '.git', '.claude', '.mnemon', 'coverage'])
-const IGNORED_FILES = new Set(['.gitignore', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc'])
+const IGNORED_FILES = new Set(['.git', '.gitignore', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc'])
 const IGNORED_FILE_PATTERNS = [/\.tsbuildinfo$/]
 
 function sh(cmd, args, cwd) {

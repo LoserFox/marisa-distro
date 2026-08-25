@@ -4,7 +4,7 @@
 
 ## 仓库边界
 
-- `plugins/`、`desktop/` 由本仓库直接拥有；`harness/` 跟踪上游 rc pin，转换为 submodule 后不得在其中维护发行版源码修改——发行版增量（anchored-standard 预设、品牌兜底字符串）唯一合法存放处是 `overlays/harness/`，由 `scripts/apply-harness-overlays.mjs` 在构建/打包期应用，harness 工作树必须保持上游 pristine（`verify-repository` 强制）。不得创建其他嵌套 `.git`。
+- `plugins/`、`desktop/` 由本仓库直接拥有；`harness/` 是 git submodule（`.gitmodules` pin 上游 rc 基线），不得在其中维护发行版源码修改——发行版增量（anchored-standard 预设、品牌兜底字符串）唯一合法存放处是 `overlays/harness/`，由 `scripts/apply-harness-overlays.mjs` 在构建/打包期应用，harness 工作树必须保持上游 pristine（`verify-repository` 强制；fresh clone 先 `git submodule update --init harness`）。不得创建其他嵌套 `.git`。
 - 根 `pnpm-lock.yaml` 是唯一依赖图；`harness/` 内的 lockfile/workspace 文件不参与构建。
 - `release/`、`node_modules/`、`*.log`、`*.tsbuildinfo` 不得提交。
 
@@ -19,11 +19,14 @@
 ## 必须执行的验证
 
 ```powershell
+$env:CI = 'true'   # harness 的 postinstall（install-lefthook）在 submodule 下拒绝配置 git，CI 环境跳过
 pnpm install --frozen-lockfile
 pnpm test
 go test -C desktop -tags installedbundle ./...
 go test -C desktop -tags embeddedbundle ./...
 ```
+
+harness 构建必须从根 workspace 发起（`pnpm --filter @deepseek-ai/dsh-root run build`，build.ps1 step 3 即此形态）：harness 目录内嵌套上游自带的 pnpm-workspace.yaml/pnpm-lock.yaml，直接在其目录跑 pnpm 会触发 deps-status 自动 install。fresh checkout 顺序：`pnpm install --frozen-lockfile --ignore-scripts`（链接）→ harness build（产出 lib/）→ `pnpm install --frozen-lockfile`（补 lifecycle；build.ps1 的 step 3.5 按 mygo-api lib 存在性自动判断）。
 
 改动 `plugins/` 或 `harness/` 时，额外跑 PR 边界检查：
 

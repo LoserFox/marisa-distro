@@ -13,6 +13,6 @@
 | dsh-sonar | `1de51055a30e` | ❌ DIRTY | package.json (content differs) |
 | whale-girl | `e22e1fd91874` | ❌ DIRTY | desktop/package.json (content differs)<br>desktop/README.md (content differs)<br>docs/AGENTS.md (content differs)<br>package.json (content differs)<br>README.md (content differs)<br>scripts/gates/verify-doc-budget.mjs (content differs) |
 | dsh-change-ledger | `ae742c65689c` | ❌ DIRTY | VENDOR.md (local-only) |
-| harness | `b150a551b8d4` | ❌ DIRTY | apps/web/index.html (content differs)<br>tsconfig.client.tsbuildinfo (local-only)<br>tsconfig.host.tsbuildinfo (local-only) |
+| harness | `b150a551b8d4` | ✅ CLEAN |  |
 
-共 10 个组件，8 个存在本地差异（DIRTY 组件转 submodule 前必须先消除差异：反馈上游或降级 fork）。
+共 10 个组件，7 个存在本地差异（DIRTY 组件转 submodule 前必须先消除差异：反馈上游或降级 fork）。

@@ -50,6 +50,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.validate.outputs.commit }}
+          submodules: recursive
       - uses: pnpm/action-setup@v4
         with:
           # Pin to 11.9.0: pnpm >= 11.22 resolves workspace peers strictly and

@@ -7,7 +7,7 @@
 | DSH 兼容版本 | `0.1.1-rc.2` |
 | 上游仓库 | `https://github.com/deepseek-ai/deepseek-harness` |
 | 当前导入基线 | `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`（2026-08-22 换树，分支 sync/0.1.1-rc1，基于 origin/main 的 rc8 树） |
-| 本仓库位置 | `harness/`，内容应保持上游 0.1.1-rc.2；本次换树重放 anchored-standard 预设并补回 scripts/release/* |
+| 本仓库位置 | `harness/`（**git submodule**，2026-08-27 自 vendored 转换；内容应与上游 b150a551 完全一致，发行版增量全部在 `overlays/harness/`） |
 
 > 版本线说明：上游 0.1.0-rc.8 → 0.1.1-rc.1（528c682e，08-21）→ 0.1.1-rc.2（b150a551，08-22，35 提交）。rc.1 在本次同步完成前即被 rc.2 取代：rc.2 主体为图像管线大一统（master/Files 双请求合并、附件规范化编码、deepseek Files 回退、read_image 缩放坐标），并回滚了权限默认值重做（#2608 revert）。本同步直接以 rc.2 为目标。
 
@@ -29,11 +29,13 @@
 
 ## Harness 边界
 
-`harness/` 当前应与 `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`（dsh-v0.1.1-rc.2）上游树**完全一致**：anchored-standard 预设与品牌兜底字符串已于 2026-08-27 移入 `overlays/harness/`（发行版增量唯一合法存放处，构建期由 `scripts/apply-harness-overlays.mjs` 应用，`verify-repository` 会拦截 harness 树内的 overlay 残留）。核对口径：逐文件比对 git blob SHA（Windows 工作树的 CRLF/mode 位差异不影响 blob）。工作区中 agent notes 或生成物（`*.tsbuildinfo`、`.claude/skills/` 等）不应进入发行提交。后续应以 pinned submodule 记录该上游对象，避免把换树同步误读为 Marisa 源码修改。
+`harness/` 自 2026-08-27 起是 **git submodule**（`.gitmodules` 登记 `deepseek-harness`，gitlink pin 到 `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` = dsh-v0.1.1-rc.2）：工作树与上游零差异（anchored-standard 预设与品牌兜底字符串已于同日移入 `overlays/harness/`，发行版增量唯一合法存放处，构建期由 `scripts/apply-harness-overlays.mjs` 应用，`verify-repository` 会拦截 harness 树内的 overlay 残留）。fresh clone / CI 需 `git submodule update --init harness`（CI 的 actions/checkout 已带 `submodules: recursive`；`build.ps1` 有幂等兜底）。核对口径：`git -C harness diff b150a551` 应为空（Windows 工作树的 CRLF/mode 位差异不影响 blob；`scripts/verify-mirror-purity.mjs --ids harness` 可复验）。工作区中 agent notes 或生成物（`*.tsbuildinfo`、`.claude/skills/` 等）不应进入发行提交。换树同步 = 人工 pin bump（`scripts/sync-upstream.mjs harness` 只产出 review 候选），避免把换树同步误读为 Marisa 源码修改。
 
 ## 根 workspace 与依赖图
 
 `harness/pnpm-lock.yaml` 与 `harness/pnpm-workspace.yaml` 不进入根依赖图；根 workspace 和根 lockfile 是唯一依赖图。打包阶段复制 harness 时排除其嵌套 workspace 文件，避免 pnpm 11 触发二次安装。
+
+harness 目录内**不得直接执行 pnpm 命令**（会触发 deps-status 自动 install）：构建一律从根 workspace 发起 `pnpm --filter @deepseek-ai/dsh-root run build`（build.ps1 step 3、CI 同此形态）；harness 内测试用 node 直跑 vitest。本机裸跑 `pnpm install`（无 `CI=true`）时 harness 的 postinstall（install-lefthook）会在 submodule 仓库上拒绝配置 `extensions.worktreeConfig`（`core.worktree` 位于 common config）——以 `$env:CI='true'` 或 `--ignore-scripts` 运行（build.ps1 已内置 `CI=true`，CI 环境天然跳过）。
 
 ## 发行组合差异
 
