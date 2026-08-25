@@ -7,9 +7,10 @@
 
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import net from 'node:net'
 import http from 'node:http'
-import { createProxyDispatcher, apply, parseProxy, displayProxy, inNoProxy } from '../dist/index.js'
+import { createProxyDispatcher, apply, parseProxy, displayProxy, inNoProxy, DEFAULT_PROXY_URL } from '../dist/index.js'
 
 const DISPATCHER_KEY = Symbol.for('undici.globalDispatcher.2')
 const originalDispatcher = globalThis[DISPATCHER_KEY]
@@ -27,17 +28,34 @@ function install(dispatcher, dispose) {
   globalThis[DISPATCHER_KEY] = dispatcher
 }
 
-function listen(server) {
-  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)))
+const PROXY_ENV_KEYS = ['HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy']
+
+function isolateEnv(keys) {
+  const saved = new Map(keys.map(key => [key, process.env[key]]))
+  for (const key of keys) delete process.env[key]
+  return () => {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
+}
+
+function isolateProxyEnv() {
+  return isolateEnv(PROXY_ENV_KEYS)
+}
+
+function listen(server, host = '127.0.0.1') {
+  return new Promise((resolve) => server.listen(0, host, () => resolve(server.address().port)))
 }
 
 // ── 假上游 ──
-async function fakeUpstream() {
+async function fakeUpstream(host = '127.0.0.1') {
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ path: req.url, via: 'upstream' }))
   })
-  const port = await listen(server)
+  const port = await listen(server, host)
   return { server, port }
 }
 
@@ -236,11 +254,11 @@ test('dispose restores the previous dispatcher', async () => {
   socks.server.close()
 })
 
-test('apply: env-driven install + dispose restore', async () => {
-  const upstream = await fakeUpstream()
-  const socks = await fakeSocks5()
-  const saved = process.env.MODEL_PROXY
-  process.env.MODEL_PROXY = `socks5://127.0.0.1:${socks.port}`
+test('apply: HTTP_PROXY drives model transport, reaches shell children, and never rewrites the API endpoint', async () => {
+  const upstream = await fakeUpstream('0.0.0.0')
+  const proxy = await fakeHttpProxy()
+  const restoreEnv = isolateEnv([...PROXY_ENV_KEYS, 'DEEPSEEK_BASE_URL'])
+  process.env.HTTP_PROXY = `http://127.0.0.1:${proxy.port}`
   const events = []
   let disposer
   const ctx = {
@@ -250,27 +268,59 @@ test('apply: env-driven install + dispose restore', async () => {
   try {
     apply(ctx, {})
     assert.ok(events.some(([kind, msg]) => kind === 'info' && msg.includes('global fetch dispatcher')))
-    const res = await fetch(`http://127.0.0.1:${upstream.port}/env-driven`, { signal: AbortSignal.timeout(10_000) })
+    assert.equal(process.env.DEEPSEEK_BASE_URL, undefined)
+    assert.equal(process.env.HTTP_PROXY, `http://127.0.0.1:${proxy.port}`)
+
+    const nodeChild = spawnSync(process.execPath, ['-p', 'process.env.HTTP_PROXY ?? ""'], { encoding: 'utf8' })
+    assert.equal(nodeChild.status, 0, nodeChild.stderr)
+    assert.equal(nodeChild.stdout.trim(), `http://127.0.0.1:${proxy.port}`)
+    if (process.platform === 'win32') {
+      const pwshChild = spawnSync('pwsh', ['-NoProfile', '-NonInteractive', '-Command', '$env:HTTP_PROXY'], { encoding: 'utf8' })
+      assert.equal(pwshChild.status, 0, pwshChild.stderr)
+      assert.equal(pwshChild.stdout.trim(), `http://127.0.0.1:${proxy.port}`)
+    }
+
+    // 127.0.0.2 reaches the all-interfaces fake upstream but is not one of the
+    // plugin's exact loopback exemptions, so this call must touch the proxy.
+    const res = await fetch(`http://127.0.0.2:${upstream.port}/env-driven`, { signal: AbortSignal.timeout(10_000) })
     assert.equal(res.status, 200)
     const body = await res.json()
     assert.equal(body.path, '/env-driven')
+    assert.ok(proxy.connections() > 0, 'HTTP proxy must have been contacted')
   } finally {
-    process.env.MODEL_PROXY = saved ?? ''
-    disposer?.()
+    await disposer?.()
+    restoreEnv()
     if (globalThis[DISPATCHER_KEY] !== originalDispatcher) globalThis[DISPATCHER_KEY] = originalDispatcher
     upstream.server.close()
-    socks.server.close()
+    proxy.server.close()
   }
 })
 
-test('apply: direct / invalid values leave the dispatcher untouched', () => {
-  for (const value of ['', 'direct', 'none', 'ftp://x']) {
-    const saved = process.env.MODEL_PROXY
-    process.env.MODEL_PROXY = value
+test('apply: local default is published when no standard proxy env exists', async () => {
+  const restoreEnv = isolateEnv([...PROXY_ENV_KEYS, 'DEEPSEEK_BASE_URL'])
+  let disposer
+  const ctx = {
+    logger: () => ({ info: () => {}, warn: () => {} }),
+    effect: (cb) => { disposer = cb(); return disposer ?? (() => {}) },
+  }
+  try {
+    apply(ctx, {})
+    assert.equal(process.env.HTTP_PROXY, DEFAULT_PROXY_URL)
+    assert.equal(process.env.DEEPSEEK_BASE_URL, undefined)
+  } finally {
+    await disposer?.()
+    restoreEnv()
+    if (globalThis[DISPATCHER_KEY] !== originalDispatcher) globalThis[DISPATCHER_KEY] = originalDispatcher
+  }
+})
+
+test('apply: direct / invalid config values leave the dispatcher untouched', () => {
+  for (const value of ['direct', 'none', 'ftp://x']) {
+    const restoreProxyEnv = isolateProxyEnv()
     const events = []
     const ctx = { logger: () => ({ info: (m) => events.push(m), warn: (m) => events.push(m) }), effect: () => () => {} }
     try {
-      apply(ctx, {})
+      apply(ctx, { proxy: value })
       assert.equal(globalThis[DISPATCHER_KEY], originalDispatcher, `value: ${JSON.stringify(value)}`)
       if (value === 'ftp://x') {
         assert.ok(events.some((m) => m.includes('invalid proxy URL')))
@@ -278,15 +328,15 @@ test('apply: direct / invalid values leave the dispatcher untouched', () => {
         assert.ok(events.some((m) => m.includes('direct')))
       }
     } finally {
-      process.env.MODEL_PROXY = saved ?? ''
+      restoreProxyEnv()
     }
   }
 })
 
-// ── 真机 https 冒烟（可选）：设置了 MODEL_PROXY 时打真实 API，断言 4xx ──
+// ── 真机 https 冒烟（可选）：显式设置 DSH_MODEL_PROXY_E2E 时才访问真实 API ──
 // 覆盖自定义 connector 的 https 分支（隧道 + TLS 包裹 + SNI）。
-test('https fetch through the configured MODEL_PROXY reaches the API', { skip: !process.env.MODEL_PROXY }, async () => {
-  const { dispatcher, dispose } = createProxyDispatcher(process.env.MODEL_PROXY, ['localhost', '127.0.0.1', '::1'])
+test('https fetch through the configured proxy reaches the API', { skip: !process.env.DSH_MODEL_PROXY_E2E }, async () => {
+  const { dispatcher, dispose } = createProxyDispatcher(process.env.DSH_MODEL_PROXY_E2E, ['localhost', '127.0.0.1', '::1'])
   globalThis[DISPATCHER_KEY] = dispatcher
   try {
     const res = await fetch('https://api.deepseek.com/v1/models', { signal: AbortSignal.timeout(20_000) })

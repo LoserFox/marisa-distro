@@ -266,7 +266,7 @@
       "id": "dsh-model-proxy",
       "mode": "internal",
       "source": "internal",
-      "note": "自研插件（undici 全局 dispatcher 换为 socks5/http 隧道 agent，模型/搜索/上传请求透明走代理，2026-08-27 入登记）；无上游仓库，upstream:check 跳过"
+      "note": "自研插件（undici 全局 dispatcher 令模型/搜索/上传请求在不改 API endpoint 的前提下透明走标准 HTTP_PROXY，并向 Agent shell 子进程发布同一 HTTP_PROXY，2026-08-25 入登记）；无上游仓库，upstream:check 跳过"
     },
     {
       "id": "dsh-change-ledger",

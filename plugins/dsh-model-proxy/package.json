@@ -1,8 +1,8 @@
 {
   "name": "dsh-model-proxy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
-  "description": "Route DSH model/web requests through a local SOCKS5/HTTP proxy by replacing the undici global dispatcher. Zero-config fallback to standard proxy env vars (MODEL_PROXY / ALL_PROXY / HTTPS_PROXY / HTTP_PROXY) with NO_PROXY exemptions.",
+  "description": "Route DSH model/web requests through HTTP_PROXY at the transport layer and export the same proxy to agent shell children without rewriting model API endpoints.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

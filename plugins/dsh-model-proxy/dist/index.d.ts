@@ -11,9 +11,10 @@
  * `DEEPSEEK_BASE_URL` redirect, no separate relay process. Loopback hosts
  * and `NO_PROXY` entries always connect directly.
  *
- * Proxy resolution: `config.proxy` (plugin config) → `$MODEL_PROXY` →
- * `$ALL_PROXY` → `$HTTPS_PROXY` → `$HTTP_PROXY`. `direct` / `none` / `off`
- * (or an empty value) leaves the dispatcher untouched.
+ * Proxy resolution: `config.proxy` (plugin config) → `$HTTP_PROXY` →
+ * `$HTTPS_PROXY` → `$ALL_PROXY` → the Marisa desktop default. The resolved
+ * proxy is also published as `HTTP_PROXY` for model-invoked shell children;
+ * the model API endpoint itself is never rewritten.
  * @module dsh-model-proxy
  */
 import { type Dispatcher } from 'undici';
@@ -21,6 +22,8 @@ import type { Context } from '@deepseek-ai/cordis';
 import Schema from '@deepseek-ai/schemastery';
 export * from './tunnel.js';
 export declare const name = "dsh-model-proxy";
+/** Marisa's local HTTP proxy endpoint when the launch environment has none. */
+export declare const DEFAULT_PROXY_URL = "http://127.0.0.1:10808";
 export declare const Config: Schema<Schemastery.ObjectS<{
     proxy: Schema<string, string>;
     noProxy: Schema<string[], string[]>;
