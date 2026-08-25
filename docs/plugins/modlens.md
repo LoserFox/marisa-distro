@@ -37,3 +37,7 @@
 ## 2026-08-27 npm 快照同步（3.24.2）
 
 从 npm 重新 vendored `@liustack/modlens@3.24.2` 并重放 seed 补丁（`existsSync` import 修正、`ZEN_DEFAULT_SEED` 常量与 `seedZenDefault` 签名对齐），OpenCode Zen 默认（`https://opencode.ai/zen/v1` + `mimo-v2.5-free`、占位 key `public`）行为保持；`prepublishOnly` 移除策略不变。`node --test tests/` 与 PR 边界检查绿。
+
+## 2026-08-25 Linux 可执行位
+
+`dist/main.js` 置 exec 位（100644 → 100755，内容不变），随 feature/linux-support 的 Linux 构建链改动（modlens CLI 入口可直接执行）；Windows 无 exec 位语义，无行为影响。
