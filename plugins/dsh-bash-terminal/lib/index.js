@@ -338,6 +338,42 @@ function processOutcome(proc) {
 
 // ---- model-facing rendering ---------------------------------------------------
 
+/** Display label for a shell id (used by the dynamic guidance section). */
+export const SHELL_LABELS = {
+  powershell: "PowerShell",
+  msys2: "MSYS2",
+  gitbash: "Git Bash",
+  wsl: "WSL"
+};
+
+/**
+ * Model guidance that embeds the CURRENT default terminal so the model never
+ * has to guess it. Assembled dynamically per request (systemPrompt.section
+ * text may be a function); the value is the user's live settings default.
+ */
+export function shellGuidanceText(defaultShell) {
+  const label = SHELL_LABELS[defaultShell] ?? defaultShell;
+  return [
+    `The user's current default terminal is ${label} (Settings -> General -> Default terminal, value "${defaultShell}").`,
+    "Use the shell tool for terminal commands: it runs in that terminal and honors the DSH sandbox. Do NOT pass the shell argument on ordinary calls — the default is already correct; pass it only when the user explicitly asks for a different shell (e.g. \"in WSL\", \"with msys2\").",
+    "Prefer the shell tool over the pwsh tool for everyday commands; keep the pwsh tool for cases that specifically need the sandboxed PowerShell surface."
+  ].join(" ");
+}
+
+/**
+ * The call-card description with the ACTUAL terminal label prefixed
+ * (`Git Bash · <description>`), matching the official bash/pwsh row chrome
+ * (`Bash · {description}`) so the UI always shows which terminal ran the
+ * command — the plain tool name "shell" cannot. The label is resolved once
+ * per call (explicit `shell` arg, else the live settings default) and the
+ * rendered description persists in the call view snapshot, so replayed
+ * history keeps the terminal it actually ran in.
+ */
+export function callDescription(description, shell) {
+  const label = SHELL_LABELS[shell] ?? shell;
+  return `${label} · ${description}`;
+}
+
 function streamText(output) {
   if (!output.truncated) return output.text;
   return `${output.text}\n[output truncated; full output: ${output.spillPath ?? "(unavailable)"}]`;
@@ -495,7 +531,9 @@ export function apply(ctx, config = {}) {
   ctx.systemPrompt.section({
     name: "tool:bash-terminal",
     order: 105,
-    text: "Use the shell tool for terminal commands: it runs in the terminal the user chose in Settings -> General -> Default terminal (PowerShell, MSYS2, Git Bash, or WSL) and honors the DSH sandbox. When the user explicitly asks to run something in a different shell (e.g. \"in WSL\", \"with msys2\"), pass that backend in the shell argument for that call. Prefer the shell tool over the pwsh tool for everyday commands; keep the pwsh tool for cases that specifically need the sandboxed PowerShell surface."
+    // Dynamic: embeds the user's current default terminal, re-evaluated on
+    // every request, so the model never guesses the backend.
+    text: () => shellGuidanceText(mergedConfig().defaultShell)
   });
 
   const toolName = "shell";
@@ -671,19 +709,24 @@ export function apply(ctx, config = {}) {
       });
     },
     presentCall: (args) => {
+      // Resolved once here and baked into the call-view snapshot: the explicit
+      // shell arg wins, otherwise the user's live default terminal. Replayed
+      // history therefore keeps the terminal the call actually ran in.
+      const shell = args.shell ?? settingsScope.get().defaultShell;
+      const described = (text) => callDescription(text, shell);
       if (args.run_in_background === true) {
         return {
           card: "generic",
           title: args.command,
           kind: "execute",
           rawInput: args.command,
-          content: [{ type: "text", text: args.description }]
+          content: [{ type: "text", text: described(args.description) }]
         };
       }
       return {
         card: "terminal",
         title: args.command,
-        description: args.description,
+        description: described(args.description),
         ...(args.workdir !== undefined ? { cwd: args.workdir } : {})
       };
     },
@@ -713,6 +756,8 @@ export const internals = {
   buildEnv,
   buildArgv,
   validateArgs,
+  shellGuidanceText,
+  callDescription,
   DEFAULT_TIMEOUT_MS,
   MAX_TIMEOUT_MS,
   DEFAULT_MAX_OUTPUT_BYTES

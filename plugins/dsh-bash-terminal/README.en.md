@@ -2,7 +2,7 @@
 
 > Community: [LINUX DO](https://linux.do) · [GitHub](https://github.com/MAXeaglet/dsh-bash-terminal)
 
-A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **PowerShell / Git Bash / WSL** on Windows, plus an **interactive terminal** tool — all following the terminal **you** choose in the Web UI settings.
+A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **PowerShell / MSYS2 / Git Bash / WSL** on Windows, plus an **interactive terminal** tool — all following the terminal **you** choose in the Web UI settings.
 
 ![test](https://github.com/MAXeaglet/dsh-bash-terminal/actions/workflows/test.yml/badge.svg)
 
@@ -11,10 +11,11 @@ A DeepSeek Harness (DSH) plugin: one `shell` tool that runs commands through **P
 | Backend | Runs | Syntax / paths | Env vars |
 |---------|------|----------------|----------|
 | `powershell` (default) | `pwsh -NoLogo -NoProfile -NonInteractive -Command <cmd>` | PowerShell; `C:\\...` | `$env:NAME` |
+| `msys2` | MSYS2 root `bash -lc <cmd>` (auto-detected `C:\msys64` etc.; `msys2Root` config) | POSIX; `C:\...` and `/c/...` both work; pacman/mingw toolchains | `$NAME` (`MSYSTEM` injected) |
 | `gitbash` | Git for Windows `bash -lc <cmd>` | POSIX; `/d/WorkSpace`; PATH includes `/usr/bin` and `/mingw64/bin` | `$NAME` |
 | `wsl` | `wsl [-d <distro>] -e bash -lc <cmd>` | Linux; `/mnt/d/...` | `$NAME` (via WSLENV) |
 
-- **User decides, the AI cannot override**: pick the default terminal in Settings -> General -> Default terminal (PowerShell / Git Bash / WSL). The setting persists through the DSH settings system; the `shell` tool always obeys it.
+- **User decides, the AI cannot override**: pick the default terminal in Settings -> General -> Default terminal (PowerShell / MSYS2 / Git Bash / WSL). The setting persists through the DSH settings system; the `shell` tool always obeys it.
 - **Official sandbox seam**: the `shell` tool resolves the DSH sandbox policy per call and confines PowerShell / Git Bash argv through `ctx.sandbox` — same fail-closed `SandboxUnavailableError` semantics as the shipped executors. WSL runs unconfined (its Linux-VM isolation IS the sandbox). Official `sandbox_permissions` / `justification` escalation and denial markers included.
 - **Interactive terminal**: the `terminal` tool opens persistent real-PTY sessions over the official `ctx.subprocess.spawnTerminal` seam (node-pty). Actions `open` / `send` / `read` / `signal` / `close`; shell state persists across calls; sessions are managed as background jobs and auto-close when idle.
 - **Background execution** via the generic jobs registry (`run_in_background` / `job_output` / `job_kill`).
@@ -54,7 +55,7 @@ For local development (junction install, source changes apply instantly) see the
 
 ## Config
 
-Web UI: Settings -> General -> Default terminal. Plugin row `config` overrides: `defaultShell`, `timeoutMs`, `maxTimeoutMs`, `pwshPath`, `gitBashPath`, `wslPath`.
+Web UI: Settings -> General -> Default terminal. Plugin row `config` overrides: `defaultShell`, `timeoutMs`, `maxTimeoutMs`, `pwshPath`, `msys2Root`, `msys2Msystem`, `wslDistro`, `gitBashPath`, `wslPath`.
 
 ## Uninstall
 
@@ -65,5 +66,5 @@ powershell -ExecutionPolicy Bypass -File install.ps1 uninstall
 ## Tests
 
 ```powershell
-node test/unit.mjs && node test/apply.mjs && node test/client.mjs && node test/terminal.mjs
+node test/unit.mjs
 ```

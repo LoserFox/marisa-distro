@@ -11,6 +11,9 @@ fork 基线：npm `dsh-bash-terminal@0.3.14`（[MAXeaglet/dsh-bash-terminal](htt
 | 3 | **按调用切换** | `lib/index.js` `lib/terminal.js` | `shell` 工具新增 `shell` 参数（enum powershell/msys2/gitbash/wsl），execute 用 `args.shell ?? settings.defaultShell`；`terminal` open 同款 `shell` 参数。设置页 `defaultShell` 仍是用户默认，模型仅在用户明确要求时临时切换（systemPrompt 有对应引导） |
 | 4 | **wslDistro 配置** | `lib/index.js` `lib/terminal.js` | `wslDistro` 作为 WSL 默认发行版（`args.distro ?? settings.wslDistro`），未配置走系统默认 |
 | 5 | **设置面扩展** | `lib/index.js` | settings namespace 从只有 `defaultShell` 扩为 `defaultShell` + `msys2Root` + `msys2Msystem` + `wslDistro`；execute/terminal open 每次从 settings 合并解析（设置页改动即时生效） |
+| 6 | **设置页补 msys2 选项** | `src/client.jsx` | 设置 → 通用「默认终端」下拉原本只有 PowerShell / Git Bash / WSL 三项，与后端四后端目录不一致（后端 `msys2` 只能靠配置文件 `defaultShell` 或按调用 `shell` 参数使用）；`SHELLS` 对齐 `lib/index.js` 加入 `msys2`，补充 zh/en `shell.msys2` 文案（2026-08-26） |
+| 7 | **默认终端值动态注入 system prompt** | `lib/index.js` | 原 `tool:bash-terminal` 引导段是静态文本（只说 "defaults to the user's choice"，模型无从知道当前值，容易猜 shell 或改用 pwsh 工具）；改为 `systemPrompt.section` 函数式 text，每次请求组装时读取 settings 的 `defaultShell` 实际值嵌入（如 "The user's current default terminal is Git Bash (…value \"gitbash\")…Do NOT pass the shell argument on ordinary calls"）。新 `shellGuidanceText` 纯函数可单测（2026-08-26） |
+| 8 | **调用卡片显示实际终端** | `lib/index.js` | shell 工具是四合一，UI 卡片只显示工具名 "shell"，看不出用哪个终端（官方 bash/pwsh 有专属行 "Bash · {description}"）；`presentCall` 的 description 改为 `callDescription()` 前缀终端标签（`Git Bash · 查看 git 状态`），显式 `shell` 参数优先、否则闭包读一次 settings 默认值（结果随 callView 快照持久化，重放保留调用时终端）——折叠行、展开卡片、结果态均可见（2026-08-26） |
 
 上游语义保持：不占用 `ctx.shell` 接缝（官方沙箱 pwsh 原样可用）；`ctx.subprocess` 派生（进程树终止、grace/SIGKILL、spill）；`run_in_background`/`jobs`；沙箱 escalate 面（`sandbox_permissions`/`justification`，wsl 视为自隔离）；每次调用全新 shell 不保留状态。
 
@@ -38,7 +41,8 @@ bundle patch 默认（全部可选，留空即自动探测）：
 
 ## 验证
 
-- **单元测试**：`plugins/dsh-bash-terminal/test/unit.mjs`（node:test，11 项）——候选路径探测（含排除 System32/Git）、`resolveAllPaths` 配置优先、msys2/wsl argv 构造、MSYSTEM/WSLENV env 注入、terminalArgv。运行方式：插件目录 `node_modules` junction 指向含 @deepseek-ai peer 的 node_modules（开发机用已安装后端），`node test/unit.mjs`。
+- **单元测试**：`plugins/dsh-bash-terminal/test/unit.mjs`（node:test，13 项）——候选路径探测（含排除 System32/Git）、`resolveAllPaths` 配置优先、msys2/wsl argv 构造、MSYSTEM/WSLENV env 注入、terminalArgv、`shellGuidanceText` 动态引导段（嵌入当前默认值 + 禁止猜测传参）、`callDescription` 卡片终端标签。运行方式：插件目录 `node_modules` junction 指向含 @deepseek-ai peer 的 node_modules（开发机用已安装后端），`node test/unit.mjs`。
+- **设置页 UI 验证**（2026-08-26，live 部署树）：`node scripts/build-client.mjs` 重建 `dist/client.js`/`dist/client.core.js` 后同步 live 部署，浏览器实测设置 → 通用 →「默认终端」下拉出现四项 PowerShell / MSYS2 / Git Bash / WSL；选中 MSYS2 写入 settings 持久化（下拉按钮即时变为 MSYS2），切回 Git Bash 恢复原默认值。
 - **boot 冒烟**：以已安装 rc7 后端的 `marisa-test` 测试 profile 装载 fork（bundle patch 生效、`--dump-config` 含 `tool-bash-terminal` 行与全部 config 键），web app 启动 HTTP 200、无 boot 报错。
 - **真实执行**：本机 `C:\msys64\usr\bin\bash.exe -lc 'echo $MSYSTEM; uname -s'` 在非沙箱环境输出 `MINGW64` / `MINGW64_NT-10.0-26200`，pacman 在位——msys2 后端 argv 链路可用。沙箱/受限令牌下 MSYS2 报 `couldn't create signal pipe, Win32 error 5`（与 Marisa OOM 事故记录同源，属沙箱限制非插件缺陷）。
 - **环境事实**（2026-08-21 本机）：`C:\msys64` MSYS2 已装、Git for Windows 已装、pwsh 7 在位；`wsl -l` 在沙箱下返回 E_ACCESSDENIED，WSL 发行版需桌面环境复核。

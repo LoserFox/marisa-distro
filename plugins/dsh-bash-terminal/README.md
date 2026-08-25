@@ -87,7 +87,7 @@ node "$env:APPDATA\nvm\v24.16.0\node_modules\@deepseek-ai\dsh\lib\bin.js" --prof
 
 ## 使用
 
-**用户在 Web UI 设置默认终端**：打开设置（齿轮）→ 通用 →「默认终端」下拉，选择 PowerShell / Git Bash / WSL 之一。改动即时生效并持久化。
+**用户在 Web UI 设置默认终端**：打开设置（齿轮）→ 通用 →「默认终端」下拉，选择 PowerShell / MSYS2 / Git Bash / WSL 之一。改动即时生效并持久化。
 
 模型看到 `shell` 工具后，执行命令时自动使用你选择的终端（工具不暴露终端参数，模型无法更改你的选择）：
 
@@ -179,8 +179,6 @@ Remove-Item "$env:USERPROFILE\.dsh\profiles\web\node_modules\dsh-bash-terminal" 
 
 ```powershell
 cd D:\WorkSpace\projects\dsh-bash-terminal
-node test\unit.mjs    # 纯函数单测（路径解析/argv/env/渲染/校验）
-node test\apply.mjs   # apply + execute mock 集成测试（用户设置决定后端、workdir、WSLENV、超时）
-node test\client.mjs  # client 插件逻辑测试（slot 注册/初始快照/setShell 写透）
+node test\unit.mjs    # 纯函数单测（路径解析/argv/env/渲染/校验，11 项）
 node scripts/build-client.mjs  # 打包前端设置项 bundle → dist/client.js
 ```

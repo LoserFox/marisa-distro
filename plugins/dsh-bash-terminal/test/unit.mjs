@@ -83,3 +83,25 @@ test("terminalArgv wsl keeps the upstream -- fallback for the default distro", (
   assert.deepEqual(terminalArgv("wsl", paths, undefined), ["C:\\Windows\\System32\\wsl.exe", "--", "bash", "-i"]);
   assert.deepEqual(terminalArgv("wsl", paths, "Debian"), ["C:\\Windows\\System32\\wsl.exe", "-d", "Debian", "-e", "bash", "-i"]);
 });
+
+test("shellGuidanceText embeds the current default shell and forbids guessing", () => {
+  const t = internals.shellGuidanceText("gitbash");
+  assert.ok(t.includes("Git Bash"), "label must be human-readable");
+  assert.ok(t.includes('value "gitbash"'), "raw settings value must be present");
+  assert.ok(t.includes("Do NOT pass the shell argument"), "must instruct the model to keep the default");
+  assert.ok(t.includes("msys2"), "must keep the per-call override hint");
+  const m = internals.shellGuidanceText("msys2");
+  assert.ok(m.includes("MSYS2"));
+  const p = internals.shellGuidanceText("powershell");
+  assert.ok(p.includes("PowerShell"));
+  const w = internals.shellGuidanceText("wsl");
+  assert.ok(w.includes("WSL"));
+});
+
+test("callDescription prefixes the terminal label like the official row chrome", () => {
+  assert.equal(internals.callDescription("查看 git 状态", "gitbash"), "Git Bash · 查看 git 状态");
+  assert.equal(internals.callDescription("install package", "msys2"), "MSYS2 · install package");
+  assert.equal(internals.callDescription("get processes", "powershell"), "PowerShell · get processes");
+  // unknown ids fall back to the raw id, never crash
+  assert.equal(internals.callDescription("x", "unknown-shell"), "unknown-shell · x");
+});

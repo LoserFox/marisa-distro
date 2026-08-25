@@ -8,7 +8,8 @@ import { IconChevronDownOutline14, Menu } from "@deepseek-ai/dsh-client-ui-primi
 
 const SETTINGS_NS = "settings.bash-terminal";
 const SETTINGS_NAMESPACE = "bash-terminal";
-const SHELLS = ["powershell", "gitbash", "wsl"];
+// Order mirrors lib/index.js SHELLS so the catalog stays in sync.
+const SHELLS = ["powershell", "msys2", "gitbash", "wsl"];
 
 // Injected once when the browser loads the bundle (node tests guard on document).
 const ROW_CSS = 
@@ -31,6 +32,7 @@ const zh = {
   "shell.title": "默认终端",
   "shell.description": "shell 工具执行命令时使用的终端",
   "shell.powershell": "PowerShell",
+  "shell.msys2": "MSYS2",
   "shell.gitbash": "Git Bash",
   "shell.wsl": "WSL"
 };
@@ -38,6 +40,7 @@ const en = {
   "shell.title": "Default terminal",
   "shell.description": "Terminal used by the shell tool",
   "shell.powershell": "PowerShell",
+  "shell.msys2": "MSYS2",
   "shell.gitbash": "Git Bash",
   "shell.wsl": "WSL"
 };

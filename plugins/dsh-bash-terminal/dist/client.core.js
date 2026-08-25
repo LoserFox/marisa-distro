@@ -29,7 +29,7 @@ var import_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primit
 var import_jsx_runtime = require("react/jsx-runtime");
 var SETTINGS_NS = "settings.bash-terminal";
 var SETTINGS_NAMESPACE = "bash-terminal";
-var SHELLS = ["powershell", "gitbash", "wsl"];
+var SHELLS = ["powershell", "msys2", "gitbash", "wsl"];
 var ROW_CSS = ".btRow{border-bottom:1px solid var(--dsw-alias-border-l2);align-items:center;gap:8px;padding:16px 0;display:flex}.btRowText{flex-direction:column;flex:1;gap:4px;min-width:0;padding-right:48px;display:flex}.btTitle{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:400;line-height:22px}.btDesc{color:var(--dsw-alias-label-tertiary);font-size:12px;font-weight:400;line-height:18px}.btSelector{background:var(--dsw-alias-bg-module-platform);height:36px;font:inherit;color:var(--dsw-alias-label-primary);cursor:pointer;border:none;border-radius:18px;align-items:center;gap:12px;padding:0 14px;font-size:14px;line-height:22px;display:inline-flex}.btSelector:hover{background:var(--dsw-alias-interactive-bg-hover)}.btChevron{flex:none}";
 if (typeof document !== "undefined" && document.querySelector('style[data-plugin-css="bash-terminal-row"]') === null) {
   const tag = document.createElement("style");
@@ -42,6 +42,7 @@ var zh = {
   "shell.title": "\u9ED8\u8BA4\u7EC8\u7AEF",
   "shell.description": "shell \u5DE5\u5177\u6267\u884C\u547D\u4EE4\u65F6\u4F7F\u7528\u7684\u7EC8\u7AEF",
   "shell.powershell": "PowerShell",
+  "shell.msys2": "MSYS2",
   "shell.gitbash": "Git Bash",
   "shell.wsl": "WSL"
 };
@@ -49,6 +50,7 @@ var en = {
   "shell.title": "Default terminal",
   "shell.description": "Terminal used by the shell tool",
   "shell.powershell": "PowerShell",
+  "shell.msys2": "MSYS2",
   "shell.gitbash": "Git Bash",
   "shell.wsl": "WSL"
 };
