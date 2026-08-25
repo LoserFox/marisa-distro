@@ -175,16 +175,16 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var NotificationSettingsRow_module_css_default = {
-			"title": "TrRyMG_title",
-			"status": "TrRyMG_status",
-			"styleLabel": "TrRyMG_styleLabel",
 			"button": "TrRyMG_button",
 			"desc": "TrRyMG_desc",
-			"styleRow": "TrRyMG_styleRow",
-			"styleHint": "TrRyMG_styleHint",
-			"styleSelect": "TrRyMG_styleSelect",
 			"row": "TrRyMG_row",
-			"rowText": "TrRyMG_rowText"
+			"rowText": "TrRyMG_rowText",
+			"status": "TrRyMG_status",
+			"styleHint": "TrRyMG_styleHint",
+			"styleLabel": "TrRyMG_styleLabel",
+			"styleRow": "TrRyMG_styleRow",
+			"styleSelect": "TrRyMG_styleSelect",
+			"title": "TrRyMG_title"
 		};
 		//#endregion
 		//#region src/client/NotificationSettingsRow.tsx
@@ -451,7 +451,7 @@ window.__ModuleLoader__.load({
 							});
 						}
 					}
-					if (sid !== current && summary.completed === true) {
+					if (sid !== current && summary.origin !== "subagent" && summary.completed === true) {
 						if (!completedNotified.has(sid)) {
 							completedNotified.add(sid);
 							if (awayNow() && notificationUsable()) fireSessionDoneNotification(t, {

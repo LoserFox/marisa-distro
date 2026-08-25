@@ -101,6 +101,7 @@ interface ScriptedSummary {
   displayTitle: string
   pendingInteraction?: 'approval' | 'plan-review' | 'question'
   completed?: boolean
+  origin?: 'subagent'
 }
 
 /**
@@ -624,6 +625,34 @@ describe('apply', () => {
     sessions.setSummary('s2', { completed: false })
     sessions.setSummary('s2', { completed: true })
     expect(notify.created).toHaveLength(2)
+  })
+
+  it('does not notify a subagent session completion, but still notifies its waits', async () => {
+    const { ctx, notify } = await bench()
+    await ctx.plugin({ inject: [...inject], apply }).await()
+    notify.created.length = 0
+    const sessions = ctx.get('sessions') as unknown as ReturnType<typeof scriptedSessions>
+    // A background subagent finishes (running→idle arms `completed` on the
+    // child row): its return surfaces through the parent conversation, so no
+    // "done" toast for the child session.
+    sessions.setSummary('sub-1', { displayTitle: '子代理', origin: 'subagent', completed: true })
+    expect(notify.created).toHaveLength(0)
+    // The same subagent row blocked on a question still notifies — that wait
+    // is actionable and must not be swallowed with the completion skip.
+    sessions.setPendingFor('sub-1', [{
+      kind: 'question',
+      key: 'q:rpc-20',
+      payload: { questions: [{ id: 'q20', question: '子代理需要你决定' }] },
+    }])
+    expect(notify.created).toHaveLength(1)
+    expect(notify.created[0]).toMatchObject({
+      title: '子代理 · 需要你的回答',
+      options: { body: '子代理需要你决定' },
+    })
+    // A regular background session completing right beside it still notifies.
+    sessions.setSummary('s2', { displayTitle: '后台会话', completed: true })
+    expect(notify.created).toHaveLength(2)
+    expect(notify.created[1]).toMatchObject({ title: '后台会话 · 会话完成' })
   })
 
   it('does not re-notify the same wait when its session becomes current', async () => {

@@ -140,7 +140,10 @@ export function apply(ctx) {
             }
             // Whole-session completion ("done" reminder): notify once per session,
             // cleared when the flag drops (running again / opened / removed).
-            if (sid !== current && summary.completed === true) {
+            // Subagent rows are transient delegation machinery, not user sessions:
+            // their finish surfaces through the parent conversation, so a "done"
+            // toast for the child is noise (their pending waits still notify below).
+            if (sid !== current && summary.origin !== 'subagent' && summary.completed === true) {
                 if (!completedNotified.has(sid)) {
                     completedNotified.add(sid);
                     if (awayNow() && notificationUsable()) {

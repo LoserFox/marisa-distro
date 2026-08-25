@@ -81,4 +81,42 @@ id/url/rev/inject），浏览器半的开关只能靠壳侧。
   载荷 base64 解码含 `{"data":{"sessionId":"s-test-42"}}`——点击回传链路
   数据面验证通过（真实点击后的 ExecJS 跳转待发行构建后人工验收）。
 
-同步时验证通知权限、托盘行为和客户端审批事件。
+## 子代理会话完成不再弹「会话完成」通知（2026-08-27，fork 差异）
+
+问题：后台 subagent 返回时也会弹「会话完成」通知。根因：subagent（child）
+会话也是列表行（`origin: 'subagent'`），runtime 的
+`syncCompletedNotifications` 对**任何**非选中会话的 running→idle 沿都会挂
+`completed` 完成提醒，插件 `scanList` 的整会话完成分支不区分来源，于是
+subagent 一结束就为子会话弹「会话完成」toast——而子代理的返回本来就会经父
+会话的 turn-end 通知体现，子会话的 toast 纯属噪音。
+
+修复（`src/client/index.ts` `scanList`）：整会话完成通知跳过
+`origin === 'subagent'` 行（`sid !== current && summary.origin !== 'subagent'
+&& summary.completed === true`）。子代理行的**待交互**通知（approval/
+question，子代理卡住等输入）保留——那正是该通知的用途，不受影响。
+
+测试证据（2026-08-27，vitest 3 文件 41 项全过）：新增
+`browser-plugin.spec.ts` 用例——子代理行 `completed: true` 零通知；同一子
+代理行挂 question 仍通知（标题含子会话名）；旁边普通后台会话完成仍通知。
+`lib/` 产物已随本次修复重建（lib/client.js 含 `origin !== "subagent"` 判断）。
+
+## 构建注意（2026-08-27）：harness rc8 下 scripts/build.mjs 失效
+
+harness 换到 rc8 后，`packages/client/tsdown.client.ts` 预设新增
+`workspaceManifest` 校验：按包名在 harness 的 `packages/*/*/package.json`
+里查 manifest，独立于 workspace 的插件直接构建报错（且脚本的
+`symlinkSync` 在无权限的 Windows 上还先 EPERM）。临时绕过法（本次重建
+lib/ 用）：
+
+1. `node_modules` 链接改用 junction（`fs.symlinkSync(…, 'junction')`）指向
+   harness/node_modules，再按需 junction 工作区包与 react/@types/react；
+2. 在 harness 下建真实目录 `packages/plugins/dsh-web-ui-approval-notify/`
+   只放一份 package.json 拷贝（预设只读 manifest；glob 不进 junction）；
+   构建完删除该目录与残留链接，harness 零改动；
+3. `tsc -p tsconfig.json` + `tsdown -c tsdown.config.mjs`（DSH_CHECKOUT 指
+   向 harness）。
+
+建议反馈上游：插件 tsdown 配置自包含化（参照 dsh-stickers/dsh-sonar 的
+自带预设写法），彻底摆脱对 harness workspace 的构建期依赖。
+
+## 同步时验证通知权限、托盘行为和客户端审批事件。
