@@ -315,12 +315,12 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var StickerPicker_module_css_default = {
-			"root": "BNP33a_root",
+			"variants": "BNP33a_variants",
 			"popover": "BNP33a_popover",
-			"grid": "BNP33a_grid",
-			"active": "BNP33a_active",
+			"root": "BNP33a_root",
 			"trigger": "BNP33a_trigger",
-			"variants": "BNP33a_variants"
+			"grid": "BNP33a_grid",
+			"active": "BNP33a_active"
 		};
 		//#endregion
 		//#region src/client/StickerPicker.tsx
