@@ -22,3 +22,7 @@
 ## 2026-08-23 依赖区间迁移
 
 0.1.1-rc.2 迁移收敛的一部分：`@deepseek-ai/*` 依赖区间从 `^0.1.0-rc.6`/`^0.1.0-rc.8` 统一改为 `workspace:^`（workspace 成员）或 `^0.1.1-rc.2`（registry 包）。机械替换，无代码改动；解析目标从 registry rc.8 副本树切换到 workspace rc.2 树。反馈上游：待同步窗口。
+
+## 2026-08-25 npm 快照同步（0.16.0）
+
+从 npm 重新 vendored `dsh-better-sidebar@0.16.0`（14 个 `@deepseek-ai/*` workspace 依赖按 `workspace:^` 重接线）；本地补丁按既有流程重放：互斥补丁 src + lib/client.js 双处、`prepare`/`prepublishOnly` 检查（0.16.0 无安装期脚本）。lib/ 与类型产物随主树提交；验收见 2026-08-27 upstream-sync-assess 报告。

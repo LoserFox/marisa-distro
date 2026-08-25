@@ -12,3 +12,7 @@
 1. 从 npm 更新目标版本，排除 `node_modules`、`.git` 与缓存。
 2. 重放 devDependencies 的 `workspace:^` 改写（每次同步必须检查发布包是否改回了 registry 风格范围）。
 3. 验证侧栏 client 注入、组合 patch 与 rc8 boot。
+
+## 2026-08-25 npm 快照同步（0.3.3）
+
+从 npm 重新 vendored `@huanlin/dsh-plugin-ya-workspace-sidebar@0.3.3`（7 个 `@deepseek-ai/*` workspace 依赖按 `workspace:^` 重接线），peer 依赖可选化保持；验证侧栏 client 注入、组合 patch 与 rc8 boot。
