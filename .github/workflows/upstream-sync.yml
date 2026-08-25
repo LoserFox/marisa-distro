@@ -16,7 +16,7 @@ jobs:
     outputs:
       components: ${{ steps.components.outputs.components }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
       - id: components
@@ -36,7 +36,7 @@ jobs:
         component: ${{ fromJSON(needs.matrix.outputs.components) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: main
