@@ -27,6 +27,7 @@
     "@bill9109/dsh-web-ui-notify": "file:../../plugins/dsh-web-ui-approval-notify",
     "dsh-whale-widget": "file:../../plugins/dsh-whale-widget",
     "dsh-session-isolate": "file:../../plugins/dsh-session-isolate",
+    "dsh-model-proxy": "file:../../plugins/dsh-model-proxy",
     "@dsh-external/change-ledger": "file:../../plugins/dsh-change-ledger",
     "@dsh-external/dsh-auto-resume": "file:../../plugins/dsh-auto-resume",
     "@deepseek-ai/cordis": "file:../../harness/vendor/cordis",
