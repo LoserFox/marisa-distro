@@ -165,7 +165,7 @@
       "name": "dsh-model-proxy",
       "source": "internal",
       "dir": "dsh-model-proxy",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "bundle": true
     },
     {

@@ -8,9 +8,10 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import net from 'node:net'
 import http from 'node:http'
-import { createProxyDispatcher, apply, parseProxy, displayProxy, inNoProxy, DEFAULT_PROXY_URL } from '../dist/index.js'
+import { createProxyDispatcher, apply, parseProxy, displayProxy, inNoProxy, DEFAULT_PROXY_URL, validateSettingsConfig } from '../dist/index.js'
 
 const DISPATCHER_KEY = Symbol.for('undici.globalDispatcher.2')
 const originalDispatcher = globalThis[DISPATCHER_KEY]
@@ -174,6 +175,26 @@ test('inNoProxy: NO_PROXY env participates', () => {
   }
 })
 
+test('package ships a Web settings card for the model-proxy namespace', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  assert.equal(pkg.exports['./client'].default, './dist/client.js')
+  assert.equal(pkg.dsh.client.platform, 'web')
+  assert.ok(pkg.dsh.client.inject.includes('@deepseek-ai/dsh-client-ui-settings-plugins'))
+  const client = readFileSync(new URL('../dist/client.js', import.meta.url), 'utf8')
+  assert.match(client, /window\.__ModuleLoader__\.load/)
+  assert.match(client, /settings\.plugin\.item/)
+  assert.match(client, /model-proxy/)
+})
+
+test('settings validation rejects unusable or credential-bearing proxy URLs', () => {
+  for (const proxy of ['', 'direct', 'none', 'off', 'http://127.0.0.1:10808', 'socks5h://proxy.internal:1080']) {
+    assert.doesNotThrow(() => validateSettingsConfig({ proxy }))
+  }
+  for (const proxy of ['ftp://proxy.internal', 'not-a-url', 'http://user:pass@proxy.internal:8080']) {
+    assert.throws(() => validateSettingsConfig({ proxy }))
+  }
+})
+
 // ── 集成：真实全局 dispatcher ──
 
 function withNoProxyCleared(run) {
@@ -263,6 +284,7 @@ test('apply: HTTP_PROXY drives model transport, reaches shell children, and neve
   let disposer
   const ctx = {
     logger: () => ({ info: (m) => events.push(['info', m]), warn: (m) => events.push(['warn', m]) }),
+    inject: () => {},
     effect: (cb) => { disposer = cb(); return disposer ?? (() => {}) },
   }
   try {
@@ -301,6 +323,7 @@ test('apply: local default is published when no standard proxy env exists', asyn
   let disposer
   const ctx = {
     logger: () => ({ info: () => {}, warn: () => {} }),
+    inject: () => {},
     effect: (cb) => { disposer = cb(); return disposer ?? (() => {}) },
   }
   try {
@@ -314,11 +337,16 @@ test('apply: local default is published when no standard proxy env exists', asyn
   }
 })
 
-test('apply: direct / invalid config values leave the dispatcher untouched', () => {
+test('apply: direct / invalid config values leave the dispatcher untouched', async () => {
   for (const value of ['direct', 'none', 'ftp://x']) {
     const restoreProxyEnv = isolateProxyEnv()
     const events = []
-    const ctx = { logger: () => ({ info: (m) => events.push(m), warn: (m) => events.push(m) }), effect: () => () => {} }
+    let disposer
+    const ctx = {
+      logger: () => ({ info: (m) => events.push(m), warn: (m) => events.push(m) }),
+      inject: () => {},
+      effect: (cb) => { disposer = cb(); return disposer ?? (() => {}) },
+    }
     try {
       apply(ctx, { proxy: value })
       assert.equal(globalThis[DISPATCHER_KEY], originalDispatcher, `value: ${JSON.stringify(value)}`)
@@ -328,6 +356,7 @@ test('apply: direct / invalid config values leave the dispatcher untouched', () 
         assert.ok(events.some((m) => m.includes('direct')))
       }
     } finally {
+      await disposer?.()
       restoreProxyEnv()
     }
   }

@@ -924,7 +924,7 @@ importers:
         version: file:plugins/dsh-update-check(@deepseek-ai/cordis@file:harness/vendor/cordis(@deepseek-ai/cordis-plugin-include@harness+vendor+include)(@deepseek-ai/cordis-plugin-loader@harness+vendor+loader))(@deepseek-ai/dsh-home-paths@harness+packages+util+home-paths)(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(@deepseek-ai/schemastery@harness+vendor+schemastery)(react@18.3.1)
       dsh-model-proxy:
         specifier: file:../../plugins/dsh-model-proxy
-        version: file:plugins/dsh-model-proxy(cordis@4.0.0-rc.7)
+        version: file:plugins/dsh-model-proxy(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(cordis@4.0.0-rc.7)(react@18.3.1)
       dsh-session-isolate:
         specifier: file:../../plugins/dsh-session-isolate
         version: link:../../plugins/dsh-session-isolate
@@ -10805,12 +10805,36 @@ importers:
         specifier: ^7.29.0
         version: 7.29.0
     devDependencies:
+      '@deepseek-ai/dsh-client-locale':
+        specifier: workspace:^
+        version: link:../../harness/packages/client/locale
+      '@deepseek-ai/dsh-client-runtime':
+        specifier: workspace:^
+        version: link:../../harness/packages/client/runtime
+      '@deepseek-ai/dsh-client-ui-settings-plugins':
+        specifier: workspace:^
+        version: link:../../harness/packages/client/ui-settings-plugins
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: workspace:^
+        version: link:../../harness/packages/client/ui-slots
+      '@deepseek-ai/dsh-settings':
+        specifier: workspace:^
+        version: link:../../harness/packages/settings/settings
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.31
       cordis:
         specifier: 4.0.0-rc.7
         version: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.14(@arethetypeswrong/core@0.18.5)(oxc-resolver@11.24.2)(publint@0.3.23)(tsx@4.23.12)(typescript@6.0.3)(unrun@0.2.39)
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -11693,7 +11717,7 @@ importers:
         version: file:plugins/mnemon(@deepseek-ai/dsh-client-ui-primitives@harness+packages+client+ui-primitives)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       dsh-model-proxy:
         specifier: file:../../../plugins/dsh-model-proxy
-        version: file:plugins/dsh-model-proxy(cordis@4.0.0-rc.7)
+        version: file:plugins/dsh-model-proxy(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(cordis@4.0.0-rc.7)(react@18.3.1)
       dsh-session-isolate:
         specifier: file:../../../plugins/dsh-session-isolate
         version: link:../../../plugins/dsh-session-isolate
@@ -16173,7 +16197,9 @@ packages:
     resolution: {directory: plugins/dsh-model-proxy, type: directory}
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
+      '@deepseek-ai/dsh-settings': workspace:^
       cordis: 4.0.0-rc.7
+      react: ^18.2.0
 
   dsh-skill-manager@file:dsh-skill-manager:
     resolution: {directory: dsh-skill-manager, type: directory}
@@ -22902,10 +22928,12 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       schemastery: 3.18.0
 
-  dsh-model-proxy@file:plugins/dsh-model-proxy(cordis@4.0.0-rc.7):
+  dsh-model-proxy@file:plugins/dsh-model-proxy(@deepseek-ai/dsh-settings@harness+packages+settings+settings)(cordis@4.0.0-rc.7)(react@18.3.1):
     dependencies:
+      '@deepseek-ai/dsh-settings': link:harness/packages/settings/settings
       '@deepseek-ai/schemastery': 3.18.1
       cordis: 4.0.0-rc.7(@cordisjs/plugin-loader@1.0.0-rc.5)
+      react: 18.3.1
       undici: 7.29.0
 
   dsh-skill-manager@file:dsh-skill-manager:

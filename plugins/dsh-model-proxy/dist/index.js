@@ -18,21 +18,38 @@
  * @module dsh-model-proxy
  */
 import { Agent } from 'undici';
+import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings';
 import Schema from '@deepseek-ai/schemastery';
 import tls from 'node:tls';
 import { connectSocket, DEFAULT_NO_PROXY, displayProxy, firstEnv, parseProxy } from './tunnel.js';
 export * from './tunnel.js';
 export const name = 'dsh-model-proxy';
+/** Host/client pairing key for the Web settings card. */
+export const MODEL_PROXY_SETTINGS_NAMESPACE = settingsNamespace('model-proxy');
 /** Marisa's local HTTP proxy endpoint when the launch environment has none. */
 export const DEFAULT_PROXY_URL = 'http://127.0.0.1:10808';
 export const Config = Schema.object({
     proxy: Schema.string()
-        .description('上游代理 URL：socks5://、socks5h://、http://、https://（可带 user:pass），或 direct；留空则读 HTTP_PROXY → HTTPS_PROXY → ALL_PROXY，最后使用 Marisa 本地 HTTP 代理默认值')
+        .description('上游代理 URL：socks5://、socks5h://、http://、https://（认证代理请改用环境变量），或 direct；留空则读 HTTP_PROXY → HTTPS_PROXY → ALL_PROXY，最后使用 Marisa 本地 HTTP 代理默认值')
         .default(''),
     noProxy: Schema.array(Schema.string())
         .description('命中则直连的主机（追加到环境变量 NO_PROXY 之上；localhost/127.0.0.1/::1 恒直连）')
         .default([]),
 });
+/**
+ * Browser-served settings must be both usable and safe to return in a
+ * settings snapshot. Authenticated proxy URLs remain supported through the
+ * standard proxy environment variables, which never cross the settings RPC.
+ */
+export function validateSettingsConfig(config) {
+    const proxyUrl = (config.proxy ?? '').trim();
+    if (proxyUrl === '' || /^(direct|none|off)$/i.test(proxyUrl))
+        return;
+    const proxy = parseProxy(proxyUrl);
+    if (proxy.username !== undefined || proxy.password !== undefined) {
+        throw new Error('authenticated proxy URLs must be supplied through HTTP_PROXY, HTTPS_PROXY, or ALL_PROXY');
+    }
+}
 function publishShellProxy(proxyUrl) {
     // PowerShell on Windows resolves environment names case-insensitively. On
     // POSIX publish both spellings because common CLI clients disagree on case.
@@ -117,14 +134,14 @@ export function createProxyDispatcher(proxyUrl, noProxyExtra = []) {
  * Install the proxying dispatcher as the undici global dispatcher, restoring
  * the previous value on dispose. No-op when no proxy is configured.
  */
-export function apply(ctx, config) {
+function activateProxy(ctx, config) {
     const logger = ctx.logger('model-proxy');
     const proxyUrl = (config.proxy ?? '').trim()
         || firstEnv('HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy')
         || DEFAULT_PROXY_URL;
     if (!proxyUrl || /^(direct|none|off)$/i.test(proxyUrl)) {
         logger.info('no proxy configured — global fetch dispatcher untouched (direct)');
-        return;
+        return async () => { };
     }
     let proxy;
     try {
@@ -133,7 +150,7 @@ export function apply(ctx, config) {
     }
     catch (error) {
         logger.warn(`invalid proxy URL "${proxyUrl}": ${error.message} — staying direct`);
-        return;
+        return async () => { };
     }
     const noProxyExtra = [
         ...DEFAULT_NO_PROXY,
@@ -143,9 +160,55 @@ export function apply(ctx, config) {
     const { display, dispose } = createProxyDispatcher(proxy, noProxyExtra);
     const restoreShellProxy = publishShellProxy(proxy);
     logger.info(`global fetch dispatcher → via ${display}; shell HTTP_PROXY exported (noProxy: ${noProxyExtra.length} entries + loopback)`);
-    ctx.effect(() => async () => {
+    return async () => {
         restoreShellProxy();
         await dispose();
+    };
+}
+/**
+ * Install the proxy dispatcher and expose its two fields through the Host
+ * settings namespace. Saved Web settings reconfigure both fetch and shell
+ * inheritance immediately; the model API endpoint remains outside this
+ * namespace and cannot be rewritten by the card.
+ */
+export function apply(ctx, config) {
+    const entry = {
+        proxy: config.proxy ?? '',
+        noProxy: [...(config.noProxy ?? [])],
+    };
+    let source = () => entry;
+    let active;
+    let started = false;
+    let stopped = false;
+    let transition = Promise.resolve();
+    const reconfigure = () => {
+        if (!started || stopped)
+            return;
+        const next = source();
+        transition = transition.then(async () => {
+            try {
+                await active?.();
+            }
+            catch (error) {
+                ctx.logger('model-proxy').warn(`proxy cleanup failed during settings update: ${error.message}`);
+            }
+            if (!stopped)
+                active = activateProxy(ctx, next);
+        });
+    };
+    installSettingsSection(ctx, MODEL_PROXY_SETTINGS_NAMESPACE, Config, entry, {
+        validate: validateSettingsConfig,
+        setSource: current => { source = current; },
+        onChange: reconfigure,
+    });
+    ctx.effect(() => {
+        started = true;
+        active = activateProxy(ctx, source());
+        return async () => {
+            stopped = true;
+            await transition;
+            await active?.();
+        };
     });
 }
 //# sourceMappingURL=index.js.map

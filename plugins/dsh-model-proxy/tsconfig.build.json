@@ -6,5 +6,7 @@
     "rootDir": "src",
     "declaration": true,
     "sourceMap": true
-  }
+  },
+  "include": ["src/index.ts", "src/tunnel.ts"],
+  "exclude": ["src/client"]
 }

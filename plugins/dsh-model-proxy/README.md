@@ -17,20 +17,26 @@ connector 自行完成 TLS，于是所有全局 fetch 透明走代理——
 
 ## 配置
 
-插件配置（profile 的 cordis.yml 里给本插件配 config 即可），全部可选：
+在 Web 设置页打开「插件 → 插件配置 → 模型代理」即可修改；Host 确认写入后立即同时
+更新模型/Web 请求的 transport 和 Agent shell 继承的 `HTTP_PROXY`。也可以在
+profile 的 cordis.yml 里给本插件配置以下字段，全部可选：
 
 | 字段 | 含义 | 默认 |
 |---|---|---|
-| `proxy` | 上游代理 URL：`socks5://`、`socks5h://`、`http://`、`https://`（可带 `user:pass`），或 `direct` | 读 `HTTP_PROXY` → `HTTPS_PROXY` → `ALL_PROXY`；都没有时用 `http://127.0.0.1:10808` |
+| `proxy` | 上游代理 URL：`socks5://`、`socks5h://`、`http://`、`https://`（不含认证信息），或 `direct` | 读 `HTTP_PROXY` → `HTTPS_PROXY` → `ALL_PROXY`；都没有时用 `http://127.0.0.1:10808` |
 | `noProxy` | 命中则直连的主机列表（追加到环境变量 `NO_PROXY` 之上） | `[]` |
 
-环境变量示例（pwsh `$PROFILE`）：
+环境变量示例：
 
 ```powershell
 $env:HTTP_PROXY = 'http://127.0.0.1:10808'
 ```
 
-显式配置 `direct` 时插件不做任何事。代理 URL 非法时记 warning 并保持直连。
+带 `user:pass` 的代理仍受 transport 支持，但只应通过上述标准代理环境变量提供，
+避免认证信息进入浏览器可读的 Host 设置快照。
+
+显式配置 `direct` 时插件不做任何事。Web 设置会拒绝非法 URL；启动配置中的
+非法 URL 会记 warning 并保持直连。
 插件不会设置或改写 `DEEPSEEK_BASE_URL`：DeepSeek endpoint 始终由适配器保持为
 `https://api.deepseek.com`（除非用户自己在模型设置中覆盖）。
 
@@ -48,4 +54,5 @@ node --test plugins/dsh-model-proxy/tests/
 
 测试含假 SOCKS5/HTTP 代理 + 假上游，真实走 undici 全局 dispatcher 断言
 隧道路径与 NO_PROXY 直连路径，并断言子进程继承 `HTTP_PROXY`、
-`DEEPSEEK_BASE_URL` 不被改写（不依赖外网）。
+`DEEPSEEK_BASE_URL` 不被改写，以及 Web 设置卡片被正确打进 client bundle
+（不依赖外网）。
