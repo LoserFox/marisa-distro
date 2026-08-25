@@ -83,7 +83,7 @@ jobs:
       - name: Build, test and package Windows release
         shell: pwsh
         run: pwsh -NoProfile -File scripts/build-release-windows.ps1 -Version '${{ needs.validate.outputs.version }}'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-windows
           path: |
@@ -113,7 +113,7 @@ jobs:
           go build -C desktop -trimpath -ldflags '-s -w' -o ../release/linux/marisa-dsh .
           cp desktop/README.md release/linux/README.md
           tar -C release/linux -czf release/Marisa-DSH-linux-x64-experimental.tar.gz marisa-dsh README.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-linux-experimental
           path: release/Marisa-DSH-linux-x64-experimental.tar.gz
@@ -140,7 +140,7 @@ jobs:
           go build -C desktop -trimpath -ldflags '-s -w' -o "../$app/Contents/MacOS/Marisa DSH" .
           cp desktop/installer/macos-Info.plist "$app/Contents/Info.plist"
           ditto -c -k --sequesterRsrc --keepParent "$app" release/Marisa-DSH-macos-arm64-experimental.app.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-macos-experimental
           path: release/Marisa-DSH-macos-arm64-experimental.app.zip
