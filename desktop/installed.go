@@ -101,12 +101,16 @@ func prepareInstalledBackend(zipPath string) error {
 		return err
 	}
 	// 更新数据守卫（MSI 形态）：deferred custom action 中不能弹窗（会挂起
-	// 安装），自动备份 backend\.dsh 到备份区；失败中止替换（保留旧目录）。
+	// 安装），自动备份 backend\.dsh 到备份区，并把用户数据合并进新 staging
+	// （升级后自动保留，无需手动恢复）；备份/迁移失败中止替换（保留旧目录）。
 	if from, err := readBackendVersionFile(dir); err == nil && from != "" {
 		if backupDir, err := backupDshData(dir, from); err != nil {
 			return fmt.Errorf("backup installed backend data: %w (old backend kept)", err)
 		} else if backupDir != "" {
 			log.Printf("installed backend data backed up to %s before replace", backupDir)
+		}
+		if err := mergeDshData(dshHomePath(dir), dshHomePath(staging)); err != nil {
+			return fmt.Errorf("migrate installed backend data: %w (old backend kept)", err)
 		}
 	} else if err != nil {
 		log.Printf("installed backend version unreadable (%v); skipping data backup", err)

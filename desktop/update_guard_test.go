@@ -172,7 +172,7 @@ func TestGuardUpdateDataNoDataSkipsPrompt(t *testing.T) {
 	isolateMigrationDirs(t)
 	backend := t.TempDir()
 	// 无 .dsh：直接通过，不询问、不备份。
-	kept, cancelled, backupDir, err := guardUpdateData(backend, "0.1.7", "0.1.8")
+	kept, cancelled, backupDir, err := guardUpdateData(backend, t.TempDir(), "0.1.7", "0.1.8")
 	if err != nil {
 		t.Fatal(err)
 	}

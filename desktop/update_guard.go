@@ -10,11 +10,13 @@
 //     %LOCALAPPDATA%\marisa-distro\backup\dsh-<from>-<ts>\（跳过 junction，
 //     junction 指向 backend 内 node_modules 等部署物，不随用户数据备份；
 //     新部署会自行重建），并写入 BACKUP-INFO.txt 说明来源与恢复方法
-//   - guardUpdateData：删除旧 backend 前调用；平台相关 prompt（Windows 弹
-//     确认框，见 update_guard_windows.go；其他平台自动备份），返回
-//     dataKept/cancelled 供调用方决定是否继续替换
+//   - guardUpdateData：删除旧 backend 前调用；先备份（安全网），再按用户
+//     选择把旧 .dsh 用户数据合并进新 staging（mergeDshData，见
+//     update_migrate.go）——升级后数据自动保留，不再依赖手动恢复备份；
+//     平台相关 prompt（Windows 弹确认框，见 update_guard_windows.go；
+//     其他平台自动保留），返回 dataKept/cancelled 供调用方决定是否继续替换
 //
-// 失败安全原则与迁移框架一致：任何备份失败都返回错误，调用方必须保留
+// 失败安全原则与迁移框架一致：任何备份/迁移失败都返回错误，调用方必须保留
 // 旧 backend（不删、不切换）。
 //
 // 本文件不设 build tag，任何形态都能编译（函数未被调用即无副作用）。
@@ -127,15 +129,16 @@ func backupDshData(backendDir, from string) (string, error) {
 来源版本 : %s
 备份时间 : %s
 
-此备份包含升级/卸载前 backend\.dsh 中的全部用户数据
-（会话记录 sessions/、工作区登记 storages/、设置 settings.yaml 等）。
-目录 junction（profiles/marisa/node_modules 等部署共享链接）已跳过，
-新部署会自行重建，不影响数据。
+此备份是升级前的安全网。升级会自动把用户数据（会话记录 sessions/、
+工作区登记 storages/、设置 settings.yaml 等）迁移进新版本，通常无需
+手动恢复。仅当迁移失败或你手动操作时才需要：
 
-恢复方法：
   1. 完全退出 Marisa DSH；
   2. 把本目录内容整体复制回新部署的 %s；
   3. 重新启动 Marisa DSH。
+
+目录 junction（profiles/marisa/node_modules 等部署共享链接）已跳过，
+新部署会自行重建，不影响数据。
 `, src, from, time.Now().Format(time.RFC3339), dshHomePath(backendDir))
 	if err := os.WriteFile(filepath.Join(dst, backupInfoName), []byte(info), 0o644); err != nil {
 		return "", fmt.Errorf("write backup info: %w", err)
@@ -178,15 +181,21 @@ func copyDshTree(src, dst string) error {
 }
 
 // guardUpdateData 在替换 backend 目录前保护用户数据。这是更新流程的统一
-// 入口：standalone 升级时弹确认框（保留数据→备份 / 直接洗 / 取消）；
-// MSI custom action 等非交互上下文经 platformUpdatePrompt 自动备份。
+// 入口：standalone 升级时弹确认框（保留数据→备份+自动迁移 / 全新开始 /
+// 取消）；MSI custom action 等非交互上下文经 platformUpdatePrompt 自动
+// 保留。
+//
+// 用户数据先备份到备份区（安全网），再按用户选择合并进 stagingDir 的
+// .dsh（mergeDshData，在 RemoveAll 旧 backend 之前执行）：
+//   - keep=true  ：自动迁移——升级后会话/设置/插件配置原样保留；
+//   - keep=false ：全新开始——数据留在备份区，不迁移。
 //
 // 返回：
-//   - dataKept：true 表示数据已备份或无需备份（可以安全替换）；
-//     false 表示用户明确选择不保留数据（仍可替换）。
+//   - dataKept：true 表示用户数据已备份并（按选择）迁移，可以安全替换；
+//     false 表示用户选择全新开始（数据仍已在备份区）。
 //   - cancelled：true 表示用户取消更新——调用方必须保留旧目录、终止流程。
 //   - backupDir：非空时是本次备份的位置（供日志/提示）。
-func guardUpdateData(backendDir, from, to string) (dataKept, cancelled bool, backupDir string, err error) {
+func guardUpdateData(backendDir, stagingDir, from, to string) (dataKept, cancelled bool, backupDir string, err error) {
 	has, err := hasUserData(dshHomePath(backendDir))
 	if err != nil {
 		return false, false, "", err
@@ -198,12 +207,17 @@ func guardUpdateData(backendDir, from, to string) (dataKept, cancelled bool, bac
 	if cancel {
 		return false, true, "", nil
 	}
-	if !keep {
-		return false, false, "", nil
-	}
+	// 备份先做（安全网）：无论是否迁移，旧数据都在备份区。
 	dir, err := backupDshData(backendDir, from)
 	if err != nil {
 		return false, false, "", err
 	}
+	if !keep {
+		return false, false, dir, nil // 全新开始：不迁移
+	}
+	if err := mergeDshData(dshHomePath(backendDir), dshHomePath(stagingDir)); err != nil {
+		return false, false, dir, fmt.Errorf("migrate user data into staged backend: %w", err)
+	}
+	log.Printf("update guard: user data migrated into staged backend %s", stagingDir)
 	return true, false, dir, nil
 }

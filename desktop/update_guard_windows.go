@@ -29,9 +29,10 @@ const (
 	mbSetForeground = 0x00010000
 )
 
-// platformUpdatePrompt 询问用户是否保留数据。返回 (keep, cancel)：
-// keep=false 表示用户选择不保留（直接洗一遍）；cancel=true 表示取消更新。
-// 环境变量 MARISA_UPDATE_NO_PROMPT=1 时跳过询问，默认备份（keep=true）。
+// platformUpdatePrompt 询问用户如何更新。返回 (keep, cancel)：
+// keep=true 表示保留数据（备份 + 自动迁移进新版本）；keep=false 表示
+// 全新开始（数据留在备份区，不迁移）；cancel=true 表示取消更新。
+// 环境变量 MARISA_UPDATE_NO_PROMPT=1 时跳过询问，默认保留（keep=true）。
 func platformUpdatePrompt(from, to string) (keep, cancel bool) {
 	if os.Getenv("MARISA_UPDATE_NO_PROMPT") == "1" {
 		return true, false
@@ -39,9 +40,10 @@ func platformUpdatePrompt(from, to string) (keep, cancel bool) {
 	title := "Marisa DSH 更新"
 	text := fmt.Sprintf(
 		"检测到新版本（v%s → v%s）。\n\n"+
-			"更新将替换 backend 目录，其中的会话记录、设置等数据（backend\\.dsh）会被删除。\n\n"+
-			"是(Y)   备份数据后更新（推荐）\n"+
-			"否(N)   不保留数据，直接更新\n"+
+			"升级会自动保留你的数据（会话记录、设置、插件配置），\n"+
+			"并先备份到 backup\\ 目录作为安全网。\n\n"+
+			"是(Y)   保留数据并更新（推荐）\n"+
+			"否(N)   清除全部数据，全新开始\n"+
 			"取消    本次不更新",
 		from, to)
 	titlePtr, err := windows.UTF16PtrFromString(title)
