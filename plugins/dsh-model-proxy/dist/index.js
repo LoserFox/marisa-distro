@@ -11,9 +11,10 @@
  * `DEEPSEEK_BASE_URL` redirect, no separate relay process. Loopback hosts
  * and `NO_PROXY` entries always connect directly.
  *
- * Proxy resolution: `config.proxy` (plugin config) → `$MODEL_PROXY` →
- * `$ALL_PROXY` → `$HTTPS_PROXY` → `$HTTP_PROXY`. `direct` / `none` / `off`
- * (or an empty value) leaves the dispatcher untouched.
+ * Proxy resolution: `config.proxy` (plugin config) → `$HTTP_PROXY` →
+ * `$HTTPS_PROXY` → `$ALL_PROXY` → the Marisa desktop default. The resolved
+ * proxy is also published as `HTTP_PROXY` for model-invoked shell children;
+ * the model API endpoint itself is never rewritten.
  * @module dsh-model-proxy
  */
 import { Agent } from 'undici';
@@ -22,14 +23,33 @@ import tls from 'node:tls';
 import { connectSocket, DEFAULT_NO_PROXY, displayProxy, firstEnv, parseProxy } from './tunnel.js';
 export * from './tunnel.js';
 export const name = 'dsh-model-proxy';
+/** Marisa's local HTTP proxy endpoint when the launch environment has none. */
+export const DEFAULT_PROXY_URL = 'http://127.0.0.1:10808';
 export const Config = Schema.object({
     proxy: Schema.string()
-        .description('上游代理 URL：socks5://、socks5h://、http://、https://（可带 user:pass），或 direct；留空则读环境变量 MODEL_PROXY → ALL_PROXY → HTTPS_PROXY → HTTP_PROXY')
+        .description('上游代理 URL：socks5://、socks5h://、http://、https://（可带 user:pass），或 direct；留空则读 HTTP_PROXY → HTTPS_PROXY → ALL_PROXY，最后使用 Marisa 本地 HTTP 代理默认值')
         .default(''),
     noProxy: Schema.array(Schema.string())
         .description('命中则直连的主机（追加到环境变量 NO_PROXY 之上；localhost/127.0.0.1/::1 恒直连）')
         .default([]),
 });
+function publishShellProxy(proxyUrl) {
+    // PowerShell on Windows resolves environment names case-insensitively. On
+    // POSIX publish both spellings because common CLI clients disagree on case.
+    const keys = process.platform === 'win32' ? ['HTTP_PROXY'] : ['HTTP_PROXY', 'http_proxy'];
+    const previous = keys.map(key => process.env[key]);
+    for (const key of keys)
+        process.env[key] = proxyUrl;
+    return () => {
+        keys.forEach((key, index) => {
+            const value = previous[index];
+            if (value === undefined)
+                delete process.env[key];
+            else
+                process.env[key] = value;
+        });
+    };
+}
 /**
  * undici 的全局 dispatcher 符号是版本化的：7.x 用
  * `undici.globalDispatcher.2`，`.1` 是 legacy。Node ≥24 的内置 fetch 跟随
@@ -99,7 +119,9 @@ export function createProxyDispatcher(proxyUrl, noProxyExtra = []) {
  */
 export function apply(ctx, config) {
     const logger = ctx.logger('model-proxy');
-    const proxyUrl = (config.proxy ?? '').trim() || firstEnv('MODEL_PROXY', 'ALL_PROXY', 'HTTPS_PROXY', 'HTTP_PROXY');
+    const proxyUrl = (config.proxy ?? '').trim()
+        || firstEnv('HTTP_PROXY', 'http_proxy', 'HTTPS_PROXY', 'https_proxy', 'ALL_PROXY', 'all_proxy')
+        || DEFAULT_PROXY_URL;
     if (!proxyUrl || /^(direct|none|off)$/i.test(proxyUrl)) {
         logger.info('no proxy configured — global fetch dispatcher untouched (direct)');
         return;
@@ -119,7 +141,11 @@ export function apply(ctx, config) {
         ...(firstEnv('NO_PROXY', 'no_proxy') ?? '').split(',').map(s => s.trim()).filter(Boolean),
     ];
     const { display, dispose } = createProxyDispatcher(proxy, noProxyExtra);
-    logger.info(`global fetch dispatcher → via ${display} (noProxy: ${noProxyExtra.length} entries + loopback)`);
-    ctx.effect(() => () => void dispose());
+    const restoreShellProxy = publishShellProxy(proxy);
+    logger.info(`global fetch dispatcher → via ${display}; shell HTTP_PROXY exported (noProxy: ${noProxyExtra.length} entries + loopback)`);
+    ctx.effect(() => async () => {
+        restoreShellProxy();
+        await dispose();
+    });
 }
 //# sourceMappingURL=index.js.map

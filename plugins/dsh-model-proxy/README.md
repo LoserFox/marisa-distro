@@ -11,6 +11,7 @@ connector 自行完成 TLS，于是所有全局 fetch 透明走代理——
 
 - 不需要改 `DEEPSEEK_BASE_URL`，不需要本地转发进程；
 - 模型请求、`DEEPSEEK_SEARCH_BASE_URL` 联网搜索、文件上传一起覆盖；
+- Agent 通过 tool call 启动的 `pwsh` / `bash` 子进程继承同一个 `HTTP_PROXY`；
 - `localhost` / `127.0.0.1` / `::1` 与 `NO_PROXY` 命中项恒直连；
 - 卸载（dispose）时恢复原 dispatcher，无残留。
 
@@ -20,24 +21,23 @@ connector 自行完成 TLS，于是所有全局 fetch 透明走代理——
 
 | 字段 | 含义 | 默认 |
 |---|---|---|
-| `proxy` | 上游代理 URL：`socks5://`、`socks5h://`、`http://`、`https://`（可带 `user:pass`），或 `direct` | 读环境变量 `MODEL_PROXY` → `ALL_PROXY` → `HTTPS_PROXY` → `HTTP_PROXY` |
+| `proxy` | 上游代理 URL：`socks5://`、`socks5h://`、`http://`、`https://`（可带 `user:pass`），或 `direct` | 读 `HTTP_PROXY` → `HTTPS_PROXY` → `ALL_PROXY`；都没有时用 `http://127.0.0.1:10808` |
 | `noProxy` | 命中则直连的主机列表（追加到环境变量 `NO_PROXY` 之上） | `[]` |
 
 环境变量示例（pwsh `$PROFILE`）：
 
 ```powershell
-$env:MODEL_PROXY = 'socks5://127.0.0.1:10808'
+$env:HTTP_PROXY = 'http://127.0.0.1:10808'
 ```
 
-留空或 `direct` 时插件不做任何事（直连）。代理 URL 非法时记 warning 并保持直连。
+显式配置 `direct` 时插件不做任何事。代理 URL 非法时记 warning 并保持直连。
+插件不会设置或改写 `DEEPSEEK_BASE_URL`：DeepSeek endpoint 始终由适配器保持为
+`https://api.deepseek.com`（除非用户自己在模型设置中覆盖）。
 
-## 与 tools/model-proxy 的关系
-
-- 本插件 = 进程内透明代理，只影响 DSH 自身进程的全局 fetch；
-- `tools/model-proxy` = 独立本地转发代理（relay/CONNECT），给 curl、git 等
-  任意客户端用，也可配合 `DEEPSEEK_BASE_URL` 给 DSH 用。
-- 两者互不依赖；若同时使用，模型请求会先命中插件（loopback 直连）到本地
-  relay 再转发，多一跳但可用。推荐二选一。
+插件会把最终解析出的代理写入宿主进程的 `HTTP_PROXY`，因此 DSH 的本地
+subprocess seam 会把它保留给 Agent 发起的 `pwsh` / `bash` tool call。插件卸载时
+恢复原环境值。代理 URL 可能携带认证信息，因此启用该行为意味着模型启动的
+本地子进程可以读取该代理配置；它不会得到模型 API key。
 
 ## 验证
 
@@ -47,4 +47,5 @@ node --test plugins/dsh-model-proxy/tests/
 ```
 
 测试含假 SOCKS5/HTTP 代理 + 假上游，真实走 undici 全局 dispatcher 断言
-隧道路径与 NO_PROXY 直连路径（不依赖外网）。
+隧道路径与 NO_PROXY 直连路径，并断言子进程继承 `HTTP_PROXY`、
+`DEEPSEEK_BASE_URL` 不被改写（不依赖外网）。
