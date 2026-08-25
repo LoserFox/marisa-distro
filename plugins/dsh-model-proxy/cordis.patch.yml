@@ -1,0 +1,5 @@
+# Mount the model-proxy dispatcher patch into a DSH profile.
+# Config (可选)：proxy（如 socks5://127.0.0.1:10808）、noProxy；不配则读环境变量。
+- insert:
+    - id: dsh-model-proxy
+      name: 'dsh-model-proxy'

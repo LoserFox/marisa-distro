@@ -162,6 +162,13 @@
       "bundle": true
     },
     {
+      "name": "dsh-model-proxy",
+      "source": "internal",
+      "dir": "dsh-model-proxy",
+      "version": "0.1.0",
+      "bundle": true
+    },
+    {
       "name": "@dsh-external/change-ledger",
       "source": "git",
       "dir": "dsh-change-ledger",
