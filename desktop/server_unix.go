@@ -70,6 +70,20 @@ func killServer(cmd *exec.Cmd, sig syscall.Signal) {
 	_ = syscall.Kill(-cmd.Process.Pid, sig)
 }
 
+// killServerTree 按进程树终止后端：后端经 Setpgid 独立成组，负 PID 信号
+// 覆盖组内全部后代 node 进程。force=false 发 SIGTERM 给优雅退出机会，
+// true 直接 SIGKILL —— 语义对齐 Windows 侧 taskkill /T（/F）。组不存在
+// （后端已整体退出）时对单个 PID 兜底发一次，ESRCH 静默忽略。
+func killServerTree(pid int, force bool) {
+	sig := syscall.SIGTERM
+	if force {
+		sig = syscall.SIGKILL
+	}
+	if err := syscall.Kill(-pid, sig); err == syscall.ESRCH {
+		_ = syscall.Kill(pid, sig)
+	}
+}
+
 // stopServer 终止后端并等待其退出：SIGTERM 整个进程组，serverStopGrace
 // 内未退出则 SIGKILL 兜底，随后等待 Wait 收口（exitCh 必然收到结果）。
 func stopServer(cmd *exec.Cmd, exitCh <-chan serverExit) {

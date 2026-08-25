@@ -36,6 +36,7 @@ type item struct {
 	dir  bool
 	ext  string
 	dirP string
+	exec bool // source file had any executable bit (normalized to 0755)
 }
 
 func main() {
@@ -94,7 +95,7 @@ func main() {
 		err := tw.WriteHeader(&tar.Header{
 			Name:     it.name,
 			Typeflag: tar.TypeReg,
-			Mode:     0o644,
+			Mode:     regMode(it),
 			Size:     it.size,
 			ModTime:  epoch,
 		})
@@ -168,6 +169,7 @@ func collect(src string) ([]item, error) {
 			size: info.Size(),
 			ext:  strings.ToLower(filepath.Ext(name)),
 			dirP: filepath.Dir(name),
+			exec: info.Mode()&0o111 != 0,
 		})
 		return nil
 	})
@@ -184,6 +186,19 @@ func collect(src string) ([]item, error) {
 		return files[i].name < files[j].name
 	})
 	return append(dirs, files...), nil
+}
+
+// regMode normalizes every regular file to exactly 0644 or 0755 so output
+// stays deterministic while carrying the executable bit (the header comment
+// above already promised 0644/0755 normalization). Windows sources never set
+// exec bits, so Windows bundles remain byte-identical to previous runs;
+// Linux bundles need 0755 on node/mnemon/launcher.sh so the desktop
+// extractor restores an executable tree.
+func regMode(it item) int64 {
+	if it.exec {
+		return 0o755
+	}
+	return 0o644
 }
 
 func fatal(err error) {

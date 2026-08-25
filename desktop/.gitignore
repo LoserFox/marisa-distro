@@ -2,3 +2,4 @@ build/
 *.tsbuildinfo
 .tmp/
 bundle/backend.zip
+bundle/backend.tar.zst

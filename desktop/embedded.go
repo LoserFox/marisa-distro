@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/klauspost/compress/zstd"
@@ -35,17 +36,45 @@ const installForm = "standalone"
 // backendVersionName is the version marker file at the bundle root.
 const backendVersionName = "VERSION"
 
-// backendRootDir is where the embedded backend is materialized.
+// backendRootDir is where the embedded backend is materialized. The tree
+// carries DSH_HOME (.dsh profiles) inside it, so it maps to each platform's
+// per-user application-data directory rather than a cache directory:
+// Windows keeps %LOCALAPPDATA%\marisa-distro\backend, Linux uses
+// XDG_DATA_HOME (~/.local/share by default), macOS uses ~/Library/Application
+// Support. MARISA_BACKEND_DIR overrides on every platform (the same escape
+// hatch the installedbundle build already honors).
 func backendRootDir() (string, error) {
-	local := os.Getenv("LOCALAPPDATA")
-	if local == "" {
+	if override := os.Getenv("MARISA_BACKEND_DIR"); override != "" {
+		return filepath.Abs(override)
+	}
+	switch runtime.GOOS {
+	case "windows":
+		local := os.Getenv("LOCALAPPDATA")
+		if local == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return "", err
+			}
+			local = filepath.Join(home, "AppData", "Local")
+		}
+		return filepath.Join(local, "marisa-distro", "backend"), nil
+	case "darwin":
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", err
 		}
-		local = filepath.Join(home, "AppData", "Local")
+		return filepath.Join(home, "Library", "Application Support", "marisa-distro", "backend"), nil
+	default: // linux and the rest of unix
+		data := os.Getenv("XDG_DATA_HOME")
+		if data == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return "", err
+			}
+			data = filepath.Join(home, ".local", "share")
+		}
+		return filepath.Join(data, "marisa-distro", "backend"), nil
 	}
-	return filepath.Join(local, "marisa-distro", "backend"), nil
 }
 
 // embeddedBackendVersion reads the VERSION file from the embedded tar.zst.
@@ -180,12 +209,23 @@ func extractBackend(data []byte, dest string, progress func(consumed, total int6
 	}, progress)
 }
 
+// launcherName is the bundle-root launcher script staged by make-bundle:
+// a .cmd batch file on Windows, a POSIX shell script elsewhere. Both point
+// DSH_HOME at the bundle's .dsh and prepend the bundle root to PATH so
+// plugins resolve the bundled node/mnemon.
+func launcherName() string {
+	if runtime.GOOS == "windows" {
+		return "launcher.cmd"
+	}
+	return "launcher.sh"
+}
+
 // backendWebCommand returns the DSH_WEB_CMD value pointing at the extracted
 // launcher. The `{port}` placeholder is deliberately absent: the bundled
 // profile's desktop.overlay.yml pins the webserver to an OS-assigned port
 // (port: 0), and the shell parses the actual URL from the backend stdout.
 func backendWebCommand(dir string) string {
-	return fmt.Sprintf(`"%s"`, filepath.Join(dir, "launcher.cmd"))
+	return fmt.Sprintf(`"%s"`, filepath.Join(dir, launcherName()))
 }
 
 func handleBackendMaintenance() (bool, error) {

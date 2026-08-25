@@ -553,19 +553,24 @@ func main() {
 	// WebView2 的父窗口位置通知（wails 只在 WM_MOVE 时发送）。
 	registerWebviewImeKeepalive(win)
 
-	// 守护后端：启动、就绪、重启都由 supervise 负责。退出时先 cancel 让
-	// supervise 终止后端进程组，再等它收口（done）——main 不能抢先返回，
-	// 否则 Go 进程退出会强杀 goroutine，kill 来不及执行，后端残留为孤儿。
-	// 应用启动后再建托盘(此时 tray impl 可用);托盘菜单/图标由此接管
-	// 窗口显隐与退出,后端守护逻辑不变。
+	// 配置托盘必须在 app.Run() 之前完成（含 SetMenu）：wails 对已运行应用
+	// 的 SystemTray.New() 会立即触发一次 Run，而那时菜单尚未设置；
+	// Linux 实现只在 Run 时把菜单导出为 D-Bus Menu 属性/dbusmenu 内容，
+	// 之后 SetMenu 不会回存到 SystemTray——显式 tray.Run() 重建 impl 时
+	// 菜单已丢，KDE/GNOME 拿不到 Menu 属性就不显示右键菜单。放在
+	// app.Run() 之前则由 wails 的 pendingRun 带着完整菜单启动托盘。
+	setupTray(app, win)
+
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
 		// 通知服务 Startup 完成（AUMID/activator 已注册），放行 toast 请求。
 		if toastBridgeInstance != nil {
 			toastBridgeInstance.markReady()
 		}
-		setupTray(app, win)
 	})
 
+	// 守护后端：启动、就绪、重启都由 supervise 负责。退出时先 cancel 让
+	// supervise 终止后端进程组，再等它收口（done）——main 不能抢先返回，
+	// 否则 Go 进程退出会强杀 goroutine，kill 来不及执行，后端残留为孤儿。
 	done := make(chan struct{})
 	go func() {
 		defer close(done)

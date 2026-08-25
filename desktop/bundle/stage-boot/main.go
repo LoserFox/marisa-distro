@@ -5,6 +5,13 @@
 // make-bundle run costs ~10 minutes; this costs seconds).
 //
 // Usage: stage-boot <stageDir>
+//
+// Windows-only: it recreates LINKS.json entries as NTFS junctions and kills
+// the boot probe via taskkill /T; the Linux pipeline verifies the same
+// handshake through launcher.sh instead.
+//
+//go:build windows
+
 package main
 
 import (

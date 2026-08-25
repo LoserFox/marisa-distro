@@ -27,7 +27,8 @@ func trayIcon() []byte {
 	return data
 }
 
-// setupTray 创建系统托盘(应用启动事件后调用,此时 impl 可用)。
+// setupTray 配置系统托盘（必须在 app.Run() 之前调用，见 main.go 调用处的
+// 时序说明；实际启动由 wails 的 pendingRun 在应用启动时执行）。
 // 托盘行为:
 //   - 左键单击:切换主窗口显隐
 //   - 菜单「打开 Marisa DSH」:显示并聚焦主窗口
@@ -142,14 +143,15 @@ func setupTray(app *application.App, win *application.WebviewWindow) {
 
 	tray.SetMenu(menu)
 	tray.OnClick(func() {
-		if win.IsVisible() {
-			win.Hide()
-		} else {
-			win.Show()
-		}
+		toggleFromTray(win)
 	})
-	tray.Run()
-	log.Printf("system tray ready")
+	// Linux 上 wails 会把宿主弹菜单的 dbusmenu "opened" 事件误路由进
+	// clickHandler，这里注入菜单打开回调用于中和（详见 tray_linux.go）。
+	registerTrayMenuOpenHook(tray)
+	// 不显式调 tray.Run()：托盘未启动时 SetMenu 等配置存入 SystemTray
+	// 字段，由 app.Run() 的 pendingRun 带着完整状态启动 Linux D-Bus 导出
+	//（菜单属性 + dbusmenu 内容）。显式 Run 会因 impl 重建丢失菜单。
+	log.Printf("system tray configured")
 }
 
 // ensureAndOpenFolder 确保目录存在后，用系统文件管理器打开它（Explorer /

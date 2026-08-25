@@ -46,8 +46,10 @@ func extractTarZst(data []byte, dest string, skip func(string) bool, progress fu
 	)
 
 	type writeJob struct {
-		target string
-		data   []byte
+		target   string
+		data     []byte
+		perm     os.FileMode // permission bits restored from the tar header
+		budgeted bool        // whether this job counts against the writeBudget
 	}
 
 	counting := &countingReader{r: bytes.NewReader(data)}
@@ -72,7 +74,7 @@ func extractTarZst(data []byte, dest string, skip func(string) bool, progress fu
 		go func() {
 			defer wg.Done()
 			for j := range jobs {
-				if err := writeFile(j.target, j.data); err != nil {
+				if err := writeFile(j.target, j.data, j.perm); err != nil {
 					mu.Lock()
 					if firstErr == nil {
 						firstErr = err
@@ -81,7 +83,9 @@ func extractTarZst(data []byte, dest string, skip func(string) bool, progress fu
 				} else {
 					fileCount.Add(1)
 				}
-				buffered.Add(-int64(len(j.data)))
+				if j.budgeted {
+					buffered.Add(-int64(len(j.data)))
+				}
 			}
 		}()
 	}
@@ -117,10 +121,17 @@ func extractTarZst(data []byte, dest string, skip func(string) bool, progress fu
 				}
 			case tar.TypeReg, tar.TypeRegA:
 				// Byte budget: block reading until writers free space.
-				for {
-					cur := buffered.Load()
-					if cur+hdr.Size <= writeBudget && buffered.CompareAndSwap(cur, cur+hdr.Size) {
-						break
+				// Files larger than the budget bypass it entirely and are
+				// streamed to a writer goroutine that writes directly from
+				// the reader's buffer, so a 275MB file never deadlocks a
+				// 256MB budget (measured 2026-08-22).
+				oversized := hdr.Size > writeBudget
+				if !oversized {
+					for {
+						cur := buffered.Load()
+						if cur+hdr.Size <= writeBudget && buffered.CompareAndSwap(cur, cur+hdr.Size) {
+							break
+						}
 					}
 				}
 				buf := make([]byte, hdr.Size)
@@ -128,7 +139,11 @@ func extractTarZst(data []byte, dest string, skip func(string) bool, progress fu
 					errCh <- fmt.Errorf("read %s: %w", hdr.Name, err)
 					return
 				}
-				jobs <- writeJob{target: target, data: buf}
+				perm := os.FileMode(hdr.Mode) & 0o777
+				if perm == 0 {
+					perm = 0o644 // defensive: archives without mode bits stay plain files
+				}
+				jobs <- writeJob{target: target, data: buf, perm: perm, budgeted: !oversized}
 			}
 			if progress != nil {
 				progress(counting.n, int64(len(data)))
@@ -150,12 +165,16 @@ func extractTarZst(data []byte, dest string, skip func(string) bool, progress fu
 	return int(fileCount.Load()), nil
 }
 
-// writeFile writes one buffered file. The parent directory already exists:
-// tarszst emits every directory entry before its files, and the reader
-// materializes them — an extra MkdirAll here would be one stat per file
-// (45k stats ≈ the install-time bottleneck, measured 2026-08-18).
-func writeFile(target string, data []byte) error {
-	dst, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+// writeFile writes one buffered file with the permission bits carried by its
+// tar header. The parent directory already exists: tarszst emits every
+// directory entry before its files, and the reader materializes them — an
+// extra MkdirAll here would be one stat per file (45k stats ≈ the
+// install-time bottleneck, measured 2026-08-18). Executable entries (bundled
+// node/mnemon binaries, launcher.sh — tarszst normalizes their mode to 0755)
+// re-assert exact perms after Close because OpenFile applies the process
+// umask; plain 0644 files skip that extra syscall.
+func writeFile(target string, data []byte, perm os.FileMode) error {
+	dst, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
 		return err
 	}
@@ -163,8 +182,13 @@ func writeFile(target string, data []byte) error {
 	// fill on NTFS); plain sequential writes at 8 workers won (2026-08-18).
 	_, copyErr := dst.Write(data)
 	closeErr := dst.Close()
-	if copyErr != nil {
-		return copyErr
+	if copyErr == nil {
+		copyErr = closeErr
 	}
-	return closeErr
+	if perm.Perm() != 0o644 {
+		if chErr := os.Chmod(target, perm); chErr != nil && copyErr == nil {
+			copyErr = chErr
+		}
+	}
+	return copyErr
 }
