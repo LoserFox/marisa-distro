@@ -25,7 +25,7 @@ jobs:
       - name: Require maintainer acceptance
         if: inputs.desktop_acceptance_complete != true
         run: exit 1
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: version
@@ -47,7 +47,7 @@ jobs:
     # locally warm; CI cold installs need headroom (bumped 2026-08-19).
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.commit }}
           submodules: recursive
@@ -96,7 +96,7 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.commit }}
       - uses: actions/setup-go@v5
@@ -124,7 +124,7 @@ jobs:
     continue-on-error: true
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.commit }}
       - uses: actions/setup-go@v5
@@ -151,7 +151,7 @@ jobs:
     if: always() && needs.validate.result == 'success' && needs.windows.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.validate.outputs.commit }}
           fetch-depth: 0
