@@ -39,5 +39,8 @@ portable:
 linux:
   icon: build/icon.png
   category: Development
+  executableName: marisa-dsh
+  artifactName: marisa-dsh-electron-${version}-${arch}.${ext}
+  maintainer: omdsh-dev <marisa@omdsh-dev.invalid>
   target:
     - dir
