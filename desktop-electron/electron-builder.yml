@@ -15,6 +15,12 @@ files:
   - build/**
   - res/**
   - package.json
+# 只保留实际用到的界面语言（默认打包 55 种 locales ≈ 47MB）
+electronLanguages:
+  - en-US
+  - zh-CN
+  - zh-TW
+compression: maximum
 asar: true
 # The orphan reaper runs under Electron-as-Node, which cannot read inside
 # app.asar; unpack everything it (or the extract path) touches at runtime.

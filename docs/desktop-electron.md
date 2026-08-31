@@ -96,16 +96,31 @@ recovery window = 主进程级恢复 + 插件管理。rescue-server.ts 计划下
 
 ### 打包体积实测（Linux x64，2026-08-31）
 
+**壳（Electron）**：
+
 | 产物 | 体积 |
 | --- | --- |
-| linux-unpacked 目录 | 315 MB（Electron 本体 223 MB + locales 47 MB + 其余 Chromium 运行时） |
-| deb 安装包（xz 压缩） | 96 MB，Installed-Size 322 MB |
-| Electron 43.5.0 linux-x64 zip 原始 | 121 MB |
-| 对照：Wails/WebView2 Go 壳（windows/amd64, installedbundle tag） | 20 MB（单文件，不含后端 payload，WebView2 系统组件复用） |
+| linux-unpacked 目录 | 270 MB（Electron 本体 213 MB + Chromium 资源 38 MB + 动态库 16 MB + locales 1.6 MB + app.asar 0.2 MB） |
+| deb 安装包（xz maximum，locales 裁剪至 en/zh-CN/zh-TW） | **88 MB**（未裁剪时 96 MB） |
+| 对照：Wails/WebView2 Go 壳（windows/amd64, installedbundle tag） | 20 MB（单文件，WebView2 系统组件复用） |
 
-结论：Electron 壳 + 后端 tar.zst payload（典型 ~30-80 MB）的 Windows NSIS
-安装包预计 130-180 MB；Wails 路线安装包约 50-100 MB。体积差距是
-Chromium 内嵌 vs WebView2 系统共享的直接代价，与对比报告结论一致。
+**后端 payload（backend.tar.zst，两壳共用同一份，Linux 无法运行
+make-bundle.ps1，以下为 stage 构成实测 + 压缩比估算）**：
+
+| 构成 | stage 体积（node_modules 除外） |
+| --- | --- |
+| harness 源码树（b150a551 = 0.1.1-rc.2） | 48.7 MB |
+| plugins 28 个（含 dsh-stickers 贴纸资产 76 MB、dsh-track 31 MB、better-sidebar 15 MB） | 157.8 MB |
+| dsh-mygo（vendored） | 4.0 MB |
+| node.exe（Windows v22 runtime，估） | ~80 MB |
+| mnemon.exe（bundle 管理 CLI） | 14 MB |
+| **stage 合计** | **~305 MB**；tar.zst 压缩后估 **~95-110 MB**（JS/TS 文本 3:1 + 资产少压缩） |
+
+**完整发行版总体积（Windows 安装包）**：
+- Electron 壳路线：88 MB（壳）+ ~100 MB（backend.tar.zst）≈ **NSIS 安装包 ~190 MB**（xz 压缩后约 150-170 MB）
+- Wails 壳路线：20 MB（壳含 go:embed 后端 payload 的入口）+ 同一份 backend.tar.zst ≈ **~120-130 MB**
+- 后端是两壳共用的大头；壳差 68 MB 全部是 Chromium vs WebView2 系统共享的代价。
+- 注意：backend.tar.zst 真实数字只能在 Windows 主机跑 make-bundle.ps1 得出（脚本内含 pnpm install + junction 处理 + .ignored_* 裁剪），上表 stage 构成为 Linux 侧 du 实测，压缩后数字为估算。
 
 ### 关于"直接用 dsh-plugin-desktop 插件"的查证结论
 
