@@ -21,6 +21,8 @@ export interface ToastIntent {
   title: string
   body: string
   sessionId?: string
+  /** Explicit outcome from the backend when it classifies (preferred over title heuristics). */
+  outcome?: NotificationOutcome
 }
 
 export interface ToastSender {
@@ -60,15 +62,21 @@ export interface ToastBridgeHandle {
 
 /**
  * Loopback receiver for backend notification intents (toast_bridge.go
- * protocol: POST /toast {title, body, sessionId?}; MARISA_TOAST_PORT env).
- * Binds 127.0.0.1 with an OS-assigned port; the token is the port itself
- * plus loopback-only binding — same threat model as the Wails shell's bridge.
+ * protocol: POST /toast {title, body, sessionId?, outcome?};
+ * MARISA_TOAST_PORT env). Binds 127.0.0.1 with an OS-assigned port; the
+ * token is the port itself plus loopback-only binding — same threat model
+ * as the Wails shell's bridge.
+ *
+ * anywhere suppression order (notifyAttention): focused window ⇒ suppress
+ * the toast entirely (no count, no flash); otherwise escalate attention
+ * (Windows flash / badge count) AND show the native toast.
  */
 export function startToastBridge(
   sender: ToastSender,
   settings: () => DesktopNotificationSettings,
   outcomeOf: (intent: ToastIntent) => NotificationOutcome | null,
   log: (message: string) => void,
+  attention?: { escalate(): boolean },
 ): Promise<ToastBridgeHandle> {
   return new Promise(resolvePromise => {
     const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -88,14 +96,22 @@ export function startToastBridge(
             res.end()
             return
           }
+          const outcome = typeof parsed.outcome === 'string'
+            && (['turn-completed', 'turn-failed', 'job-completed', 'job-failed'] as const).includes(parsed.outcome as NotificationOutcome)
+            ? parsed.outcome as NotificationOutcome
+            : undefined
           const intent: ToastIntent = {
             title: parsed.title,
             body: parsed.body,
             ...(typeof parsed.sessionId === 'string' ? { sessionId: parsed.sessionId } : {}),
+            ...(outcome !== undefined ? { outcome } : {}),
           }
-          const allowed = filterToastIntent(intent, settings(), outcomeOf)
+          const allowed = filterToastIntent(intent, settings(), i => i.outcome ?? outcomeOf(i))
           if (allowed !== null && sender.isSupported()) {
-            sender.show({ title: allowed.title, body: allowed.body })
+            // anywhere's isFocused early return: window focused → no toast.
+            if (attention === undefined || attention.escalate()) {
+              sender.show({ title: allowed.title, body: allowed.body })
+            }
           }
           res.statusCode = allowed !== null ? 200 : 204
           res.end()

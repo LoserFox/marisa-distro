@@ -29,8 +29,10 @@ import { SetupWizardWindow } from './setup-wizard-window.ts'
 import { windowsBuildNumber, effectiveDesktopWindowMaterial, materialIsTransparent, type DesktopWindowMaterial } from './window-material.ts'
 import { readDesktopSettings, writeDesktopSettings } from './desktop-settings.ts'
 import { startToastBridge, type NotificationOutcome } from './notifications.ts'
+import { AttentionManager } from './attention.ts'
 
 let toastBridgeClose: (() => void) | null = null
+let attentionRef: { clear(): void } | null = null
 
 /**
  * Main window construction with platform material (window-options.ts
@@ -411,7 +413,18 @@ async function main(): Promise<void> {
       if (/任务|job/i.test(intent.title)) return /失败|未能|fail/i.test(intent.title) ? 'job-failed' : 'job-completed'
       return null
     }
-    const bridge = await startToastBridge(notificationSender, () => settings.notifications, outcomeOf, m => log.log(m))
+    // anywhere attention escalation: focused window suppresses everything;
+    // unfocused → flash (win32) / dock badge (else) + native toast.
+    const attention = new AttentionManager(
+      process.platform,
+      {
+        isFocused: () => win !== null && !win.isDestroyed() && win.isFocused(),
+        flashFrame: (flash: boolean) => { if (win !== null && !win.isDestroyed()) win.flashFrame(flash) },
+      },
+      { setBadgeCount: (count: number) => app.setBadgeCount(count) },
+    )
+    attentionRef = attention
+    const bridge = await startToastBridge(notificationSender, () => settings.notifications, outcomeOf, m => log.log(m), attention)
     if (bridge.port > 0) {
       process.env.MARISA_TOAST_PORT = String(bridge.port)
       log.log(`toast bridge on 127.0.0.1:${bridge.port} (MARISA_TOAST_PORT)`)
@@ -433,6 +446,9 @@ async function main(): Promise<void> {
   registerCloseToTray(win)
   registerNavigationGuard(win)
   win.once('ready-to-show', () => win?.show())
+  // anywhere clearAttention wiring: refocus/show/destroy clears flash+badge.
+  win.on('focus', () => attentionRef?.clear())
+  win.on('show', () => attentionRef?.clear())
   const landingPath = join(here, '..', 'res', 'landing.html')
   if (existsSync(landingPath)) await win.loadFile(landingPath)
   else {
@@ -484,6 +500,7 @@ app.on('quit', () => {
   quitting = true
   desktopRun?.markClean()
   toastBridgeClose?.()
+  attentionRef?.clear()
   // The supervisor's cleanup kills the backend tree on its own exit path;
   // force-kill anything left, then stop the reaper.
   if (activeBackend !== null) void activeBackend.stop()
