@@ -88,6 +88,8 @@ function escapeBatchSetValue(value: string): string {
 /** Module preloaded into RunAsNode children before their requested entry. */
 export function clearEnvironmentModule(): string {
   return [
+    // RunAsNode children still report ELECTRON_RUN_AS_NODE in their own env
+    // copy; delete it so grandchildren spawn as plain processes.
     `for (const name of Object.keys(process.env)) {`,
     `  if (name.toUpperCase() === '${RUN_AS_NODE}') delete process.env[name]`,
     `}`,
