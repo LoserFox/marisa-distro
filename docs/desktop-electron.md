@@ -122,13 +122,15 @@ agent-SDK 原生二进制/client-only 浏览器库/平台不符二进制全部�
 | node.exe | **0 —— 复用 Electron**（见下） |
 | **stage 合计** | **~153 MB** → tar.zst 估 **52-61 MB** |
 
-**node.exe 复用 Electron（anywhere 架构核心之一）**：anywhere 的
-desktop-runtime-environment.ts 用 `ELECTRON_RUN_AS_NODE=1 +
-process.execPath` 把 Electron 二进制当 Node 用（pnpm shim、node shim、
-DSH shim 全是 exec Electron），发行版不带独立 Node。实测 Electron 43.5
-内嵌 Node 24.19.0，满足 harness engines `^22.19 || >=24`，native 模块
-（node-pty 等）构建时用 electron headers 重编。移植该 shim 层后
-backend payload 再省 ~80 MB / 压缩后 ~25-30 MB。
+**node.exe 复用 Electron（anywhere 架构核心之一，已落地 a359becb）**：
+desktop-electron/src/electron-node.ts 移植 anywhere
+desktop-runtime-environment.ts 的 RunAsNode 半区：clear-env.mjs 预载
+（防孙进程继承 RunAsNode）、node/pnpm shim（cmd/sh 双形态）、PATH 幂等
+前插。main.ts 在 materializeBackend 后安装，quit dispose。launcher.cmd
+双模：node.exe 在则照旧，缺省 fallback 到 `..\..\marisa-dsh.exe
+--import clear-env.mjs`。make-bundle.ps1 `-RuntimeMode electron` 不拷
+node.exe。Linux 真机双向验证 clear-env 语义（带 preload 孙进程 env 已
+清/不带则继承），Electron 43.5 内嵌 Node 24.19.0 满足 engines 门。
 
 **完整发行版总体积（Windows 安装包）**：
 - Electron 壳路线：88 MB（壳，内含 Node 运行时）+ ~55 MB（backend.tar.zst）≈ **NSIS 安装包 ~140-150 MB**
