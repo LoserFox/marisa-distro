@@ -28,6 +28,11 @@ param(
   [switch]$SkipBodies,  # keep the existing staged bodies, only re-walk links and re-zip
   [string]$ProfilePath,
   [string]$NodePath,
+  # runtime: bundle node.exe as before; electron: omit node.exe — the
+  # Electron shell serves as Node via ELECTRON_RUN_AS_NODE shims it installs
+  # next to launcher.cmd at first boot (see desktop-electron/electron-node.ts)
+  [ValidateSet('runtime','electron')]
+  [string]$RuntimeMode = 'runtime',
   [string]$SevenZipPath,
   [string]$Version
 )
@@ -38,14 +43,19 @@ $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path ([Environment]:
 $profile = if ($ProfilePath) { [System.IO.Path]::GetFullPath($ProfilePath) } else { Join-Path $dshHome 'profiles\marisa' }
 $stage = "$repo\release\_stage"
 $out = "$repo\desktop\bundle\backend.tar.zst"
+# node.exe is only a required BUILD tool in runtime mode (pnpm install runs
+# on the build host); in electron mode the payload ships without it.
 $node = if ($NodePath) { $NodePath } else { (Get-Command node.exe -ErrorAction Stop).Source }
+if ($RuntimeMode -eq 'runtime') {
+  if (-not (Test-Path -LiteralPath $node -PathType Leaf)) { throw "required build tool not found: $node" }
+}
 if ($SevenZipPath) {
   $sevenZip = $SevenZipPath
 } else {
   $sevenZipCommand = Get-Command 7z.exe -ErrorAction SilentlyContinue
   $sevenZip = if ($sevenZipCommand) { $sevenZipCommand.Source } else { Join-Path $env:ProgramFiles '7-Zip\7z.exe' }
 }
-foreach ($requiredTool in $node, $sevenZip) {
+foreach ($requiredTool in $sevenZip) {
   if (-not (Test-Path -LiteralPath $requiredTool -PathType Leaf)) { throw "required build tool not found: $requiredTool" }
 }
 if (-not (Test-Path -LiteralPath $profile -PathType Container)) { throw "marisa profile not found: $profile" }
@@ -295,7 +305,14 @@ New-Item -ItemType Directory -Force "$stage\marisa-distro", "$stage\.dsh\profile
 
 if (-not $SkipBodies) {
   Set-Content -Path "$stage\VERSION" -Value "marisa-backend-$bundleVersion$dirtySuffix" -NoNewline
-  Copy-Item $node "$stage\node.exe"
+  if ($RuntimeMode -eq 'runtime') {
+    Copy-Item $node "$stage\node.exe"
+  } else {
+    # Electron payload: no node.exe — launcher.cmd falls back to the desktop
+    # exe (ELECTRON_RUN_AS_NODE=1 + --import clear-env.mjs) and the shell's
+    # electron-node.ts runtime installs pnpm/node shims onto PATH at boot.
+    Write-Host 'runtime mode=electron: node.exe omitted from payload'
+  }
   # mnemon memory engine: the plugin spawns `mnemon` (PATH lookup) and the
   # launcher prepends the bundle root, so the exe rides next to node.exe.
   Copy-Item "$repo\desktop\bundle\mnemon.exe" "$stage\mnemon.exe" -Force
@@ -306,9 +323,18 @@ if (-not $SkipBodies) {
   Set-Content -Path "$stage\launcher.cmd" -Value $launcherText -NoNewline -Encoding ascii
   # pnpm.cmd rides PATH the same way (mygo `pnpm add` / `dsh plugin`): the
   # shim runs the JS pnpm hoisted into marisa-distro/node_modules (a root
-  # prod dependency) on the bundled node.exe. Same CRLF rule as launcher.cmd.
+  # prod dependency). runtime mode: on the bundled node.exe. electron mode:
+  # on the desktop exe two levels up (ELECTRON_RUN_AS_NODE=1 + clear-env
+  # prelude — anywhere desktop-runtime-environment.ts windowsNodeShim shape;
+  # the shell's electron-node.ts also installs a richer PATH shim, this one
+  # is the payload-local fallback). Same CRLF rule as launcher.cmd.
   $pnpmShimText = Get-Content "$repo\desktop\bundle\pnpm.cmd" -Raw
   $pnpmShimText = $pnpmShimText -replace "`r?`n", "`r`n"
+  if ($RuntimeMode -eq 'electron') {
+    $pnpmShimText = $pnpmShimText -replace
+      [regex]::Escape('"%~dp0node.exe"'),
+      ('"%~dp0..\..\marisa-dsh.exe" --import "%~dp0private\clear-env.mjs"')
+  }
   Set-Content -Path "$stage\pnpm.cmd" -Value $pnpmShimText -NoNewline -Encoding ascii
   # minimal fallback overlay: when the full composition fails twice the shell
   # relaunches with MARISA_BOOT_PROFILE=web and launcher.cmd boots the web

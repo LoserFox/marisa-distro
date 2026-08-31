@@ -30,9 +30,12 @@ import { windowsBuildNumber, effectiveDesktopWindowMaterial, materialIsTranspare
 import { readDesktopSettings, writeDesktopSettings } from './desktop-settings.ts'
 import { startToastBridge, type NotificationOutcome } from './notifications.ts'
 import { AttentionManager } from './attention.ts'
+import { installElectronNodeRuntime, type NodeRuntimeInstallation } from './electron-node.ts'
 
 let toastBridgeClose: (() => void) | null = null
 let attentionRef: { clear(): void } | null = null
+/** Electron-as-Node runtime shims (PATH install); disposed on quit. */
+let nodeRuntime: NodeRuntimeInstallation | null = null
 
 /**
  * Main window construction with platform material (window-options.ts
@@ -210,6 +213,32 @@ async function materializeBackend(): Promise<void> {
   process.env.DSH_WEB_CMD =
     process.platform === 'win32' ? `"${launcher}"` : `sh "${launcher}"`
   log.log(`DSH_WEB_CMD set to backend launcher: ${process.env.DSH_WEB_CMD}`)
+  // Electron-as-Node runtime (anywhere desktop-runtime-environment port):
+  // generate pnpm/node shims that run the Electron executable with
+  // ELECTRON_RUN_AS_NODE=1, and prepend them to PATH so payload-side
+  // `pnpm` (mygo `pnpm add`, `dsh plugin`) resolves to them instead of the
+  // payload's node.exe-dependent pnpm.cmd. No bundled node.exe needed.
+  const pnpmEntry = join(
+    backendRootDir(),
+    'marisa-distro', 'node_modules', 'pnpm', 'bin', 'pnpm.mjs',
+  )
+  if (existsSync(pnpmEntry)) {
+    try {
+      nodeRuntime = installElectronNodeRuntime({
+        appExecutable: process.execPath,
+        pnpmBinPath: pnpmEntry,
+        electronVersion: process.versions.electron,
+        stateDir: join(appLogDir(), 'runtime'),
+        platform: process.platform,
+      })
+      log.log(`electron-as-node runtime installed: ${nodeRuntime.pnpmShimPath}`)
+    } catch (cause) {
+      // Non-fatal: payload with bundled node.exe keeps working via launcher.
+      log.log(`electron-as-node runtime unavailable, payload node.exe will serve: ${cause instanceof Error ? cause.message : String(cause)}`)
+    }
+  } else {
+    log.log('payload has no hoisted pnpm entry; electron-as-node runtime skipped')
+  }
 }
 
 /**
@@ -501,6 +530,7 @@ app.on('quit', () => {
   desktopRun?.markClean()
   toastBridgeClose?.()
   attentionRef?.clear()
+  nodeRuntime?.dispose()
   // The supervisor's cleanup kills the backend tree on its own exit path;
   // force-kill anything left, then stop the reaper.
   if (activeBackend !== null) void activeBackend.stop()
