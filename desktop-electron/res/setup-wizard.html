@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Marisa DSH 初始设置</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #202124; color: #e8eaed;
+    font: 14px/1.6 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex; justify-content: center; padding: 28px 20px 48px;
+  }
+  main { width: min(720px, 100%); }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .muted { color: #9aa0a6; font-size: 12.5px; }
+  .beta {
+    display: inline-block; font-size: 11px; border: 1px solid #fdd663; color: #fdd663;
+    border-radius: 999px; padding: 0 8px; margin-left: 8px; vertical-align: middle;
+  }
+  .card { background: #2a2c30; border-radius: 12px; padding: 16px 20px; margin: 14px 0; }
+  .card h2 { font-size: 15px; margin: 0 0 2px; }
+  .card p.desc { margin: 0 0 12px; color: #9aa0a6; font-size: 12.5px; }
+  .opt { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; cursor: pointer; }
+  .opt input { margin-top: 4px; accent-color: #8ab4f8; }
+  .opt .t { font-weight: 500; }
+  .opt .d { color: #9aa0a6; font-size: 12.5px; }
+  .opt.disabled { opacity: .45; cursor: not-allowed; }
+  .warn { background: #2d2a20; border: 1px solid #5f5340; border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 12.5px; color: #fdd663; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; }
+  button { font: inherit; font-size: 14px; cursor: pointer; border: 0; border-radius: 10px; padding: 10px 22px; background: #3c4043; color: #e8eaed; }
+  button.primary { background: #8ab4f8; color: #202124; font-weight: 600; }
+  button.primary:hover { background: #a5c5fa; }
+  button.ghost:hover { background: #4a4d51; }
+  footer { margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>欢迎使用 Marisa DSH<span class="beta">Beta</span></h1>
+  <p class="muted" id="welcome">几步设置，选好外观与提醒方式，随时可在系统托盘的「恢复模式」里调整。</p>
+
+  <div class="card">
+    <h2>窗口外观</h2>
+    <p class="desc" id="materialDesc">选择主窗口的背景材质（可后改）。</p>
+    <div id="materialOptions"></div>
+    <div class="warn" id="materialWarn" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <h2>桌面通知</h2>
+    <p class="desc">回合完成或失败、后台任务结束时提醒你。子代理会话不会提醒。</p>
+    <div id="notifyOptions"></div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="btnComplete">完成</button>
+    <button class="ghost" id="btnSkip">跳过</button>
+  </div>
+  <footer><p class="muted">关闭此窗口 = 退出应用（与「跳过」不同）。</p></footer>
+</main>
+<script>
+'use strict'
+function decodeState() {
+  const encoded = new URLSearchParams(window.location.search).get('state')
+  if (encoded === null || encoded.length > 512000) return { platform: 'linux', windowsBuild: undefined, backendVersion: '' }
+  try { return JSON.parse(atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))) } catch { return { platform: 'linux' } }
+}
+const state = decodeState()
+const isWindows = state.platform === 'win32'
+const isMac = state.platform === 'darwin'
+const build = typeof state.windowsBuild === 'number' ? state.windowsBuild : undefined
+const MICA_MIN = 22621
+const backdropSupported = isWindows && build !== undefined && build >= MICA_MIN
+
+// 材料选项按平台裁剪（window-material.ts 的值域）
+const MATERIALS = isWindows
+  ? [
+      { id: 'mica', t: 'Mica（云母）', d: 'Win11 系统背景材质，取桌面壁纸色调，性能开销最小。', disabled: !backdropSupported },
+      { id: 'acrylic', t: 'Acrylic（亚克力/实验性）', d: '实时模糊。上游曾因拖动残影/原生行为问题移除该选项，选择即视为知晓风险。', disabled: !backdropSupported },
+      { id: 'off', t: '不透明', d: '普通窗口背景，兼容性最好。' },
+    ]
+  : isMac
+    ? [
+        { id: 'transparent', t: '透明（Vibrancy）', d: 'macOS 原生毛玻璃侧栏效果。' },
+        { id: 'off', t: '不透明', d: '普通窗口背景。' },
+      ]
+    : [
+        { id: 'off', t: '不透明', d: 'Linux 暂不支持系统背景材质。' },
+      ]
+
+const NOTIFIES = [
+  { id: 'enabled', t: '启用桌面通知', d: '总开关。' },
+  { id: 'notifyOnTurnCompletion', t: '回合完成时', d: '你发起的对话回合正常结束。' },
+  { id: 'notifyOnTurnFailure', t: '回合失败时', d: '出错或达到 token 上限。' },
+  { id: 'notifyOnJobCompletion', t: '后台任务完成时', d: '后台作业正常结束。' },
+  { id: 'notifyOnJobFailure', t: '后台任务失败时', d: '后台作业未能完成。' },
+]
+
+function buildOptions(containerId, defs, defaultChecked) {
+  const container = document.getElementById(containerId)
+  for (const def of defs) {
+    const label = document.createElement('label')
+    label.className = 'opt' + (def.disabled ? ' disabled' : '')
+    const input = document.createElement('input')
+    input.type = 'radio'
+    input.name = containerId
+    input.value = def.id
+    if (def.disabled) input.disabled = true
+    if (def.id === defaultChecked) input.checked = true
+    input.dataset.disabled = def.disabled ? '1' : '0'
+    const text = document.createElement('span')
+    const t = document.createElement('div'); t.className = 't'; t.textContent = def.t
+    const d = document.createElement('div'); d.className = 'd'; d.textContent = def.d
+    text.append(t, d)
+    label.append(input, text)
+    container.append(label)
+  }
+}
+
+const defaultMaterial = isWindows ? (backdropSupported ? 'mica' : 'off') : isMac ? 'transparent' : 'off'
+buildOptions('materialOptions', MATERIALS, defaultMaterial)
+if (isWindows && !backdropSupported) {
+  const warn = document.getElementById('materialWarn')
+  warn.style.display = 'block'
+  warn.textContent = '检测到 Windows 版本低于 22H2（NT 22621），系统背景材质不可用，已回退为不透明。'
+}
+if (state.backendVersion) {
+  document.getElementById('welcome').textContent += ' 当前后端版本：' + state.backendVersion + '。'
+}
+
+// 通知默认全开
+const notifyBox = document.getElementById('notifyOptions')
+for (const def of NOTIFIES) {
+  const label = document.createElement('label')
+  label.className = 'opt'
+  const input = document.createElement('input')
+  input.type = 'checkbox'
+  input.dataset.key = def.id
+  input.checked = true
+  const text = document.createElement('span')
+  const t = document.createElement('div'); t.className = 't'; t.textContent = def.t
+  const d = document.createElement('div'); d.className = 'd'; d.textContent = def.d
+  text.append(t, d)
+  label.append(input, text)
+  notifyBox.append(label)
+}
+// 总开关联动
+notifyBox.addEventListener('change', e => {
+  if (e.target.dataset.key !== 'enabled') return
+  for (const input of notifyBox.querySelectorAll('input')) {
+    if (input.dataset.key !== 'enabled') input.disabled = !e.target.checked
+  }
+})
+
+function go(action, params) {
+  const url = new URL('marisa-setup://' + action)
+  for (const [k, v] of Object.entries(params || {})) url.searchParams.set(k, v)
+  window.location.href = url.href
+}
+
+document.getElementById('btnComplete').addEventListener('click', () => {
+  const material = document.querySelector('input[name="materialOptions"]:checked')
+  const params = {
+    mode: 'advanced',
+    macosMaterial: isMac ? (material ? material.value : 'transparent') : 'off',
+    windowsMaterial: isWindows ? (material ? material.value : 'off') : 'off',
+  }
+  for (const input of notifyBox.querySelectorAll('input')) {
+    params[input.dataset.key] = String(input.checked)
+  }
+  go('complete', params)
+})
+document.getElementById('btnSkip').addEventListener('click', () => go('skip'))
+</script>
+</body>
+</html>

@@ -8,7 +8,7 @@
  * focus, orphan reaper, rescue page, desktop log.
  */
 
-import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog } from 'electron'
+import { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog, Notification as ElectronNotification } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -25,6 +25,84 @@ import { routeDesktopStartupFailure, type DesktopStartupFailureStage } from './s
 import { beginDesktopRun } from './crash-evidence.ts'
 import { RecoveryController } from './recovery-controller.ts'
 import { RecoveryWindow } from './recovery-window.ts'
+import { SetupWizardWindow } from './setup-wizard-window.ts'
+import { windowsBuildNumber, effectiveDesktopWindowMaterial, materialIsTransparent, type DesktopWindowMaterial } from './window-material.ts'
+import { readDesktopSettings, writeDesktopSettings } from './desktop-settings.ts'
+import { startToastBridge, type NotificationOutcome } from './notifications.ts'
+
+let toastBridgeClose: (() => void) | null = null
+
+/**
+ * Main window construction with platform material (window-options.ts
+ * customChromeWindowOptions port): custom frame + titleBarOverlay on
+ * Windows, hiddenInset + vibrancy on macOS, plain on Linux. Transparent
+ * materials get an inset drag strip injected into remote pages.
+ */
+function createMainWindow(material: DesktopWindowMaterial): BrowserWindow {
+  const transparent = materialIsTransparent(material)
+  const base: Electron.BrowserWindowConstructorOptions = {
+    title: APP_NAME,
+    width: 1280,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    show: false,
+    backgroundColor: transparent ? '#00000000' : '#f5f6f8',
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      nodeIntegrationInSubFrames: false,
+    },
+  }
+  let options: Electron.BrowserWindowConstructorOptions = base
+  if (process.platform === 'win32') {
+    options = {
+      ...base,
+      autoHideMenuBar: true,
+      titleBarStyle: 'hidden',
+      titleBarOverlay: {
+        color: '#00000000',
+        symbolColor: '#7f858f',
+        height: 36,
+      },
+      ...(transparent ? { backgroundMaterial: material === 'mica' ? 'mica' : 'acrylic' } : {}),
+      hasShadow: true,
+      roundedCorners: true,
+      thickFrame: true,
+    }
+  } else if (process.platform === 'darwin') {
+    options = {
+      ...base,
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 16, y: 12 },
+      ...(material === 'transparent'
+        ? { transparent: true, vibrancy: 'sidebar' as const, visualEffectState: 'followWindow' as const }
+        : {}),
+    }
+  }
+  const window = new BrowserWindow(options)
+  if (transparent) {
+    // Remote pages paint an opaque body: inject an inset drag strip + body
+    // transparency hints so the material shows through the top 36px frame.
+    window.webContents.on('did-finish-load', () => {
+      void window.webContents.insertCSS(
+        'html, body { background: transparent !important; }' +
+        '::backdrop { background: transparent; }',
+      ).catch(() => {})
+      window.webContents.executeJavaScript(
+        '(() => {' +
+        'if (document.getElementById("marisa-drag-strip")) return;' +
+        'const strip = document.createElement("div");' +
+        'strip.id = "marisa-drag-strip";' +
+        'strip.style.cssText = "position:fixed;top:0;left:0;right:0;height:36px;-webkit-app-region:drag;z-index:2147483647";' +
+        'document.body ? document.body.append(strip) : document.addEventListener("DOMContentLoaded", () => document.body.append(strip));' +
+        '})()',
+      ).catch(() => {})
+    })
+  }
+  return window
+}
 
 const here = dirname(fileURLToPath(import.meta.url))
 const APP_NAME = 'Marisa DSH'
@@ -280,21 +358,78 @@ async function main(): Promise<void> {
   }
 
   await app.whenReady()
-  win = new BrowserWindow({
-    title: APP_NAME,
-    width: 1280,
-    height: 800,
-    minWidth: 800,
-    minHeight: 600,
-    show: false,
-    backgroundColor: '#f5f6f8',
-    webPreferences: {
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
-      nodeIntegrationInSubFrames: false,
-    },
-  })
+
+  // ---- Setup Wizard (anywhere port): first launch only, before the window.
+  let settings = readDesktopSettings()
+  if (!settings.setupComplete) {
+    try {
+      const wizard = new SetupWizardWindow({
+        input: {
+          platform: process.platform,
+          ...(process.platform === 'win32' ? { windowsBuild: windowsBuildNumber() } : {}),
+        },
+      })
+      const result = await wizard.run()
+      if (result.action === 'complete') {
+        settings = {
+          ...settings,
+          macosMaterial: result.selection.macosMaterial,
+          windowsMaterial: result.selection.windowsMaterial,
+          notifications: { ...result.selection.notifications },
+          setupComplete: true,
+        }
+        writeDesktopSettings(settings)
+        log.log(`setup wizard completed: windowsMaterial=${settings.windowsMaterial} macosMaterial=${settings.macosMaterial}`)
+      } else if (result.action === 'skip') {
+        settings = { ...settings, setupComplete: true }
+        writeDesktopSettings(settings)
+        log.log('setup wizard skipped')
+      } else {
+        // quit: user closed the wizard — respect it as an app exit.
+        log.log('setup wizard closed; exiting')
+        app.exit(0)
+        return
+      }
+    } catch (cause) {
+      log.log(`setup wizard failed (continuing with defaults): ${cause instanceof Error ? cause.message : String(cause)}`)
+    }
+  }
+
+  // ---- Toast bridge (Wails-shell MARISA_TOAST_PORT protocol, anywhere
+  // decision table): start BEFORE the backend so the port env is inherited.
+  {
+    const notificationSender = {
+      show: (n: { title: string; body: string }) => {
+        const notification = new ElectronNotification({ title: n.title, body: n.body })
+        notification.once('click', () => showMainWindow())
+        notification.show()
+      },
+      isSupported: () => ElectronNotification.isSupported(),
+    }
+    const outcomeOf = (intent: { title: string }): NotificationOutcome | null => {
+      if (/回合|turn/i.test(intent.title)) return /失败|未能|fail/i.test(intent.title) ? 'turn-failed' : 'turn-completed'
+      if (/任务|job/i.test(intent.title)) return /失败|未能|fail/i.test(intent.title) ? 'job-failed' : 'job-completed'
+      return null
+    }
+    const bridge = await startToastBridge(notificationSender, () => settings.notifications, outcomeOf, m => log.log(m))
+    if (bridge.port > 0) {
+      process.env.MARISA_TOAST_PORT = String(bridge.port)
+      log.log(`toast bridge on 127.0.0.1:${bridge.port} (MARISA_TOAST_PORT)`)
+      toastBridgeClose = bridge.close
+    } else {
+      log.log('toast bridge unavailable (native toasts disabled)')
+    }
+  }
+
+  // ---- Main window with the resolved material (window-options.ts port).
+  const material = effectiveDesktopWindowMaterial(
+    process.platform,
+    settings.macosMaterial,
+    settings.windowsMaterial,
+    windowsBuildNumber(),
+  )
+  log.log(`window material: ${material}`)
+  win = createMainWindow(material)
   registerCloseToTray(win)
   registerNavigationGuard(win)
   win.once('ready-to-show', () => win?.show())
@@ -348,6 +483,7 @@ app.on('window-all-closed', () => {
 app.on('quit', () => {
   quitting = true
   desktopRun?.markClean()
+  toastBridgeClose?.()
   // The supervisor's cleanup kills the backend tree on its own exit path;
   // force-kill anything left, then stop the reaper.
   if (activeBackend !== null) void activeBackend.stop()

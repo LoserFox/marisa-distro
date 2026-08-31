@@ -68,6 +68,46 @@ startup recovery 架构，替换/补充原 rescue 流程：
 enterRescue 钩子不变），两层互补：rescue = 后端无法启动时的壳内页面；
 recovery window = 主进程级恢复 + 插件管理。rescue-server.ts 计划下版删除。
 
+## 三期移植（2026-08-31）：通知系统 / 亚克力玻璃 / 引导向导
+
+继续按 anywhere dsh-plugin-desktop @ e71a9ef 源码移植：
+
+1. **窗口材质**（window-material.ts）：NT 22621+ 门控 + fail-closed
+   （mica/acrylic 在老 build 自动回退 off）；acrylic 上游已移除（原生窗口
+   行为问题），marisa 恢复为显式实验选项并在向导页标注风险；macOS 走
+   vibrancy sidebar，Windows 走 titleBarOverlay + backgroundMaterial，
+   Linux 恒 off。透明材质时主窗注入 36px 拖拽条 + body 透明化 CSS。
+2. **设置持久化**（desktop-settings.ts）：desktop-settings.json 于
+   %LOCALAPPDATA%\marisa-distro\（backend 树外，重解包不丢）；per-field
+   默认值 + 损坏 fail-closed。
+3. **通知系统**（notifications.ts）：壳侧 = 复用 Wails 壳已定的
+   MARISA_TOAST_PORT loopback 协议接后端 dsh-web-ui-notify 的通知意图 +
+   anywhere 的 Electron Notification click-to-focus 模式；四开关决策表
+   （回合/任务 × 完成/失败）在壳侧再过滤一次。anywhere 的 Cordis 侧决策
+   插件（session/event turn 跟踪 + jobs.onJobDone）依赖 harness 进程内缝线
+   （packages/core/session rc.2 均有对应事件），未来做进程内插件时可直接
+   按 notifications.ts 决策表实现。
+4. **引导向导**（setup-wizard-*）：一次性首启向导（settings.setupComplete
+   门控），sandbox 渲染、零 IPC、base64url state 进、`marisa-setup://`
+   严格 action 解析出（exact-keys + 枚举 + 8KB 上限，anywhere 同款 closed-
+ world schema）；close ≠ skip（quit 直接退出应用）；Windows ready-to-show
+   竞态按上游注释处理（win32 直接可见创建）。页面提供平台裁剪的材料选项
+   （22621 以下禁用并提示）+ 通知五开关（总开关联动）。
+
+### 关于"直接用 dsh-plugin-desktop 插件"的查证结论
+
+- npm 只有 0.0.1（纯占位）与 2.0.0（pin 0.1.0-rc.6 线 96 包）；repo HEAD
+  2.0.4 已 pin 0.1.2-alpha.1。历史上 pin 0.1.1-rc.2（fe81811, 2026-08-25,
+  在 v2.0.3/v2.0.4 tag 内）——与魔理沙 harness pin 同线，npm 未发布该版本。
+- npm 2.0.0 的 96 个 @deepseek-ai/dsh-* 依赖中 94 个可在 rc.2 线解析，
+  缺 2 个：dsh-client-schema-form（rc7 并入别处）、dsh-client-web-react
+  （rc8 并入 dsh-client-web）——但缺的就是 client inject 链成员，装上即
+  ClientPackageCompositionError。
+- 它是整个桌面（95 源文件，接管 profile/市场/更新），非独立急救插件；
+  急救/通知/材质/向导都缝在它的 main 进程里，拆不出来。
+- 结论：源码按模块抄（现状方案），版本对齐等 anywhere 恢复 rc 线 pin 或
+  魔理沙升级 alpha 线后再评估整包接入。
+
 ## 关键设计差异
 
 | 维度 | Wails 壳 | Electron 壳 |
