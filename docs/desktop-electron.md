@@ -105,22 +105,36 @@ recovery window = 主进程级恢复 + 插件管理。rescue-server.ts 计划下
 | 对照：Wails/WebView2 Go 壳（windows/amd64, installedbundle tag） | 20 MB（单文件，WebView2 系统组件复用） |
 
 **后端 payload（backend.tar.zst，两壳共用同一份，Linux 无法运行
-make-bundle.ps1，以下为 stage 构成实测 + 压缩比估算）**：
+make-bundle.ps1，以下为按脚本 stage 语义复算）**：
 
-| 构成 | stage 体积（node_modules 除外） |
+make-bundle.ps1 的真实 stage 语义（2026-08-18 后端体积审查已做过一轮）：
+`assets/source`/`wechat-submission`/docs/promo 全部 prune，dsh-stickers
+runtime PNG 经 convert-stickers-webp.mjs 转 WebP（~4:1）后才进包，
+agent-SDK 原生二进制/client-only 浏览器库/平台不符二进制全部裁掉，
+.ignored_* 开发工具链与成员内重复依赖删除。
+
+| 构成 | stage 体积 |
 | --- | --- |
-| harness 源码树（b150a551 = 0.1.1-rc.2） | 48.7 MB |
-| plugins 28 个（含 dsh-stickers 贴纸资产 76 MB、dsh-track 31 MB、better-sidebar 15 MB） | 157.8 MB |
+| harness 源码树（b150a551 = 0.1.1-rc.2，lib/dist 产物随树） | 48.7 MB |
+| plugins 28 个（source/wechat/docs prune 后 + stickers WebP 转换） | 86.1 MB（原树 157.8 MB） |
 | dsh-mygo（vendored） | 4.0 MB |
-| node.exe（Windows v22 runtime，估） | ~80 MB |
-| mnemon.exe（bundle 管理 CLI） | 14 MB |
-| **stage 合计** | **~305 MB**；tar.zst 压缩后估 **~95-110 MB**（JS/TS 文本 3:1 + 资产少压缩） |
+| mnemon.exe | 14 MB |
+| node.exe | **0 —— 复用 Electron**（见下） |
+| **stage 合计** | **~153 MB** → tar.zst 估 **52-61 MB** |
+
+**node.exe 复用 Electron（anywhere 架构核心之一）**：anywhere 的
+desktop-runtime-environment.ts 用 `ELECTRON_RUN_AS_NODE=1 +
+process.execPath` 把 Electron 二进制当 Node 用（pnpm shim、node shim、
+DSH shim 全是 exec Electron），发行版不带独立 Node。实测 Electron 43.5
+内嵌 Node 24.19.0，满足 harness engines `^22.19 || >=24`，native 模块
+（node-pty 等）构建时用 electron headers 重编。移植该 shim 层后
+backend payload 再省 ~80 MB / 压缩后 ~25-30 MB。
 
 **完整发行版总体积（Windows 安装包）**：
-- Electron 壳路线：88 MB（壳）+ ~100 MB（backend.tar.zst）≈ **NSIS 安装包 ~190 MB**（xz 压缩后约 150-170 MB）
-- Wails 壳路线：20 MB（壳含 go:embed 后端 payload 的入口）+ 同一份 backend.tar.zst ≈ **~120-130 MB**
-- 后端是两壳共用的大头；壳差 68 MB 全部是 Chromium vs WebView2 系统共享的代价。
-- 注意：backend.tar.zst 真实数字只能在 Windows 主机跑 make-bundle.ps1 得出（脚本内含 pnpm install + junction 处理 + .ignored_* 裁剪），上表 stage 构成为 Linux 侧 du 实测，压缩后数字为估算。
+- Electron 壳路线：88 MB（壳，内含 Node 运行时）+ ~55 MB（backend.tar.zst）≈ **NSIS 安装包 ~140-150 MB**
+- Wails 壳路线：20 MB 壳必须自带 node.exe（WebView2 路线没有 Electron 可复用）≈ 20 + 80-90 MB（payload 含 node.exe）≈ **~120-130 MB**
+- 即：Electron 壳贵 68 MB 的 Chromium，但省掉独立 node.exe ~25 MB（压缩后），净差缩到 ~30-40 MB；后端 payload 大头是 28 插件的 runtime 资产与 harness 产物，与壳选型无关。
+- 注意：backend.tar.zst 真实数字只能在 Windows 主机跑 make-bundle.ps1 得出（脚本内含 pnpm install + junction + prune），上表为 Linux 侧按脚本语义复算。
 
 ### 关于"直接用 dsh-plugin-desktop 插件"的查证结论
 
