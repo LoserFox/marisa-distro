@@ -14,16 +14,21 @@ import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chdir } from 'node:process'
-import { setupLogging, ensureAndOpenFolder, parseLogLevel, type DesktopLog } from './logging.ts'
-import { backendRootDir, appLogDir } from './paths.ts'
+import { setupLogging, ensureAndOpenFolder, parseLogLevel, readLogTail, type DesktopLog } from './logging.ts'
+import { backendRootDir, appLogDir, APP_LOG_NAME } from './paths.ts'
 import { supervise, type SuperviseRun } from './supervisor.ts'
 import { startRescueServer } from './rescue-server.ts'
 import { rescueBackendDirLike } from './rescue-paths.ts'
 import { ensureBackend } from './extract.ts'
 import { spawnBackendForStage, type ActiveHandle } from './backend-adapter.ts'
+import { routeDesktopStartupFailure, type DesktopStartupFailureStage } from './startup-failure-routing.ts'
+import { beginDesktopRun } from './crash-evidence.ts'
+import { RecoveryController } from './recovery-controller.ts'
+import { RecoveryWindow } from './recovery-window.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const APP_NAME = 'Marisa DSH'
+const APP_VERSION = '0.1.0-electron.1'
 
 let log: DesktopLog
 let tray: Tray | null = null
@@ -31,6 +36,10 @@ let win: BrowserWindow | null = null
 let supervisor: SuperviseRun | null = null
 let activeBackend: ActiveHandle | null = null
 let quitting = false
+/** Current startup stage for failure routing (anywhere: startupStage). */
+let startupStage: DesktopStartupFailureStage = 'electron-ready'
+/** Run marker: detects an unclean previous exit (crash evidence). */
+let desktopRun: ReturnType<typeof beginDesktopRun> | null = null
 
 const isEmbedded =
   process.env.EMBEDDED_BUNDLE === '1' ||
@@ -92,6 +101,15 @@ function setupTray(): void {
           if (supervisor?.restartBackend() !== true) log.log('backend restart requested but no backend is running')
           else log.log('backend restart requested; supervise will relaunch it')
         } },
+      { label: '恢复模式…', click: () => {
+          void openRecoveryWindow(startupStage, '用户从托盘主动进入恢复模式', true).then(result => {
+            if (result === 'restart') {
+              quitting = true
+              app.relaunch()
+              app.exit(0)
+            }
+          })
+        } },
       { type: 'separator' },
       { label: '退出', click: () => { quitting = true; app.quit() } },
     ]),
@@ -112,6 +130,53 @@ async function materializeBackend(): Promise<void> {
   process.env.DSH_WEB_CMD =
     process.platform === 'win32' ? `"${launcher}"` : `sh "${launcher}"`
   log.log(`DSH_WEB_CMD set to backend launcher: ${process.env.DSH_WEB_CMD}`)
+}
+
+/**
+ * Recovery-mode window (anywhere dsh-plugin-desktop port): a dedicated
+ * sandboxed window with the two-phase controller. Resolves the user's final
+ * choice; 'restart' relaunches the whole app.
+ */
+async function openRecoveryWindow(failureStage: string, failureDetail: string, requested = false): Promise<'restart' | 'quit' | 'unavailable'> {
+  if (!app.isReady()) return 'unavailable'
+  try {
+    const backendDir = rescueBackendDirLike(dirname(process.execPath)) ?? ''
+    const controller = backendDir !== ''
+      ? new RecoveryController({
+          backendDir,
+          log: m => log.log(m),
+          reinstallAvailable: () => isEmbedded,
+          reinstallBackend: async () => {
+            if (!isEmbedded) throw new Error('当前安装形态不支持从内置资源恢复源码，请通过安装程序修复')
+            rmSync(backendRootDir(), { recursive: true, force: true })
+            rmSync(backendRootDir() + '.extracting', { recursive: true, force: true })
+            await materializeBackend()
+          },
+        })
+      : undefined
+    const window = new RecoveryWindow({
+      ...(controller !== undefined ? { controller } : {}),
+      failureStage,
+      failureDetail,
+      ...(requested ? { requested: true } : {}),
+      embeddedAvailable: isEmbedded,
+      exportDiagnostics: async () => {
+        const lines = [
+          `app: ${APP_NAME} ${APP_VERSION} (electron ${process.versions.electron}, node ${process.versions.node})`,
+          `platform: ${process.platform} ${process.arch}`,
+          `embedded: ${String(isEmbedded)}`,
+          `startupStage: ${startupStage}`,
+          `--- ${APP_LOG_NAME} (tail) ---`,
+          readLogTail(join(appLogDir(), APP_LOG_NAME), 16 << 10),
+        ]
+        return lines.join('\n')
+      },
+    })
+    return await window.run()
+  } catch (cause) {
+    log.log(`failed to open recovery window: ${cause instanceof Error ? cause.message : String(cause)}`)
+    return 'unavailable'
+  }
 }
 
 /** Rescue page host (reuses the Go shell's rescue.html verbatim). */
@@ -181,6 +246,20 @@ async function main(): Promise<void> {
   log = setupLogging()
   log.log(`${APP_NAME} electron shell starting (embedded=${String(isEmbedded)})`)
 
+  // Crash evidence: a leftover run marker means the previous launch exited
+  // uncleanly (hard kill / crash) — logged and shown in recovery diagnostics.
+  desktopRun = beginDesktopRun(join(appLogDir(), 'desktop-run.json'), {
+    startedAt: new Date().toISOString(),
+    pid: process.pid,
+    version: APP_VERSION,
+  })
+  if (desktopRun.previousRun !== undefined) {
+    const detail = 'unreadable' in desktopRun.previousRun
+      ? 'unreadable marker'
+      : `pid ${desktopRun.previousRun.pid} started ${desktopRun.previousRun.startedAt}`
+    log.log(`previous launch exited uncleanly (${detail})`)
+  }
+
   const workspace = process.env.DSH_APP_WORKSPACE
   if (workspace !== undefined && workspace !== '') {
     try { chdir(workspace) } catch (err) { log.log(`chdir failed: ${String(err)}`) }
@@ -188,9 +267,13 @@ async function main(): Promise<void> {
 
   if (isEmbedded) {
     try {
+      startupStage = 'backend-extract'
       await materializeBackend()
     } catch (err) {
-      dialog.showErrorBox(APP_NAME, `内嵌后端解包失败：${String(err)}`)
+      // Failure routing (anywhere): app not ready → stderr-only path.
+      const detail = err instanceof Error ? err.message : String(err)
+      log.log(`backend extract failed: ${detail}`)
+      dialog.showErrorBox(APP_NAME, `内嵌后端解包失败：${detail}`)
       app.exit(1)
       return
     }
@@ -228,6 +311,10 @@ async function main(): Promise<void> {
 
   setupTray()
 
+  // Supervision: stage transitions feed startupStage; rescue keeps the Go
+  // shell's rescue.html (backend-side fallback), while the anywhere-style
+  // recovery window is available from the tray and after unclean exits.
+  startupStage = 'backend-boot'
   supervisor = await supervise(
     {
       spawn: async stage => {
@@ -241,6 +328,7 @@ async function main(): Promise<void> {
       },
       enterRescue: lastError => enterRescuePage(lastError),
       navigate: url => {
+        startupStage = 'backend-ready'
         if (win !== null && !win.isDestroyed()) void win.loadURL(url.href)
       },
       log: m => log.log(m),
@@ -258,6 +346,8 @@ app.on('window-all-closed', () => {
 })
 
 app.on('quit', () => {
+  quitting = true
+  desktopRun?.markClean()
   // The supervisor's cleanup kills the backend tree on its own exit path;
   // force-kill anything left, then stop the reaper.
   if (activeBackend !== null) void activeBackend.stop()

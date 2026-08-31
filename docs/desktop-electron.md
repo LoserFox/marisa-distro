@@ -42,6 +42,32 @@ Wails 路线 60% 精力花在重新造 Electron 免费提供的东西（junction
 - **桌面通知权限注入**：Wails 版用 JS 注入 requestPermission，Electron 用
   `Notification.requestPermission()` 原生 API 即可
 
+## 恢复模式（2026-08-31 二期：anywhere dsh-plugin-desktop 移植）
+
+按 anywhere-labs/dsh-plugin-desktop @ e71a9ef（v2.0.4，2026-08-30）移植其
+startup recovery 架构，替换/补充原 rescue 流程：
+
+1. **失败分级路由**（startup-failure-routing.ts）：app 未就绪 → stderr-only
+   退出；就绪 → 恢复窗。不看错误文本，只看就绪状态（决策表可单测）。
+2. **启动阶段跟踪**：electron-ready → backend-extract → backend-boot →
+   backend-ready，失败时带阶段进恢复窗。
+3. **崩溃证据**（crash-evidence.ts）：desktop-run.json run 标记（原子写 +
+   ownerId 防抢占），非正常退出残留标记 → 下次启动记录日志。
+4. **恢复窗**（recovery-window.ts + res/recovery.html）：专用 sandbox 窗
+   （零 IPC/零网络、独立 partition、deny window-open/webview），状态经
+   base64url query 传入，动作经 `marisa-recovery://` scheme 导航拦截。
+   Tab：插件（禁用/启用）/ 备份·重解包 / 诊断（日志尾部）。
+5. **两阶段操作**（recovery-controller.ts）：preview（不透明
+   `prev_<43位>` ID + 5min TTL + 单次使用）→ 原生确认框 → execute 主进程
+   再校验。bundle 名过 `^[a-z0-9...]$` 防路径注入。
+6. **重启语义**：恢复动作完成后「重启应用」= `app.relaunch()` 整体重启，
+   不做 in-place 恢复。
+7. 托盘新增「恢复模式…」主动入口。
+
+保留：原 Go 壳 rescue.html 流程作为后端侧 fallback（supervisor 的
+enterRescue 钩子不变），两层互补：rescue = 后端无法启动时的壳内页面；
+recovery window = 主进程级恢复 + 插件管理。rescue-server.ts 计划下版删除。
+
 ## 关键设计差异
 
 | 维度 | Wails 壳 | Electron 壳 |

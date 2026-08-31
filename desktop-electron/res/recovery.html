@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Marisa DSH 恢复模式</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #202124; color: #e8eaed;
+    font: 14px/1.6 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex; justify-content: center; padding: 24px 16px 40px;
+  }
+  main { width: min(760px, 100%); }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .muted { color: #9aa0a6; font-size: 12.5px; }
+  .warnbox {
+    background: #2d2a20; border: 1px solid #5f5340; border-radius: 10px;
+    padding: 12px 16px; margin: 16px 0;
+  }
+  .warnbox code {
+    background: #1a1b1e; padding: 1px 6px; border-radius: 4px;
+    font-size: 12px; color: #fdd663; word-break: break-all;
+  }
+  nav { display: flex; gap: 6px; margin: 18px 0 12px; border-bottom: 1px solid #3c4043; }
+  nav a {
+    color: #9aa0a6; text-decoration: none; padding: 8px 14px; border-radius: 8px 8px 0 0;
+    font-size: 13.5px;
+  }
+  nav a.active { color: #8ab4f8; background: #2a2c30; font-weight: 600; }
+  section.panel { display: none; }
+  section.panel.active { display: block; }
+  .card { background: #2a2c30; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #35383c; }
+  .row:last-child { border-bottom: 0; }
+  .row .name { font-weight: 500; word-break: break-all; }
+  .tag { font-size: 11px; color: #9aa0a6; border: 1px solid #5f6368; border-radius: 999px; padding: 1px 8px; margin-left: 8px; }
+  button {
+    font: inherit; font-size: 13px; cursor: pointer; border: 0; border-radius: 8px;
+    padding: 7px 14px; background: #3c4043; color: #e8eaed;
+  }
+  button:hover:not(:disabled) { background: #4a4d51; }
+  button.primary { background: #8ab4f8; color: #202124; font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: #a5c5fa; }
+  button.danger { background: #5c2b29; color: #f2b8b5; }
+  button.danger:hover:not(:disabled) { background: #6d332f; }
+  button:disabled { opacity: .5; cursor: progress; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  pre.log {
+    background: #17181a; border: 1px solid #3c4043; border-radius: 8px;
+    padding: 12px; font-size: 11.5px; line-height: 1.5; max-height: 320px;
+    overflow: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .toast {
+    position: fixed; right: 16px; bottom: 16px; max-width: 420px;
+    background: #2a2c30; border: 1px solid #5f6368; border-left: 4px solid #8ab4f8;
+    border-radius: 10px; padding: 10px 16px; box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  }
+  .toast.success { border-left-color: #81c995; }
+  .toast.error { border-left-color: #f28b82; }
+  .toast.warning { border-left-color: #fdd663; }
+  .empty { color: #9aa0a6; padding: 18px 0; text-align: center; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+'use strict'
+const SCHEME = 'marisa-recovery:'
+function href(action, id) {
+  const url = new URL(SCHEME + '//' + action)
+  if (id !== undefined) url.searchParams.set('id', id)
+  return url.href
+}
+function decodeState() {
+  const encoded = new URLSearchParams(window.location.search).get('state')
+  if (encoded === null || encoded.length > 512000) return undefined
+  try { return JSON.parse(atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))) } catch { return undefined }
+}
+function el(tag, attrs, children) {
+  const node = document.createElement(tag)
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'text') node.textContent = v
+    else if (k === 'html') node.innerHTML = v
+    else node.setAttribute(k, v)
+  }
+  for (const c of children || []) node.append(c)
+  return node
+}
+function button(label, action, id, cls) {
+  return el('button', { class: cls || '', onclick: "location.href='" + href(action, id).replace(/'/g, '%27') + "'" }, [])
+}
+/* build DOM imperatively below to avoid inline handlers */
+function btn(label, action, id, cls) {
+  const b = document.createElement('button')
+  if (cls) b.className = cls
+  b.textContent = label
+  b.addEventListener('click', () => { window.location.href = href(action, id) })
+  return b
+}
+
+function formatBytes(n) {
+  if (!Number.isFinite(n) || n <= 0) return '—'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let v = n, u = units[0]
+  for (let i = 1; v >= 1024 && i < units.length; i++) { v /= 1024; u = units[i] }
+  return v.toFixed(1) + ' ' + u
+}
+
+function renderTabs(state) {
+  const tabs = [
+    ['plugins', '插件'],
+    ['backups', '备份 / 重解包'],
+    ['diagnostics', '诊断'],
+  ]
+  const nav = el('nav', {}, [])
+  for (const [id, label] of tabs) {
+    const a = document.createElement('a')
+    a.textContent = label
+    if (state.activeTab === id) a.className = 'active'
+    a.addEventListener('click', () => { window.location.href = href('show-tab', id) })
+    nav.append(a)
+  }
+  return nav
+}
+
+function renderPlugins(state) {
+  const section = el('section', { class: 'panel' + (state.activeTab === 'plugins' ? ' active' : '') }, [])
+  if (!state.snapshot) {
+    section.append(el('div', { class: 'card' }, [
+      el('p', { text: '插件清单不可用' + (state.snapshotError ? '：' + state.snapshotError : '') }, []),
+      el('p', { class: 'muted', text: '后端目录缺失或 profile 清单无法读取。可尝试「重新解包后端」。' }, []),
+    ]))
+    return section
+  }
+  const card = el('div', { class: 'card' }, [
+    el('p', { class: 'muted', text: 'profile: ' + state.snapshot.profileName + ' · 禁用仅跳过加载，不卸载文件；重启后端后生效。' }, []),
+  ])
+  if (state.snapshot.bundles.length === 0) {
+    card.append(el('p', { class: 'empty', text: '该 profile 没有登记任何 bundle' }, []))
+  }
+  for (const b of state.snapshot.bundles) {
+    const left = el('div', {}, [])
+    left.append(el('div', { class: 'name', text: b.name }, []))
+    const right = el('div', { style: 'display:flex;gap:8px;align-items:center' }, [])
+    if (b.status === 'disabled') right.append(el('span', { class: 'tag', text: '已禁用' }, []))
+    if (b.status === 'active' && b.action === 'disable') right.append(btn('禁用', 'disable-bundle', b.name, 'danger'))
+    if (b.status === 'disabled') right.append(btn('启用', 'enable-bundle', b.name, ''))
+    const row = el('div', { class: 'row' }, [left, right])
+    card.append(row)
+  }
+  section.append(card)
+  return section
+}
+
+function renderBackups(state) {
+  const section = el('section', { class: 'panel' + (state.activeTab === 'backups' ? ' active' : '') }, [])
+  const card = el('div', { class: 'card' }, [
+    el('p', { class: 'muted', text: '重新解包 = 删除当前 backend 并从内嵌资源恢复为全新出厂树（用户数据面 .dsh 若存在会先自动备份）。' }, []),
+  ])
+  const actions = el('div', { class: 'actions' }, [])
+  if (state.reExtractAvailable) actions.append(btn('重新解包后端', 'preview-re-extract', undefined, 'danger'))
+  else actions.append(el('span', { class: 'muted', text: '当前安装形态不支持从内置资源恢复源码（dev 形态请用安装器修复）。' }, []))
+  card.append(actions)
+  section.append(card)
+  const list = el('div', { class: 'card' }, [el('p', { class: 'muted', text: '历史备份（升级/急救时自动创建）' }, [])])
+  const backups = state.snapshot?.backups ?? []
+  if (backups.length === 0) list.append(el('p', { class: 'empty', text: '暂无备份' }, []))
+  for (const b of backups) {
+    const row = el('div', { class: 'row' }, [
+      el('div', {}, [
+        el('div', { class: 'name', text: b.name }, []),
+        el('div', { class: 'muted', text: (b.capturedAt || '时间未知') + (b.backendVersion ? ' · backend ' + b.backendVersion : '') }, []),
+      ]),
+    ])
+    list.append(row)
+  }
+  section.append(list)
+  return section
+}
+
+function renderDiagnostics(state) {
+  const section = el('section', { class: 'panel' + (state.activeTab === 'diagnostics' ? ' active' : '') }, [])
+  const actions = el('div', { class: 'actions' }, [])
+  actions.append(btn('刷新诊断', 'export-diagnostics', undefined, ''))
+  actions.append(btn('打开日志目录', 'open-log', undefined, ''))
+  actions.append(btn('定位日志文件', 'show-log', undefined, ''))
+  section.append(actions)
+  const card = el('div', { class: 'card' }, [])
+  if (state.diagnostics.status === 'saving') card.append(el('p', { class: 'muted', text: '正在收集诊断…' }, []))
+  if (state.diagnostics.status === 'failed') card.append(el('p', { class: 'muted', text: '诊断导出失败。' }, []))
+  card.append(el('pre', { class: 'log', text: state.diagnosticsTail || '（暂无内容）' }, []))
+  section.append(card)
+  return section
+}
+
+function render() {
+  const state = decodeState()
+  const app = document.getElementById('app')
+  app.replaceChildren()
+  if (state === undefined) {
+    app.append(el('h1', { text: '恢复模式' }, []), el('p', { class: 'muted', text: '状态数据损坏，请关闭窗口重启应用。' }, []))
+    return
+  }
+  app.append(el('h1', { text: 'Marisa DSH 恢复模式' }, []))
+  app.append(el('p', { class: 'muted', text: state.requested ? '你主动进入了恢复模式。' : '启动遇到问题。可在下方排查、禁用问题插件或恢复出厂后端。' }, []))
+  const warn = el('div', { class: 'warnbox' }, [])
+  warn.append(el('div', {}, [
+    el('span', { class: 'muted', text: '失败阶段：' }, []),
+    el('code', { text: state.failureStage }, []),
+  ]))
+  const detail = document.createElement('div')
+  detail.style.cssText = 'margin-top:8px;font-size:12.5px;word-break:break-all;white-space:pre-wrap'
+  detail.textContent = state.failureDetail || '（无详细信息）'
+  warn.append(detail)
+  app.append(warn)
+  app.append(renderTabs(state))
+  app.append(renderPlugins(state))
+  app.append(renderBackups(state))
+  app.append(renderDiagnostics(state))
+  const actions = el('div', { class: 'actions', style: 'margin-top:20px' }, [])
+  actions.append(btn('刷新状态', 'refresh', undefined, ''))
+  if (state.restartReady) actions.append(btn('重启应用（以完整模式）', 'restart', undefined, 'primary'))
+  actions.append(btn('退出', 'quit', undefined, ''))
+  app.append(actions)
+  if (state.notice) {
+    const toast = el('div', { class: 'toast ' + state.notice.tone }, [
+      el('strong', { text: state.notice.title }, []),
+      el('div', { class: 'muted', text: state.notice.body }, []),
+    ])
+    document.body.append(toast)
+    setTimeout(() => toast.remove(), 8000)
+  }
+}
+render()
+</script>
+</body>
+</html>
