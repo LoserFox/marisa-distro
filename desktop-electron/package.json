@@ -1,0 +1,26 @@
+{
+  "name": "@marisa/desktop-electron",
+  "description": "Marisa DSH Desktop (Electron shell): supervises the marisa web backend and hosts it in a sandboxed Electron window with tray residency",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/main.js",
+  "license": "BSD-3-Clause",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "watch": "tsc -p tsconfig.build.json --watch",
+    "dev": "npm run build && node scripts/run-electron.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dist": "npm run build && electron-builder --config electron-builder.yml",
+    "dist:dir": "npm run build && electron-builder --config electron-builder.yml --dir"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "tar-stream": "^3.1.7",
+    "typescript": "6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

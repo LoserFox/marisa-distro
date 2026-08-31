@@ -1,0 +1,43 @@
+# Marisa DSH Desktop (Electron shell) packaging.
+#
+# The shell carries NO backend payload: the backend bundle (node.exe + harness +
+# marisa profile + tar.zst) is a separate artifact produced by
+# desktop/bundle/make-bundle.ps1 and materialized at runtime by src/extract.ts.
+# The Electron payload is lib/ (tsc output) + build/ (icons) + the vendored
+# rescue page. Native runtime deps: none (zstd decode is pure JS).
+appId: io.marisa-distro.desktop-electron
+productName: Marisa DSH
+directories:
+  output: release
+  buildResources: build
+files:
+  - lib/**
+  - build/**
+  - res/**
+  - package.json
+asar: true
+# The orphan reaper runs under Electron-as-Node, which cannot read inside
+# app.asar; unpack everything it (or the extract path) touches at runtime.
+asarUnpack:
+  - lib/reaper.js
+  - lib/process-tree.js
+  - lib/extract.js
+  - lib/zstd-decoder.js
+win:
+  icon: build/icon.png
+  target:
+    - nsis
+    - portable
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: Marisa DSH
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+# Development/testing targets only — the marisa release ships Windows first;
+# linux artifacts here are for CI smoke builds, not distributions.
+linux:
+  icon: build/icon.png
+  category: Development
+  target:
+    - dir
