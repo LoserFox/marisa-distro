@@ -1,0 +1,11 @@
+{
+  "component": "dsh-update-check",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "67a766806e429b512fb03832431c1c5e207f7bc2",
+  "available": "4aa96256d0af09fa65e64679a1c7826342e9ded2",
+  "repository": "https://github.com/omdsh-dev/marisa-distro.git",
+  "diffDocument": "docs/plugins/dsh-update-check.md",
+  "checkedAt": "2026-09-05T07:43:52.850Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
