@@ -1,0 +1,11 @@
+{
+  "component": "dsh-track",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "49991c6ee0be954daf38c5429f8148e3cf4c6137",
+  "available": "fd000f69da4ab79973a1ffe6e168da74fca6355e",
+  "repository": "https://github.com/dsh-external/dsh-track.git",
+  "diffDocument": "docs/plugins/dsh-track.md",
+  "checkedAt": "2026-09-05T07:43:23.951Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
