@@ -1,0 +1,12 @@
+{
+  "component": "dsh-llm-fallbacks",
+  "source": "npm",
+  "mode": "fork",
+  "package": "dsh-llm-fallbacks",
+  "currentVersion": "0.3.2",
+  "available": "0.4.1",
+  "repository": "https://github.com/omdsh-dev/dsh-llm-fallbacks.git",
+  "diffDocument": "docs/plugins/dsh-llm-fallbacks.md",
+  "checkedAt": "2026-09-05T07:43:34.039Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
