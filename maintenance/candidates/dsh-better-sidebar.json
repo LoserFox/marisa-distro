@@ -1,0 +1,12 @@
+{
+  "component": "dsh-better-sidebar",
+  "source": "npm",
+  "mode": "fork",
+  "package": "dsh-better-sidebar",
+  "currentVersion": "0.16.0",
+  "available": "0.18.0",
+  "repository": "https://github.com/omdsh-dev/DSH-better-sidebar.git",
+  "diffDocument": "docs/plugins/dsh-better-sidebar.md",
+  "checkedAt": "2026-09-05T07:43:38.680Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
