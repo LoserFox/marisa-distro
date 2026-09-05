@@ -1,0 +1,11 @@
+{
+  "component": "yet-another-subagent",
+  "source": "npm",
+  "mode": "mirror",
+  "package": "@huanlin/dsh-plugin-yet-another-subagent",
+  "currentVersion": "0.1.6",
+  "available": "0.3.0",
+  "repository": null,
+  "checkedAt": "2026-09-05T07:43:25.236Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
