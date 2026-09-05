@@ -1,0 +1,11 @@
+{
+  "component": "dsh-suggested-replies",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "eb7e41b82ae80d01ae09b6e2641156dc21fdd01e",
+  "available": "47fdbc17107333b7bd3be7f2d07a0ba5575d6bd0",
+  "repository": "https://github.com/dsh-external/dsh-suggested-replies.git",
+  "diffDocument": "docs/plugins/dsh-suggested-replies.md",
+  "checkedAt": "2026-09-05T07:43:28.323Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
