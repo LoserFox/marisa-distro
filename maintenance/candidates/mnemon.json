@@ -1,0 +1,11 @@
+{
+  "component": "mnemon",
+  "source": "npm",
+  "mode": "mirror",
+  "package": "dsh-mnemon",
+  "currentVersion": "0.2.13",
+  "available": "0.5.2",
+  "repository": "https://github.com/omdsh-dev/dsh-mnemon.git",
+  "checkedAt": "2026-09-05T07:43:26.239Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
