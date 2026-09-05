@@ -1,0 +1,12 @@
+{
+  "component": "modlens",
+  "source": "npm",
+  "mode": "fork",
+  "package": "@liustack/modlens",
+  "currentVersion": "3.24.2",
+  "available": "3.25.4",
+  "repository": "https://github.com/liustack/modlens.git",
+  "diffDocument": "docs/plugins/modlens.md",
+  "checkedAt": "2026-09-05T07:43:25.483Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
