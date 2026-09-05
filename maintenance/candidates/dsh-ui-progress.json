@@ -1,0 +1,11 @@
+{
+  "component": "dsh-ui-progress",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "e8ffef3bce21fa5d657e0c5e5f2d78c5d8e41631",
+  "available": "d55b9f712fd989c9746cf88ff9fc3c726e84ebd8",
+  "repository": "https://github.com/lhh010/dsh-ui-progress.git",
+  "diffDocument": "docs/plugins/dsh-ui-progress.md",
+  "checkedAt": "2026-09-05T07:43:59.683Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
