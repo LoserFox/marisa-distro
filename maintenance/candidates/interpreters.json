@@ -1,0 +1,11 @@
+{
+  "component": "interpreters",
+  "source": "npm",
+  "mode": "mirror",
+  "package": "@huanlin/dsh-plugin-interpreters",
+  "currentVersion": "0.2.3",
+  "available": "0.3.0",
+  "repository": null,
+  "checkedAt": "2026-09-05T07:43:30.816Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
