@@ -1,0 +1,11 @@
+{
+  "component": "dsh-web-ui-approval-notify",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "865d2f6fc93f2e0d051d53df772646cb831a43ed",
+  "available": "39c52b269ed4857e29acdc5720b5eb3498d90153",
+  "repository": "https://github.com/bill9109/dsh-web-ui-notify.git",
+  "diffDocument": "docs/plugins/dsh-web-ui-approval-notify.md",
+  "checkedAt": "2026-09-05T07:43:56.638Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
