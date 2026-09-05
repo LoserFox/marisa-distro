@@ -1,0 +1,11 @@
+{
+  "component": "dsh-web-review",
+  "source": "npm",
+  "mode": "mirror",
+  "package": "@canglongcl/dsh-web-review",
+  "currentVersion": "0.3.0",
+  "available": "0.6.0",
+  "repository": "https://github.com/CanglongCl/dsh-web-review.git",
+  "checkedAt": "2026-09-05T07:43:54.371Z",
+  "action": "Review the published npm tarball manually, then update the vendored snapshot, manifest, profile, and lockfile. This candidate does not modify plugins automatically."
+}
