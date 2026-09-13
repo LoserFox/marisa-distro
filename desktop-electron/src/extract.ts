@@ -18,6 +18,20 @@ export const LINKS_MANIFEST_NAME = 'LINKS.json'
 /** The VERSION marker is skipped during extraction and written last. */
 const SKIP_VERSION_MARKER = true
 
+/**
+ * Defer tar-stream's per-entry `next()` to the next macrotask.
+ *
+ * tar-stream re-enters its internal `_consumeHeader` synchronously when
+ * `next()` is called from an entry handler, so the real backend.tar.zst
+ * (~100k entries) grows the stack by one frame per entry and blows it. Yielding
+ * through setImmediate bounds stack depth to a single frame per entry
+ * irrespective of archive size; the throughput cost is negligible beside the
+ * synchronous writeFileSync each file entry already performs.
+ */
+function deferNext(next: () => void): void {
+  setImmediate(next)
+}
+
 export interface ExtractProgress {
   (consumed: number, total: number): void
 }
@@ -43,7 +57,7 @@ export async function embeddedBackendVersion(data: Uint8Array): Promise<string> 
         stream.resume()
       } else {
         stream.resume()
-        next()
+        deferNext(next)
       }
     })
     extractor.on('finish', () => reject(new Error('bundle has no VERSION entry')))
@@ -132,14 +146,14 @@ function extractTarAsync(
         try {
           if (name === BACKEND_VERSION_NAME && SKIP_VERSION_MARKER) {
             onProgress?.(totalBytes, totalBytes)
-            return next()
+            return deferNext(next)
           }
           if (name === LINKS_MANIFEST_NAME) {
             const parsed = parseLinksManifest(data)
             if (parsed !== null) links.push(...parsed)
           }
           const target = safeJoin(dest, name)
-          if (target === null) return next()
+          if (target === null) return deferNext(next)
           if (header.type === 'directory') {
             mkdirSync(target, { recursive: true })
           } else if (header.type === 'file') {
@@ -153,7 +167,7 @@ function extractTarAsync(
         } catch (err) {
           return reject(err instanceof Error ? err : new Error(String(err)))
         }
-        next()
+        deferNext(next)
       })
       stream.resume()
     })

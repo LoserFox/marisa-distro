@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
 import { parseCommandLine, webCommandLine } from './command.ts'
 import { scanBackendStdout } from './backend-stdout.ts'
-import { stopBackend } from './launcher.ts'
+import { stopBackend, needsShell } from './launcher.ts'
 import { killProcessTree } from './process-tree.ts'
 import type { ActiveBackend } from './supervisor.ts'
 
@@ -39,6 +39,12 @@ export function spawnBackendForStage(_stage: 'normal' | 'minimal', hooks: Backen
     // POSIX: own process group so tree kills hit the whole group.
     detached: !win32,
     windowsHide: true,
+    // The embedded backend is launched through launcher.cmd on Windows. Since
+    // the CVE-2024-27980 fix Node refuses to spawn .cmd/.bat without a shell
+    // (EINVAL), so this spawn path needs the same needsShell() wrapper that
+    // launcher.ts:spawnBackend already applies — without it the launcher can
+    // never start and every boot lands in the rescue path.
+    ...(win32 ? { shell: needsShell(command) } : {}),
   })
   child.stderr?.setEncoding('utf8')
   child.stderr?.on('data', (chunk: string) => hooks.tee(chunk))

@@ -1,8 +1,18 @@
 /**
- * Pure-JS zstd stream decoder selection. The embedded backend is a single
- * zstd stream (desktop/bundle/tarszst). Node has no built-in zstd; prefer the
- * optional system binding, fall back to `zstd -d` via stdin/stdout when the
- * CLI exists (the Wails build already requires zstd in the bundle toolchain).
+ * zstd stream decoder selection for the embedded backend (a single
+ * zstd stream, desktop/bundle/backend.tar.zst).
+ *
+ * Resolution order:
+ *   1. Node's built-in zstd (node:zlib, Node >= 22.15 / 23.8) — always present
+ *      under Electron 43, which embeds Node 24.19. No native binding, no
+ *      external tool.
+ *   2. An optional native binding, if one happens to be installed.
+ *   3. The `zstd` CLI (the Wails build already requires it in the bundle
+ *      toolchain), unless it is missing.
+ *
+ * The CLI path is last on purpose: on Windows it truncates the ~153MB payload
+ * (zstd exits 70, "Write error: No space left on device") when its stdout is
+ * consumed through a pipe, so it must never be the preferred decoder.
  */
 
 import { spawn } from 'node:child_process'
@@ -11,7 +21,7 @@ import { createRequire } from 'node:module'
 export interface ZstdDecode {
   (input: Uint8Array): Promise<Buffer>
   /** Which implementation resolved; diagnostics only. */
-  impl: 'binding' | 'cli'
+  impl: 'builtin' | 'binding' | 'cli'
 }
 
 /** Try to load an optional zstd binding without breaking when absent. */
@@ -41,8 +51,17 @@ function probeCli(): Promise<boolean> {
   })
 }
 
-/** Decode a whole zstd stream (the embedded tar.zst, ~300MB compressed). */
+/** Decode a whole zstd stream (the embedded tar.zst, ~153MB compressed). */
 export const zstdDecode = (async (input: Uint8Array): Promise<Buffer> => {
+  // Preferred path: Node's own zstd decoder. Available in Electron 43 (Node
+  // 24.19), so the shipped shell needs no native module and no zstd CLI.
+  try {
+    const zlib = (await import('node:zlib')) as { zstdDecompressSync?: (d: Uint8Array) => Buffer }
+    if (typeof zlib.zstdDecompressSync === 'function') {
+      zstdDecode.impl = 'builtin'
+      return zlib.zstdDecompressSync(input)
+    }
+  } catch { /* fall through to binding/CLI */ }
   const binding = tryBinding()
   if (binding !== null) {
     zstdDecode.impl = 'binding'
@@ -81,4 +100,5 @@ export const zstdDecode = (async (input: Uint8Array): Promise<Buffer> => {
   })
 }) as ZstdDecode
 
-zstdDecode.impl = 'binding'
+/** Default label before the first call resolves a real implementation. */
+zstdDecode.impl = 'builtin'

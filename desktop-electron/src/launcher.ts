@@ -76,7 +76,7 @@ export function spawnBackend(options: SpawnOptions): SpawnedBackend {
 }
 
 /** cmd/cmd.exe/bat need a shell wrapper on Windows (Go os/exec does this implicitly). */
-function needsShell(command: string): boolean {
+export function needsShell(command: string): boolean {
   const base = command.toLowerCase()
   return base.endsWith('.cmd') || base.endsWith('.bat') || base === 'cmd' || base === 'cmd.exe'
 }
