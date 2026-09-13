@@ -34,23 +34,43 @@ param(
   [ValidateSet('runtime','electron')]
   [string]$RuntimeMode = 'runtime',
   [string]$SevenZipPath,
-  [string]$Version
+  [string]$Version,
+  # Where to write backend.tar.zst. Defaults to desktop/bundle/ (the go:embed
+  # location for the Wails shell); the Electron shell reads its own copy from
+  # desktop-electron/bundle/, so its build passes that path instead of copying
+  # the ~153MB artifact afterwards.
+  [string]$OutPath
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+
+# Resolve a caller-supplied path against the REPO ROOT, not the process working
+# directory. [System.IO.Path]::GetFullPath uses [Environment]::CurrentDirectory,
+# which PowerShell's Set-Location does not reliably update — and this script is
+# routinely invoked from a different worktree, so a bare `-OutPath
+# desktop-electron\bundle\...` would silently land in whichever tree happened to
+# own the inherited cwd. Absolute paths are passed through untouched.
+function Resolve-RepoPath([string]$path) {
+  if ([System.IO.Path]::IsPathRooted($path)) { return [System.IO.Path]::GetFullPath($path) }
+  return [System.IO.Path]::GetFullPath((Join-Path $repo $path))
+}
+
 $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh' }
-$profile = if ($ProfilePath) { [System.IO.Path]::GetFullPath($ProfilePath) } else { Join-Path $dshHome 'profiles\marisa' }
+$profile = if ($ProfilePath) { Resolve-RepoPath $ProfilePath } else { Join-Path $dshHome 'profiles\marisa' }
 $stage = "$repo\release\_stage"
-$out = "$repo\desktop\bundle\backend.tar.zst"
+$out = if ($OutPath) { Resolve-RepoPath $OutPath } else { "$repo\desktop\bundle\backend.tar.zst" }
+# Materialise the destination directory up front: both the cache-hit copy and
+# the tarszst writer below fail if an -OutPath parent does not exist yet.
+New-Item -ItemType Directory -Force (Split-Path -Parent $out) | Out-Null
 # node.exe is only a required BUILD tool in runtime mode (pnpm install runs
 # on the build host); in electron mode the payload ships without it.
-$node = if ($NodePath) { $NodePath } else { (Get-Command node.exe -ErrorAction Stop).Source }
+$node = if ($NodePath) { Resolve-RepoPath $NodePath } else { (Get-Command node.exe -ErrorAction Stop).Source }
 if ($RuntimeMode -eq 'runtime') {
   if (-not (Test-Path -LiteralPath $node -PathType Leaf)) { throw "required build tool not found: $node" }
 }
 if ($SevenZipPath) {
-  $sevenZip = $SevenZipPath
+  $sevenZip = Resolve-RepoPath $SevenZipPath
 } else {
   $sevenZipCommand = Get-Command 7z.exe -ErrorAction SilentlyContinue
   $sevenZip = if ($sevenZipCommand) { $sevenZipCommand.Source } else { Join-Path $env:ProgramFiles '7-Zip\7z.exe' }
@@ -224,6 +244,11 @@ function Invoke-PnpmProd([string]$cwd, [string]$what) {
 # in ~0s. VERSION carries NO git sha (only the bundle version, plus a -dirty
 # suffix when the workspace is uncommitted) so the extractor's version gate
 # stays consistent across cached rebuilds of the same content.
+#
+# RuntimeMode is part of the key: the two modes produce DIFFERENT payloads
+# (runtime ships node.exe, electron omits it), so sharing a cache entry would
+# hand a node-less payload to the Wails shell, whose backend cannot start
+# without it.
 $cacheDir = Join-Path $repo 'release\.cache'
 $bundleVersion = if ($Version) { $Version } else { (Get-Content "$repo\package.json" -Raw | ConvertFrom-Json).version }
 if ($bundleVersion -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') { throw "invalid bundle version: $bundleVersion" }
@@ -287,7 +312,7 @@ while ($pendingOutputs.Count -gt 0) {
   }
 }
 $outputsHash = [BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($outputsManifest.ToString()))).Replace('-', '').Substring(0, 12)
-$runtimeKey = "$lockHash-$($treeHash.Substring(0, 12))$profileKey+$outputsHash"
+$runtimeKey = "$lockHash-$($treeHash.Substring(0, 12))$profileKey+$outputsHash-$RuntimeMode"
 $cachedZip = Join-Path $cacheDir "backend-$runtimeKey.zip"
 
 if (-not $SkipBodies -and (Test-Path -LiteralPath $cachedZip)) {
