@@ -165,7 +165,101 @@ node.exe。Linux 真机双向验证 clear-env 语义（带 preload 孙进程 env
 | 日志路径 | %LOCALAPPDATA%\marisa-distro\logs | 同（paths.ts 1:1） |
 | rescue-state.json | 同 | 同（rescue-state.ts 1:1） |
 
-## 验证状态
+## 构建与验收（2026-09-13，Windows 真机）
+
+### 可复现构建入口
+
+```
+pwsh desktop-electron/scripts/make-installer.ps1            # 四段：profile → payload → shell → package
+pwsh desktop-electron/scripts/make-installer.ps1 -SkipProfile -SkipPayload   # 只重打包壳
+```
+
+四段各自可跳过，每段自查：
+
+| 段 | 动作 | 自查 |
+| --- | --- | --- |
+| 0 profile | `profiles/marisa/generate-profile.mjs` → `profiles/marisa/runtime` | 断言 `package.json` 生成 |
+| 1 payload | `desktop/bundle/make-bundle.ps1 -RuntimeMode electron -OutPath desktop-electron/bundle/` | 断言载荷**不含** `node.exe` |
+| 2 shell | `vitest run` + `tsc -p tsconfig.build.json` | 测试与类型全绿 |
+| 3 package | `electron-builder --win` | — |
+| 4 verify | `scripts/verify-packaged-deps.mjs` | 断言 asar 内 `lib/*.js` 的裸导入都能在 asar 的 `node_modules` 里解析到 |
+
+第 0 段对齐 `scripts/build-release-windows.ps1`：载荷必须从仓库内 runtime profile
+出，不能用维护者的 `~/.dsh/profiles/marisa`，否则会把个人已装插件泄漏进发行包。
+
+验收辅助：`scripts/capture-window.ps1`（按标题截顶层窗口为 PNG；AGENTS.md 要求
+真实窗口渲染证据，而不是后端 HTTP 200）。
+
+### 实测结果（Windows x64，Electron 43.5 / Node 24.19）
+
+| 项 | 结果 |
+| --- | --- |
+| `npx tsc --noEmit` | ✅ 零错误 |
+| `npx vitest run` | ✅ **71/71** 全绿（8 个测试文件） |
+| 载荷 | ✅ 98.5 MB / 40062 条目（95 个 harness 包 `lib` 产物 + 2779 条 workspace 链接），确认不含 `node.exe` |
+| 安装包 | ✅ NSIS 190.2 MB、portable 189.9 MB |
+| asar 内容 | ✅ 含 `\bundle\backend.tar.zst` 与 `node_modules\tar-stream` |
+| 安装形态判定 | ✅ 真机日志 `electron shell starting (embedded=true)` |
+| **NSIS 安装** | ✅ 退出码 0；装到指定目录；开始菜单快捷方式生成 |
+| **NSIS 卸载** | ✅ 退出码 0；安装目录与开始菜单条目**无残留** |
+| 内嵌载荷解包 | ✅ 40061 条目解出、2779 条链接重放、`VERSION` 最后落盘（可重复：第二次启动 `backend up to date` 后链接重放不再失败） |
+| Electron-as-Node | ✅ 真机确认后端以 `Node.js v24.19.0`（Electron 内嵌 Node）执行到插件树加载器 |
+| **窗口渲染 + 后端就绪** | ❌ **未达成**：后端插件树加载失败，三级状态机按设计降级到急救页（详见下） |
+
+### 未达成项：插件树加载失败
+
+真机上后端进程确实起来了（Electron-as-Node 生效），但在 profile 启动期报
+`dsh: plugin tree failed to load: failed to apply loader entry include (cordis:include)`。
+逐条 `ERR_MODULE_NOT_FOUND` 指向两类包：
+
+1. `@r05en1cu/dsh-mygo*`（4 个）与 `@dsh-external/dsh-sidechain` —— 该 worktree 里
+   **产物未构建**（`dsh-mygo/packages/**/lib/index.js` 缺失、`plugins/dsh-sidechain/lib` 缺失）。
+2. `@deepseek-ai/dsh-file-reference-local`、`dsh-client-ui-renderer`、
+   `dsh-client-ui-brand-official`、`dsh-client-ui-reference` —— 包**存在且 `lib/index.js`
+   已构建**，但 `marisa-distro/node_modules/@deepseek-ai/` 下**没有对应 junction**；
+   `LINKS.json` 只把它们记在成员内部（如
+   `harness/packages/bundle/web-app/node_modules/...`），而加载器从
+   `harness/vendor/loader/` 向上解析够不到。
+   **注意：这是既有状态，不是本轮引入**——同一缺失在 main worktree（`marisa-release-wt`）
+   以及用户现网可用的 Wails 安装里**同样存在**。
+
+结论：这属于**发行流水线的准备度问题**，不是 Electron 壳的代码缺陷。正确的下一步不是继续
+手工拼载荷，而是让 Electron 路线走完整的发行流水线：
+
+```
+pwsh scripts/build-release-windows.ps1   # 或抽出其 step 2–4，改成同时产 electron 路线
+```
+
+该脚本目前只产 Wails MSI（`desktop/scripts/build-msi.ps1`），**没有任何 Electron 分支**，
+`release.yml` 同样零 electron 引用 —— 这是 Electron 路线尚未「完整」的最后一块。
+
+### 本轮修复的七个缺陷（commit `aee5a3ea` / `53fb6dc5` / `bf2922d8`）
+
+按发现顺序，每条都单独能让应用"装得上但起不来"，且都能逃过 tsc/vitest/`--dir`：
+
+1. 载荷没进安装包；且 `isEmbedded` 判定对内嵌形态恒为假 → `materializeBackend()` 永不执行（新增 `src/install-form.ts`）
+2. `electron-builder.yml` 的 `files` 缺 `bundle/**`
+3. `tar-stream` 被放在 `devDependencies` → 产物零 `node_modules`，启动即 `ERR_MODULE_NOT_FOUND`（新增 `scripts/verify-packaged-deps.mjs` 门禁）
+4. 壳与 `launcher.cmd` 从未接线（shim 装在 `appLogDir()/runtime/private`，launcher 找 `<backend>\private` 与 `marisa-dsh.exe`）
+5. `launcher.cmd` 从不设置 `ELECTRON_RUN_AS_NODE=1` → 壳以 GUI 实例启动、撞单实例锁、~80ms 退出
+6. `recreateLinks` 用 `existsSync` 判断链接存在性（会跟随链接）→ 悬空 junction 被当成缺失，重放失败；Go 壳用 `os.Lstat`（`embedded.go:263`）
+7. `make-bundle.ps1` 缓存键不含 `RuntimeMode` → 两种模式载荷互相污染；`-OutPath` 参数路径按进程 cwd 而非仓库根解析
+
+### 环境备注（与本分支无关，但会影响本机构建）
+
+本机 PATH 上的 `pnpm` 是 DSH Desktop 包装器，它把 Electron-as-node 的 `node.cmd`
+前置进 PATH；该 shim 的 `clear-env.mjs` 会删掉 `ELECTRON_RUN_AS_NODE`，
+导致 `tsx` 的 respawn 子进程被当作 GUI 应用启动并以 `4294967295` 退出。后果是
+`pnpm --filter @deepseek-ai/dsh-root run build`（harness 的 `tsx scripts/build.ts` 入口）
+在本机必失败，而 `build.ps1:167` 失败后会**静默降级到 `build:web` 并把 `harness-build`
+记为 OK**，把问题掩盖到发布校验阶段。
+绕过：`build:lib`（tsc+tsdown）与 `build:web`（vite）都不含 tsx，可分别直接运行；
+或用真 node 的 pnpm（`%APPDATA%\npm\pnpm.cmd`）。
+`harness/.dsh-build/client-build-environment.json` 因此不会产出——它**无运行时消费者**
+（读取者只有 `apps/web/tests/built-boot.snapshot.ts`、`apps/web/tests/hmr-live.e2e.ts`、
+`scripts/release/families.ts`），缺它不影响已装应用运行。
+
+### 历史验证状态（2026-08-31，仅 Linux 侧）
 
 - `npx tsc --noEmit` ✅ 零错误
 - `npx vitest run` ✅ 31/31 全绿（命令行/ready-line/退避/状态机/LINKS 解析/提取管线）
