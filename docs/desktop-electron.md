@@ -216,12 +216,35 @@ pwsh desktop-electron/scripts/make-installer.ps1 -SkipProfile -SkipPayload   # �
    **产物未构建**（`dsh-mygo/packages/**/lib/index.js` 缺失、`plugins/dsh-sidechain/lib` 缺失）。
 2. `@deepseek-ai/dsh-file-reference-local`、`dsh-client-ui-renderer`、
    `dsh-client-ui-brand-official`、`dsh-client-ui-reference` —— 包**存在且 `lib/index.js`
-   已构建**，但 `marisa-distro/node_modules/@deepseek-ai/` 下**没有对应 junction**；
-   `LINKS.json` 只把它们记在成员内部（如
-   `harness/packages/bundle/web-app/node_modules/...`），而加载器从
-   `harness/vendor/loader/` 向上解析够不到。
-   **注意：这是既有状态，不是本轮引入**——同一缺失在 main worktree（`marisa-release-wt`）
-   以及用户现网可用的 Wails 安装里**同样存在**。
+   已构建**，但只在 `harness/packages/bundle/web-app/node_modules/` 下有链接，
+   加载器从 `harness/vendor/loader/` 向上解析够不到；该位置在**用户现网安装里同样
+   不存在**（逐级核验过 `vendor/loader/lib/node_modules` → `harness/node_modules` →
+   `node_modules` 五级，两种安装全为 false）。
+   载荷里这四个包**一条都没有**：它们是 junction，被 make-bundle 删除后靠
+   `LINKS.json` 重放，而 live worktree 从未创建过这些链接，清单里自然也没有。
+
+### 关键上下文：现网安装本身也是坏的
+
+排查上述失败时对照了用户现网可用的安装，结论推翻了"Wails 路线是好的"这一前提：
+
+- 真实可用形态是 **MSI 安装形态**，后端在 `%LOCALAPPDATA%\Marisa DSH\backend\`，
+  **不是** `%LOCALAPPDATA%\marisa-distro\backend\`（后者是另一棵更旧的树，本轮早期
+  误把它当基线，浪费了一轮对比）。
+- 直接运行该 MSI 的 `launcher.cmd`，今天仍然失败：
+  `dsh: profile "marisa" does not exist`，因为
+  `backend\.dsh\profiles\marisa\package.json` **不存在**。
+  `%LOCALAPPDATA%\marisa-distro\logs` 下 **8 份**日志都有同样的两行，
+  而**没有任何一份日志出现过后端就绪行 `dsh web:`**。
+  这正是 `update_migrate.go` 注释里记录的 2026-08-25 事故形态：
+  「手动恢复还会带回损坏的 profile 文件（0 字节 package.json 使 marisa profile
+  无法启动，桌面壳降级到无插件的最小模式）」。
+- 对照之下，**Electron 内嵌形态反而更健康**：它每个版本从载荷重建 `.dsh`，
+  `profiles/marisa/package.json` 是齐的（`release/_stage/.dsh/profiles/marisa/package.json`
+  存在）。也就是说，本轮的 Electron 构建是这台机器上**第一个把 marisa profile
+  推进到插件树加载阶段**的配置——Wails/现网连这一步都到不了。
+
+因此本项未达成的原因**不在 Electron 壳**：打包安装形态下 marisa profile 能否
+启动，是两条壳共用的、且早于本轮存在的问题。
 
 结论：这属于**发行流水线的准备度问题**，不是 Electron 壳的代码缺陷。正确的下一步不是继续
 手工拼载荷，而是让 Electron 路线走完整的发行流水线：
