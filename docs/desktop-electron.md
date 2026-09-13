@@ -246,6 +246,58 @@ pwsh desktop-electron/scripts/make-installer.ps1 -SkipProfile -SkipPayload   # �
 因此本项未达成的原因**不在 Electron 壳**：打包安装形态下 marisa profile 能否
 启动，是两条壳共用的、且早于本轮存在的问题。
 
+### 已定位根因：裸包名 entry 在仓库根解析不到（2026-09-13，已实证）
+
+继续排查后根因已确认，且**在 live dev 树上用一份全新生成的 profile 复现了完全
+相同的报错**——所以它既不是 Electron 问题，也不是打包问题，而是**仓库级缺陷**：
+
+1. `harness/packages/bundle/*/cordis.patch.yml` 用**裸包名**声明 loader entry，
+   例如 `name: '@deepseek-ai/dsh-file-reference-local'`。
+2. `apps/cli` 的 `runProfile` 调用
+   `boot(NAME, rootConfig, patches, prepare)` —— **只传 4 个参数，
+   `bareModuleBaseUrl`（第 5 个）没有传**（`apps/cli/lib/profile-boot-*.js:247`）。
+   于是 `mountRootInclude` 走的是普通 `Include`
+   （`packages/boot/app-boot/src/index.ts:492-504`）：只有传了 `bareModuleBaseUrl`
+   才会装上 `HostResolvedRootInclude`，把裸包名按"安装宿主基准"解析。
+3. 普通 `Include` 对裸导入执行 `import(name)`，按 Node 语义从
+   `harness/vendor/loader/lib/index.js` **自身位置向上找 `node_modules`**
+   （`vendor/loader/lib/index.js:260-273`）。
+4. 这些包只存在于**声明它们的 bundle 自己的 `node_modules`**
+   （如 `harness/packages/bundle/web-app/node_modules/…`），而 pnpm 的隔离布局
+   只在仓库根 `node_modules` 放**根依赖**的链接。上游的 npm 分发包是扁平
+   hoist 布局（所有包都在根），所以这条回退路径在他们那里成立；marisa 的
+   pnpm 布局不满足这个隐含前提。
+
+**实证**：三个 worktree（`marisa-distro` / `marisa-release-wt` / `marisa-electron-wt`）
+的根 `node_modules/@deepseek-ai` 均为 235 项，**都缺这 4 个包**；在 root 补上这 4 条
+junction 后重跑，`@deepseek-ai/*` 这一整类 `ERR_MODULE_NOT_FOUND` **全部消失**，
+只剩我合成测试环境未跑 profile `pnpm install` 造成的插件类报错（它们相对
+profile 目录解析，属测试环境不完整，非缺陷）。
+
+这也解释了为什么现网安装从来没起来过：`%LOCALAPPDATA%\marisa-distro\logs` 下
+**8 份**日志都停在同一条链路上，且没有任何一份出现过后端就绪行 `dsh web:`。
+
+**修复方向**（两条，推荐第一条）：
+
+- **发行版侧**：`make-bundle.ps1` 在 staged `pnpm install` 之后、记录 LINKS.json
+  之前，把每个 bundle patch 里用到的裸 entry 包名在 staged 根 `node_modules`
+  下补上链接（幂等）。这是对上游"npm 扁平 hoist"隐含前提的发行版适配，
+  改动留在本仓库内。
+- **上游侧**：`apps/cli` 的 `runProfile` 传第 5 个参数 `bareModuleBaseUrl`
+  （app-boot 已为此准备好 `HostResolvedRootInclude`）。属 harness 改动，
+  按 AGENTS.md 只能走 `overlays/harness/` 或反馈上游；且该文件是带 hash 的
+  构建产物，overlay 锚点脆弱。
+
+### 附带发现：本机存在两份损坏的 profile 清单
+
+- `%LOCALAPPDATA%\Marisa DSH\backend\.dsh\profiles\marisa\package.json` —— **缺失**
+- `%USERPROFILE%\.dsh\profiles\marisa\package.json` —— **0 字节**
+
+两者都会让 profile 启动失败（前者报 `profile "marisa" does not exist`，后者报
+`SyntaxError: Unexpected end of JSON input`）。这正是 `update_migrate.go` 注释里
+记录的 2026-08-25 事故形态。本轮已用一份全新生成的 profile 绕开它们做实验，
+未改动这两份文件。
+
 结论：这属于**发行流水线的准备度问题**，不是 Electron 壳的代码缺陷。正确的下一步不是继续
 手工拼载荷，而是让 Electron 路线走完整的发行流水线：
 
