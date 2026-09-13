@@ -31,6 +31,7 @@ import { readDesktopSettings, writeDesktopSettings } from './desktop-settings.ts
 import { startToastBridge, type NotificationOutcome } from './notifications.ts'
 import { AttentionManager } from './attention.ts'
 import { installElectronNodeRuntime, type NodeRuntimeInstallation } from './electron-node.ts'
+import { resolveInstallForm } from './install-form.ts'
 
 let toastBridgeClose: (() => void) | null = null
 let attentionRef: { clear(): void } | null = null
@@ -124,9 +125,22 @@ let startupStage: DesktopStartupFailureStage = 'electron-ready'
 /** Run marker: detects an unclean previous exit (crash evidence). */
 let desktopRun: ReturnType<typeof beginDesktopRun> | null = null
 
-const isEmbedded =
-  process.env.EMBEDDED_BUNDLE === '1' ||
-  existsSync(join(dirname(process.execPath), 'backend', 'launcher.cmd'))
+/**
+ * Install form, resolved once for the whole process. The Go shell splits these
+ * cases with build tags; the Electron build ships one binary, so a payload
+ * beside `lib/` is what makes it the embedded form. The resolved marker is
+ * published into the environment so the boot path, the rescue page and the
+ * recovery window all agree on the answer instead of re-deriving it.
+ */
+const install = resolveInstallForm({
+  libDir: here,
+  exeDir: dirname(process.execPath),
+  env: process.env,
+})
+if (install.marker !== null) process.env.EMBEDDED_BUNDLE = install.marker
+
+/** This build ships a payload it must materialize (dev builds do not). */
+const isEmbedded = install.form === 'embedded'
 
 /** Single-instance: second launch focuses the existing window and exits. */
 if (!app.requestSingleInstanceLock()) {
@@ -201,7 +215,8 @@ function setupTray(): void {
 
 /** Materialize the embedded backend and point DSH_WEB_CMD at its launcher. */
 async function materializeBackend(): Promise<void> {
-  const bundlePath = join(here, '..', 'bundle', 'backend.tar.zst')
+  const bundlePath = install.bundlePath
+  if (bundlePath === null) throw new Error('this build ships no embedded backend payload')
   if (!existsSync(bundlePath)) throw new Error(`embedded bundle missing: ${bundlePath}`)
   await ensureBackend({
     bundle: new Uint8Array(readFileSync(bundlePath)),
@@ -218,26 +233,39 @@ async function materializeBackend(): Promise<void> {
   // ELECTRON_RUN_AS_NODE=1, and prepend them to PATH so payload-side
   // `pnpm` (mygo `pnpm add`, `dsh plugin`) resolves to them instead of the
   // payload's node.exe-dependent pnpm.cmd. No bundled node.exe needed.
+  //
+  // Installed unconditionally: the clear-env prelude and the Node identity
+  // published below are what launcher.cmd needs to boot the backend at all in
+  // electron mode, whereas the pnpm shim is only a convenience for payloads
+  // that ship a hoisted pnpm.
   const pnpmEntry = join(
     backendRootDir(),
     'marisa-distro', 'node_modules', 'pnpm', 'bin', 'pnpm.mjs',
   )
-  if (existsSync(pnpmEntry)) {
-    try {
-      nodeRuntime = installElectronNodeRuntime({
-        appExecutable: process.execPath,
-        pnpmBinPath: pnpmEntry,
-        electronVersion: process.versions.electron,
-        stateDir: join(appLogDir(), 'runtime'),
-        platform: process.platform,
-      })
-      log.log(`electron-as-node runtime installed: ${nodeRuntime.pnpmShimPath}`)
-    } catch (cause) {
-      // Non-fatal: payload with bundled node.exe keeps working via launcher.
-      log.log(`electron-as-node runtime unavailable, payload node.exe will serve: ${cause instanceof Error ? cause.message : String(cause)}`)
-    }
-  } else {
-    log.log('payload has no hoisted pnpm entry; electron-as-node runtime skipped')
+  const hasPnpm = existsSync(pnpmEntry)
+  try {
+    nodeRuntime = installElectronNodeRuntime({
+      appExecutable: process.execPath,
+      ...(hasPnpm ? { pnpmBinPath: pnpmEntry } : {}),
+      electronVersion: process.versions.electron,
+      stateDir: join(appLogDir(), 'runtime'),
+      platform: process.platform,
+    })
+    // Tell launcher.cmd which Node runs the backend. It cannot work this out
+    // itself: the shell lives in <install>\ and the backend under
+    // %LOCALAPPDATA%\marisa-distro\backend, so there is no stable relative
+    // path between them — only this process knows process.execPath.
+    // The prelude is published as a file:// URL because Node's --import
+    // rejects bare Windows paths.
+    process.env.MARISA_NODE_EXE = process.execPath
+    process.env.MARISA_NODE_PRELOAD_URL = nodeRuntime.clearEnvironmentUrl
+    log.log(`electron-as-node runtime: node=${process.execPath}`)
+    log.log(hasPnpm
+      ? `electron-as-node pnpm shim: ${String(nodeRuntime.pnpmShimPath)}`
+      : 'payload has no hoisted pnpm entry; pnpm shim skipped')
+  } catch (cause) {
+    // Non-fatal: payload with bundled node.exe keeps working via launcher.
+    log.log(`electron-as-node runtime unavailable, payload node.exe will serve: ${cause instanceof Error ? cause.message : String(cause)}`)
   }
 }
 

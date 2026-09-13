@@ -222,6 +222,21 @@ function isLink(p: string): boolean {
 }
 
 /**
+ * Whether a directory entry exists at `p`, judged by lstat so links are NOT
+ * followed (Go: os.Lstat). existsSync is the wrong predicate here: it follows
+ * the link, so a junction whose target is absent reads as "missing" even
+ * though the entry is there.
+ */
+function pathEntryExists(p: string): boolean {
+  try {
+    lstatSync(p)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Replay LINKS.json (recreateLinks): mkdir parents, skip present links, fail
  * on shadowing real directories (a failed pnpm op must surface loudly).
  */
@@ -258,7 +273,15 @@ export async function recreateLinks(
       throw new Error(`link escapes extraction root: ${e.link} -> ${e.target}`)
     }
     mkdirSync(dirname(link), { recursive: true })
-    if (existsSync(link)) {
+    // Presence must be judged without following the link (Go: os.Lstat,
+    // embedded.go:263). The bundle deliberately prunes some link targets —
+    // harness/website is pruned as dead weight while LINKS.json still lists
+    // @deepseek-ai/website — so those junctions dangle. existsSync follows
+    // them, reports "absent", and the code retried `mklink /J`, which fails
+    // with "cannot create a file when that file already exists". The result
+    // was a shell that started exactly once and then failed every later launch
+    // during link replay.
+    if (pathEntryExists(link)) {
       if (!isLink(link)) shadowed.push(e.link)
       continue
     }

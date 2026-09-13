@@ -1,4 +1,7 @@
 node_modules/
 lib/
 release/
+# Staged backend payload (backend.tar.zst, ~150MB) produced by
+# scripts/make-installer.ps1; never committed.
+bundle/
 *.tsbuildinfo

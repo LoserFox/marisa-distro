@@ -1,10 +1,12 @@
 # Marisa DSH Desktop (Electron shell) packaging.
 #
-# The shell carries NO backend payload: the backend bundle (node.exe + harness +
-# marisa profile + tar.zst) is a separate artifact produced by
-# desktop/bundle/make-bundle.ps1 and materialized at runtime by src/extract.ts.
+# The shell source carries no backend payload: the backend bundle (harness +
+# marisa profile + LINKS.json, no node.exe in electron mode) is a separate
+# artifact produced by desktop/bundle/make-bundle.ps1 and staged into bundle/
+# by scripts/make-installer.ps1, then materialized at runtime by src/extract.ts.
 # The Electron payload is lib/ (tsc output) + build/ (icons) + the vendored
-# rescue page. Native runtime deps: none (zstd decode is pure JS).
+# wizard/recovery/rescue pages + the staged bundle/. Native runtime deps: none
+# (zstd decode uses Node's built-in zstd).
 appId: io.marisa-distro.desktop-electron
 productName: Marisa DSH
 directories:
@@ -14,6 +16,12 @@ files:
   - lib/**
   - build/**
   - res/**
+  # The embedded backend payload. src/install-form.ts resolves it at
+  # <app root>/bundle/backend.tar.zst — beside lib/ inside the asar — and its
+  # presence is what marks this build as the embedded form. Without this entry
+  # the installer ships a shell with no backend and every launch dies in the
+  # rescue path.
+  - bundle/**
   - package.json
 # 只保留实际用到的界面语言（默认打包 55 种 locales ≈ 47MB）
 electronLanguages:

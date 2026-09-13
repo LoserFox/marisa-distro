@@ -20,25 +20,41 @@ set "DSH_ROOT=%BUNDLE%marisa-distro"
 set "BOOT_PROFILE=%MARISA_BOOT_PROFILE%"
 if "%BOOT_PROFILE%"=="" set "BOOT_PROFILE=marisa"
 rem Plugins may spawn `node`; make the bundled node the first on PATH.
-rem Runtime mode: with node.exe present (Wails-era payload) it runs the CLI;
-rem without node.exe (Electron payload) the shell has installed
-rem private\clear-env.mjs + shims next to this launcher and the desktop exe
-rem itself serves as Node (ELECTRON_RUN_AS_NODE=1) — same mechanism as the
-rem anywhere dsh-plugin-desktop runtime shims. NODE_EXE/NODE_PRELOAD are
-rem resolved so both modes share the boot lines below.
+rem
+rem Two payload shapes share the boot lines below:
+rem   runtime mode  - node.exe ships in the payload and is used directly.
+rem   electron mode - no node.exe. The desktop shell runs the CLI as Node via
+rem                   ELECTRON_RUN_AS_NODE and publishes where it lives in
+rem                   MARISA_NODE_EXE, plus the RunAsNode prelude module as a
+rem                   file:// URL in MARISA_NODE_PRELOAD_URL (Node's --import
+rem                   rejects a bare Windows path). The shell is the only party
+rem                   that can know these: in an installed layout it sits in
+rem                   <install>\ while this backend is extracted under
+rem                   %LOCALAPPDATA%\marisa-distro\backend, so no relative path
+rem                   between them is stable. Guessing one here is what kept the
+rem                   Electron shell from ever starting a backend.
+rem The legacy guess (a Wails-era marisa-dsh.exe two levels up) is kept last so
+rem a payload laid out that way still boots.
 set "PATH=%BUNDLE%;%PATH%"
-set "NODE_EXE=%BUNDLE%node.exe"
+set "NODE_EXE="
 set "NODE_PRELOAD="
-if not exist "%NODE_EXE%" (
-    rem Electron payload: the desktop exe lives two levels up from the
-    rem backend extraction dir (%LOCALAPPDATA%\marisa-distro\backend).
-    for %%I in ("%BUNDLE%..\..\marisa-dsh.exe") do set "NODE_EXE=%%~fI"
-    for %%I in ("%BUNDLE%private\clear-env.mjs") do set "NODE_PRELOAD=--import %%~fI"
-)
-if not exist "%NODE_EXE%" (
-    echo marisa: no node.exe and no desktop exe found next to the backend 1>&2
+set "RUN_AS_ELECTRON="
+if defined MARISA_NODE_EXE set "NODE_EXE=%MARISA_NODE_EXE%"
+if defined MARISA_NODE_PRELOAD_URL set NODE_PRELOAD=--import "%MARISA_NODE_PRELOAD_URL%"
+if not defined NODE_EXE if exist "%BUNDLE%node.exe" set "NODE_EXE=%BUNDLE%node.exe"
+if not defined NODE_EXE for %%I in ("%BUNDLE%..\..\marisa-dsh.exe") do if exist "%%~fI" set "NODE_EXE=%%~fI"
+if not defined NODE_EXE (
+    echo marisa: no Node runtime available - payload has no node.exe and the desktop shell published no MARISA_NODE_EXE 1>&2
     exit /b 87
 )
+rem Anything other than the payload's own node.exe is the Electron shell, which
+rem only acts as Node when ELECTRON_RUN_AS_NODE is set. Without this the shell
+rem boots as a second GUI instance, loses the single-instance race and exits in
+rem under 100ms - surfacing upstream as "backend exited without publishing a URL"
+rem and then as the rescue page. The prelude above then removes the variable
+rem again inside the backend process so its children stay plain processes.
+if /I not "%NODE_EXE%"=="%BUNDLE%node.exe" set "RUN_AS_ELECTRON=1"
+if defined RUN_AS_ELECTRON set "ELECTRON_RUN_AS_NODE=1"
 cd /d "%DSH_ROOT%\harness"
 if "%BOOT_PROFILE%"=="web" (
     "%NODE_EXE%" %NODE_PRELOAD% "%DSH_ROOT%\harness\apps\cli\lib\bin.js" --profile web --patch "%BUNDLE%minimal.overlay.yml"

@@ -13,13 +13,16 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dist": "npm run build && electron-builder --config electron-builder.yml",
-    "dist:dir": "npm run build && electron-builder --config electron-builder.yml --dir"
+    "dist:dir": "npm run build && electron-builder --config electron-builder.yml --dir",
+    "verify:packaged": "node scripts/verify-packaged-deps.mjs"
+  },
+  "dependencies": {
+    "tar-stream": "^3.1.7"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3",
-    "tar-stream": "^3.1.7",
     "typescript": "6.0.3",
     "vitest": "^4.1.8"
   },

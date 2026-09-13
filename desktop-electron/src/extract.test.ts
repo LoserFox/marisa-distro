@@ -58,6 +58,37 @@ describe('recreateLinks', () => {
       rmSync(root, { recursive: true, force: true })
     }
   })
+
+  it('replays a dangling link instead of retrying to create it', async () => {
+    // The bundle prunes some link targets as dead weight — harness/website is
+    // pruned while LINKS.json still lists @deepseek-ai/website — so those
+    // junctions dangle. existsSync follows the link and reports "absent", so
+    // replay tried mklink again and died with "cannot create a file when that
+    // file already exists": the shell started once and then failed every
+    // later launch during link replay. Presence must be judged by lstat.
+    const root = mkdtempSync(join(tmpdir(), 'marisa-links-dangling-'))
+    try {
+      mkdirSync(join(root, 'store'), { recursive: true })
+      mkdirSync(join(root, 'node_modules'), { recursive: true })
+      writeFileSync(
+        join(root, 'LINKS.json'),
+        JSON.stringify([{ link: 'node_modules/pruned', target: 'store/never-shipped' }]),
+      )
+      symlinkSync(
+        join(root, 'store', 'never-shipped'),
+        join(root, 'node_modules', 'pruned'),
+        process.platform === 'win32' ? 'junction' : 'dir',
+      )
+      // Precondition: the entry is there, but nothing resolves through it.
+      expect(existsSync(join(root, 'node_modules', 'pruned'))).toBe(false)
+
+      let created = 0
+      await recreateLinks(join(root, 'LINKS.json'), root, async () => { created++ }, () => {})
+      expect(created).toBe(0)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
 })
 
 /** Build a minimal tar buffer with two files + VERSION + LINKS.json (ustar). */

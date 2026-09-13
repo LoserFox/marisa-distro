@@ -37,8 +37,14 @@ const EXECUTABLE_FILE_MODE = 0o755
 export interface NodeRuntimeOptions {
   /** The Electron executable (process.execPath) — becomes the Node binary. */
   appExecutable: string
-  /** JS pnpm entry inside the backend tree (hoisted node_modules/pnpm). */
-  pnpmBinPath: string
+  /**
+   * JS pnpm entry inside the backend tree (hoisted node_modules/pnpm).
+   * Optional: the pnpm shim is a convenience for payload-side `pnpm add` /
+   * `dsh plugin`, whereas the clear-env prelude and the Node identity it is
+   * paired with are what launcher.cmd needs to boot the backend at all. A
+   * payload without hoisted pnpm still gets the latter.
+   */
+  pnpmBinPath?: string
   /** Electron version (process.versions.electron) for native rebuilds. */
   electronVersion: string
   /** Directory that hosts the generated shims (backend runtime state dir). */
@@ -51,11 +57,19 @@ export interface NodeRuntimeOptions {
 export interface NodeRuntimeInstallation {
   /** Directory prepended to PATH (holds pnpm.cmd|pnpm and node via bin dir). */
   pathDir: string
-  pnpmShimPath: string
+  /** Public pnpm shim; null when the payload ships no hoisted pnpm. */
+  pnpmShimPath: string | null
   /** Directory holding the private `node` shim (for lifecycle scripts). */
   nodeBinDir: string
   nodeShimPath: string
   clearEnvironmentPath: string
+  /**
+   * The same prelude as a file:// URL. Node's `--import` accepts only URLs (or
+   * specifiers) — a bare Windows path fails with ERR_UNSUPPORTED_ESM_URL_SCHEME
+   * ("Received protocol 'c:'"), so anything forwarding the prelude to a child
+   * process must use this form, not clearEnvironmentPath.
+   */
+  clearEnvironmentUrl: string
   /** Restores the previous PATH; idempotent. */
   dispose: () => void
 }
@@ -108,7 +122,7 @@ function posixNodeShim(appExecutable: string, clearEnvironmentUrl: string): stri
 
 /** Public POSIX pnpm command. */
 function posixPnpmShim(
-  options: Pick<NodeRuntimeOptions, 'appExecutable' | 'pnpmBinPath' | 'electronVersion'>,
+  options: { appExecutable: string; pnpmBinPath: string; electronVersion: string },
   nodeBinDir: string,
   nodeShimPath: string,
   clearEnvironmentUrl: string,
@@ -142,7 +156,7 @@ function windowsNodeShim(appExecutable: string, clearEnvironmentUrl: string): st
 
 /** Public Windows pnpm command (marisa layout: hoisted JS pnpm). */
 function windowsPnpmShim(
-  options: Pick<NodeRuntimeOptions, 'appExecutable' | 'pnpmBinPath' | 'electronVersion'>,
+  options: { appExecutable: string; pnpmBinPath: string; electronVersion: string },
   nodeBinDir: string,
   nodeShimPath: string,
   clearEnvironmentUrl: string,
@@ -310,9 +324,13 @@ export function installElectronNodeRuntime(options: NodeRuntimeOptions): NodeRun
     ['Electron version', options.electronVersion],
     ['state directory', options.stateDir],
   ] as const) {
-    if (value === undefined || value === '') {
+    // pnpmBinPath may be omitted entirely; an explicitly empty value is still
+    // a caller bug (it would generate a shim pointing at "").
+    if (value === undefined) {
+      if (label === 'pnpm entry') continue
       throw new Error(`marisa-electron: runtime ${label} must be a non-empty value`)
     }
+    if (value === '') throw new Error(`marisa-electron: runtime ${label} must be a non-empty value`)
   }
 
   const windows = options.platform === 'win32'
@@ -330,7 +348,6 @@ export function installElectronNodeRuntime(options: NodeRuntimeOptions): NodeRun
   removeStaleTemporaryFiles(pathDir, pnpmShimName)
   removeStaleTemporaryFiles(nodeBinDir, nodeShimName)
   removeStaleTemporaryFiles(privateDir, 'clear-env.mjs')
-  const pnpmShimPath = join(pathDir, pnpmShimName)
   const nodeShimPath = join(nodeBinDir, nodeShimName)
   const clearEnvironmentPath = join(privateDir, 'clear-env.mjs')
   replacePrivateFile(clearEnvironmentPath, clearEnvironmentModule(), PRIVATE_FILE_MODE)
@@ -342,13 +359,23 @@ export function installElectronNodeRuntime(options: NodeRuntimeOptions): NodeRun
       : posixNodeShim(options.appExecutable, clearEnvironmentUrl),
     windows ? PRIVATE_FILE_MODE : EXECUTABLE_FILE_MODE,
   )
-  replacePrivateFile(
-    pnpmShimPath,
-    windows
-      ? windowsPnpmShim(options, nodeBinDir, nodeShimPath, clearEnvironmentUrl)
-      : posixPnpmShim(options, nodeBinDir, nodeShimPath, clearEnvironmentUrl),
-    windows ? PRIVATE_FILE_MODE : EXECUTABLE_FILE_MODE,
-  )
+
+  let pnpmShimPath: string | null = null
+  if (options.pnpmBinPath !== undefined) {
+    pnpmShimPath = join(pathDir, pnpmShimName)
+    const pnpmOptions = {
+      appExecutable: options.appExecutable,
+      pnpmBinPath: options.pnpmBinPath,
+      electronVersion: options.electronVersion,
+    }
+    replacePrivateFile(
+      pnpmShimPath,
+      windows
+        ? windowsPnpmShim(pnpmOptions, nodeBinDir, nodeShimPath, clearEnvironmentUrl)
+        : posixPnpmShim(pnpmOptions, nodeBinDir, nodeShimPath, clearEnvironmentUrl),
+      windows ? PRIVATE_FILE_MODE : EXECUTABLE_FILE_MODE,
+    )
+  }
 
   return {
     pathDir,
@@ -356,6 +383,7 @@ export function installElectronNodeRuntime(options: NodeRuntimeOptions): NodeRun
     nodeBinDir,
     nodeShimPath,
     clearEnvironmentPath,
+    clearEnvironmentUrl,
     dispose: installPathDirectory(environment, pathDir, options.platform),
   }
 }
