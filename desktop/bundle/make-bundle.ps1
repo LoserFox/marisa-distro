@@ -799,6 +799,85 @@ ui-onboarding:
   Write-Host ("total pruned: {0:N1} MB" -f ($pruned / 1MB))
 }
 
+# --- root links for bare loader-entry specifiers ------------------------------
+# Every bundle's cordis.patch.yml declares loader entries by BARE package name
+# (e.g. '@deepseek-ai/dsh-file-reference-local'). apps/cli boots with
+# `boot(NAME, rootConfig, patches, prepare)` — no bareModuleBaseUrl — so
+# mountRootInclude installs the plain Include, which resolves a bare specifier
+# with `import(name)` from harness/vendor/loader/lib/index.js and therefore
+# walks UP to <stage>/marisa-distro/node_modules
+# (app-boot/src/index.ts:492-504, vendor/loader/lib/index.js:260-273).
+#
+# pnpm's isolated layout only links ROOT dependencies there, while a bundle's
+# entries are the BUNDLE's own dependencies (they live in <bundle>/node_modules).
+# Upstream's npm distribution hoists everything flat, so that fallback resolves
+# for them; the marisa pnpm tree does not satisfy the implicit assumption, and
+# every launch died with
+#   plugin tree failed to load ... Cannot find package '@deepseek-ai/...'
+# Reproduced 2026-09-13 in the LIVE dev tree against a freshly generated profile,
+# so this is neither shell- nor packaging-specific. Linking the missing bare
+# entries at the staged root removed that entire class of failures.
+#
+# Links created here are ordinary staged junctions: the LINKS.json walker below
+# records them and deletes them before tarring, so they travel as manifest rows
+# and get replayed at extraction like every other workspace link.
+Write-Host 'linking bare loader-entry packages at the staged root ...'
+$stageRoot = "$stage\marisa-distro"
+$stageModules = "$stageRoot\node_modules"
+$packageDirs = @{}
+foreach ($manifestGlob in @(
+    "$stageRoot\harness\packages\*\*\package.json",
+    "$stageRoot\harness\vendor\*\package.json",
+    "$stageRoot\harness\apps\*\package.json",
+    "$stageRoot\plugins\*\package.json",
+    "$stageRoot\bundles\*\package.json",
+    "$stageRoot\dsh-mygo\packages\*\package.json",
+    "$stageRoot\dsh-mygo\packages\*\*\package.json",
+    "$stageRoot\.dsh\profiles\*\package.json"
+  )) {
+  foreach ($manifest in Get-ChildItem $manifestGlob -File -ErrorAction SilentlyContinue) {
+    try { $parsed = Get-Content -LiteralPath $manifest.FullName -Raw | ConvertFrom-Json } catch { continue }
+    if ($parsed.name -and -not $packageDirs.ContainsKey($parsed.name)) {
+      $packageDirs[$parsed.name] = $manifest.Directory.FullName
+    }
+  }
+}
+$entrySpecifiers = @{}
+$rootLinksCreated = 0
+$unresolvedSpecifiers = @()
+foreach ($patchGlob in @(
+    "$stageRoot\harness\packages\bundle\*\cordis*.yml",
+    "$stageRoot\bundles\*\cordis*.yml",
+    "$stageRoot\.dsh\profiles\*\cordis*.yml"
+  )) {
+  foreach ($patchFile in Get-ChildItem $patchGlob -File -ErrorAction SilentlyContinue) {
+    foreach ($line in [System.IO.File]::ReadAllLines($patchFile.FullName)) {
+      $match = [regex]::Match($line, '^\s*(?:-\s*)?name:\s*[''"]?(@?[a-z0-9][\w./-]*)[''"]?\s*$')
+      if (-not $match.Success) { continue }
+      $specifier = $match.Groups[1].Value
+      if ($specifier.StartsWith('cordis:') -or $entrySpecifiers.ContainsKey($specifier)) { continue }
+      $entrySpecifiers[$specifier] = $true
+      $linkPath = Join-Path $stageModules ($specifier -replace '/', '\')
+      if (Test-Path -LiteralPath $linkPath) { continue }
+      # Subpath specifiers ('@scope/pkg/sub') resolve through their package's
+      # exports map, so only the package itself needs a root link.
+      $packageName = if ($specifier.StartsWith('@')) {
+        ($specifier -split '/')[0..1] -join '/'
+      } else { ($specifier -split '/')[0] }
+      if (-not $packageDirs.ContainsKey($packageName)) { $unresolvedSpecifiers += $specifier; continue }
+      if (Test-Path -LiteralPath (Join-Path $stageModules ($packageName -replace '/', '\'))) { continue }
+      New-Item -ItemType Directory -Force (Split-Path -Parent (Join-Path $stageModules ($packageName -replace '/', '\'))) | Out-Null
+      New-Item -ItemType Junction -Path (Join-Path $stageModules ($packageName -replace '/', '\')) -Target $packageDirs[$packageName] | Out-Null
+      $rootLinksCreated++
+    }
+  }
+}
+Write-Host ("root entry links: {0} created ({1} bare specifier(s) scanned)" -f $rootLinksCreated, $entrySpecifiers.Count)
+if ($unresolvedSpecifiers.Count -gt 0) {
+  # Not a workspace member: it must arrive from the registry install instead.
+  Write-Host ("  not workspace members, left to the registry install: {0}" -f ($unresolvedSpecifiers -join ', '))
+}
+
 # --- staged tree integrity check ----------------------------------------------
 # 2026-08-15 regression: a stage install can silently produce an EMPTY root
 # node_modules (pnpm "added 0" when live member node_modules leaked into the

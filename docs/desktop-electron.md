@@ -206,7 +206,40 @@ pwsh desktop-electron/scripts/make-installer.ps1 -SkipProfile -SkipPayload   # �
 | Electron-as-Node | ✅ 真机确认后端以 `Node.js v24.19.0`（Electron 内嵌 Node）执行到插件树加载器 |
 | **窗口渲染 + 后端就绪** | ❌ **未达成**：后端插件树加载失败，三级状态机按设计降级到急救页（详见下） |
 
-### 未达成项：插件树加载失败
+### ✅ 完整验收达成（2026-09-13，根因修复后）
+
+补齐最后两个缺陷后，Electron 路线在 Windows 真机上**完整跑通**：
+
+```
+dsh web: http://127.0.0.1:4965
+dsh server ready at http://127.0.0.1:4965/
+[whale-balance] NO_KEY 未配置 DEEPSEEK_API_KEY     <- 插件已加载
+```
+
+CDP 证实窗口落在**后端 URL**（`title='DSH Local Build' url=http://127.0.0.1:4965/`），
+不是急救页；后端 HTTP 200（19017 字节）；退出后无任何孤儿进程
+（Marisa DSH / node / reaper 均为 0）；卸载后安装目录已清除。
+窗口截图存证：`scripts/capture-window.ps1` 抓到 1919x1202 的窗口 PNG。
+
+补齐的两个缺陷（本轮）：
+
+8. **裸包名 entry 在仓库根解析不到** → `make-bundle.ps1` 在 staged `pnpm install`
+   之后、记录 LINKS.json 之前，把 bundle patch 里用到的裸 entry 包名在 staged 根
+   `node_modules` 下补链接（幂等；本次扫到 160 条裸 specifier、补 4 条链接，
+   载荷链接数 2779 → 2783）。**效果：`plugin tree failed to load` 的失败条目从
+   34 个降到 5 个。**
+9. **`--expose-internals` 缺失**（`launcher.cmd`）→ `apps/cli` 在插件树 settle 后
+   会装 HMR 服务，`vendor/hmr` 没有该标志就抛
+   `--expose-internals is required for HMR service`；harness 里没有任何地方设置它，
+   必须由持有 Node 调用的 launcher 传入。**效果：极简模式首次出现后端就绪行
+   `dsh web: http://127.0.0.1:3232`。**
+10. 另需补该 worktree 未构建的产物：`dsh-mygo/packages/**`（8 个）与
+   `plugins/dsh-sidechain`。它们的缺失让错误停在 `lib/index.js` 而非包名上。
+
+### 曾经的阻塞记录（保留，供追溯）
+
+<details>
+<summary>2026-09-13 早期：插件树加载失败（已解决，上方为修复记录）</summary>
 
 真机上后端进程确实起来了（Electron-as-Node 生效），但在 profile 启动期报
 `dsh: plugin tree failed to load: failed to apply loader entry include (cordis:include)`。
@@ -287,6 +320,8 @@ profile 目录解析，属测试环境不完整，非缺陷）。
   （app-boot 已为此准备好 `HostResolvedRootInclude`）。属 harness 改动，
   按 AGENTS.md 只能走 `overlays/harness/` 或反馈上游；且该文件是带 hash 的
   构建产物，overlay 锚点脆弱。
+
+</details>
 
 ### 附带发现：本机存在两份损坏的 profile 清单
 

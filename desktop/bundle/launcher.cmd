@@ -56,9 +56,15 @@ rem again inside the backend process so its children stay plain processes.
 if /I not "%NODE_EXE%"=="%BUNDLE%node.exe" set "RUN_AS_ELECTRON=1"
 if defined RUN_AS_ELECTRON set "ELECTRON_RUN_AS_NODE=1"
 cd /d "%DSH_ROOT%\harness"
+rem --expose-internals: apps/cli installs the HMR service right after the plugin
+rem tree settles (profile-boot:259) and vendor/hmr throws without the flag
+rem ("--expose-internals is required for HMR service"). Nothing in the harness
+rem sets it, so the launcher that owns the Node invocation has to. Without it
+rem BOTH boot modes die after an otherwise successful plugin-tree load, which
+rem reads upstream as a generic "backend exited without publishing a URL".
 if "%BOOT_PROFILE%"=="web" (
-    "%NODE_EXE%" %NODE_PRELOAD% "%DSH_ROOT%\harness\apps\cli\lib\bin.js" --profile web --patch "%BUNDLE%minimal.overlay.yml"
+    "%NODE_EXE%" --expose-internals %NODE_PRELOAD% "%DSH_ROOT%\harness\apps\cli\lib\bin.js" --profile web --patch "%BUNDLE%minimal.overlay.yml"
 ) else (
-    "%NODE_EXE%" %NODE_PRELOAD% "%DSH_ROOT%\harness\apps\cli\lib\bin.js" --profile %BOOT_PROFILE% --patch "%DSH_HOME%\profiles\marisa\desktop.overlay.yml" --patch "%DSH_HOME%\profiles\marisa\standalone.overlay.yml"
+    "%NODE_EXE%" --expose-internals %NODE_PRELOAD% "%DSH_ROOT%\harness\apps\cli\lib\bin.js" --profile %BOOT_PROFILE% --patch "%DSH_HOME%\profiles\marisa\desktop.overlay.yml" --patch "%DSH_HOME%\profiles\marisa\standalone.overlay.yml"
 )
 exit /b %ERRORLEVEL%
