@@ -245,6 +245,32 @@ pwsh scripts/build-release-windows.ps1   # 或抽出其 step 2–4，改成同�
 6. `recreateLinks` 用 `existsSync` 判断链接存在性（会跟随链接）→ 悬空 junction 被当成缺失，重放失败；Go 壳用 `os.Lstat`（`embedded.go:263`）
 7. `make-bundle.ps1` 缓存键不含 `RuntimeMode` → 两种模式载荷互相污染；`-OutPath` 参数路径按进程 cwd 而非仓库根解析
 
+### 用户数据保护（本轮已加安全网，合并逻辑仍缺）
+
+`ensureBackend` 在版本变化时执行 `rmSync(dest, { recursive: true, force: true })`
+整树替换。Wails 壳在这条路径上有两层保护——`update_migrate.go:mergeDshData`
+（把旧 `.dsh` 用户数据合并进新树）与备份区，其文件头记录着 **2026-08-25 v0.1.10
+数据丢失事故**；Electron 移植两层都没有，即**每次版本升级都会直接抹掉
+`%LOCALAPPDATA%\marisa-distro\backend\.dsh` 里的凭据、会话、设置**。
+
+本轮补上**第一步：备份安全网**（与 Go 壳自身演进顺序一致——它也是先有
+「备份 → 整树替换」，再补 `mergeDshData`）：
+
+- `ensureBackend` 新增 `backupRoot`；在 `rmSync(dest)` **之前**把 `dest/.dsh`
+  快照到 `<backupRoot>/dsh-<ISO 时间戳>`，`main.ts` 传 `backupsRootDir()`
+  （即 `%LOCALAPPDATA%\marisa-distro\backups`，与 Wails 壳同址）。
+- **失败安全**：备份抛错时 `rmSync(dest)` 还没执行，旧 backend 原样保留、
+  下次启动重试——对齐 Go 的「失败安全：任一步失败返回错误，调用方保留旧
+  backend（不删、不切换）」。5 例单测覆盖：无 `.dsh` 时不动、快照内容正确、
+  拒绝覆盖同名快照、版本变化时先备份、备份失败时旧树与 `VERSION` 均未被碰。
+- junction 以链接形式复制（`dereference: false`），不会顺着链接走进 pnpm store。
+
+**仍然缺**：把快照合并回新树的 `mergeDshData` 语义（规则复杂：junction 跳过、
+`profiles/web` 不迁移、`profiles/marisa` 的 `package.json` 以新 bundle 列表为准
+但保留用户 `file:` 依赖、bundle 自带 yml 总是用新的、其余一律以旧为准）。
+在此之前，升级后用户**需要从 `backups/dsh-*` 手工恢复**——这正是 2026-08-25
+事故的形态，只是这次数据至少还在。此项应在 Electron 路线进入发行流水线前完成。
+
 ### 环境备注（与本分支无关，但会影响本机构建）
 
 本机 PATH 上的 `pnpm` 是 DSH Desktop 包装器，它把 Electron-as-node 的 `node.cmd`

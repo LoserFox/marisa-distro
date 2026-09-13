@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, symlinkSync, existsSync, readFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, symlinkSync, existsSync, readFileSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseLinksManifest, recreateLinks, ensureBackend, embeddedBackendVersion } from '../src/extract.ts'
+import {
+  parseLinksManifest,
+  recreateLinks,
+  ensureBackend,
+  embeddedBackendVersion,
+  backupUserData,
+} from '../src/extract.ts'
 
 const BOM = '﻿'
 
@@ -166,5 +172,118 @@ describe('ensureBackend', () => {
     const raw = buildTestTar([{ name: 'VERSION', data: 'vX\n' }])
     const { versionFromTar } = await import('./extract-testkit.ts')
     expect(await versionFromTar(raw)).toBe('vX')
+  })
+})
+
+describe('user-data safety across re-extraction', () => {
+  const FIXED = new Date('2026-09-13T00:00:00.000Z')
+  const STAMP = 'dsh-2026-09-13T00-00-00-000Z'
+
+  it('backupUserData is a no-op when the backend has no .dsh', () => {
+    const root = mkdtempSync(join(tmpdir(), 'marisa-nodsh-'))
+    try {
+      mkdirSync(join(root, 'backend'), { recursive: true })
+      expect(backupUserData(join(root, 'backend'), join(root, 'backups'), () => {}, FIXED)).toBeNull()
+      expect(existsSync(join(root, 'backups'))).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('backupUserData snapshots the DSH home and returns the target', () => {
+    const root = mkdtempSync(join(tmpdir(), 'marisa-backup-'))
+    try {
+      const backend = join(root, 'backend')
+      mkdirSync(join(backend, '.dsh', 'sessions'), { recursive: true })
+      writeFileSync(join(backend, '.dsh', 'sessions', 's1.jsonl'), '{"turn":1}\n')
+      writeFileSync(join(backend, '.dsh', '.credentials.yaml'), 'key: secret\n')
+      const target = backupUserData(backend, join(root, 'backups'), () => {}, FIXED)
+      expect(target).toBe(join(root, 'backups', STAMP))
+      expect(readFileSync(join(target!, 'sessions', 's1.jsonl'), 'utf8')).toBe('{"turn":1}\n')
+      expect(readFileSync(join(target!, '.credentials.yaml'), 'utf8')).toBe('key: secret\n')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('backupUserData refuses to clobber an existing snapshot', () => {
+    const root = mkdtempSync(join(tmpdir(), 'marisa-backup-dup-'))
+    try {
+      const backend = join(root, 'backend')
+      mkdirSync(join(backend, '.dsh'), { recursive: true })
+      const backups = join(root, 'backups')
+      backupUserData(backend, backups, () => {}, FIXED)
+      expect(() => backupUserData(backend, backups, () => {}, FIXED)).toThrowError(/already exists/)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('a version change snapshots the old DSH home before replacing the tree', async () => {
+    // The bug this guards: ensureBackend did rmSync(dest, recursive) with no
+    // backup at all, so every version change destroyed sessions, credentials
+    // and settings outright.
+    const raw = buildTestTar([
+      { name: 'VERSION', data: 'v2.0.0-new\n' },
+      { name: 'LINKS.json', data: '[]' },
+      { name: 'fresh.txt', data: 'new tree' },
+    ])
+    const root = mkdtempSync(join(tmpdir(), 'marisa-upgrade-'))
+    const dest = join(root, 'backend')
+    try {
+      mkdirSync(join(dest, '.dsh', 'sessions'), { recursive: true })
+      writeFileSync(join(dest, '.dsh', 'sessions', 'old.jsonl'), 'old session\n')
+      writeFileSync(join(dest, 'VERSION'), 'v1.0.0-old')
+      const { ensureBackendWithDecoder } = await import('./extract-testkit.ts')
+      await ensureBackendWithDecoder({
+        bundle: new Uint8Array(raw),
+        dest,
+        decode: async input => Buffer.from(input),
+        log: () => {},
+        backupRoot: join(root, 'backups'),
+      })
+      // New tree published ...
+      expect(readFileSync(join(dest, 'fresh.txt'), 'utf8')).toBe('new tree')
+      expect(readFileSync(join(dest, 'VERSION'), 'utf8').trim()).toBe('v2.0.0-new')
+      // ... and the old user data is recoverable from the snapshot.
+      const snapshots = readdirSync(join(root, 'backups'))
+      expect(snapshots).toHaveLength(1)
+      expect(readFileSync(join(root, 'backups', snapshots[0]!, 'sessions', 'old.jsonl'), 'utf8')).toBe('old session\n')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('a failing backup aborts the upgrade and keeps the old backend', async () => {
+    const raw = buildTestTar([
+      { name: 'VERSION', data: 'v2.0.0-new\n' },
+      { name: 'LINKS.json', data: '[]' },
+      { name: 'fresh.txt', data: 'new tree' },
+    ])
+    const root = mkdtempSync(join(tmpdir(), 'marisa-upgrade-fail-'))
+    const dest = join(root, 'backend')
+    try {
+      mkdirSync(join(dest, '.dsh'), { recursive: true })
+      writeFileSync(join(dest, 'VERSION'), 'v1.0.0-old')
+      // A file where the backup root should be makes mkdirSync fail.
+      writeFileSync(join(root, 'backups'), 'not a directory')
+      const { ensureBackendWithDecoder } = await import('./extract-testkit.ts')
+      await expect(
+        ensureBackendWithDecoder({
+          bundle: new Uint8Array(raw),
+          dest,
+          decode: async input => Buffer.from(input),
+          log: () => {},
+          backupRoot: join(root, 'backups'),
+        }),
+      ).rejects.toThrow()
+      // Fail-safe: the old backend is untouched, so the next launch retries.
+      expect(readFileSync(join(dest, 'VERSION'), 'utf8').trim()).toBe('v1.0.0-old')
+      expect(existsSync(join(dest, '.dsh'))).toBe(true)
+      expect(existsSync(join(dest, 'fresh.txt'))).toBe(false)
+      expect(existsSync(join(root, 'backend.extracting'))).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })

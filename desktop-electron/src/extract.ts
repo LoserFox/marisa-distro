@@ -8,7 +8,7 @@
  * point leaves no matching marker — the next launch retries.
  */
 
-import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync, lstatSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync, lstatSync, cpSync } from 'node:fs'
 import { basename, dirname, join, resolve as pathResolve, sep } from 'node:path'
 import { extract as parseTar } from 'tar-stream'
 import { zstdDecode } from './zstd-decoder.ts'
@@ -89,6 +89,11 @@ export async function ensureBackend(opts: {
   linksManifest?: string
   onProgress?: ExtractProgress
   log: (message: string) => void
+  /**
+   * Directory that receives a snapshot of the outgoing backend's `.dsh` before
+   * the tree is replaced. Omit to skip the backup entirely (tests, dev form).
+   */
+  backupRoot?: string
   /** Windows junction creation via `cmd /c mklink /J` (injected for tests). */
   createJunction?: (link: string, target: string) => Promise<void>
 }): Promise<string> {
@@ -111,6 +116,14 @@ export async function ensureBackend(opts: {
   try {
     const tar = await zstdDecode(bundle)
     const result = await extractTarAsync(tar, staging, opts.onProgress, bundle.length, want)
+    // Snapshot the outgoing backend's user data BEFORE the wipe. This runs
+    // before rmSync on purpose: a failing backup throws here, the old backend
+    // is left untouched, and the next launch retries — the same fail-safe
+    // ordering the Go shell uses ("备份区始终先于迁移完成，作为安全网",
+    // update_migrate.go). Merging that snapshot back into the fresh tree is a
+    // separate, still-missing step (see docs/desktop-electron.md); without
+    // this backup the wipe below is irreversible.
+    if (opts.backupRoot !== undefined) backupUserData(dest, opts.backupRoot, log)
     // Junctions only AFTER publishing: targets are absolute (embedded.go).
     rmSync(dest, { recursive: true, force: true })
     const { renameSync } = await import('node:fs')
@@ -123,6 +136,34 @@ export async function ensureBackend(opts: {
   } finally {
     if (!published) rmSync(staging, { recursive: true, force: true })
   }
+}
+
+/** Subtree of the backend holding DSH home data (sessions, credentials, …). */
+export const DSH_HOME_DIR_NAME = '.dsh'
+
+/**
+ * Copy `<dest>/.dsh` into `<backupRoot>/dsh-<timestamp>` before the backend tree
+ * is replaced. Returns the snapshot path, or null when there is nothing to keep.
+ *
+ * Junctions are copied as links (dereference: false) so the walk cannot escape
+ * into the pnpm store, and they are replayed from LINKS.json on the fresh tree
+ * anyway.
+ */
+export function backupUserData(
+  dest: string,
+  backupRoot: string,
+  log: (message: string) => void,
+  now: Date = new Date(),
+): string | null {
+  const source = join(dest, DSH_HOME_DIR_NAME)
+  if (!existsSync(source)) return null
+  const stamp = now.toISOString().replace(/[:.]/gu, '-')
+  const target = join(backupRoot, `dsh-${stamp}`)
+  if (existsSync(target)) throw new Error(`user-data backup target already exists: ${target}`)
+  mkdirSync(backupRoot, { recursive: true })
+  cpSync(source, target, { recursive: true, dereference: false, force: true })
+  log(`backed up previous user data: ${source} -> ${target}`)
+  return target
 }
 
 /** Async tar extraction with entry writes, link collection, VERSION skip. */

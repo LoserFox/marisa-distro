@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chdir } from 'node:process'
 import { setupLogging, ensureAndOpenFolder, parseLogLevel, readLogTail, type DesktopLog } from './logging.ts'
-import { backendRootDir, appLogDir, APP_LOG_NAME } from './paths.ts'
+import { backendRootDir, backupsRootDir, appLogDir, APP_LOG_NAME } from './paths.ts'
 import { supervise, type SuperviseRun } from './supervisor.ts'
 import { startRescueServer } from './rescue-server.ts'
 import { rescueBackendDirLike } from './rescue-paths.ts'
@@ -221,6 +221,10 @@ async function materializeBackend(): Promise<void> {
   await ensureBackend({
     bundle: new Uint8Array(readFileSync(bundlePath)),
     dest: backendRootDir(),
+    // Snapshot the outgoing backend's DSH home before the tree is replaced, so
+    // a version change can never silently destroy sessions or credentials —
+    // the same safety net the Wails shell keeps in backups/ (update_migrate.go).
+    backupRoot: backupsRootDir(),
     log: m => log.log(m),
   })
   const launcher = join(backendRootDir(), process.platform === 'win32' ? 'launcher.cmd' : 'launcher.sh')

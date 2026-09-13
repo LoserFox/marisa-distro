@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { extract as parseTar } from 'tar-stream'
-import { recreateLinks, LINKS_MANIFEST_NAME, BACKEND_VERSION_NAME } from '../src/extract.ts'
+import { recreateLinks, backupUserData, LINKS_MANIFEST_NAME, BACKEND_VERSION_NAME } from '../src/extract.ts'
 
 /** Extract a decompressed tar buffer (shared with extract.test.ts helpers). */
 export function extractTarBuffer(
@@ -97,6 +97,8 @@ export async function ensureBackendWithDecoder(opts: {
   dest: string
   decode: (input: Uint8Array) => Promise<Buffer>
   log: (m: string) => void
+  /** Mirrors the production option: snapshot the outgoing .dsh before wiping. */
+  backupRoot?: string
 }): Promise<string> {
   const { bundle, dest, decode, log } = opts
   const staging = dest + '.extracting'
@@ -113,6 +115,9 @@ export async function ensureBackendWithDecoder(opts: {
   let published = false
   try {
     await extractTarBuffer(tar, staging)
+    // Same ordering as production: back up before the wipe, so a failing
+    // backup leaves the old backend intact.
+    if (opts.backupRoot !== undefined) backupUserData(dest, opts.backupRoot, log)
     rmSync(dest, { recursive: true, force: true })
     renameSync(staging, dest)
     published = true
