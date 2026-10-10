@@ -1,0 +1,11 @@
+{
+  "component": "dsh-input-history",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "eaf9aab70df9220e2e7b7b07cfb61605909d110d",
+  "available": "f5a91179b7eef644c3ebe4fec7199c88572254d4",
+  "repository": "https://github.com/lhh010/dsh-input-history.git",
+  "diffDocument": "docs/plugins/dsh-input-history.md",
+  "checkedAt": "2026-10-10T09:56:02.583Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
