@@ -1,0 +1,11 @@
+{
+  "component": "dsh-diff-viewer",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "d576c00cc7db52695d69f86142d4454380fed236",
+  "available": "c46f11b144fff7f1191d22c391f455b3f8f650c9",
+  "repository": "https://github.com/dsh-external/dsh-diff-viewer.git",
+  "diffDocument": "docs/plugins/dsh-diff-viewer.md",
+  "checkedAt": "2026-10-31T09:44:12.614Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
