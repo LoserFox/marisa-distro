@@ -1,0 +1,11 @@
+{
+  "component": "dsh-sidechain",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "9dc75fefc1f79d1a28e388e14012a45da83f474e",
+  "available": "1577e969940a7e0cda3f06925372184e64afc2b7",
+  "repository": "https://github.com/dsh-external/dsh-sidechain.git",
+  "diffDocument": "docs/plugins/dsh-sidechain.md",
+  "checkedAt": "2026-11-21T11:14:18.241Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
