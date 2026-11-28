@@ -1,0 +1,11 @@
+{
+  "component": "dsh_workflow",
+  "source": "git",
+  "mode": "fork",
+  "baseline": "44b83c182aa02d1be8a0803e8446cb495f93cd8f",
+  "available": "2c4d263ead8f3931721f46b7f4349cdc06764949",
+  "repository": "https://github.com/dsh-external/dsh_workflow.git",
+  "diffDocument": "docs/plugins/dsh_workflow.md",
+  "checkedAt": "2026-11-28T11:54:15.853Z",
+  "action": "Rebase the fork manually, replay or delete every documented diff, then run the release-level test matrix."
+}
